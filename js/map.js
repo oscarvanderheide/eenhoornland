@@ -27,7 +27,18 @@ export const inPen = (x, z) => x > PEN.x0 && x < PEN.x1 && z > PEN.z0 && z < PEN
 function mulberry(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 /** solids: [[x0,z0,x1,z1],...] building footprints; keep: [[x,z],...] tiles that must stay free (doors) */
-export function buildMap({ solids = [], keep = [] } = {}) {
+/** block[] values: 0 free, 1 solid, LOW can be jumped over, BREAK is removed with a tool */
+export const LOW = 2, BREAK = 3;
+export const TOOL_FOR = { bramble: 'schaar', boulder: 'hamer' };
+
+/** Builds the island. `seed` 0 is the first, hand-tuned island; every later cycle passes a new seed, which
+ *  reshuffles everything outside the village. A seed that fails `validate` is skipped. */
+export function buildMap(opts = {}) {
+  let seed = opts.seed | 0, m = null; const skipped = [];
+  for (let k = 0; k < 12; k++) { m = build({ ...opts, seed }); m.problems = validate(m, opts.keep || []); if (!m.problems.length) break; skipped.push(...m.problems); seed = (seed + 7919) | 0; }
+  m.skipped = skipped; return m;
+}
+function build({ solids = [], keep = [], seed = 0 } = {}) {
   const ground = new Uint8Array(W * H), block = new Uint8Array(W * H);
   const I = (x, z) => z * W + x, inb = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
   const set = (x, z, t) => { if (inb(x, z) && ground[I(x, z)] !== SE) ground[I(x, z)] = t; };
@@ -39,7 +50,7 @@ export function buildMap({ solids = [], keep = [] } = {}) {
       for (let s = 0; s <= n; s++) { const px = ax + (bx - ax) * s / n, pz = az + (bz - az) * s / n; for (let z = Math.floor(pz - r); z <= Math.floor(pz + r); z++) for (let x = Math.floor(px - r); x <= Math.floor(px + r); x++) if ((x + .5 - px) ** 2 + (z + .5 - pz) ** 2 <= r * r) set(x, z, t); }
     }
   };
-  const keepSet = new Set(keep.map(([x, z]) => I(x, z)));
+  const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile)).map(([x, z]) => I(x, z)));
 
   /* ---- base ground + sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -76,8 +87,25 @@ export function buildMap({ solids = [], keep = [] } = {}) {
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1;
   const structural = block.slice();                               // everything that is not vegetation
 
+  /* ---- zone borders: a thick forest edge and the castle hedge, with a gate wherever a path crosses ---- */
+  const trees = [], obstacles = [];
+  const line = (x0, z0, x1, z1) => { const out = []; for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) out.push([x, z]); return out; };
+  const border = (tiles, gate, wallKind) => {
+    let prev = null;
+    for (const [x, z] of tiles) {
+      const i = I(x, z); if (!inb(x, z) || block[i] || keepSet.has(i)) { prev = null; continue; }
+      const g = ground[i];
+      if (g === PA || g === BW || g === CO) { const o = { kind: gate, type: 'break', tool: TOOL_FOR[gate], x, z, gate: true, g: prev ? prev.g : obstacles.length }; obstacles.push(o); block[i] = BREAK; prev = o; }
+      else { trees.push({ kind: wallKind(x, z, g), x, z, seed: 1 + (x * 5 + z * 3) % 6, fixed: true }); block[i] = 1; prev = null; }
+    }
+  };
+  const pathAt = (x, z) => inb(x, z) && (ground[I(x, z)] === PA || ground[I(x, z)] === BW || ground[I(x, z)] === CO);
+  // a tall tree just south of a path would hide the gate and whoever stands at it: keep the edge low there
+  const forestEdge = (x, z) => [[0, -1], [0, -2], [0, -3], [-1, -1], [1, -1], [-1, -2], [1, -2]].some(([dx, dz]) => pathAt(x + dx, z + dz)) ? 'bush' : (x + z) % 2 ? 'pine' : 'tree', castleHedge = (x, z, g) => g === SA ? 'rock' : 'hedge';
+  border(line(28, 0, 28, 23), 'bramble', forestEdge); border(line(29, 23, 43, 23), 'bramble', forestEdge);
+  border(line(43, 24, 43, H - 1), 'boulder', castleHedge); border(line(44, 24, W - 1, 24), 'boulder', castleHedge);
+
   /* ---- fixed props (blocked, drawn as billboards) ---- */
-  const trees = [];
   const prop = (kind, x, z, seed = 1) => { if (!inb(x, z) || block[I(x, z)] || keepSet.has(I(x, z))) return; const g = ground[I(x, z)]; if (g === PA || g === BW || g === PL) return; trees.push({ kind, x, z, seed, fixed: true }); block[I(x, z)] = 1; };
   [[38, 15], [42, 15], [37, 20], [42, 21], [40, 16], [47, 9], [52, 14]].forEach(([x, z], k) => prop('apple', x, z, k + 1));
   prop('oak', 50, 10); prop('stump', 46, 13); prop('stump', 57, 4); prop('log', 53, 13);
@@ -88,7 +116,7 @@ export function buildMap({ solids = [], keep = [] } = {}) {
   for (let x = 47; x <= 61; x += 2) if (x !== 53 && x !== 55) prop('hedge', x, 39, x);
 
   /* ---- vegetation ---- */
-  const r = mulberry(20251122);
+  const rDorp = mulberry(20251122), rOut = mulberry((20251122 ^ Math.imul(seed, 2654435761)) | 0);   // the village never changes
   const pd = new Int16Array(W * H).fill(99);                      // distance to the nearest path / clearing
   { const q = []; for (let i = 0; i < W * H; i++) { const g = ground[i]; if (g === PA || g === PL || g === CO || g === BW || (g === GR && zoneAt(i % W, Math.floor(i / W)) === 'bos')) { pd[i] = 0; q.push(i); } } for (let h = 0; h < q.length; h++) { const i = q[h], x = i % W, z = Math.floor(i / W); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz; if (inb(X, Z) && pd[I(X, Z)] > pd[i] + 1) { pd[I(X, Z)] = pd[i] + 1; q.push(I(X, Z)); } } } }
   const plain = g => g === GR || g === FO || g === SA;
@@ -96,6 +124,7 @@ export function buildMap({ solids = [], keep = [] } = {}) {
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
     const i = I(x, z), g = ground[i]; if (block[i] || keepSet.has(i) || !plain(g) || inPen(x, z)) continue;
     const zn = zoneAt(x, z), edge = z <= 1 || x <= 1 || x >= W - 2; let kind = null;
+    const r = zn === 'dorp' ? rDorp : rOut;
     if (g === SA) { if (edge) { if (r() < .75) kind = 'rock'; } else if (zn === 'strand' && z <= 40 && !nearBusy(x, z, 1) && r() < .06) kind = 'palm'; }
     else if (edge) { if (r() < .9) kind = r() < .45 ? 'pine' : 'tree'; }
     else if (g === FO) { const inFront = [[0, -1], [0, -2], [-1, -1], [1, -1]].some(([dx, dz]) => inb(x + dx, z + dz) && pd[I(x + dx, z + dz)] === 0);   // a tree here would hide whoever walks the trail behind it
@@ -107,24 +136,59 @@ export function buildMap({ solids = [], keep = [] } = {}) {
     if (kind) { trees.push({ kind, x, z, seed: Math.floor(r() * 6) + 1 }); block[i] = 1; }
   }
 
-  /* ---- reachability: everything walkable must be reachable from the start; pockets get filled in ---- */
-  const reach = new Uint8Array(W * H);
-  { const s = I(Math.floor(START[0]), Math.floor(START[1])); const q = [s]; reach[s] = 1; for (let h = 0; h < q.length; h++) { const i = q[h], x = i % W, z = Math.floor(i / W); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz; if (inb(X, Z) && !block[I(X, Z)] && !reach[I(X, Z)]) { reach[I(X, Z)] = 1; q.push(I(X, Z)); } } } }
-  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) { const i = I(x, z); if (!block[i] && !reach[i]) { block[i] = 1; const g = ground[i]; trees.push({ kind: g === SA ? 'rock' : g === FO ? 'fern' : 'bush', x, z, seed: 1 + (x * 7 + z * 3) % 6 }); } }
+  const r = rOut;
   const free = (x, z) => inb(x, z) && !block[I(x, z)];
-
-  /* ---- spawn spots for collectibles & egg hiding places ---- */
-  const hides = (x, z) => inb(x, z) && block[I(x, z)] && ground[I(x, z)] !== SE;   // something tall stands here
+  const hides = (x, z) => inb(x, z) && block[I(x, z)] === 1 && ground[I(x, z)] !== SE;   // something tall stands here
   const pick = (n, pred, minDist) => {
     const c = []; for (let z = 1; z < H - 1; z++) for (let x = 1; x < W - 1; x++) if (free(x, z) && !keepSet.has(I(x, z)) && !hides(x, z + 1) && pred(x, z, ground[I(x, z)])) c.push([x, z]);
     for (let k = c.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1));[c[k], c[j]] = [c[j], c[k]]; }
     const out = []; for (const p of c) { if (out.length >= n) break; if (out.every(o => Math.hypot(o[0] - p[0], o[1] - p[1]) >= minDist)) out.push(p); }
     return out;
   };
+  const farFromStart = (x, z) => Math.hypot(x - START[0], z - START[1]) > 7;
+
+  /* ---- things to jump over (logs, puddles) and loose things to cut or smash for a coin ---- */
+  const open4 = (x, z) => free(x - 1, z) && free(x + 1, z) && free(x, z - 1) && free(x, z + 1);
+  const low = (x, z, kind) => { if (!free(x, z) || keepSet.has(I(x, z))) return; obstacles.push({ kind, type: 'low', x, z }); block[I(x, z)] = LOW; };
+  low(14, 23, 'log'); low(15, 23, 'log');                         // on the way south out of the village: the first jump
+  for (const [x, z] of pick(6, (x, z, g) => g === PA && zoneAt(x, z) !== 'dorp' && open4(x, z), 6)) low(x, z, zoneAt(x, z) === 'bos' ? 'log' : 'plas');
+  for (const [x, z] of pick(7, (x, z, g) => plain(g) && zoneAt(x, z) !== 'dorp' && !inPen(x, z) && open4(x, z), 5)) low(x, z, ground[I(x, z)] === GR ? 'plas' : 'log');
+  const loose = (kind, pred) => { for (const [x, z] of pick(5, (x, z, g) => plain(g) && pred(zoneAt(x, z)) && !inPen(x, z) && !nearBusy(x, z, 1), 5)) { obstacles.push({ kind, type: 'break', tool: TOOL_FOR[kind], x, z, gate: false, g: obstacles.length }); block[I(x, z)] = BREAK; } };
+  loose('bramble', zn => zn === 'bos'); loose('boulder', zn => zn === 'strand' || zn === 'kasteel');
+
+  /* ---- reachability: walking, jumping over LOW tiles, and passing BREAK tiles you own the tool for ---- */
+  const toolAt = new Map(obstacles.filter(o => o.type === 'break').map(o => [I(o.x, o.z), o.tool]));
+  const flood = tools => {
+    const re = new Uint8Array(W * H), s = I(Math.floor(START[0]), Math.floor(START[1])), q = [s]; re[s] = 1;
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h], x = i % W, z = Math.floor(i / W);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let X = x + dx, Z = z + dz; if (!inb(X, Z)) continue; let j = I(X, Z);
+        if (block[j] === LOW) { X += dx; Z += dz; if (!inb(X, Z)) continue; j = I(X, Z); if (block[j]) continue; }
+        else if (block[j] && !(block[j] === BREAK && tools[toolAt.get(j)])) continue;
+        if (!re[j]) { re[j] = 1; q.push(j); }
+      }
+    }
+    return re;
+  };
+  // everything walkable must be reachable once you own both tools; pockets get filled in
+  const reach = flood({ schaar: 1, hamer: 1 });
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) { const i = I(x, z); if (!block[i] && !reach[i]) { block[i] = 1; const g = ground[i]; trees.push({ kind: g === SA ? 'rock' : g === FO ? 'fern' : 'bush', x, z, seed: 1 + (x * 7 + z * 3) % 6 }); } }
+  // a log that lost its landing spot to a filled pocket becomes an ordinary bush
+  for (let k = obstacles.length - 1; k >= 0; k--) { const o = obstacles[k]; if (o.type !== 'low' || (free(o.x - 1, o.z) && free(o.x + 1, o.z)) || (free(o.x, o.z - 1) && free(o.x, o.z + 1))) continue; obstacles.splice(k, 1); block[I(o.x, o.z)] = 1; trees.push({ kind: 'bush', x: o.x, z: o.z, seed: 1 + (o.x + o.z) % 6 }); }
+  const reach0 = flood({}), reach1 = flood({ schaar: 1 });       // with no tools / with the shears only
+  const at = (m, x, z) => !!m[I(x, z)];
+
+  /* ---- where the tools lie: the shears where you can walk from the start, the hammer behind the brambles ---- */
+  const toolSpots = {
+    schaar: pick(1, (x, z, g) => g === GR && at(reach0, x, z) && !inPen(x, z) && farFromStart(x, z) && !nearBusy(x, z, 1), 0)[0] || [20, 20],
+    hamer: pick(1, (x, z, g) => g === GR && zoneAt(x, z) === 'bos' && at(reach1, x, z) && open4(x, z), 0)[0] || [49, 11],
+  };
+
+  /* ---- spawn spots for collectibles & egg hiding places ---- */
   const isTree = (x, z) => inb(x, z) && block[I(x, z)] && !structural[I(x, z)];
   const nextTo = (x, z, f) => f(x + 1, z) || f(x - 1, z) || f(x, z + 1) || f(x, z - 1);
   const appleAt = new Set(trees.filter(t => t.kind === 'apple').map(t => I(t.x, t.z)));
-  const farFromStart = (x, z) => Math.hypot(x - START[0], z - START[1]) > 7;
   const spawns = {
     bloem: pick(34, (x, z, g) => g === GR && !inPen(x, z) && (zoneAt(x, z) === 'dorp' || zoneAt(x, z) === 'wei'), 2.2),
     appel: pick(18, (x, z, g) => g !== PA && nextTo(x, z, (X, Z) => appleAt.has(I(X, Z))) || (g !== PA && [[1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dz]) => appleAt.has(I(x + dx, z + dz)))), 1),
@@ -134,8 +198,34 @@ export function buildMap({ solids = [], keep = [] } = {}) {
     diamant: pick(10, (x, z, g) => zoneAt(x, z) === 'kasteel' && g !== PA && z > 25, 3.2),
     munt: pick(44, (x, z, g) => g !== SO && !inPen(x, z) && farFromStart(x, z), 5),
   };
-  const hidden = zn => pick(7, (x, z, g) => plain(g) && zoneAt(x, z) === zn && !inPen(x, z) && farFromStart(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
-  const eggSpots = { bloem: hidden('dorp').concat(hidden('wei')), bos: hidden('bos'), zee: pick(7, (x, z, g) => g === SA && zoneAt(x, z) === 'strand' && z >= 38, 5).concat([[30, 45]]), kasteel: hidden('kasteel') };
+  const need = { dorp: reach0, wei: reach0, bos: reach1, kasteel: reach };
+  const hidden = zn => pick(7, (x, z, g) => plain(g) && zoneAt(x, z) === zn && at(need[zn], x, z) && !inPen(x, z) && farFromStart(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
+  const eggSpots = { bloem: hidden('dorp').concat(hidden('wei')), bos: hidden('bos'), zee: pick(7, (x, z, g) => g === SA && zoneAt(x, z) === 'strand' && z >= 38 && at(reach0, x, z), 5).concat([[30, 45]]), kasteel: hidden('kasteel') };
 
-  return { W, H, ground, block, trees, spawns, eggSpots, reach, I, inb, free };
+  return { W, H, seed, ground, block, trees, obstacles, toolSpots, spawns, eggSpots, reach, reach0, reach1, I, inb, free };
+}
+
+/** What is wrong with a generated island (empty = fine). Used to skip bad seeds and by tests/map.test.mjs. */
+export function validate(m, keep = []) {
+  const bad = [], I = m.I, ok = (c, msg) => { if (!c) bad.push(msg); };
+  for (const [k, v] of Object.entries(m.spawns)) { ok(v.length >= 8, k + ' has too few spots'); for (const [x, z] of v) ok(m.reach[I(x, z)] && !m.block[I(x, z)], k + ' spot unreachable ' + x + ',' + z); }
+  const mask = { bloem: m.reach0, zee: m.reach0, bos: m.reach1, kasteel: m.reach };
+  for (const [k, v] of Object.entries(m.eggSpots)) { ok(v.length >= 3, 'egg ' + k + ' too few'); for (const [x, z] of v) ok(mask[k][I(x, z)], 'egg spot unreachable ' + k + ' ' + x + ',' + z); }
+  for (const [x, z] of keep) ok(m.reach[I(x, z)], 'door unreachable ' + x + ',' + z);
+  for (const [k, p] of Object.entries(PLACES)) ok(m.reach[I(...p.tile)], 'place unreachable ' + k);
+  for (const g of PEN.gate) ok(m.reach0[I(...g)], 'gate blocked');
+  ok(m.reach0[I(22, 28)], 'pen interior unreachable'); ok(m.reach0[I(30, 45)], 'pier end unreachable');
+  // the tools: shears without any tool, the hammer with the shears; and the gates really gate
+  ok(m.reach0[I(...m.toolSpots.schaar)] && !m.block[I(...m.toolSpots.schaar)], 'shears unreachable'); ok(m.reach1[I(...m.toolSpots.hamer)] && !m.block[I(...m.toolSpots.hamer)], 'hammer unreachable');
+  let leak0 = 0, leak1 = 0, un = 0, home = 0;
+  for (let i = 0; i < m.block.length; i++) {
+    const zn = zoneAt(i % W, Math.floor(i / W));
+    if (m.reach0[i] && (zn === 'bos' || zn === 'kasteel')) leak0++; if (m.reach1[i] && zn === 'kasteel') leak1++;
+    if (!m.block[i] && !m.reach[i]) un++; if (!m.block[i] && !m.reach0[i] && zn !== 'bos' && zn !== 'kasteel') home++;
+  }
+  ok(!leak0, leak0 + ' forest/castle tiles reachable without tools'); ok(!leak1, leak1 + ' castle tiles reachable without the hammer');
+  ok(!un, un + ' walkable-but-unreachable tiles'); ok(!home, home + ' village/meadow/beach tiles need a tool');
+  ok(m.obstacles.some(o => o.gate && o.tool === 'schaar'), 'no gate into the forest'); ok(m.obstacles.some(o => o.gate && o.tool === 'hamer'), 'no gate to the castle');
+  for (const o of m.obstacles) if (o.type === 'low') ok([[1, 0], [0, 1]].some(([dx, dz]) => !m.block[I(o.x + dx, o.z + dz)] && !m.block[I(o.x - dx, o.z - dz)]), 'cannot jump over ' + o.x + ',' + o.z);
+  return bad;
 }

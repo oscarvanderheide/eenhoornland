@@ -20,16 +20,25 @@ The players are two young children who cannot read. A bug that blocks them ends 
 | `js/art.js` | Ground painter, prop/item/animal sprites, eggs, foal, unicorn marks and wings. |
 | `js/world.js` | three.js scene, movement, input, camera. Hands a toolbox (`ctx`) to world-extras. |
 | `js/world-extras.js` | Sea, pier, fence, castle, extra animals, collectibles, hidden egg, meadow herd. |
+| `js/world-tools.js` | Logs and puddles (jumped over), brambles and boulders (cut / smashed with a tool), and the shears and hammer lying on the island. |
 | `js/hud.js` | Wish chips, coins, bed button, island map. |
 | `js/act-*.js` | One activity per building: `export const meta`, `export function open(root, api)` returning a cleanup fn. |
 
 New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep `world.js` edits to small hooks.
+
+## Gates, tools and the island per cycle
+- `block[]` in `map.js`: 0 free, 1 solid, `LOW` (jumped over automatically, in a straight line) and `BREAK` (needs the tool in `TOOL_FOR`).
+- The forest is closed by brambles (shears), the castle by boulders (hammer). The shears lie where you can walk without tools, the hammer in the forest. `Q.neededTool()` turns a missing tool into the first wish.
+- `Q.mapSeed()` is 0 in the first cycle and new for every later one; `buildMap({ seed })` reshuffles everything outside the village and skips seeds that fail `MAP.validate`. `main.js` destroys and rebuilds the world when the seed changes (on leaving the huisje).
+- Anything added to the world must go away in `destroy()`: pass `listen` to `addEventListener`, return an unsubscribe from `Q.on`.
 
 ## Verify (server: `python3 -m http.server 8765` in the project folder)
 ```bash
 node tests/map.test.mjs            # add -v for an ASCII map
 node tests/quest.test.mjs          # 12 full cycles without a browser
 node cdp.mjs tests/t-cycle.mjs     # one whole cycle in headless Chrome, screenshots in tmp-shots/c-*.png
+node cdp.mjs tests/t-tools.mjs     # jumping, gates, finding and using both tools (tmp-shots/t-*.png)
+node cdp.mjs tests/t-look.mjs      # screenshots of gates, tools, tool wish and map pin (tmp-shots/l-*.png)
 node cdp.mjs tests/t-areas.mjs     # screenshot every area (ONLY=bos,strand to limit)
 node cdp.mjs tests/t-bed.mjs       # bedroom per stage (STAGE=ei,baby,jong,groot)
 node cdp.mjs tests/t-perf.mjs      # draw calls per area

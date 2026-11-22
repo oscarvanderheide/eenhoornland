@@ -221,7 +221,7 @@ export function createExtras(ctx) {
     sfx.splash(); burst(new THREE.Vector3(MAP.FOUNT.cx, 0, MAP.FOUNT.cz), 12); ctx.onWish && ctx.onWish(); return true;
   }
 
-  Q.on(type => {
+  const off = Q.on(type => {
     if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); }
     if (type === 'day') syncItems();
     if (type === 'herd') syncHerd(true);
@@ -229,7 +229,7 @@ export function createExtras(ctx) {
   syncItems(); syncEgg(); syncHerd(false);
 
   return {
-    tapCompanion, fountain, eggSpot,
+    tapCompanion, fountain, eggSpot, dispose: off,
     info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], herd: herd.length }),
     items: () => items.map(it => ({ type: it.type, x: it.x, z: it.z })),
     /** active: the child can play (not paused, start screen gone) */

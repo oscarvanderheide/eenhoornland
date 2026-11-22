@@ -26,6 +26,12 @@ $('#book-ico').appendChild(PX.domSprite(PX.star(), 3));
 const setNightIcon = () => { const i = $('#night-ico'); i.innerHTML = ''; i.appendChild(PX.domSprite(state.night ? PX.moon() : PX.sparkle('#FFD43B'), 3)); };
 setNightIcon(); ui.updateBookCount();
 
+/** a new cycle brings a new island: the village stays, everything around it is laid out afresh (the girls wake up to it) */
+let makeWorld = null;
+function rebuildIfNewIsland() {
+  if (!world || !makeWorld || world.seed === Q.mapSeed()) return;
+  world.destroy(); world = makeWorld(); world.setInteractive(true); syncNight(true);
+}
 async function enter(id) {
   if (ui.activityOpen()) return;
   if (id === 'stal' && !Q.hasUnicorn()) {          // nobody lives there yet
@@ -37,7 +43,7 @@ async function enter(id) {
   sfx.door();
   try {
     const mod = await ACTS[id]();
-    ui.openActivity(mod, () => { if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
+    ui.openActivity(mod, () => { rebuildIfNewIsland(); if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
   } catch (e) {
     console.error(e); speak('Dit huisje is nog in aanbouw!');
     if (world) { world.exitBuilding(id); world.pause(false); }
@@ -61,7 +67,8 @@ if (params.get('act')) {
   enter(params.get('act'));
 } else {
   import('./world.js').then(m => {
-    world = m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!') });
+    makeWorld = () => m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!') });
+    world = makeWorld();
     syncNight(true);
     if (params.has('night')) world.setNight(true, true);
     if (params.has('go')) { $('#start').hidden = true; world.setInteractive(true); }

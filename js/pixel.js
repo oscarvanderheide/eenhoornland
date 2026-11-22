@@ -90,6 +90,7 @@ const ANNA_LEGS = {
   idle: ['....ss..ss....', '....ss..ss....', '....pp..pp....'],
   w1: ['....ss..ss....', '....pp..ss....', '........pp....'],
   w2: ['....ss..ss....', '....ss..pp....', '....pp........'],
+  jump: ['...ss....ss...', '..pp......pp..', '..............'],
 };
 const FENNA_TOP = [
   '...hhhhhh...',
@@ -110,6 +111,7 @@ const FENNA_LEGS = {
   idle: ['...ss..ss...', '...pp..pp...'],
   w1: ['...pp..ss...', '.......pp...'],
   w2: ['...ss..pp...', '...pp.......'],
+  jump: ['..pp....pp..', '............'],
 };
 function kidPal(k) { return { h: k.hair, y: k.clip, s: SKIN, k: EYE, c: CHEEK, m: MOUTH, d: k.dress, D: k.dress2, p: k.shoe }; }
 export function anna(frame = 'idle', blink = false) {

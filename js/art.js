@@ -114,7 +114,18 @@ const trough = () => cached('trough', () => sprite(['bwwwwwwwwwwwwwwwwb', 'bwWww
 const hay = () => cached('hay', () => { const r = PX.rng(77), n = []; for (let i = 0; i < 16 * 11; i++) n.push(r()); return gridSprite(16, 11, (x, y) => { if ((y === 0 && (x < 1 || x > 14))) return null; if (x === 4 || x === 11) return '#B8323A'; return n[y * 16 + x] < .2 ? '#FFF1A8' : n[y * 16 + x] < .45 ? '#C9A23F' : '#E9C46A'; }); });
 const bigMushroom = () => cached('bigmush', () => sprite(['...RRRRRR...', '.RRwRRRRwRR.', 'RRRRRwRRRRRR', 'RwRRRRRRRwRR', 'RRRRwRRRRRRR', '.RRRRRRRRRR.', '....ssss....', '....ssss....', '....sSss....', '...ssssss...'], { R: '#E8484A', w: '#FFFFFF', s: '#FFF1DC', S: '#E0CDB0' }));
 
+/* things to jump over, cut or smash, and the tools for it */
+const bramble = seed => cached('bramble' + (seed % 2), () => { const r = PX.rng(seed * 7 + 3), n = []; for (let i = 0; i < 18 * 14; i++) n.push(r()); return gridSprite(18, 14, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 8) / 6.5) ** 2; if (dd > 1) return null; const v = n[y * 18 + x]; if ((x * 3 + y * 5 + seed) % 11 === 0) return '#F3EDE3'; if ((x + y * 2) % 7 === 0 && v < .6) return '#6B4A3A'; if ((x * 5 + y * 3) % 17 === 0) return '#C2456E'; return v < .3 ? '#5C9A4E' : v < .7 ? '#3F7A45' : '#2F5E3C'; }); });
+const boulder = seed => cached('boulder' + (seed % 2), () => gridSprite(18, 15, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 8.5) / 7) ** 2; if (dd > 1 || y > 13) return null; if ((x === 6 + seed % 2 && y > 3 && y < 9) || (y === 8 && x > 6 && x < 10) || (x === 12 && y > 6 && y < 12)) return '#6B7088'; const v = (x - 4) * .55 + (y - 3); return v < 2 ? '#E2E5EE' : v < 6 ? '#BFC4D4' : v < 10 ? '#9FA5BC' : '#848AA2'; }));
+const plas = () => cached('plas', () => gridSprite(18, 12, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 6) / 6) ** 2; if (dd > 1) return null; if (dd > .78) return '#8FD6F5'; return (x + y * 2) % 9 === 0 || (x === 5 && y === 3) || (x === 6 && y === 3) ? '#E8FAFF' : (y < 5 ? '#4FA8DE' : '#3E9AD6'); }, { outline: '#2F7FC0' }));
+export const toolIcon = id => id === 'hamer'
+  ? cached('hamer', () => sprite(['..ssssssss..', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '..ssssssss..', '.....hh.....', '.....hh.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hh.....'], { s: '#9FA5BC', S: '#D8DCE8', h: '#B5823F', H: '#8A5A3B' }))
+  : cached('schaar', () => sprite(['s........s', 'ss......ss', '.ss....ss.', '..ss..ss..', '...ssss...', '....kk....', '...rrrr...', '.rr.rr.rr.', 'r..rrrr..r', 'r..r..r..r', '.rr....rr.'], { s: '#D8DCE8', k: '#6B7088', r: '#FF5E9C' }));
+/** a little picture for "press here to jump" */
+export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));
+
 const PROPS = {
+  bramble, boulder, plas,
   tree: s => PX.treeRound(s), pine: s => PX.pine(s), bush: s => PX.bush(s), palm, rock, apple: appleTree, oak, stump, log, fern, rose, hedge, sign, scarecrow, umbrella, sandcastle, boat, statue, flag, trough, hay,
 };
 const SCALE = { tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };

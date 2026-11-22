@@ -29,7 +29,11 @@ const CSS = `
 .kaart-pin canvas{image-rendering:pixelated}
 .kaart-me{position:absolute;transform:translate(-50%,-85%);pointer-events:none;animation:bob 1s ease-in-out infinite;z-index:2}
 .kaart-egg{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;font-family:var(--f-pixel);font-weight:700;font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink)}
-@media (max-width:640px){#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+#b-jump{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0}
+#b-jump canvas{width:44px}
+#tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
+.kaart-tool{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;z-index:1;padding:3px;background:var(--paper);border:3px solid var(--ink);border-radius:50%;line-height:0}
+@media (max-width:640px){#b-jump{width:60px;height:60px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -42,21 +46,28 @@ export function createHud(getWorld) {
   const mapBtn = document.createElement('button'); mapBtn.className = 'hbtn'; mapBtn.id = 'b-map'; mapBtn.setAttribute('aria-label', 'Kaart'); mapBtn.appendChild(PX.domSprite(ART.mapIcon(), 3));
   const tr = document.querySelector('.hud.tr'); tr.insertBefore(mapBtn, tr.firstChild); mapBtn.onclick = openMap;
 
+  // jumping (bottom right) and the tools the girls own (bottom left)
+  const jumpBtn = document.createElement('button'); jumpBtn.className = 'hbtn'; jumpBtn.id = 'b-jump'; jumpBtn.setAttribute('aria-label', 'Springen'); jumpBtn.appendChild(PX.domSprite(ART.jumpIcon(), 4));
+  jumpBtn.onclick = () => { const w = getWorld(); w && w.jump(); }; game.appendChild(jumpBtn);
+  const toolRow = document.createElement('div'); toolRow.id = 'tools'; game.appendChild(toolRow);
+  const TOOL_SAY = { schaar: 'Dit is de schaar. Tik op een doornstruik om hem weg te knippen!', hamer: 'Dit is de hamer. Tik op een grote steen om hem kapot te slaan!' };
+
   let lastSig = {};
-  function chip(cls, icon, text, onTap, key) {
+  function chip(cls, icon, text, onTap, key, parent = panel) {
     const b = document.createElement('button'); b.className = 'qchip ' + cls; if (icon) b.appendChild(fit(icon, 30));
     if (text) { const s = document.createElement('span'); s.textContent = text; b.appendChild(s); }
     b.onclick = () => { sfx.click(); onTap(); };
     if (key) { const sig = text + cls; if (lastSig[key] !== undefined && lastSig[key] !== sig) b.classList.add('bump'); lastSig[key] = sig; }
-    panel.appendChild(b); return b;
+    parent.appendChild(b); return b;
   }
   function render() {
-    panel.innerHTML = '';
+    panel.innerHTML = ''; toolRow.innerHTML = '';
+    for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id)) chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);
     if (Q.bedtime()) chip('bed', ART.bedIcon(), 'Slapen', goToBed, 'bed'); else delete lastSig.bed;
     Q.wishes().forEach((w, i) => {
       const fin = Q.done(w), locked = w.t === 'wei' && !Q.weiOpen();
-      const icon = w.t === 'item' ? ART.itemIcon(w.id) : w.t === 'act' ? (ACT_ICON[w.id] || PX.star)() : w.t === 'egg' ? ART.egg(Q.kind()) : PX.unicorn(Q.companionLook());
-      const text = fin ? '✓' : w.t === 'egg' ? '?' : w.need > 1 ? w.have + '/' + w.need : '';
+      const icon = w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'item' ? ART.itemIcon(w.id) : w.t === 'act' ? (ACT_ICON[w.id] || PX.star)() : w.t === 'egg' ? ART.egg(Q.kind()) : PX.unicorn(Q.companionLook());
+      const text = fin ? '✓' : w.t === 'egg' || w.t === 'tool' ? '?' : w.need > 1 ? w.have + '/' + w.need : '';
       chip((fin ? 'done' : '') + (locked ? ' locked' : ''), icon, text, () => speak(Q.wishText(w)), Q.quest.stage + i);
     });
     chip('coins', ART.coin(), String(Q.quest.coins), () => speak(Q.quest.coins >= Q.FOUNTAIN_PRICE ? 'Je hebt ' + Q.quest.coins + ' muntjes! Tik op de fontein in het dorp en doe een wens.' : 'Je hebt ' + (Q.quest.coins === 1 ? 'één muntje' : Q.quest.coins + ' muntjes') + '. Met ' + Q.FOUNTAIN_PRICE + ' muntjes mag je een wens doen bij de fontein.'), 'coins');
@@ -86,9 +97,12 @@ export function createHud(getWorld) {
     pin('Bos', PX.pine(1), 46, 6, walk(P.bos), 'Naar het bos!'); pin('Wei', PX.heart(), 24, 28.5, walk(P.wei), 'Naar de eenhoornwei!');
     pin('Tuin', PX.carrot(), 6, 28, walk(P.tuin), 'Naar de moestuin!'); pin('Strand', ART.shell(0), 12, 39.5, walk(P.strand), 'Naar het strand!'); pin('Kasteel', PX.crown(), 54, 31, walk(P.kasteel), 'Naar het kasteel!');
     if (Q.quest.stage === 'zoek') { const c = { bloem: [8, 21], bos: [38, 12], zee: [26, 39.5], kasteel: [57, 37] }[Q.quest.zone] || [8, 21]; const e = document.createElement('div'); e.className = 'kaart-egg'; e.appendChild(fit(ART.egg(Q.kind()), 28)); e.insertAdjacentText('beforeend', '?'); e.style.display = 'flex'; e.style.alignItems = 'center'; at(e, c[0], c[1]); }
+    // a tool that still has to be found is shown exactly where it lies
+    const tool = Q.neededTool(), ts = tool && world.tools.spot(tool);
+    if (ts) { const e = document.createElement('div'); e.className = 'kaart-tool'; e.appendChild(fit(ART.toolIcon(tool), 26)); at(e, ts[0] - .5, ts[1] - .5); }
     const me = document.createElement('div'); me.className = 'kaart-me'; me.appendChild(fit(PX.anna(), 34)); const [mx, mz] = world.pos(); at(me, mx - .5, mz - .5);
     close = ui.modal(el);
-    speak(Q.quest.stage === 'zoek' ? 'Dit is de kaart. Waar zou het ei liggen? Tik op een plek om erheen te lopen!' : 'Dit is de kaart van Eenhoornland. Tik op een plek om erheen te lopen!');
+    speak(ts ? 'Dit is de kaart. Kijk, daar ligt de ' + Q.TOOLS[tool].name + '! Tik op een plek om erheen te lopen.' : Q.quest.stage === 'zoek' ? 'Dit is de kaart. Waar zou het ei liggen? Tik op een plek om erheen te lopen!' : 'Dit is de kaart van Eenhoornland. Tik op een plek om erheen te lopen!');
   }
 
   Q.on(type => { if (type === 'change') render(); });

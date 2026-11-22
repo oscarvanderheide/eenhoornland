@@ -34,6 +34,8 @@ export const sfx = {
   pop() { tone(420, 0, .12, 'sine', .22, 900); },
   click() { tone(660, 0, .06, 'square', .05); },
   step() { tone(140, 0, .05, 'triangle', .04, 90); },
+  snip() { [0, .14, .28].forEach(t => { noise(t, .05, .09, 5000); tone(1400, t, .04, 'square', .03, 900); }); },
+  bonk() { [0, .22].forEach(t => { tone(120, t, .18, 'triangle', .22, 60); noise(t, .08, .12, 500); }); noise(.44, .3, .1, 300); },
   boing() { tone(180, 0, .35, 'triangle', .2, 560); },
   munch() { [0, .13, .26].forEach(t => { tone(160, t, .07, 'square', .05, 110); noise(t, .06, .08, 900); }); },
   purr() { tone(90, 0, .5, 'sawtooth', .035, 80); tone(660, .05, .4, 'sine', .1, 880); },

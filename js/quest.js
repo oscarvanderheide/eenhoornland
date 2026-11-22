@@ -33,14 +33,35 @@ function fresh() {
   let returning = false;
   try { returning = !!JSON.parse(localStorage.getItem('eenhoornland-v1') || 'null'); } catch (e) { }
   // a unicorn from before this update moves into the meadow, so nobody loses their friend
-  const q = { v: 1, cycle: 0, stage: 'zoek', kind: 'bloem', zone: 'bloem', spot: 0, day: 1, wishes: [], picked: {}, coins: 0, totals: {}, herd: returning ? [Object.assign({ kind: 'bloem' }, state.uni)] : [], seed: Math.floor(Math.random() * 1e9) };
+  const q = { v: 1, cycle: 0, stage: 'zoek', kind: 'bloem', zone: 'bloem', spot: 0, day: 1, wishes: [], picked: {}, coins: 0, totals: {}, herd: returning ? [Object.assign({ kind: 'bloem' }, state.uni)] : [], seed: Math.floor(Math.random() * 1e9), tools: {}, broken: [] };
   q.wishes = wishesFor(q); return q;
 }
 let q = state.extra.quest && state.extra.quest.v === 1 && STAGES.includes(state.extra.quest.stage) ? state.extra.quest : null;
 if (!q) { q = state.extra.quest = fresh(); save(); }
 for (const k of ['picked', 'totals']) if (!q[k] || typeof q[k] !== 'object') q[k] = {};
 if (!Array.isArray(q.herd)) q.herd = []; if (!Array.isArray(q.wishes)) q.wishes = wishesFor(q);
+if (!q.tools || typeof q.tools !== 'object') q.tools = {}; if (!Array.isArray(q.broken)) q.broken = [];
 export const quest = q;
+
+/* ---------- tools & the island of this cycle ---------- */
+/** shears cut the brambles on the way into the forest, the hammer smashes the boulders before the castle. Tools are kept forever. */
+export const TOOLS = {
+  schaar: { name: 'schaar', found: 'Jullie hebben de schaar gevonden! Daarmee knip je doornstruiken weg. Tik maar op een doornstruik!', need: 'Au, doornstruiken! Hier heb je de schaar voor nodig.', seek: 'De weg naar het bos zit dicht met doornstruiken. Zoek de schaar! Kijk maar op de kaart.' },
+  hamer: { name: 'hamer', found: 'Jullie hebben de hamer gevonden! Daarmee sla je grote stenen kapot. Tik maar op een steen!', need: 'Wat een grote steen! Hier heb je de hamer voor nodig.', seek: 'Er liggen grote stenen op de weg naar het kasteel. Zoek de hamer! Die ligt in het bos. Kijk maar op de kaart.' },
+};
+const BEHIND = { appel: 'bos', paddenstoel: 'bos', diamant: 'kasteel' };   // where a wish sends you
+export const hasTool = id => !!q.tools[id];
+/** the tool the children still have to find before today's wishes can come true (or null) */
+export function neededTool() {
+  const zones = q.wishes.filter(w => !done(w)).map(w => w.t === 'egg' ? q.zone : w.t === 'item' ? BEHIND[w.id] : null);
+  if ((zones.includes('bos') || zones.includes('kasteel')) && !q.tools.schaar) return 'schaar';   // the hammer lies in the forest
+  return zones.includes('kasteel') && !q.tools.hamer ? 'hamer' : null;
+}
+export function giveTool(id) { if (!TOOLS[id] || q.tools[id]) return false; q.tools[id] = true; commit(['tool', id]); return true; }
+/** obstacle `i` of this cycle's island was cut or smashed; loose ones hide a coin */
+export function smash(list, coin) { for (const i of list) if (!q.broken.includes(i)) q.broken.push(i); const ev = [['smash']]; if (coin) { q.coins++; ev.push(['coins', q.coins]); } commit(...ev); }
+/** 0 for the first island; a new number for every later cycle, so the outer areas are laid out differently each time */
+export const mapSeed = () => q.cycle ? ((q.seed | 0) + q.cycle * 104729) | 0 || 1 : 0;
 
 const listeners = new Set();
 /** fn(type, data): 'collect' | 'wish' | 'egg' | 'stage' | 'day' | 'bedtime' | 'coins' | 'herd' — always followed by 'change' */
@@ -64,7 +85,8 @@ function wishesFor(q) {
   }
 }
 export const done = w => w.have >= w.need;
-export const wishes = () => q.wishes;
+/** today's wishes; a tool that has to be found first is shown as a wish of its own */
+export const wishes = () => { const t = neededTool(); return t ? [{ t: 'tool', id: t, need: 1, have: 0 }, ...q.wishes] : q.wishes; };
 /** the wish 'bring her to the meadow' only opens once the others are done */
 export const weiOpen = () => q.stage === 'groot' && q.wishes.every(w => w.t === 'wei' || done(w));
 export const allDone = () => q.wishes.every(done);
@@ -77,6 +99,7 @@ export const uniName = () => state.uni.name;
 
 export function wishText(w) {
   const n = uniName();
+  if (w.t === 'tool') return TOOLS[w.id].seek;
   if (w.t === 'egg') return 'Er ligt ergens een ei verstopt! ' + (KINDS[q.zone] || KINDS.bloem).hint;
   if (w.t === 'wei') return weiOpen() ? n + ' is nu groot! Breng ' + n + ' naar de eenhoornwei.' : 'Als ' + n + ' alles heeft, mag ze naar de eenhoornwei.';
   if (w.t === 'act') return ({ stal: 'Verzorg ' + n + ' in de stal!', bakkerij: n + ' heeft zin in taart. Ga naar de bakkerij!', kermis: n + ' wil naar de kermis!', atelier: 'Maak iets moois voor ' + n + ' in het atelier!' })[w.id] || '';
@@ -88,7 +111,7 @@ export function wishText(w) {
 export function goalText() {
   if (q.stage === 'feest') return 'Wat een feest! Ga maar lekker slapen in je huisje.';
   if (bedtime()) return (q.stage === 'ei' ? 'Het nestje is klaar! ' : 'Alles is gelukt! ') + 'Het wordt avond. Ga slapen in je huisje!';
-  const w = q.wishes.find(w => !done(w) && (w.t !== 'wei' || weiOpen())) || q.wishes.find(w => !done(w));
+  const all = wishes(), w = all.find(w => !done(w) && (w.t !== 'wei' || weiOpen())) || all.find(w => !done(w));
   return w ? wishText(w) : '';
 }
 
@@ -145,7 +168,7 @@ export function sleep() {
   else if (ready && from === 'baby') { q.stage = 'jong'; res = { type: 'grow', name: state.uni.name, stage: 'jong' }; }
   else if (ready && from === 'jong') { q.stage = 'groot'; res = { type: 'grow', name: state.uni.name, stage: 'groot' }; }
   else if (from === 'feest') {
-    q.cycle++; q.stage = 'zoek';
+    q.cycle++; q.stage = 'zoek'; q.broken = [];
     const r = rnd(q, 5); let k = q.cycle < ZONES.length ? ZONES[q.cycle] : (r() < .22 ? 'ster' : ZONES[Math.floor(r() * ZONES.length)]);
     if (q.cycle >= ZONES.length && k === q.kind) k = ZONES[(ZONES.indexOf(k) + 1) % ZONES.length];
     q.kind = k; q.zone = KINDS[k].zone || ZONES[Math.floor(r() * ZONES.length)]; q.spot = Math.floor(r() * 1000);

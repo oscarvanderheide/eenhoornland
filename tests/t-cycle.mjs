@@ -12,10 +12,13 @@ export default async function (t) {
   await t.ev(`document.querySelector('#b-map').click()`); await settle(600); ok(await t.ev(`!!document.querySelector('.kaart-pin')`), 'map opens'); await shot('2-map');
   await t.ev(`document.querySelector('#modal [data-close]').click()`);
   const collect = async (type, n) => { for (let k = 0; k < n; k++) { const it = JSON.parse(await t.ev(`JSON.stringify(__w.extras.items().find(i=>i.type==='${type}')||null)`)); if (!it) return ok(false, 'no ' + type + ' left'); await t.ev(`__w.placeAt(${it.x},${it.z})`); await settle(1200); } };
+  const toolsAsked = [], sig = () => t.ev(`__w.M.trees.filter(t=>t.x>30&&t.z<22).map(t=>t.kind+t.x+','+t.z).join(';')`), dorp = () => t.ev(`__w.M.trees.filter(t=>t.x>1&&t.x<27&&t.z>1&&t.z<21).map(t=>t.kind+t.x+','+t.z).join(';')`);
+  const forest0 = await sig(), dorp0 = await dorp();
   const grant = async () => {
     for (let g = 0; g < 8; g++) {
       s = await q(); const w = s.w.find(w => w.have < w.need && w.t !== 'wei'); if (!w) break;
-      if (w.t === 'egg') { const e = JSON.parse(await t.ev('JSON.stringify(__w.extras.info().egg)')); await t.ev(`__w.placeAt(${e[0]},${e[1] + .6})`); await settle(); }
+      if (w.t === 'tool') { const p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('${w.id}'))`)); ok(!!p, w.id + ' lies somewhere'); toolsAsked.push(s.stage + ':' + w.id); await t.ev(`__w.placeAt(${p[0]},${p[1]})`); await settle(); ok(await t.ev(`__w.Q.hasTool('${w.id}')`), 'picked up the ' + w.id); }
+      else if (w.t === 'egg') { const e = JSON.parse(await t.ev('JSON.stringify(__w.extras.info().egg)')); await t.ev(`__w.placeAt(${e[0]},${e[1] + .6})`); await settle(); }
       else if (w.t === 'item') await collect(w.id, w.need - w.have);
       else if (w.t === 'act') {
         await t.ev(`__w.placeAt(14.5,9.5); __w.walkTo(...__w.BUILDINGS.find(b=>b.id==='${w.id}').door, __w.BUILDINGS.find(b=>b.id==='${w.id}'))`);
@@ -42,5 +45,18 @@ export default async function (t) {
   await t.ev(`__w.placeAt(17.5,29)`); await settle(2500); s = await q(); ok(s.stage === 'feest' && s.herd === 1 && !s.uni && s.bed, 'delivered: party, herd 1'); await shot('11-party');
   await sleep('12'); s = await q(); ok(s.stage === 'zoek' && s.day === 5, 'new egg, day 5 (got day ' + s.day + ')'); await shot('13-new-cycle');
   ok(!(await t.ev('__w.info().paused')), 'world running at the end');
+  // the new cycle woke up to a new island: same village, different forest, tools kept, gates grown back, nothing doubled
+  ok(toolsAsked.join(' ') === 'baby:schaar groot:hamer', 'tools were asked for in order: ' + toolsAsked.join(' '));
+  ok(await t.ev('__w.seed') !== 0 && await t.ev('__w.seed === __w.Q.mapSeed()'), 'world rebuilt for the new island');
+  ok(await sig() !== forest0, 'the forest is laid out differently'); ok(await dorp() === dorp0, 'the village is the same');
+  ok(await t.ev(`__w.Q.hasTool('schaar') && __w.Q.hasTool('hamer') && __w.tools.info().lying.length === 0`), 'tools are kept');
+  ok(await t.ev(`__w.M.obstacles.filter(o=>o.gate).every(o=>__w.M.block[__w.M.I(o.x,o.z)]===3)`), 'gates have grown back');
+  ok(await t.ev(`document.querySelectorAll('#labels .blabel').length`) === 5 && await t.ev(`document.querySelectorAll('#b-jump').length`) === 1, 'no doubled labels or buttons');
+  const egg = JSON.parse(await t.ev('JSON.stringify(__w.extras.info().egg)')); ok(!!egg, 'a new egg is hidden');
+  await t.ev('__w.placeAt(25.5,8.5)'); await settle(800); await t.ev('__w.walkTo(33,8)'); for (let i = 0; i < 60; i++) { await t.sleep(500); if (!(await t.ev('__w.info().path'))) break; } await settle(800);
+  await t.ev('__w.walkTo(33,8)'); for (let i = 0; i < 60; i++) { await t.sleep(500); if (!(await t.ev('__w.info().path'))) break; }
+  ok(await t.ev('__w.anna.pos.x') > 32, 'with the shears the regrown brambles are cut on the way'); await shot('14-new-island');
+  await t.ev(`document.querySelector('#b-map').click()`); await settle(600); await shot('15-new-map'); await t.ev(`document.querySelector('#modal [data-close]').click()`);
+  ok(!t.logs.some(l => /EXC|Error/.test(l)), 'no page errors');
   console.log(fail ? 'FAILED ' + fail : 'CYCLE OK');
 }
