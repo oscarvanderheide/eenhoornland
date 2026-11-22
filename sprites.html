@@ -1,0 +1,9 @@
+<!doctype html><html><body style="background:#9ED8F5;margin:0;padding:10px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;font:12px sans-serif">
+<script type="module">
+import * as P from './js/pixel.js';
+const u={body:'#FFFFFF',mane:'rainbow',horn:'#F7C548'};
+const list=[['anna',P.anna()],['anna w1',P.anna('w1')],['fenna',P.fenna()],['fenna w2',P.fenna('w2')],['uni',P.unicorn(u)],['uni w1',P.unicorn(u,'w1')],['uni pink',P.unicorn({body:'#FFC8DD',mane:'#9B72E8',horn:'rainbow'})],['uni sleep',P.unicorn(u,'idle',true)],
+['bunny',P.bunny()],['cat',P.cat()],['puppy',P.puppy()],['hedgehog',P.hedgehog()],['duck',P.duck()],['tree',P.treeRound(1)],['tree2',P.treeRound(4)],['pine',P.pine(1)],['bush',P.bush(1)],['lantern',P.lantern()],
+['star',P.star()],['heart',P.heart()],['apple',P.apple()],['carrot',P.carrot()],['flower',P.flower()],['mush',P.mushroom()],['crown',P.crown()],['balloon',P.balloon()],['ice',P.icecream()],['cake',P.cake()],['bfly',P.butterfly()],['gem',P.gem()],['moon',P.moon()],['rainbow',P.rainbow()],['tuft',P.tuft(0)],['sf',P.smallFlower('#FF7EB6')]];
+for(const [n,c] of list){const d=document.createElement('div');d.append(P.domSprite(c,6),n);document.body.append(d)}
+</script></body></html>

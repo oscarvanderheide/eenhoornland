@@ -1,0 +1,144 @@
+<title>Eenhoornland</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: full-screen HD-2D world canvas; HUD pinned to corners; activities open as a framed full-screen panel. One committed look (cozy pixel storybook). */
+:root{
+  --ink:#2B1E3A;
+  --paper:#FFF6E3;
+  --paper2:#F2D7A6;
+  --pink:#FF5E9C;
+  --pink2:#D63F7C;
+  --sun:#FFD166;
+  --sky:#9ED8F5;
+  --mint:#7ED9B4;
+  --lilac:#B9A3F0;
+  --soft:#6B5A7D;
+  --f-pixel:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:#1C2150;color:var(--ink);font-family:var(--f-pixel);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior:none}
+[hidden]{display:none!important}
+#game{position:fixed;inset:0;overflow:hidden}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+
+/* pixel buttons */
+.pbtn,.btn,.tool,.hbtn{
+  font-family:var(--f-pixel);font-weight:700;color:var(--ink);cursor:pointer;
+  background:var(--paper);border:3px solid var(--ink);border-radius:6px;
+  box-shadow:inset -3px -3px 0 var(--paper2),0 4px 0 var(--ink);
+}
+.pbtn:active,.btn:active,.tool:active,.hbtn:active{transform:translateY(3px);box-shadow:inset -3px -3px 0 var(--paper2),0 1px 0 var(--ink)}
+:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
+.btn{font-size:1.4rem;padding:10px 22px;background:var(--pink);color:#fff;box-shadow:inset -3px -3px 0 var(--pink2),0 4px 0 var(--ink)}
+
+/* HUD */
+.hud{position:absolute;display:flex;gap:8px;z-index:5}
+.hud.tr{top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px))}
+.hud.tl{top:calc(10px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px))}
+.hbtn{height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-size:1.05rem}
+.hbtn canvas{width:30px;height:auto}
+.hbtn[aria-pressed="false"]{opacity:.55}
+.logo{font-weight:700;font-size:1.35rem;color:#fff;text-shadow:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink),0 4px 0 var(--ink);align-self:center;letter-spacing:.02em}
+
+/* world labels + bubbles */
+#labels{position:absolute;inset:0;pointer-events:none;z-index:3}
+.blabel{position:absolute;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:6px;
+  background:var(--paper);border:3px solid var(--ink);border-radius:6px;padding:3px 9px 3px 5px;font-weight:700;font-size:1rem;white-space:nowrap;
+  box-shadow:0 3px 0 var(--ink);animation:bob 2.2s ease-in-out infinite}
+.blabel canvas{width:24px;height:auto}
+.blabel.edge{opacity:.85;transform:translate(-50%,-100%) scale(.85)}
+.blabel::after{content:"";position:absolute;left:50%;bottom:-9px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--ink)}
+@keyframes bob{50%{margin-top:-5px}}
+.bubble{position:absolute;transform:translate(-50%,-100%);background:#fff;border:3px solid var(--ink);border-radius:8px;padding:4px 10px;font-weight:700;font-size:1.05rem;white-space:nowrap;animation:pop .3s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:translate(-50%,-100%) scale(.4);opacity:0}}
+
+/* start screen */
+#start{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at center,rgba(28,33,80,.15),rgba(28,33,80,.65));text-align:center;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+#start h1{margin:0;font-size:clamp(2.6rem,9vw,5rem);color:#fff;line-height:1;letter-spacing:.02em;
+  text-shadow:4px 4px 0 var(--ink),-4px 4px 0 var(--ink),4px -4px 0 var(--ink),-4px -4px 0 var(--ink),0 8px 0 var(--ink),0 8px 0 var(--pink2)}
+#start p{margin:0;color:#fff;font-size:1.15rem;text-shadow:2px 2px 0 var(--ink)}
+#start .btn{font-size:2rem;padding:14px 40px}
+
+/* activity overlay */
+#act{position:absolute;inset:0;z-index:10;background:rgba(28,22,50,.55);display:flex;
+  padding:calc(8px + env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.act-frame{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--paper);border:4px solid var(--ink);border-radius:10px;
+  box-shadow:inset 0 0 0 4px var(--paper2),0 6px 0 var(--ink);overflow:hidden;animation:frameIn .35s cubic-bezier(.3,1.4,.5,1)}
+@keyframes frameIn{from{transform:scale(.92);opacity:0}}
+.act-top{display:flex;align-items:center;gap:10px;padding:10px 12px 6px}
+.act-top h2{margin:0;font-size:1.5rem;flex:1;color:var(--pink2)}
+#act-close{font-size:1.1rem;padding:8px 14px}
+.act-root{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:4px 12px 12px;overflow:auto}
+.pstage{flex:1;min-height:150px;display:grid;place-items:center}
+.pstage canvas{image-rendering:pixelated;image-rendering:crisp-edges;border:4px solid var(--ink);border-radius:6px;background:#000;touch-action:none;display:block}
+.tools{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:68px;min-height:64px;padding:6px 8px;font-size:.95rem}
+.tools.small .tool{min-width:48px;min-height:48px;padding:4px 6px;font-size:.8rem}
+.tool canvas{image-rendering:pixelated}
+.tool .sw{width:28px;height:28px;border:3px solid var(--ink);border-radius:50%}
+.tool[aria-pressed="true"]{background:var(--sun);box-shadow:inset -3px -3px 0 #E0A93A,0 4px 0 var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.hint{margin:0;text-align:center;color:var(--soft);font-size:1rem}
+
+/* modal */
+#modal{position:absolute;inset:0;z-index:30;background:rgba(28,22,50,.6);display:grid;place-items:center;padding:16px}
+#modal .card{background:var(--paper);border:4px solid var(--ink);border-radius:10px;box-shadow:inset 0 0 0 4px var(--paper2),0 6px 0 var(--ink);
+  max-width:min(560px,100%);max-height:100%;overflow:auto;padding:18px;animation:frameIn .35s cubic-bezier(.3,1.5,.5,1)}
+.reward{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;position:relative;min-width:240px}
+.reward h3{margin:0;font-size:1.8rem;color:var(--pink2)}
+.reward .big{image-rendering:pixelated;animation:wob 1.2s ease-in-out infinite}
+.reward .nm{margin:0;font-size:1.5rem;font-weight:700}
+@keyframes wob{50%{transform:rotate(-6deg) scale(1.06)}}
+.book{display:flex;flex-direction:column;gap:12px}
+.book-head{display:flex;align-items:center;gap:10px}
+.book-head h3{margin:0;font-size:1.6rem;color:var(--pink2);flex:1}
+.book-head span{color:var(--soft);font-size:1rem}
+.x{font-family:var(--f-pixel);font-size:1.2rem;font-weight:700;width:42px;height:42px;border:3px solid var(--ink);border-radius:6px;background:#fff;cursor:pointer}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.slot{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding:8px 4px;min-height:96px;border:3px dashed #CDB48A;border-radius:8px;background:#FFFBF0;cursor:pointer;font-family:var(--f-pixel);font-size:.85rem;color:var(--soft)}
+.slot.has{border-style:solid;border-color:var(--ink);background:#fff;color:var(--ink);font-weight:700}
+.slot canvas{image-rendering:pixelated}
+.slot .ghost{filter:brightness(0) opacity(.18)}
+.slot.wig canvas{animation:wob .6s ease-in-out}
+@media (max-width:520px){
+  .logo{display:none}
+  .hbtn{height:42px;min-width:42px;padding:0 6px;font-size:.95rem}
+  .hud.tr{gap:6px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+
+<div id="game">
+  <canvas id="world" aria-label="Eenhoornland: tik om te lopen"></canvas>
+  <div id="labels"></div>
+  <div class="hud tl"><div class="logo">Eenhoornland</div></div>
+  <div class="hud tr">
+    <button class="hbtn" id="b-book" aria-label="Stickerboek"><span id="book-ico"></span><span id="book-count">0/24</span></button>
+    <button class="hbtn" id="b-night" aria-label="Dag of nacht"><span id="night-ico"></span></button>
+    <button class="hbtn" id="b-music" aria-label="Muziek aan of uit" aria-pressed="true">♪</button>
+    <button class="hbtn" id="b-voice" aria-label="Voorlezen aan of uit" aria-pressed="true">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>
+    </button>
+  </div>
+  <div id="act" hidden>
+    <div class="act-frame">
+      <div class="act-top"><h2 id="act-title"></h2><button class="pbtn" id="act-close">✕ Terug</button></div>
+      <div id="act-root" class="act-root"></div>
+    </div>
+  </div>
+  <div id="modal" hidden></div>
+  <div id="start">
+    <h1>Eenhoornland</h1>
+    <p>Voor Anna &amp; Fenna</p>
+    <button class="btn" id="b-start">Spelen!</button>
+    <p style="font-size:.95rem;opacity:.9">Zet het geluid aan · tik ergens om te lopen</p>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>

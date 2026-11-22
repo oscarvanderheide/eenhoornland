@@ -1,0 +1,5 @@
+# generated / test output
+dev.html
+*.png
+tmp-*
+.DS_Store
