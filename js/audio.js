@@ -46,6 +46,7 @@ export const sfx = {
   bubble() { tone(500 + Math.random() * 500, 0, .12, 'sine', .08, 1200); },
   door() { tone(330, 0, .15, 'triangle', .1); tone(494, .1, .25, 'triangle', .1); },
   wrong() { tone(300, 0, .2, 'triangle', .1, 200); },
+  bell() { [1568, 2093, 1568, 2093].forEach((f, i) => tone(f, i * .09, .22, 'triangle', .1)); },
   lullaby() { [659, 587, 523, 587, 659, 659, 659].forEach((f, i) => tone(f, i * .42, .7, 'sine', .09)); },
 };
 

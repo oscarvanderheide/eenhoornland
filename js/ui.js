@@ -98,7 +98,7 @@ export function openActivity(mod, onClose) {
   const root = $('#act-root'); root.innerHTML = ''; root.className = 'act-root act-' + mod.meta.id;
   // an activity's reward also grants the unicorn's wish for that activity; uniArt draws the companion as it is today (foal or grown)
   const api = { speak, stopSpeech, sfx, state, save, reward: msg => { Q.activityDone(mod.meta.id); return reward(msg); }, close: closeActivity, pixelStage, toolbar, modal, PX,
-    uniArt: (sleep = false) => ART.uniSprite(Q.companionLook(), 'idle', sleep, { baby: Q.quest.stage === 'baby' }) };
+    uniArt: (sleep = false) => ART.uniSprite(Q.companionLook(), 'idle', sleep, { baby: true }) };
   let cleanup = null;
   try { cleanup = mod.open(root, api); } catch (e) { console.error(e); }
   current = { cleanup, onClose };

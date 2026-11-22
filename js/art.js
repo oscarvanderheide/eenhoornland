@@ -1,7 +1,7 @@
 // Art for the bigger island: ground painter, props, collectibles, eggs, baby unicorn and unicorn looks.
 // Builds on pixel.js (same conventions: everything returns a <canvas>, 1px outline added automatically).
 import * as PX from './pixel.js';
-import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, POND, shoreZ } from './map.js';
+import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, POND } from './map.js';
 
 const { sprite, gridSprite, mix, rgb } = PX;
 const EYE = '#2B1E3A';
@@ -27,7 +27,8 @@ export function paintGround(M) {
       else if (t === PA) col = r() < .06 ? (r() < .5 ? '#C59B66' : '#F2DDB4') : one(pathC);
       else if (t === PL) { const bx = (px + (Math.floor((tz * U + py) / 4) % 2) * 2) % 4, by = py % 4; col = (bx === 0 || by === 0) ? '#B9AD9A' : ((tx * 7 + tz * 3 + Math.floor(px / 4) + Math.floor(py / 4)) % 3 === 0 ? '#DCD2C2' : '#E6DDCF'); }
       else if (t === WA) { const wx = tx + (px + .5) / U, wz = tz + (py + .5) / U; const dd = Math.sqrt(((wx - POND.cx) / (POND.rx - .15)) ** 2 + ((wz - POND.cz) / (POND.rz - .15)) ** 2); col = dd <= 1.02 ? '#3E9AD6' : dd <= 1.16 ? (r() < .2 ? '#D9BF8C' : '#E9D5A6') : dd <= 1.22 ? '#5FAE5A' : one(grassC); }
-      else if (t === SA || t === SE) { const wx = tx + (px + .5) / U, wz = tz + (py + .5) / U, s = shoreZ(wx); col = wz > s - .25 ? (r() < .15 ? '#C9AE78' : '#D6BC86') : wz > s - .7 ? '#E3CB94' : (r() < .04 ? (r() < .5 ? '#DCC38C' : '#FFF6D8') : one(sandC)); }
+      else if (t === SE) col = r() < .15 ? '#C9AE78' : '#D6BC86';                                   // wet sand: only the strip the sea does not cover is ever seen
+      else if (t === SA) col = r() < .04 ? (r() < .5 ? '#DCC38C' : '#FFF6D8') : one(sandC);
       else if (t === CO) { const row = Math.floor((tz * U + py) / 8), bx = (tx * U + px + (row % 2) * 4) % 8, by = py % 8; col = (bx === 0 || by === 0) ? '#8F8AA3' : ['#CFCAE0', '#BDB7D2', '#DAD6E8'][(Math.floor((tx * U + px + (row % 2) * 4) / 8) * 5 + row * 3) % 3]; if (bx === 1 && by === 1) col = '#EDEAF6'; }
       else if (t === SO) { const by = py % 8; col = by < 2 ? '#6E4A32' : by === 2 ? '#A07250' : (r() < .1 ? '#9A6B48' : '#8B5E3C'); }
       else if (t === BW) { const by = py % 4; col = by === 0 ? '#8A5A3B' : ['#CC9A68', '#C18F5C', '#D6A674'][(tx * 3 + Math.floor(py / 4) + Math.floor(px / 8)) % 3]; if (by === 2 && (px === 1 || px === 14)) col = '#7A4E33'; }
@@ -124,11 +125,31 @@ export const toolIcon = id => id === 'hamer'
 /** a little picture for "press here to jump" */
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));
 
+/* the rainbow tree on the island, the hole in the bridge to the castle, and the rainbow that mends it */
+const rainbowtree = () => cached('rbtree', () => {
+  const blobs = [[15, 11, 10], [8, 15, 7], [22, 15, 7], [15, 17, 9]], blossom = [[9, 12], [19, 8], [14, 19], [23, 16], [5, 16], [13, 5]];
+  return gridSprite(30, 36, (x, y) => {
+    if (x >= 13 && x <= 16 && y >= 20) return x === 13 ? '#B8825A' : x === 16 ? '#6E4630' : '#8A5A3B';
+    if (y >= 33 && Math.abs(x - 14.5) <= 3.5) return '#7A4E33';
+    if (!blobs.some(([cx, cy, rr]) => (x + .5 - cx) ** 2 + (y + .5 - cy) ** 2 <= rr * rr)) return null;
+    if (blossom.some(([a, b]) => Math.abs(x - a) + Math.abs(y - b) <= 1)) return '#FFFFFF';
+    return mix(PX.RAINBOW[Math.floor((x * .5 + y) / 3.4) % 6], '#ffffff', (x + y) % 2 ? .22 : .38);
+  });
+});
+const gat = () => cached('gat', () => gridSprite(18, 16, (x, y) => { const top = y < 2 + (x * 7) % 3, bot = y > 13 - (x * 5) % 3; if (!top && !bot) return null; return x % 6 === 5 ? '#8A5A3B' : (y === 0 || y === 15) ? '#D6A674' : '#C18F5C'; }));
+const regenboogbrug = () => cached('rbbrug', () => gridSprite(18, 16, (x, y) => mix(PX.RAINBOW[Math.floor(x / 3)], '#ffffff', y % 4 === 0 ? .45 : .2)));
+export const starItem = () => cached('starItem', () => sprite(['.....y.....', '....yyy....', '....yYy....', 'yyyyyYyyyyy', '.yyYYYYYyy.', '..yYkYkYy..', '..yYYmYYy..', '.yyYYYYYyy.', '.yyyy.yyyy.', 'yyy.....yyy'], { y: '#FFD43B', Y: '#FFF3A8', k: EYE, m: '#FF8FB1' }));
+export const fruit = () => cached('fruit', () => gridSprite(9, 10, (x, y) => { if (y < 2) return (x === 4 && y === 1) ? '#8A5A3B' : (x === 5 || x === 6) && y === 0 ? '#5DC88A' : null; const dd = (x + .5 - 4.5) ** 2 + (y + .5 - 6) ** 2; if (dd > 16.5) return null; if (x === 2 && y === 4) return '#FFFFFF'; return PX.RAINBOW[Math.min(5, Math.floor((y - 2) * .75))]; }));
+export const bike = () => cached('bike', () => sprite([
+  '....kk.......kk...', '.....k......k.....', '....pppppppppp....', '...p.p.....p.p....', '..kkkp.p...p.kkk..', '.k...k.p.p..k...k.', 'k..w..kppp.k..w..k', 'k.....k....k.....k', '.k...k......k...k.', '..kkk........kkk..',
+], { k: '#3D2B4F', p: '#FF5E9C', w: '#D8DCE8' }));
+export const ball = (beach = false) => cached('ball' + beach, () => { const n = beach ? 11 : 8, c = beach ? ['#FF5E9C', '#FFFFFF', '#4DABF7', '#FFFFFF', '#FFD43B', '#FFFFFF'] : ['#E8484A', '#FFFFFF', '#E8484A', '#FFFFFF']; return gridSprite(n, n, (x, y) => { const dx = x + .5 - n / 2, dy = y + .5 - n / 2; if (dx * dx + dy * dy > (n / 2) ** 2) return null; if (dx * dx + dy * dy < 1.2) return beach ? '#FFFFFF' : '#FFD43B'; const a = Math.atan2(dy, dx) + Math.PI; return c[Math.floor(a / (Math.PI * 2) * c.length) % c.length]; }); });
+
 const PROPS = {
-  bramble, boulder, plas,
+  bramble, boulder, plas, rainbowtree, gat, regenboogbrug,
   tree: s => PX.treeRound(s), pine: s => PX.pine(s), bush: s => PX.bush(s), palm, rock, apple: appleTree, oak, stump, log, fern, rose, hedge, sign, scarecrow, umbrella, sandcastle, boat, statue, flag, trough, hay,
 };
-const SCALE = { tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
+const SCALE = { rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
 export function propArt(kind, seed = 1) { return (PROPS[kind] || PROPS.bush)(seed); }
 export const propScale = kind => SCALE[kind] || 1;
 export { bigMushroom };
@@ -231,10 +252,10 @@ export function uniSprite(u, frame = 'idle', sleep = false, opts = {}) {
     ctx.putImageData(img, 0, 0); return c;
   });
 }
-/** frames for a world character: stage 'ei' | 'baby' | 'jong' | 'groot' */
+/** frames for a world character: the egg, or the little unicorn that came out of it (she never changes into the big one) */
 export function companionFrames(u, stage, kindDef) {
   if (stage === 'ei') { const e = egg(kindDef); return { idle: e, w1: e, w2: e }; }
-  const o = { baby: stage === 'baby' };
+  const o = { baby: true };
   return { idle: uniSprite(u, 'idle', false, o), w1: uniSprite(u, 'w1', false, o), w2: uniSprite(u, 'w2', false, o), blink: uniSprite(u, 'idle', true, o) };
 }
 export const bedIcon = () => cached('bed', () => sprite(['w...........', 'w...........', 'wpp.........', 'wppbbbbbbbbb', 'wwwbbbbbbbbb', 'wwwwwwwwwwww', 'w..........w'], { w: '#A97450', p: '#FFFFFF', b: '#FF7EB6' }));

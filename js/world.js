@@ -9,6 +9,7 @@ import * as ART from './art.js';
 import * as Q from './quest.js';
 import { createExtras } from './world-extras.js';
 import { createTools } from './world-tools.js';
+import { createPlay } from './world-play.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -32,7 +33,7 @@ function canvas(w, h) { const c = document.createElement('canvas'); c.width = w;
 
 /* ------------------------------------------------------------------ */
 let sharedRenderer = null;   // one WebGL context for the page; the world itself is rebuilt for every cycle's new island
-export function createWorld(cv, { onEnter, onWish }) {
+export function createWorld(cv, { onEnter, onWish, onMount }) {
   const renderer = sharedRenderer || (sharedRenderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }));
   const ac = new AbortController(), listen = { signal: ac.signal };   // every listener goes away with destroy()
   const mobile = matchMedia('(pointer:coarse)').matches;
@@ -53,7 +54,10 @@ export function createWorld(cv, { onEnter, onWish }) {
   for (const b of BUILDINGS) { const [x0, z0, x1, z1] = rectOf(b); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) footprint.set(I(x, z), b); }
   const rng = rngf(20251122);
   const walkable = (x, z) => inb(x, z) && !block[I(x, z)];
-  const lowAt = (x, z) => inb(x, z) && block[I(x, z)] === MAP.LOW, breakAt = (x, z) => inb(x, z) && block[I(x, z)] === MAP.BREAK;
+  let mount = null, busy = false;   // riding the unicorn ('uni') or the bike ('fiets'); busy: something else moves her (the boat)
+  // the hole in the bridge is a jump for a ridden unicorn and a closed gate for everybody else
+  const lowAt = (x, z) => inb(x, z) && (block[I(x, z)] === MAP.LOW || (block[I(x, z)] === MAP.GAP && mount === 'uni'));
+  const breakAt = (x, z) => inb(x, z) && (block[I(x, z)] === MAP.BREAK || (block[I(x, z)] === MAP.GAP && mount !== 'uni'));
   const waterTile = (x, z) => inb(x, z) && ground[I(x, z)] === WA && (((x + .5 - POND.cx) / (POND.rx - .4)) ** 2 + ((z + .5 - POND.cz) / (POND.rz - .4)) ** 2 <= 1);
 
   /* ---------------- ground texture ---------------- */
@@ -65,20 +69,6 @@ export function createWorld(cv, { onEnter, onWish }) {
     top.rotation.x = -Math.PI / 2; top.position.set(W / 2, 0, H / 2); top.receiveShadow = true; top.userData.ground = true; scene.add(top);
     var groundMesh = top;
   }
-  /* cliffs */
-  {
-    const [c, x] = canvas(16, 32); const r = rngf(5);
-    for (let py = 0; py < 32; py++) for (let px = 0; px < 16; px++) {
-      let col = py < 4 ? (py < 3 - (px % 3 === 0 ? 1 : 0) ? '#5FAE5A' : '#4E9A51') : (r() < .12 ? '#7D5F45' : (r() < .1 ? '#B8946E' : (py > 18 ? '#7E6047' : '#9C7B5B')));
-      if (py > 4 && (py % 7 === 0) && r() < .7) col = '#86684D';
-      x.fillStyle = col; x.fillRect(px, py, 1, 1);
-    }
-    const mk = rep => { const t = tex(c); t.wrapS = THREE.RepeatWrapping; t.repeat.set(rep, 1); return new THREE.MeshLambertMaterial({ map: t }); };
-    const dark = new THREE.MeshLambertMaterial({ color: '#5b4636' });
-    const box = new THREE.Mesh(new THREE.BoxGeometry(W, 2, H), [mk(H), mk(H), dark, dark, mk(W), mk(W)]);
-    box.position.set(W / 2, -1.002, H / 2); box.receiveShadow = true; scene.add(box);
-  }
-
   /* ---------------- water ---------------- */
   const waterUniforms = [];
   function waterMat(c1, c2, c3, scale = 8) {
@@ -96,8 +86,43 @@ export function createWorld(cv, { onEnter, onWish }) {
           gl_FragColor=vec4(c*dim,1.); }`,
     });
   }
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), waterMat('#2F7FC0', '#5AB4E6', '#D8F4FF', 4));
-  sea.rotation.x = -Math.PI / 2; sea.position.set(W / 2, -.9, H / 2); scene.add(sea);
+  /* the sea around the islands: a distance-to-land map tells the shader where the beach ends and how deep the water is */
+  {
+    const S = 4, mw = W * S, mh = H * S, d = new Float32Array(mw * mh);
+    for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) { const i = I(Math.floor(x / S), Math.floor(y / S)); d[y * mw + x] = ground[i] === MAP.SE || M.deck[i] ? 1e4 : 0; }
+    const rel = (i, j, c) => { if (d[j] + c < d[i]) d[i] = d[j] + c; };
+    for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) { const i = y * mw + x; if (x) rel(i, i - 1, 1); if (y) { rel(i, i - mw, 1); if (x) rel(i, i - mw - 1, 1.414); if (x < mw - 1) rel(i, i - mw + 1, 1.414); } }
+    for (let y = mh - 1; y >= 0; y--) for (let x = mw - 1; x >= 0; x--) { const i = y * mw + x; if (x < mw - 1) rel(i, i + 1, 1); if (y < mh - 1) { rel(i, i + mw, 1); if (x < mw - 1) rel(i, i + mw + 1, 1.414); if (x) rel(i, i + mw - 1, 1.414); } }
+    const data = new Uint8Array(mw * mh); for (let i = 0; i < d.length; i++) data[i] = Math.min(255, d[i] / S / 6 * 255);
+    const mask = new THREE.DataTexture(data, mw, mh, THREE.RedFormat); mask.magFilter = mask.minFilter = THREE.LinearFilter; mask.needsUpdate = true;
+    const u = { t: { value: 0 }, dim: { value: 1 }, mask: { value: mask }, size: { value: new THREE.Vector2(W, H) }, c1: { value: new THREE.Color('#8FE3E6') }, c2: { value: new THREE.Color('#3E9AD6') }, c3: { value: new THREE.Color('#2F7FC0') }, foam: { value: new THREE.Color('#FFFFFF') } };
+    waterUniforms.push(u);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: u,
+      vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
+      fragmentShader: `uniform float t,dim; uniform sampler2D mask; uniform vec2 size; uniform vec3 c1,c2,c3,foam; varying vec3 vW;
+        void main(){ vec2 p=floor(vW.xz*8.)/8.+.0625;
+          float d=texture2D(mask,clamp(p/size,0.,1.)).r*6.;
+          float lap=sin(t*.9+p.x*.5+p.y*.37)*.07;
+          float dz=d-(.36+lap); if(dz<0.) discard;
+          float k=floor(clamp(dz/2.4,0.,1.)*5.)/5.;
+          vec3 c=mix(c1,c2,k); c=mix(c,c3,smoothstep(2.4,5.2,dz));
+          float s=sin(p.x*5.3+t*1.6)*sin(p.y*4.1-t*1.3)*sin((p.x+p.y)*2.2+t);
+          if(s>.62) c=foam;
+          if(dz<.12) c=foam;
+          float l2=.5+.18*sin(t*.9+p.x*.5+1.5); if(abs(dz-l2)<.045 && sin(p.x*3.+p.y*2.+t)>-.3) c=mix(c,foam,.75);
+          gl_FragColor=vec4(c*dim,1.); }`,
+    });
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(460, 460), mat); sea.rotation.x = -Math.PI / 2; sea.position.set(W / 2, .02, H / 2); scene.add(sea);
+    // bridges and piers: planks just above the water, with a post wherever the open sea is next to them
+    const [pc, px] = canvas(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { px.fillStyle = y % 4 === 0 ? '#8A5A3B' : ['#CC9A68', '#C18F5C', '#D6A674'][(Math.floor(y / 4) + Math.floor(x / 8)) % 3]; px.fillRect(x, y, 1, 1); }
+    const top = new THREE.MeshLambertMaterial({ map: tex(pc) }), side = new THREE.MeshLambertMaterial({ color: '#8A5A3B' }), tiles = [], posts = [], open = (x, z) => inb(x, z) && ground[I(x, z)] === MAP.SE && block[I(x, z)] === 1;
+    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (M.deck[I(x, z)]) { tiles.push([x, z]); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (open(x + dx, z + dz) && (x + z) % 2 === 0) posts.push([x + .5 + dx * .46, z + .5 + dz * .46]); }
+    const o = new THREE.Object3D(), planks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, .06, 1), [side, side, top, side, side, side], tiles.length); planks.receiveShadow = true;
+    tiles.forEach(([x, z], k) => { o.position.set(x + .5, .018, z + .5); o.updateMatrix(); planks.setMatrixAt(k, o.matrix); }); scene.add(planks);
+    const pm = new THREE.InstancedMesh(new THREE.BoxGeometry(.16, .62, .16), new THREE.MeshLambertMaterial({ color: '#7A4E33' }), posts.length); pm.castShadow = pm.receiveShadow = true;
+    posts.forEach(([x, z], k) => { o.position.set(x, .2, z); o.updateMatrix(); pm.setMatrixAt(k, o.matrix); }); scene.add(pm);
+  }
   const pond = new THREE.Mesh(new THREE.CircleGeometry(1, 40), waterMat('#3E9AD6', '#6CC6F0', '#E8FAFF', 8));
   pond.rotation.x = -Math.PI / 2; pond.scale.set(POND.rx - .15, POND.rz - .15, 1); pond.position.set(POND.cx, .012, POND.cz); scene.add(pond);
 
@@ -111,7 +136,7 @@ export function createWorld(cv, { onEnter, onWish }) {
   /** keep the shadow map centred on the view; moves in whole shadow texels so shadows do not shimmer */
   function aimSun(x, z) { const c = new THREE.Vector3(x, 0, z), tx = 44 / 2048, a = c.dot(lRight), b = c.dot(lUp); c.addScaledVector(lRight, Math.round(a / tx) * tx - a).addScaledVector(lUp, Math.round(b / tx) * tx - b); sun.target.position.copy(c); sun.position.copy(c).add(sunOff); sun.target.updateMatrixWorld(); }
   const lampLights = [];
-  for (const [x, z] of [[11, 9], [18, 9], [11, 15], [18, 15]]) { const l = new THREE.PointLight('#FFC97A', 0, 6.5, 1.6); l.position.set(x + .5, 1.25, z + .5); scene.add(l); lampLights.push(l); }
+  for (const [x, z] of [1, 2, 4, 5].map(k => LANTERNS[k])) { const l = new THREE.PointLight('#FFC97A', 0, 6.5, 1.6); l.position.set(x + .5, 1.25, z + .5); scene.add(l); lampLights.push(l); }
 
   /* ---------------- sprites ---------------- */
   const geoCache = new Map();
@@ -146,15 +171,15 @@ export function createWorld(cv, { onEnter, onWish }) {
     const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), mat, n); inst.receiveShadow = true;
     const d = new THREE.Object3D(); let k = 0; let guard = 0;
     while (k < n && guard++ < n * 20) {
-      const x = 2 + rng() * (W - 4), z = 2 + rng() * (H - 3); const tx = Math.floor(x), tz = Math.floor(z);
+      const x = 4 + rng() * (W - 8), z = 4 + rng() * (H - 8); const tx = Math.floor(x), tz = Math.floor(z);
       if (!pick(tx, tz)) continue;
       d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.updateMatrix(); inst.setMatrixAt(k++, d.matrix);
     }
     inst.count = k; scene.add(inst);
   }
   const grassFree = (x, z) => inb(x, z) && ground[I(x, z)] === GR && !block[I(x, z)];
-  scatterInstanced(PX.tuft(0), 170, grassFree); scatterInstanced(PX.tuft(1), 170, grassFree); scatterInstanced(PX.tuft(2), 120, grassFree);
-  for (const c of ['#FF7EB6', '#FFFFFF', '#FFD43B', '#B9A3F0']) scatterInstanced(PX.smallFlower(c), 22, (x, z) => grassFree(x, z) && MAP.zoneAt(x, z) === 'dorp');
+  scatterInstanced(PX.tuft(0), 300, grassFree); scatterInstanced(PX.tuft(1), 300, grassFree); scatterInstanced(PX.tuft(2), 200, grassFree);
+  for (const c of ['#FF7EB6', '#FFFFFF', '#FFD43B', '#B9A3F0']) scatterInstanced(PX.smallFlower(c), 22, (x, z) => grassFree(x, z) && M.zone[I(x, z)] === 'dorp');
 
   // lanterns
   const lanternGlows = [];
@@ -349,8 +374,8 @@ export function createWorld(cv, { onEnter, onWish }) {
   }
   // two billboards on the same spot fight over the same pixels and flicker: everyone gets a depth of their own, the girl in front
   kid.zBias = .06;
-  // the companion is whatever the quest says: nothing yet, an egg, a foal, or the growing unicorn
-  const uniFrames = () => ART.companionFrames(Q.companionLook(), Q.quest.stage === 'ei' || Q.quest.stage === 'baby' ? Q.quest.stage : 'groot', Q.kind());
+  // the companion is whatever the quest says: nothing yet, an egg, or the little unicorn (who never grows into another sprite)
+  const uniFrames = () => ART.companionFrames(Q.companionLook(), Q.quest.stage === 'ei' ? 'ei' : 'baby', Q.kind());
   const uni = makeChar(uniFrames(), { flippable: true, name: () => state.uni.name, say: ['Hihihi!', 'Ik ben ' + state.uni.name + '!', 'Briesss!'], blobW: 1.2 });
   uni.isUni = true;
   function refreshUnicorn() {
@@ -358,10 +383,11 @@ export function createWorld(cv, { onEnter, onWish }) {
     for (const k in uni.texs) { uni.texs[k].dispose(); delete uni.texs[k]; }
     for (const k in f) { uni.texs[k] = tex(f[k]); uni.texs[k + 'F'] = tex(PX.flipX(f[k])); }
     uni.frames = f; uni.mesh.geometry = spriteGeom(f.idle.width, f.idle.height); alphaCache.clear();
-    uni.baseScale = st === 'jong' ? .82 : 1; uni.follow = st === 'ei' ? 1.5 : st === 'baby' ? 1.7 : 2;
-    const bw = st === 'ei' ? .5 : st === 'baby' ? .8 : 1.2 * uni.baseScale; uni.g.children[1].scale.set(bw, 1, bw * .55);
+    uni.baseScale = st === 'vriend' ? 1.3 : 1; uni.follow = st === 'ei' ? 1.5 : 1.8;                       // the rainbow fruit makes her a little stronger, not different
+    const bw = st === 'ei' ? .5 : .8 * uni.baseScale; uni.g.children[1].scale.set(bw, 1, bw * .55);
     uni.g.visible = Q.hasCompanion(); uni.mesh.material.map = null; uni.setFrame('idle');
     uni.say = ['Hihihi!', 'Ik ben ' + state.uni.name + '!'];
+    if (mount === 'uni' && !Q.canRide()) setMount(null, true); else seat();
   }
 
   const animals = [];
@@ -375,19 +401,20 @@ export function createWorld(cv, { onEnter, onWish }) {
     return [x0, z0];
   }
   const one = cv => ({ idle: cv, w1: cv, w2: cv });
-  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Wortel?'], sound: 'boing', blobW: .5 }, [8, 15, 13, 21]);
-  animal(one(PX.cat()), { name: 'Poes', say: ['Miauw!', 'Prrr...'], sound: 'purr', blobW: .5 }, [18, 8, 26, 10]);
-  animal(one(PX.puppy()), { name: 'Hondje', say: ['Woef woef!', 'Spelen?'], sound: 'boing', blobW: .55 }, [11, 14, 20, 20]);
-  animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [2, 9, 9, 11]);
-  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, [8, 10, 12, 14], true);
-  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, [8, 10, 12, 14], true);
+  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Wortel?'], sound: 'boing', blobW: .5 }, [25, 44, 30, 50]);
+  animal(one(PX.cat()), { name: 'Poes', say: ['Miauw!', 'Prrr...'], sound: 'purr', blobW: .5 }, [35, 37, 43, 39]);
+  animal(one(PX.puppy()), { name: 'Hondje', say: ['Woef woef!', 'Spelen?'], sound: 'boing', blobW: .55 }, [28, 43, 37, 49]);
+  animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [19, 38, 26, 40]);
+  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
+  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
   for (const a of animals) if (a.water) a.g.children[1].visible = false;
 
   /* ---------------- party & movement ---------------- */
-  const START = [14.5, 15.5];
+  const START = MAP.START;
   kid.pos.set(START[0], 0, START[1]); uni.pos.set(START[0], 0, START[1] + 2.2);
   let trail = [];
-  function resetTrail() { trail = []; for (let i = 0; i <= 30; i++) trail.push(new THREE.Vector2(kid.pos.x, kid.pos.z + i * .12)); }
+  /** (dx, dz): where the follower should end up, seen from her (south, unless that is water) */
+  function resetTrail(dx = 0, dz = 1) { trail = []; for (let i = 0; i <= 30; i++) trail.push(new THREE.Vector2(kid.pos.x + dx * i * .12, kid.pos.z + dz * i * .12)); }
   resetTrail();
   function trailAt(dist) {
     let acc = 0;
@@ -450,7 +477,9 @@ export function createWorld(cv, { onEnter, onWish }) {
       // the way is closed by brambles or boulders: walk up to the first one and use the tool on it (or hear which tool is missing)
       if (deep) return false;
       const p2 = astar(s[0], s[1], tx, tz, (x, z) => ok(x, z) || breakAt(x, z), true), hit = p2 && p2.find(([x, z]) => breakAt(x, z));
-      return !!hit && approach(hit[0], hit[1], () => tools.useAt(hit[0], hit[1]), true);
+      if (hit) return approach(hit[0], hit[1], () => tools.useAt(hit[0], hit[1]), true);
+      // over the water: walk to the boat instead (it sails by itself once she stands on the pier)
+      const d = play.detour(tx, tz); return !!d && (d[0] !== tx || d[1] !== tz) && walkTo(d[0], d[1]);
     }
     let pts = p.slice(1).map(([x, z, j]) => { const v = new THREE.Vector3(x + .5, 0, z + .5); v.jump = j; return v; });
     if (exact && freeAt(exact.x, exact.z)) { if (!pts.length || pts[pts.length - 1].jump) pts.push(exact.clone()); else pts[pts.length - 1] = exact.clone(); }
@@ -467,11 +496,21 @@ export function createWorld(cv, { onEnter, onWish }) {
     for (const [x, z] of near) if (walkTo(x, z, null, null, true)) { after = then; return true; }
     return !deep && walkTo(ox, oz);
   }
-  function arrive(b) { target = null; after = null; kid.path = []; onEnter && onEnter(b.id); }
+  function arrive(b) { setMount(null, true); target = null; after = null; kid.path = []; onEnter && onEnter(b.id); }
+  /** how she sits: on the unicorn she is drawn behind its body, a little towards the tail, so her legs disappear behind its back */
+  function seat() { const u = mount === 'uni', sc = uni.baseScale || 1; kid.lift = u ? .36 * sc : mount === 'fiets' ? .34 : 0; kid.zBias = u ? -.03 : .06; kid.dx = u ? -.2 * sc : 0; }
+  /** climb onto the unicorn ('uni') or the bike ('fiets'), or get off (null) */
+  function setMount(m, quiet = false) {
+    if (m === mount) return true; if (m === 'uni' && !(Q.canRide() && uni.g.visible)) return false;
+    const was = mount; mount = m; kid.sit = !!m; seat(); kid.path = []; target = null; after = null;
+    if (was === 'uni') { uni.pos.copy(kid.pos); resetTrail(); }
+    if (!quiet) { kid.hop = .7; (m === 'fiets' ? sfx.bell : m ? sfx.sparkle : sfx.pop)(); if (m === 'uni') burst(kid.pos, 8, true); }
+    play && play.mounted(m, was); onMount && onMount(m); return true;
+  }
   /** a hop on the spot, just for fun (jumping over things happens by itself while walking) */
   function jump() {
     if (!interactive || paused || kid.hop > 0) return; sfx.boing(); kid.hop = 1;
-    for (const [c, ms] of [[uni, 200]]) setTimeout(() => { if (c.g.visible && c.hop <= 0) c.hop = 1; }, ms);
+    if (mount !== 'uni') setTimeout(() => { if (uni.g.visible && uni.hop <= 0) uni.hop = 1; }, 200);
   }
   let lastTile = -1;
 
@@ -498,16 +537,21 @@ export function createWorld(cv, { onEnter, onWish }) {
 
   const alphaCache = new Map();
   let extras = null; const ctxHooks = { onWish };
-  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; } };
+  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
+    walkToTile: (x, z) => { target = null; return walkTo(x, z); }, placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
+    /** something else moves her for a while (the boat): no walking, no taps */
+    setBusy(v) { busy = v; if (v) { kid.path = []; target = null; after = null; keys.clear(); } } };
+  let play = null;
   extras = createExtras(ctx);
   const tools = createTools(ctx);
+  play = createPlay(ctx);
   refreshUnicorn();
 
   /* ---------------- input ---------------- */
   let interactive = false;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   cv.addEventListener('pointerdown', e => {
-    if (!interactive || paused) return;
+    if (!interactive || paused || busy) return;
     const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const hits = ray.intersectObjects(pick, false);
@@ -536,6 +580,7 @@ export function createWorld(cv, { onEnter, onWish }) {
     return false;
   }
   function tapChar(c) {
+    if (c === kid && mount) { setMount(null); return; }
     c.hop = 1; const txt = c.say[Math.floor(Math.random() * c.say.length)];
     if (c.isUni) { extras.tapCompanion(c); return; }
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
@@ -543,7 +588,7 @@ export function createWorld(cv, { onEnter, onWish }) {
   const keys = new Set();
   const midJump = () => !!(kid.path[0] && kid.path[0].jump);
   addEventListener('keydown', e => {
-    if (!interactive || paused) return;
+    if (!interactive || paused || busy) return;
     if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
   }, listen);
@@ -622,10 +667,10 @@ export function createWorld(cv, { onEnter, onWish }) {
     if (c.hop > 0) c.hop = Math.max(0, c.hop - dt * 2.5);
     const hopY = Math.sin((1 - c.hop) * Math.PI) * c.hopH * (c.hop > 0 ? 1 : 0); if (c.hop <= 0) c.hopH = .35;
     const bob = c.moving ? Math.abs(Math.sin(c.animT * 10)) * .05 : 0;
-    c.g.position.copy(c.pos); c.mesh.position.y = hopY + bob; c.mesh.position.z = c.zBias || 0;
+    c.g.position.copy(c.pos); c.mesh.position.y = hopY + bob + (c.lift || 0); c.mesh.position.z = c.zBias || 0; c.mesh.position.x = (c.dx || 0) * c.face;
     const breathe = (c.moving ? 1 : 1 + Math.sin(c.animT * 2.4) * .012) * (c.baseScale || 1); c.mesh.scale.set(breathe, breathe, 1);
-    if (c.hop > 0 && c.texs.jump) c.setFrame('jump');
-    else if (c.moving) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
+    if (c.hop > 0 && c.texs.jump && !c.sit) c.setFrame('jump');
+    else if (c.moving && !c.sit) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
     else { c.blinkT -= dt; if (c.blinkT < 0) { c.setFrame(c.frames.blink ? 'blink' : 'idle'); if (c.blinkT < -.12) c.blinkT = 2 + Math.random() * 3.5; } else c.setFrame('idle'); }
   }
   function stepAlong(c, dt, speed) {
@@ -644,10 +689,11 @@ export function createWorld(cv, { onEnter, onWish }) {
     // night transition
     if (Math.abs(nightT - nightTarget) > .001) { nightT += Math.sign(nightTarget - nightT) * Math.min(Math.abs(nightTarget - nightT), dt * .8); applyNight(nightT); }
     // keyboard
+    const speed = mount === 'uni' ? 5.4 : mount === 'fiets' ? 4.8 : 3.4;
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
     const prev = kid.pos.clone();
     if ((kx || kz) && !midJump()) {
-      const l = Math.hypot(kx, kz), sp = 3.4 * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
+      const l = Math.hypot(kx, kz), sp = speed * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
       const stuck = !freeAt(kid.pos.x, kid.pos.z); // if somehow overlapping, let her walk out
       if (stuck || freeAt(nx, kid.pos.z)) kid.pos.x = nx; if (stuck || freeAt(kid.pos.x, nz)) kid.pos.z = nz;
       kid.moving = kid.pos.distanceTo(prev) > .001;
@@ -659,8 +705,8 @@ export function createWorld(cv, { onEnter, onWish }) {
       }
     } else {
       const land = midJump() ? kid.path[0] : null;
-      if (land && jumpTo !== land) { jumpTo = land; kid.hop = 1; kid.hopH = .6; sfx.boing(); jumpSpeed = Math.max(4.5, Math.hypot(land.x - kid.pos.x, land.z - kid.pos.z) / .38); }
-      stepAlong(kid, dt, land ? jumpSpeed : 3.4);
+      if (land && jumpTo !== land) { jumpTo = land; kid.hop = 1; kid.hopH = mount === 'uni' ? .95 : .6; sfx.boing(); jumpSpeed = Math.max(4.5, Math.hypot(land.x - kid.pos.x, land.z - kid.pos.z) / .38); }
+      stepAlong(kid, dt, land ? jumpSpeed : speed);
     }
     if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
@@ -671,7 +717,8 @@ export function createWorld(cv, { onEnter, onWish }) {
     if (kid.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
     // trail followers
     if (kid.pos.distanceTo(prev) > .0001) { trail.unshift(new THREE.Vector2(kid.pos.x, kid.pos.z)); if (trail.length > 80) trail.pop(); }
-    for (const [c, dist] of [[uni, uni.follow || 2]]) {
+    if (mount === 'uni') { uni.pos.copy(kid.pos); uni.face = kid.face; uni.moving = kid.moving; uni.hop = kid.hop; uni.hopH = kid.hopH; }   // she carries the girl
+    else if (!busy) for (const [c, dist] of [[uni, uni.follow || 2]]) {
       let p = trailAt(dist); const before = c.pos.clone();
       // nobody stands on a log: wait in front of it, then hop over when the trail moves on
       if (lowAt(Math.floor(p.x), Math.floor(p.y))) { let back = dist; for (let k = 0; k < 8 && lowAt(Math.floor(p.x), Math.floor(p.y)); k++) p = trailAt(back += .25); p = trailAt(back + .45); }
@@ -687,7 +734,7 @@ export function createWorld(cv, { onEnter, onWish }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused); tools.update(dt, time, interactive && !paused);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -707,10 +754,10 @@ export function createWorld(cv, { onEnter, onWish }) {
   }
   renderer.setAnimationLoop(frame);
 
-  function placeAt(x, z) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(); uni.pos.set(x, 0, z + 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
+  function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, extras, tools, placeAt, jump, seed,
+    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
   };
@@ -724,11 +771,13 @@ export function createWorld(cv, { onEnter, onWish }) {
     walkToTile(x, z) { target = null; return walkTo(x, z); },
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     pos: () => [kid.pos.x, kid.pos.z],
-    groundCanvas, extras, tools, jump, setWho, who: () => who,
+    groundCanvas, extras, tools, play, jump, setWho, who: () => who, M,
+    /** on or off the unicorn (the HUD button); getting off a bike works the same way */
+    ride() { return mount ? setMount(null) : setMount('uni'); }, mount: () => mount,
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

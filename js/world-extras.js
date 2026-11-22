@@ -8,51 +8,12 @@ import * as Q from './quest.js';
 import { state } from './state.js';
 import { sfx, speak } from './audio.js';
 
-const COUNT = ['', 'Eén!', 'Twee!', 'Drie!', 'Vier!', 'Vijf!', 'Zes!'];
-const THANKS = {
-  bloem: () => Q.quest.stage === 'ei' ? 'Wat een zacht nestje! Het ei ligt lekker warm.' : 'Wat een mooie bloemen! Dank je wel!',
-  appel: () => 'Mmm, lekkere appels! Dank je wel!', wortel: () => 'Knap knap! Lekkere wortels!', paddenstoel: () => 'Mooie paddenstoelen! Dank je wel!',
-  schelp: () => 'Wat een mooie schelpen! Dank je wel!', diamant: () => 'Oooh, wat glinstert dat mooi!',
-};
-
 export function createExtras(ctx) {
   const { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni } = ctx;
   const { W, H } = MAP;
   const r = PX.rng(4711);
   const lam = c => new THREE.MeshLambertMaterial({ color: c });
   const shadowed = m => { m.castShadow = true; m.receiveShadow = true; return m; };
-
-  /* ---------------- shallow sea at the beach (animated shoreline) ---------------- */
-  {
-    const u = { t: { value: 0 }, dim: { value: 1 }, c1: { value: new THREE.Color('#8FE3E6') }, c2: { value: new THREE.Color('#3E9AD6') }, c3: { value: new THREE.Color('#2F7FC0') }, foam: { value: new THREE.Color('#FFFFFF') } };
-    waterUniforms.push(u);
-    const mat = new THREE.ShaderMaterial({
-      uniforms: u,
-      vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-      fragmentShader: `uniform float t,dim; uniform vec3 c1,c2,c3,foam; varying vec3 vW;
-        float shore(float x){ return 42.4+sin(x*.45)*.7+sin(x*.17+1.)*.5; }
-        void main(){ vec2 p=floor(vW.xz*8.)/8.;
-          float lap=sin(t*.9+p.x*.5)*.16;
-          float dz=p.y-(shore(p.x)-.12+lap); if(dz<0.) discard;
-          float k=floor(clamp(dz/3.6,0.,1.)*5.)/5.;
-          vec3 c=mix(c1,c2,k); c=mix(c,c3,smoothstep(4.,9.,dz));
-          float s=sin(p.x*5.3+t*1.6)*sin(p.y*4.1-t*1.3)*sin((p.x+p.y)*2.2+t);
-          if(s>.62) c=foam;
-          if(dz<.13) c=foam;
-          float l2=.55+.2*sin(t*.9+p.x*.5+1.5); if(abs(dz-l2)<.05 && sin(p.x*3.+t)>-.3) c=mix(c,foam,.75);
-          gl_FragColor=vec4(c*dim,1.); }`,
-    });
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(W + 60, 40), mat); sea.rotation.x = -Math.PI / 2; sea.position.set(W / 2, .02, 60); scene.add(sea);
-  }
-
-  /* ---------------- pier ---------------- */
-  {
-    const P = MAP.PIER, [c, x] = canvas(32, 16); for (let py = 0; py < 16; py++) for (let px = 0; px < 32; px++) { x.fillStyle = py % 4 === 0 ? '#8A5A3B' : ['#CC9A68', '#C18F5C', '#D6A674'][(Math.floor(py / 4) + Math.floor(px / 16)) % 3]; x.fillRect(px, py, 1, 1); }
-    const t = tex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, (P.z1 - P.z0 + 1.6) / 1);
-    const top = new THREE.MeshLambertMaterial({ map: t }), side = lam('#8A5A3B'), len = P.z1 - 40 + .7;
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(2.1, .3, len), [side, side, top, side, side, side]); deck.position.set(P.x0 + 1, -.115, 40.6 + len / 2); deck.receiveShadow = true; scene.add(deck);
-    for (let z = 42; z <= P.z1 + 1; z += 2) for (const dx of [-.05, 2.05]) { const post = shadowed(new THREE.Mesh(new THREE.BoxGeometry(.18, .9, .18), lam('#7A4E33'))); post.position.set(P.x0 + dx, .1, z + .2); scene.add(post); }
-  }
 
   /* ---------------- meadow fence ---------------- */
   {
@@ -107,7 +68,7 @@ export function createExtras(ctx) {
       const hat = shadowed(new THREE.Mesh(new THREE.ConeGeometry(1.25, 1.7, 14), lam(sz > 0 ? '#6A7FD6' : '#9B72E8'))); hat.position.set(x, hT + .85, z); g.add(hat);
       const fl = makeSprite(pennant, { lean: 0, shadow: false, scale: 1.1 }); fl.position.set(x, hT + 1.6, z); g.add(fl);
     }
-    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.tap = () => { sfx.tada(); burst(new THREE.Vector3(C.door[0] + .5, 0, C.door[1] + .5), 8); speak('Dit is het kasteel van Eenhoornland! Het draakje past op de schatten.'); }; pick.push(o); } });
+    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.tap = () => { sfx.tada(); burst(new THREE.Vector3(C.door[0] + .5, 0, C.door[1] + .5), 8); speak('Dit is het kasteel van Eenhoornland! Hier wonen de eenhoorns.'); }; pick.push(o); } });
     scene.add(g);
   }
 
@@ -115,25 +76,27 @@ export function createExtras(ctx) {
   function scatter(art, n, ok, scale = 1) {
     const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), spriteMat(tex(art)), n); inst.receiveShadow = true;
     const d = new THREE.Object3D(); let k = 0, guard = 0;
-    while (k < n && guard++ < n * 40) { const x = 1 + r() * (W - 2), z = 1 + r() * (H - 2); if (!ok(Math.floor(x), Math.floor(z), z)) continue; d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.scale.setScalar(scale); d.updateMatrix(); inst.setMatrixAt(k++, d.matrix); }
+    while (k < n && guard++ < n * 40) { const x = 4 + r() * (W - 8), z = 4 + r() * (H - 8); if (!ok(Math.floor(x), Math.floor(z), z)) continue; d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.scale.setScalar(scale); d.updateMatrix(); inst.setMatrixAt(k++, d.matrix); }
     inst.count = k; scene.add(inst);
   }
   const g = (x, z) => M.ground[M.I(x, z)];
   scatter(ART.propArt('fern', 1), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO); scatter(ART.propArt('fern', 2), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO);
-  scatter(ART.starfish(), 16, (x, z, fz) => M.free(x, z) && g(x, z) === MAP.SA && fz > 37 && fz < MAP.shoreZ(x) - .6);
-  scatter(ART.shell(1), 14, (x, z, fz) => M.free(x, z) && g(x, z) === MAP.SA && fz < MAP.shoreZ(x) - .6, .7);
-  for (const c of ['#FF7EB6', '#FFFFFF', '#B9A3F0']) scatter(PX.smallFlower(c), 30, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && MAP.zoneAt(x, z) !== 'dorp');
+  const beach = (x, z) => M.free(x, z) && g(x, z) === MAP.SA && (M.zone[M.I(x, z)] === 'strand' || M.zone[M.I(x, z)] === 'eiland');
+  scatter(ART.starfish(), 22, beach); scatter(ART.shell(1), 18, beach, .7);
+  for (const c of ['#FF7EB6', '#FFFFFF', '#B9A3F0']) scatter(PX.smallFlower(c), 70, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow
   for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2, m = makeSprite(ART.bigMushroom(), { lean: .25 }); m.position.set(MAP.NOOK.cx + Math.cos(a) * 1.7, 0, MAP.NOOK.cz + Math.sin(a) * 1.4); scene.add(m); }
 
   /* ---------------- more animals ---------------- */
   const one = cv => ({ idle: cv, w1: cv, w2: cv });
-  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Nootjes!', 'Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [45, 9, 53, 14]);
-  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [37, 15, 43, 21]);
-  animal(one(ART.deer()), { name: 'Hertje', say: ['Hallo!', 'Het bos is mooi, hè?'], sound: 'boing', blobW: .7, flippable: true }, [45, 8, 54, 15]);
-  animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [3, 37, 12, 40]);
-  animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!'], sound: 'pop', blobW: .5 }, [18, 37, 28, 40]);
-  animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [32, 37, 41, 40]);
-  animal(one(ART.dragon()), { name: 'Draakje', say: ['Rawr! Hihi!', 'Ik ben een lief draakje!', 'Ik pas op het kasteel!'], sound: 'boing', blobW: .7 }, [47, 34, 60, 38]);
+  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Nootjes!', 'Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [26, 10, 34, 15]);
+  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [42, 10, 48, 15]);
+  animal(one(ART.deer()), { name: 'Hertje', say: ['Hallo!', 'Het bos is mooi, hè?'], sound: 'boing', blobW: .7, flippable: true }, [26, 10, 35, 16]);
+  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [60, 36, 66, 44]);
+  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Bloemetjes!'], sound: 'boing', blobW: .5 }, [74, 44, 82, 50]);
+  animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
+  animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!'], sound: 'pop', blobW: .5 }, [9, 68, 18, 73]);
+  animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [62, 69, 74, 74]);
+  animal(one(ART.dragon()), { name: 'Draakje', say: ['Rawr! Hihi!', 'Ik ben een lief draakje!', 'Ik pas op het kasteel!'], sound: 'boing', blobW: .7 }, [78, 11, 90, 14]);
 
   /* ---------------- things to collect ---------------- */
   const itemMats = new Map();
@@ -159,18 +122,14 @@ export function createExtras(ctx) {
     const m = itemMesh(ART.itemArt(it.type, it.idx)); m.position.set(it.x, .3, it.z); scene.add(m); flying.push({ m, t: 0 });
     const res = Q.collect(it.type, it.idx);
     if (it.type === 'munt') { sfx.chime(5); return; }
-    if (res.finished) {
-      sfx.tada(); if (uni.g.visible) { uni.hop = 1; burst(uni.pos, 8, true); } else burst(kid.pos, 6);
-      speak((THANKS[it.type] ? THANKS[it.type]() : 'Dank je wel!') + ' ' + Q.goalText());
-    } else if (res.counted) { sfx.chime(res.wish.have); speak(COUNT[res.wish.have] || 'Nog één!'); if (uni.g.visible) uni.hop = .6; }
-    else sfx.pop();
+    sfx.chime(res.total); if (uni.g.visible && ctx.mount() !== 'uni') uni.hop = .6;       // nothing depends on it: picking things up is simply nice
   }
 
   /* ---------------- the hidden egg ---------------- */
   let eggMesh = null, eggPos = null, peepT = 0, sparkT = 0;
   const glowTex = (() => { const [c, x] = canvas(32, 32), gr = x.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,245,200,1)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const eggGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#FFF1B0', transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); eggGlow.visible = false; scene.add(eggGlow);
-  function eggSpot() { const list = M.eggSpots[Q.quest.zone] && M.eggSpots[Q.quest.zone].length ? M.eggSpots[Q.quest.zone] : M.eggSpots.bloem; return list[Q.quest.spot % list.length]; }
+  function eggSpot() { const list = M.eggSpots[Q.quest.zone] && M.eggSpots[Q.quest.zone].length ? M.eggSpots[Q.quest.zone] : M.eggSpots.bos; return list[Q.quest.spot % list.length]; }
   function syncEgg() {
     if (eggMesh) { scene.remove(eggMesh); eggMesh = null; } eggGlow.visible = false; eggPos = null;
     if (Q.quest.stage !== 'zoek') return;
@@ -180,8 +139,35 @@ export function createExtras(ctx) {
   }
   function findEgg() {
     const p = eggPos.clone(); if (!Q.foundEgg()) return;
-    uni.pos.copy(p); uni.hop = 1; sfx.tada(); burst(p, 12, true);
-    speak('Jullie hebben het ei gevonden! Wat een mooi ' + Q.kind().name + '! ' + Q.goalText());
+    uni.pos.copy(p); uni.hop = 1; sfx.tada(); burst(p, 12, true); bubble(kid, '!', ART.egg(Q.kind()));
+    speak('Jullie hebben het ei gevonden! Het bestaat echt! Wat een mooi ' + Q.kind().name + '! ' + Q.goalText());
+  }
+
+  /* ---------------- the fallen star that hatches the egg, and the rainbow fruit ---------------- */
+  // Both only lie there while they are wanted. The star flies to the egg, the egg shakes, and out comes the unicorn.
+  const glowAt = (col) => { const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); g.visible = false; scene.add(g); return g; };
+  const star = { mesh: makeSprite(ART.starItem(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFF1B0'), pos: null }, fruit = { mesh: makeSprite(ART.fruit(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFD0F0'), pos: null };
+  for (const o of [star, fruit]) { o.mesh.material = o.mesh.material.clone(); o.mesh.material.emissiveIntensity = .8; o.mesh.visible = false; scene.add(o.mesh); }
+  let hatching = null; const shells = [];
+  const starSpot = () => M.starSpots[Q.quest.spot % M.starSpots.length];
+  function syncGoals() {
+    const st = Q.quest.stage;
+    if (st === 'ei' && !hatching) { const [x, z] = starSpot(); star.pos = new THREE.Vector3(x + .5, 0, z + .5); } else if (!hatching) star.pos = null;
+    fruit.pos = st === 'baby' ? new THREE.Vector3(MAP.RAINBOW_TREE[0] + 1.5, 0, MAP.RAINBOW_TREE[1] + 1.5) : null;
+    for (const o of [star, fruit]) { o.mesh.visible = o.glow.visible = !!o.pos; if (o.pos) { o.mesh.position.copy(o.pos); o.glow.position.set(o.pos.x, .8, o.pos.z + .1); } }
+  }
+  function startHatch() { hatching = { t: 0, from: star.pos.clone() }; sfx.sparkle(); bubble(kid, '', ART.starItem()); }
+  function finishHatch() {
+    const kindDef = Q.kind(), p = uni.pos.clone(); hatching = null; star.pos = null;
+    if (!Q.hatch()) { syncGoals(); return; }                                         // saved; the 'stage' event swaps the egg for the unicorn
+    uni.mesh.rotation.z = 0; uni.hop = 1; sfx.tada(); burst(p, 16, true); bubble(uni, state.uni.name + '!', PX.heart());
+    for (const [part, dir] of [['top', 1], ['bottom', -1]]) { const m = makeSprite(ART.egg(kindDef, part), { lean: .3, shadow: false }); m.position.set(p.x, .3, p.z + .05); scene.add(m); shells.push({ m, vx: dir * 1.6, vy: 2.6, t: 0 }); }
+    speak('Krak! Het ei komt uit! Het is een kleine eenhoorn! Ze heet ' + state.uni.name + '. ' + Q.goalText());
+  }
+  function feed() {
+    const p = fruit.pos.clone(); if (!Q.feed()) return;
+    sfx.munch(); setTimeout(() => sfx.tada(), 500); uni.hop = 1; burst(uni.pos, 14, true); burst(p, 8); bubble(uni, 'Mmm!', ART.fruit());
+    speak('Mmm, regenboogfruit! ' + Q.goalText());
   }
 
   /* ---------------- the unicorn meadow ---------------- */
@@ -195,24 +181,27 @@ export function createExtras(ctx) {
     for (const c of herd) removeChar(c); herd = [];
     const list = Q.quest.herd.slice(-8);
     list.forEach((u, i) => {
-      const f = { idle: ART.uniSprite(u), w1: ART.uniSprite(u, 'w1'), w2: ART.uniSprite(u, 'w2'), blink: ART.uniSprite(u, 'idle', true) };
-      const c = animal(f, { flippable: true, name: u.name, say: ['Ik ben ' + u.name + '!', 'Hihihi!', 'Kom je spelen?'], sound: 'sparkle', blobW: 1.2 }, penHome);
+      const b = { baby: true }, f = { idle: ART.uniSprite(u, 'idle', false, b), w1: ART.uniSprite(u, 'w1', false, b), w2: ART.uniSprite(u, 'w2', false, b), blink: ART.uniSprite(u, 'idle', true, b) };
+      const c = animal(f, { flippable: true, name: u.name, say: ['Ik ben ' + u.name + '!', 'Hihihi!', 'Kom je spelen?'], sound: 'sparkle', blobW: .9 }, penHome);
       c.speed = 1.1; if (arriving && i === list.length - 1) c.pos.set(P.x0 + 1.5, 0, gate.z);
       herd.push(c);
     });
   }
   let party = 0;
   function deliver() {
-    const name = state.uni.name; if (!Q.deliver()) return;
+    const name = state.uni.name; if (!Q.weiOpen()) return;
+    ctx.setMount(null, true); kid.hop = 1; if (!Q.deliver()) return;
     party = 6; sfx.tada(); for (const c of herd) c.hop = 1;
-    speak('Hoera! ' + name + ' woont nu in de eenhoornwei, bij alle vriendjes! Wat een feest! Het wordt avond. Ga maar lekker slapen in je huisje.');
+    bubble(kid, '', ART.bedIcon());
+    speak('Hoera! ' + name + ' woont nu in de eenhoornwei, bij alle vriendjes! Wat een feest! De regenboog maakt de brug weer heel. Het wordt avond: ga maar lekker slapen in je huisje.');
   }
 
   /* ---------------- companion ---------------- */
   function tapCompanion(c) {
+    if (Q.canRide()) { ctx.setMount(ctx.mount() === 'uni' ? null : 'uni'); return; }   // tap her to climb on, tap again to get off
     c.hop = 1; sfx.sparkle(); burst(c.pos, 9, true);
-    if (Q.quest.stage === 'ei') { bubble(c, 'Tik tik!'); speak('Tik tik! Er beweegt iets in het ei! ' + Q.goalText()); }
-    else { bubble(c, 'Hihihi!'); speak('Hihihi! Ik ben ' + state.uni.name + '! ' + Q.goalText()); }
+    if (Q.quest.stage === 'ei') { bubble(c, 'Brr!', ART.starItem()); speak('Tik tik! Er beweegt iets in het ei! ' + Q.goalText()); }
+    else { bubble(c, '', ART.fruit()); speak('Hihihi! Ik ben ' + state.uni.name + '! ' + Q.goalText()); }
   }
   /** the fountain is a wishing well: a few coins buy a sticker. Returns true if it handled the tap. */
   function fountain() {
@@ -222,15 +211,15 @@ export function createExtras(ctx) {
   }
 
   const off = Q.on(type => {
-    if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); }
+    if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); syncGoals(); }
     if (type === 'day') syncItems();
     if (type === 'herd') syncHerd(true);
   });
-  syncItems(); syncEgg(); syncHerd(false);
+  syncItems(); syncEgg(); syncGoals(); syncHerd(false);
 
   return {
     tapCompanion, fountain, eggSpot, dispose: off,
-    info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], herd: herd.length }),
+    info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], star: star.pos && [star.pos.x, star.pos.z], fruit: fruit.pos && [fruit.pos.x, fruit.pos.z], gate: [gate.x, gate.z], herd: herd.length, hatching: !!hatching }),
     items: () => items.map(it => ({ type: it.type, x: it.x, z: it.z })),
     /** active: the child can play (not paused, start screen gone) */
     update(dt, time, active) {
@@ -240,6 +229,14 @@ export function createExtras(ctx) {
       }
       for (let i = flying.length - 1; i >= 0; i--) { const f = flying[i]; f.t += dt * 2.2; f.m.position.y = .3 + f.t * 1.5; f.m.scale.setScalar(Math.max(.01, 1.25 - f.t * f.t)); if (f.t >= 1.1) { scene.remove(f.m); flying.splice(i, 1); } }
       if (eggMesh) { eggMesh.rotation.z = Math.sin(time * 3) * .12; eggGlow.material.opacity = .45 + Math.sin(time * 3) * .25; const s = 1.5 + Math.sin(time * 3) * .25; eggGlow.scale.set(s, s, 1); sparkT -= dt; if (sparkT < 0) { sparkT = .9; burst(eggPos, 2); } }
+      for (const o of [star, fruit]) if (o.pos && !(o === star && hatching)) { o.mesh.position.y = .3 + Math.sin(time * 2.4) * .1; o.mesh.rotation.z = Math.sin(time * 1.6) * .2; const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; }
+      if (hatching) {                                                               // 0..1 the star flies to the egg, 1..2.4 the egg shakes harder and harder
+        const h = hatching; h.t += dt; const k = Math.min(1, h.t);
+        star.mesh.position.set(h.from.x + (uni.pos.x - h.from.x) * k, .3 + Math.sin(k * Math.PI) * 1.2 + k * .3, h.from.z + (uni.pos.z - h.from.z) * k); star.glow.position.copy(star.mesh.position);
+        if (h.t > 1) { star.mesh.visible = false; uni.mesh.rotation.z = Math.sin(h.t * 26) * .22 * (h.t - 1); if (Math.floor(h.t * 4) !== Math.floor((h.t - dt) * 4)) { sfx.pop(); uni.hop = .5; burst(uni.pos, 3); } }
+        if (h.t > 2.4) finishHatch();
+      }
+      for (let i = shells.length - 1; i >= 0; i--) { const sh = shells[i]; sh.t += dt; sh.vy -= dt * 7; sh.m.position.x += sh.vx * dt; sh.m.position.y = Math.max(0, sh.m.position.y + sh.vy * dt); sh.m.rotation.z += sh.vx * dt * 2; if (sh.t > 2.5) { scene.remove(sh.m); shells.splice(i, 1); } }
       if (party > 0) { party -= dt; if (Math.floor(party * 2.5) !== Math.floor((party + dt) * 2.5)) { const x = P.x0 + 2 + Math.random() * (P.x1 - P.x0 - 3), z = P.z0 + 1.5 + Math.random() * (P.z1 - P.z0 - 3); burst(new THREE.Vector3(x, 0, z), 7, Math.random() < .5); sfx.sparkle(); for (const c of herd) if (Math.random() < .4) c.hop = 1; } }
       if (!active) return;
       for (let i = items.length - 1; i >= 0; i--) { const it = items[i]; if (Math.abs(it.x - kid.pos.x) < .75 && Math.abs(it.z - kid.pos.z) < .75) pickUp(it); }
@@ -248,6 +245,8 @@ export function createExtras(ctx) {
         if (dd < 1.05) findEgg();
         else if (dd < 9) { peepT -= dt; if (peepT < 0) { peepT = .5 + dd * .32; sfx.bubble(); } }   // warmer = faster peeps
       }
+      if (star.pos && !hatching && Q.quest.stage === 'ei' && Math.hypot(star.pos.x - kid.pos.x, star.pos.z - kid.pos.z) < 1.1) startHatch();
+      if (fruit.pos && Math.hypot(fruit.pos.x - kid.pos.x, fruit.pos.z - kid.pos.z) < 1.2) feed();
       if (Q.weiOpen() && uni.g.visible && Math.hypot(gate.x - kid.pos.x, gate.z - kid.pos.z) < 1.6) deliver();
     },
   };

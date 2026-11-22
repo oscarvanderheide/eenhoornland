@@ -4,7 +4,7 @@ export default async function (t) {
   fs.mkdirSync('tmp-shots', { recursive: true });
   let fail = 0; const ok = (c, m) => { console.log(c ? '  ok  ' : '  FAIL', m); if (!c) fail++; };
   await t.go('http://127.0.0.1:8765/dev.html?go&debug'); await t.ev('localStorage.clear()'); await t.go('http://127.0.0.1:8765/dev.html?go&debug');
-  await t.ev(`__w.Q._reset({ stage: 'jong' }); __w.Q.giveTool('schaar'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('schaar'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
   ok(await t.ev(`document.querySelectorAll('.blabel').length`) === 0, 'no signs above the houses');
   for (const id of ['huisje', 'stal', 'atelier', 'bakkerij', 'kermis']) {
     await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='${id}'); __w.placeAt(b.door[0]+.5,b.door[1]+2.5)})()`); await t.sleep(2500); await t.shot(`tmp-shots/h-${id}.png`);
@@ -13,7 +13,7 @@ export default async function (t) {
     ok(open, id + ' opens'); await t.ev(`document.querySelector('#act-close').click()`); await t.sleep(900);
   }
   // taking turns
-  await t.ev(`__w.placeAt(14.5,15.5)`); await t.sleep(1200);
+  await t.ev(`__w.placeAt(31.5,44.5)`); await t.sleep(1200);
   ok(await t.ev('__w.who()') === 'anna', 'Anna starts'); const h0 = await t.ev('__w.kid.frames.idle.height'); await t.shot('tmp-shots/h-who-anna.png');
   await t.ev(`document.querySelectorAll('#who .who')[1].click()`); await t.sleep(1500);
   ok(await t.ev('__w.who()') === 'fenna' && await t.ev('__w.kid.frames.idle.height') > h0, 'Fenna takes over and is the taller one'); await t.shot('tmp-shots/h-who-fenna.png');

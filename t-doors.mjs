@@ -15,7 +15,7 @@ export default async function (t) {
     if (open) { await t.ev(`document.querySelector('#act-close').click()`); await t.sleep(800); console.log('   after exit', JSON.stringify(await t.ev('__w.info()'))); }
   }
   // keyboard: walk into a lantern / tree / building edge and try to get away
-  await t.ev(`(()=>{const a=__w.kid; a.pos.set(11.5,0,8.5); a.path=[];})()`); await t.sleep(300);
+  await t.ev(`(()=>{const a=__w.kid; a.pos.set(28.5,0,37.5); a.path=[];})()`); await t.sleep(300);
   await t.key('ArrowDown', 1500); const p1 = await t.ev('JSON.stringify(__w.info().pos)');
   await t.key('ArrowLeft', 1500); const p2 = await t.ev('JSON.stringify(__w.info().pos)');
   await t.key('ArrowUp', 1500); const p3 = await t.ev('JSON.stringify(__w.info().pos)');

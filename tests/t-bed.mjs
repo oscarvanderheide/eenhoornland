@@ -1,8 +1,8 @@
-// node cdp.mjs tests/t-bed.mjs — bedroom at every stage (STAGE=ei,baby,jong,groot) + phone layout numbers
+// node cdp.mjs tests/t-bed.mjs — bedroom at every stage (STAGE=ei,baby,vriend,feest) + phone layout numbers
 export default async function (t) {
   await t.go('http://127.0.0.1:8765/dev.html?go&debug');
-  for (const st of (process.env.STAGE || 'ei,baby,jong').split(',')) {
-    await t.ev(`__w.Q._reset({stage:'${st}', kind:'zee', zone:'zee'}); __w.Q.wishes().forEach(w=>w.have=w.need); 0`);
+  for (const st of (process.env.STAGE || 'ei,baby,feest').split(',')) {
+    await t.ev(`__w.Q._reset({stage:'${st}', kind:'zee', zone:'strand'}); 0`);
     if (st !== 'ei') await t.ev(`Object.assign(__w.Q.quest, {}), Object.assign(JSON.parse('{}'), {}), (()=>{const s=__w.Q; })()`);
     await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='huisje'); __w.placeAt(b.door[0]+.5,b.door[1]+.5); __w.walkTo(b.door[0],b.door[1],b)})()`); await t.sleep(2500);
     await t.shot(`tmp-shots/bed-${st}-0.png`);

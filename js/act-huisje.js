@@ -1,5 +1,5 @@
-// Ons Huisje — the girls' bedroom. Going to bed ends the day; the morning shows what happened overnight
-// (the egg hatches, the unicorn has grown, a new egg has appeared somewhere...).
+// Ons Huisje — the girls' bedroom. Going to bed ends the day. After the unicorn has come home to her meadow, the night
+// brings a new dream: a new egg, somewhere in Eenhoornland (the first dream of all is js/dream.js).
 import * as ART from './art.js';
 import * as Q from './quest.js';
 export const meta = { id: 'huisje', title: 'Ons Huisje' };
@@ -50,9 +50,7 @@ export function open(root, api) {
   }
   function morningText() {
     const g = Q.goalText();
-    if (res.type === 'hatch') return 'Kijk! Het ei komt uit! Het is een baby eenhoorn! Ze heet ' + res.name + '. ' + g;
-    if (res.type === 'grow') return 'Goedemorgen! Kijk eens, ' + res.name + ' is gegroeid! ' + (res.stage === 'groot' ? res.name + ' is nu al heel groot. ' : '') + g;
-    if (res.type === 'newegg') return 'Goedemorgen! Er is vannacht iets gebeurd: er ligt ergens een nieuw ei in Eenhoornland! ' + g;
+    if (res.type === 'newegg') return 'Goedemorgen! Jullie droomden weer van een ei. Er ligt ergens een nieuw ei in Eenhoornland! ' + g;
     return 'Goedemorgen, Anna en Fenna! ' + g;
   }
 
@@ -61,7 +59,7 @@ export function open(root, api) {
     if (phase === 'awake') {
       if (p.x < 86 && p.y > 50 && p.y < 104) return goSleep();
       if (Math.abs(p.x - CX) < 32 && p.y > 62 && Q.hasCompanion()) { hop = 1; sfx.sparkle(); spark(CX, CY - 24, 6, true); speak(Q.quest.stage === 'ei' ? 'Tik tik! Het ei wil ook slapen.' : 'Hihihi! ' + state.uni.name + ' wil ook slapen.'); }
-    } else if (phase === 'done' || (phase === 'reveal' && t > 3.5)) { spark(p.x, p.y, 4, true); sfx.pop(); }
+    } else if (phase === 'done') { spark(p.x, p.y, 4, true); sfx.pop(); }
   });
 
   /* ---------- drawing ---------- */
@@ -76,9 +74,9 @@ export function open(root, api) {
     if (stage === 'ei') {
       ctx.save(); ctx.translate(CX, y - 4); ctx.rotate(Math.sin(time * 2.2) * .05); PX.drawSprite(ctx, ART.egg(kindDef), 0, 0, 2); ctx.restore();
       for (let X = -17; X <= 17; X++) { const h = 9 - Math.round(Math.abs(X) * .3); px(ctx, '#8A6A2A', CX + X, y - h + 2, 1, 1); px(ctx, (X + 40) % 3 ? '#C9A23F' : '#E9C46A', CX + X, y - h + 3, 1, h); }
-    } else if (stage === 'baby' || stage === 'jong' || stage === 'groot') {
-      const sleeping = phase === 'sleep' || phase === 'dawn', sc = stage === 'groot' ? 2.5 : 2;
-      PX.drawSprite(ctx, ART.uniSprite(look, 'idle', sleeping || (time % 3.4 > 3.25), { baby: stage === 'baby' }), CX, y + (stage === 'groot' ? 4 : 0), sc, true);
+    } else if (stage === 'baby' || stage === 'vriend') {
+      const sleeping = phase === 'sleep' || phase === 'dawn';
+      PX.drawSprite(ctx, ART.uniSprite(look, 'idle', sleeping || (time % 3.4 > 3.25), { baby: true }), CX, y, 2, true);
     }
   }
   function drawKids(inBed) {
@@ -102,29 +100,23 @@ export function open(root, api) {
     // companion: before the night as it was, after the night as it has become
     if (phase === 'reveal' || phase === 'done') {
       if (!spoke) { spoke = true; setHint(''); speak(morningText()); if (res.type === 'morning' || res.type === 'newegg') { sfx.chime(2); spark(56, 30, 8); } }
-      if (res.type === 'hatch' && phase === 'reveal') {
-        if (t < 2.4) { ctx.save(); ctx.translate(CX, CY - 3); ctx.rotate(Math.sin(t * 18) * .16 * Math.min(1, t)); PX.drawSprite(ctx, ART.egg(before.kind), 0, 0, 2); ctx.restore(); if (Math.floor(t * 3) !== Math.floor((t - dt) * 3)) sfx.pop(); }
-        else {
-          if (t - dt < 2.4) { sfx.tada(); spark(CX, CY - 20, 16, true); }
-          const k = Math.min(1, (t - 2.4) * 1.6); PX.drawSprite(ctx, ART.egg(before.kind, 'bottom'), CX, CY, 2); drawCompanion('baby', Q.companionLook(), null, -4 - Math.round(Math.sin(k * Math.PI) * 6));
-          PX.drawSprite(ctx, ART.egg(before.kind, 'top'), CX + 20 + k * 8, CY - 8 + Math.round(k * 8), 2);
-        }
-      } else if (res.type === 'grow' && phase === 'reveal' && t < 1.6) {
-        if (t - dt <= 0) sfx.sparkle(); if (Math.floor(t * 8) % 2) drawCompanion(before.stage, before.look, before.kind); else drawCompanion(Q.quest.stage, Q.companionLook(), Q.kind());
-        if (Math.floor(t * 5) !== Math.floor((t - dt) * 5)) spark(CX, CY - 24, 5);
-      } else {
-        if (res.type === 'grow' && t - dt < 1.6 && phase === 'reveal') { sfx.tada(); spark(CX, CY - 24, 14, true); hop = 1; }
-        if (res.type === 'hatch') { PX.drawSprite(ctx, ART.egg(before.kind, 'bottom'), CX + 30, CY + 4, 1); PX.drawSprite(ctx, ART.egg(before.kind, 'top'), CX - 30, CY + 5, 1); }
-        drawCompanion(Q.quest.stage, Q.companionLook(), Q.kind());
-      }
-      if (phase === 'reveal' && t > (res.type === 'hatch' ? 4.2 : res.type === 'grow' ? 2.6 : 1)) finish();
+      drawCompanion(Q.quest.stage, Q.companionLook(), Q.kind());
+      if (res.type === 'newegg' && phase === 'reveal' && t < 2.5) { ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(46, 46, 15, 0, 7); ctx.fill(); PX.drawSprite(ctx, ART.egg(Q.kind()), 43, 56, 1); ctx.fillStyle = '#C2456E'; ctx.font = 'bold 13px sans-serif'; ctx.fillText('?', 51, 51); }
+      if (phase === 'reveal' && t > (res.type === 'newegg' ? 2.5 : 1)) finish();
     } else drawCompanion(before.stage, before.look, before.kind);
     if (dark > 0) { ctx.fillStyle = `rgba(20,24,70,${dark})`; ctx.fillRect(0, 0, LW, LH); }
+    // the night after the party: a dream of the next egg floats above the bed
+    if (phase === 'sleep' && res.type === 'newegg' && t > 1.2) {
+      const k = Math.min(1, (t - 1.2) / 1.2); ctx.fillStyle = '#F4F1FF';
+      for (const [dx, dy, r] of [[-30, 26, 3], [-22, 18, 5]]) { ctx.beginPath(); ctx.arc(96 + dx, 34 + dy, r * k, 0, 7); ctx.fill(); }
+      for (const [dx, dy, r] of [[0, 0, 22], [-18, 4, 15], [18, 4, 15], [-8, -10, 15], [10, -10, 15]]) { ctx.beginPath(); ctx.arc(96 + dx, 34 + dy, r * k, 0, 7); ctx.fill(); }
+      if (k >= 1) { ctx.save(); ctx.translate(96, 48); ctx.rotate(Math.sin(time * 3) * .1); PX.drawSprite(ctx, ART.egg(Q.kind()), 0, 0, 2); ctx.restore(); if (Math.floor(t * 2) !== Math.floor((t - dt) * 2)) spark(96, 30, 3); }
+    }
     if (inBed) for (let k = 0; k < 3; k++) { const a = (time * .5 + k / 3) % 1; ctx.globalAlpha = 1 - a; ctx.drawImage(zArt, 40 + k * 14 + Math.round(Math.sin(a * 6) * 2), 58 - Math.round(a * 26)); ctx.globalAlpha = 1; }
     for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt * .9; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 30 * dt; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life * 2); ctx.drawImage(p.art, Math.round(p.x), Math.round(p.y)); ctx.globalAlpha = 1; }
   });
 
   setHint('Tik op het bed om te gaan slapen.');
-  speak(Q.bedtime() ? 'Het is avond. Tijd om te slapen! Tik op het bed.' : 'Dit is jullie huisje. Tik op het bed als je wilt slapen.');
+  speak(Q.bedtime() ? 'Het is avond. Tijd om te slapen! Tik op het bed.' : 'Dit is jullie huisje. Tik op het bed als je wilt slapen. ' + Q.goalText());
   return () => st.destroy();
 }
