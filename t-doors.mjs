@@ -1,5 +1,6 @@
 export default async function (t) {
   await t.go('http://127.0.0.1:8765/dev.html?go&debug');
+  await t.ev(`__w.Q._reset({ stage: 'baby' }); 0`); // the stal only opens once a unicorn has hatched
   const fps = await t.ev(`new Promise(r=>{let n=0;const s=performance.now();const f=()=>{n++; if(performance.now()-s<1000) requestAnimationFrame(f); else r(n)}; requestAnimationFrame(f)})`);
   console.log('fps', fps);
   // tap on the ROOF of each house (the part that used to be untappable)

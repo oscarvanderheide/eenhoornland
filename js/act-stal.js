@@ -49,13 +49,15 @@ export function open(root, api) {
   const UX = 82, UY = 106;
   let uniArt, uniSleep, bodyPix = [];
   function buildUni() {
-    uniArt = PX.unicorn(state.uni); uniSleep = PX.unicorn(state.uni, 'idle', true);
+    uniArt = api.uniArt ? api.uniArt(false) : PX.unicorn(state.uni); uniSleep = api.uniArt ? api.uniArt(true) : PX.unicorn(state.uni, 'idle', true);
     const d = uniArt.getContext('2d').getImageData(0, 0, uniArt.width, uniArt.height).data; const [R, G, B] = PX.rgb(state.uni.body); bodyPix = [];
     for (let y = 0; y < uniArt.height; y++) for (let x = 0; x < uniArt.width; x++) { const i = (y * uniArt.width + x) * 4; if (d[i + 3] && d[i] === R && d[i + 1] === G && d[i + 2] === B) bodyPix.push([x, y]); }
   }
   buildUni();
   const uniBox = () => ({ x: UX - uniArt.width * S / 2, y: UY - uniArt.height * S, w: uniArt.width * S, h: uniArt.height * S });
+  // callers pass spots on the grown sprite (28x22); a foal is a smaller sprite, so named spots scale with it. Mud is stored in real pixels.
   const toScreen = (sx, sy) => { const b = uniBox(); return [b.x + sx * S + S / 2, b.y + sy * S + S / 2]; };
+  const spot = (sx, sy) => toScreen(sx * uniArt.width / 28, sy * uniArt.height / 22);
   let mud = [];
   function addMud(n) {
     mud = []; const pool = bodyPix.slice();
@@ -72,7 +74,7 @@ export function open(root, api) {
     if (msg) speak(msg);
     if (done.has(id)) return; done.add(id); sfx.chime(done.size);
     if (done.size >= 5 && !rewarding) {
-      rewarding = true; happyT = 2.5; const [hx, hy] = toScreen(14, 8); for (let k = 0; k < 4; k++) setTimeout(() => sparkle(hx, hy, 8), k * 250);
+      rewarding = true; happyT = 2.5; const [hx, hy] = spot(14, 8); for (let k = 0; k < 4; k++) setTimeout(() => sparkle(hx, hy, 8), k * 250);
       setTimeout(() => { api.reward(state.uni.name + ' is helemaal blij!').then(() => { done.clear(); rewarding = false; addMud(5); }); }, 1600);
     }
   }
@@ -103,7 +105,7 @@ export function open(root, api) {
   }
   function doFeed() {
     if (sleeping) wake(); tb.setActive('eten'); mode = null; if (food) return;
-    const art = foods[Math.floor(Math.random() * 2)]; const [mx, my] = toScreen(24, 10);
+    const art = foods[Math.floor(Math.random() * 2)]; const [mx, my] = spot(24, 10);
     food = { art, x: LW + 10, y: 40, tx: mx + 6, ty: my, t: 0, eaten: 0 }; sfx.whoosh(); speak(art === foods[0] ? 'Een appel!' : 'Een wortel!');
   }
   function doBath() {
@@ -117,7 +119,7 @@ export function open(root, api) {
     if (sleeping) return wake(); tb.setActive('slapen'); mode = null; sleeping = true; sleepT = 0; sfx.lullaby(); speak('Slaap lekker, ' + state.uni.name + '. Tik als ze wakker mag worden.');
   }
   function wake() {
-    if (!sleeping) return; sleeping = false; tb.setActive(null); sfx.sparkle(); const [hx, hy] = toScreen(18, 6); sparkle(hx, hy, 6);
+    if (!sleeping) return; sleeping = false; tb.setActive(null); sfx.sparkle(); const [hx, hy] = spot(18, 6); sparkle(hx, hy, 6);
     if (sleepT > 2) count('slapen', 'Goedemorgen, ' + state.uni.name + '! Goed geslapen!'); else speak('Goedemorgen!');
   }
   function toggleColors() {
@@ -132,7 +134,7 @@ export function open(root, api) {
     colors.querySelectorAll('.sw').forEach(b => b.onclick = () => {
       state.uni[b.dataset.k] = b.dataset.v; save(); buildUni(); addMud(Math.min(mud.length, 6));
       colors.querySelectorAll(`.sw[data-k="${b.dataset.k}"]`).forEach(x => x.setAttribute('aria-pressed', x === b)); sfx.sparkle(); speak(b.dataset.n + '!');
-      const [hx, hy] = toScreen(14, 10); sparkle(hx, hy, 8); jumpT = 1; count('kleur');
+      const [hx, hy] = spot(14, 10); sparkle(hx, hy, 8); jumpT = 1; count('kleur');
     });
     colors.querySelectorAll('.chip').forEach(b => b.onclick = () => { state.uni.name = b.dataset.name; save(); colors.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === b)); sfx.pop(); speak('Hoi! Ik heet ' + state.uni.name + '!'); jumpT = 1; });
   }
@@ -202,7 +204,7 @@ export function open(root, api) {
     // sleep overlay
     if (sleeping) {
       ctx.fillStyle = `rgba(20,24,70,${Math.min(.55, sleepT * .5)})`; ctx.fillRect(0, 0, LW, LH);
-      const [hx, hy] = toScreen(20, 3);
+      const [hx, hy] = spot(20, 3);
       for (let k = 0; k < 3; k++) { const ph = (time * .5 + k / 3) % 1; ctx.globalAlpha = 1 - ph; ctx.drawImage(zArt, Math.round(hx + ph * 18 + k * 2), Math.round(hy - ph * 30), zArt.width * (1 + k * .5) | 0, zArt.height * (1 + k * .5) | 0); } ctx.globalAlpha = 1;
     }
     // brush cursor

@@ -2,6 +2,8 @@
 import { state, save, pickSticker, STICKERS, stickerCount } from './state.js';
 import { sfx, speak, stopSpeech } from './audio.js';
 import * as PX from './pixel.js';
+import * as ART from './art.js';
+import * as Q from './quest.js';
 
 const $ = s => document.querySelector(s);
 
@@ -94,7 +96,9 @@ let current = null;
 export function openActivity(mod, onClose) {
   const act = $('#act'); act.hidden = false; $('#act-title').textContent = mod.meta.title;
   const root = $('#act-root'); root.innerHTML = ''; root.className = 'act-root act-' + mod.meta.id;
-  const api = { speak, stopSpeech, sfx, state, save, reward, close: closeActivity, pixelStage, toolbar, modal, PX };
+  // an activity's reward also grants the unicorn's wish for that activity; uniArt draws the companion as it is today (foal or grown)
+  const api = { speak, stopSpeech, sfx, state, save, reward: msg => { Q.activityDone(mod.meta.id); return reward(msg); }, close: closeActivity, pixelStage, toolbar, modal, PX,
+    uniArt: (sleep = false) => ART.uniSprite(Q.companionLook(), 'idle', sleep, { baby: Q.quest.stage === 'baby' }) };
   let cleanup = null;
   try { cleanup = mod.open(root, api); } catch (e) { console.error(e); }
   current = { cleanup, onClose };
