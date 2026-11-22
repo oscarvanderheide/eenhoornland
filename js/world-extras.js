@@ -68,7 +68,8 @@ export function createExtras(ctx) {
       const hat = shadowed(new THREE.Mesh(new THREE.ConeGeometry(1.25, 1.7, 14), lam(sz > 0 ? '#6A7FD6' : '#9B72E8'))); hat.position.set(x, hT + .85, z); g.add(hat);
       const fl = makeSprite(pennant, { lean: 0, shadow: false, scale: 1.1 }); fl.position.set(x, hT + 1.6, z); g.add(fl);
     }
-    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.tap = () => { sfx.tada(); burst(new THREE.Vector3(C.door[0] + .5, 0, C.door[1] + .5), 8); speak('Dit is het kasteel van Eenhoornland! Hier wonen de eenhoorns.'); }; pick.push(o); } });
+    // tap the castle and somebody looks out of a window (world-toys.js)
+    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.tap = h => ctx.toys && ctx.toys.peek(h); pick.push(o); } });
     scene.add(g);
   }
 
@@ -82,8 +83,8 @@ export function createExtras(ctx) {
   const g = (x, z) => M.ground[M.I(x, z)];
   scatter(ART.propArt('fern', 1), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO); scatter(ART.propArt('fern', 2), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO);
   const beach = (x, z) => M.free(x, z) && g(x, z) === MAP.SA && (M.zone[M.I(x, z)] === 'strand' || M.zone[M.I(x, z)] === 'eiland');
-  scatter(ART.starfish(), 22, beach); scatter(ART.shell(1), 18, beach, .7);
-  for (const c of ['#FF7EB6', '#FFFFFF', '#B9A3F0']) scatter(PX.smallFlower(c), 70, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow
+  scatter(ART.starfish(), 9, beach);                                              // (no loose shells for show: every shell on the beach can be picked up)
+  for (const c of ['#FF7EB6', '#FFFFFF', '#B9A3F0']) scatter(PX.smallFlower(c), 45, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow
   // the ring of big mushrooms in the forest plays music: every one is a note, tap them (or walk into them)
   const shrooms = [];
   for (let k = 0; k < 9; k++) {
@@ -122,6 +123,11 @@ export function createExtras(ctx) {
         mesh.position.set(it.x, 0, it.z); scene.add(mesh); items.push(it);
       }
     }
+  }
+  /** something that was not lying there this morning: an apple shaken out of a tree. `idx` is remembered as picked for today. */
+  function dropItem(type, idx, x, z) {
+    if (items.some(it => it.type === type && it.idx === idx) || (Q.quest.picked[type] || []).includes(idx)) return false;
+    const mesh = itemMesh(ART.itemArt(type, idx)), it = { type, idx, mesh, x, z, ph: 0, float: false, born: 1 }; mesh.position.set(x, 0, z); scene.add(mesh); items.push(it); return true;
   }
   const flying = [];
   function pickUp(it) {
@@ -207,13 +213,6 @@ export function createExtras(ctx) {
     if (Q.quest.stage === 'ei') { bubble(c, 'Brr!', ART.starItem()); speak('Tik tik! Er beweegt iets in het ei! ' + Q.goalText()); }
     else { bubble(c, '', ART.fruit()); speak('Hihihi! Ik ben ' + state.uni.name + '! ' + Q.goalText()); }
   }
-  /** the fountain is a wishing well: a few coins buy a sticker. Returns true if it handled the tap. */
-  function fountain() {
-    if (Q.quest.coins < Q.FOUNTAIN_PRICE) { if (Q.quest.coins) speak('Plons! Met ' + Q.FOUNTAIN_PRICE + ' muntjes mag je een wens doen bij de fontein.'); return false; }
-    if (!Q.spendCoins(Q.FOUNTAIN_PRICE)) return false;
-    sfx.splash(); burst(new THREE.Vector3(MAP.FOUNT.cx, 0, MAP.FOUNT.cz), 12); ctx.onWish && ctx.onWish(); return true;
-  }
-
   const off = Q.on(type => {
     if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); syncGoals(); }
     if (type === 'day') syncItems();
@@ -222,14 +221,17 @@ export function createExtras(ctx) {
   syncItems(); syncEgg(); syncGoals(); syncHerd(false);
 
   return {
-    tapCompanion, fountain, eggSpot, dispose: off,
+    tapCompanion, eggSpot, dropItem, dispose: off,
     info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], star: star.pos && [star.pos.x, star.pos.z], fruit: fruit.pos && [fruit.pos.x, fruit.pos.z], gate: [gate.x, gate.z], herd: herd.length, hatching: !!hatching }),
     items: () => items.map(it => ({ type: it.type, x: it.x, z: it.z })),
     /** active: the child can play (not paused, start screen gone) */
     update(dt, time, active) {
+      // things lie still until she comes close: then a coin turns to catch the light and a flower nods
       for (const it of items) {
-        if (it.float) { it.mesh.position.y = .28 + Math.sin(time * 2.4 + it.ph) * .09; it.mesh.scale.x = Math.cos(time * 2.2 + it.ph); if (Math.abs(it.mesh.scale.x) < .15) it.mesh.scale.x = .15; }
-        else if (it.type !== 'wortel') it.mesh.position.y = Math.max(0, Math.sin(time * 2.2 + it.ph)) * .07;
+        const close = Math.abs(it.x - kid.pos.x) < 3.2 && Math.abs(it.z - kid.pos.z) < 3.2;
+        if (it.born > 0) { it.born = Math.max(0, it.born - dt * 3); it.mesh.scale.setScalar(1 - it.born); }
+        else if (it.float) { it.mesh.position.y = .28; it.mesh.scale.x = close ? Math.max(.15, Math.abs(Math.cos(time * 1.6 + it.ph))) * Math.sign(Math.cos(time * 1.6 + it.ph) || 1) : 1; }
+        else if (it.type !== 'wortel') it.mesh.rotation.z = close ? Math.sin(time * 3 + it.ph) * .1 : 0;
       }
       for (let i = flying.length - 1; i >= 0; i--) { const f = flying[i]; f.t += dt * 2.2; f.m.position.y = .3 + f.t * 1.5; f.m.scale.setScalar(Math.max(.01, 1.25 - f.t * f.t)); if (f.t >= 1.1) { scene.remove(f.m); flying.splice(i, 1); } }
       if (eggMesh) { eggMesh.rotation.z = Math.sin(time * 3) * .12; eggGlow.material.opacity = .45 + Math.sin(time * 3) * .25; const s = 1.5 + Math.sin(time * 3) * .25; eggGlow.scale.set(s, s, 1); sparkT -= dt; if (sparkT < 0) { sparkT = .9; burst(eggPos, 2); } }

@@ -142,6 +142,7 @@ const plas = () => cached('plas', () => gridSprite(18, 12, (x, y) => { const dd 
 export const toolIcon = id => id === 'hamer'
   ? cached('hamer', () => sprite(['..ssssssss..', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '..ssssssss..', '.....hh.....', '.....hh.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hh.....'], { s: '#9FA5BC', S: '#D8DCE8', h: '#B5823F', H: '#8A5A3B' }))
   : cached('schaar', () => sprite(['s........s', 'ss......ss', '.ss....ss.', '..ss..ss..', '...ssss...', '....kk....', '...rrrr...', '.rr.rr.rr.', 'r..rrrr..r', 'r..r..r..r', '.rr....rr.'], { s: '#D8DCE8', k: '#6B7088', r: '#FF5E9C' }));
+export const belIcon = () => cached('beli', () => sprite(['....kk....', '...yyyy...', '..yYyyyy..', '..yYyyyy..', '.yyYyyyyy.', '.yyyyyyyy.', 'yyyyyyyyyy', '....oo....'], { y: '#FFD43B', Y: '#FFF3A8', k: '#8A5A3B', o: '#E0A020' }));
 /** a little picture for "press here to jump" */
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));
 
@@ -173,6 +174,74 @@ const SCALE = { rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5,
 export function propArt(kind, seed = 1) { return (PROPS[kind] || PROPS.bush)(seed); }
 export const propScale = kind => SCALE[kind] || 1;
 export { bigMushroom };
+
+/* ================= toys: one for every island (world-toys.js, world-play.js) ================= */
+export const gieter = (full = false) => cached('gieter' + full, () => sprite(['....hhhh.....', '...h....h....', full ? 's..cwwwwc....' : 's..cccccc....', '.s.cCCCCc.h..', '..scCCCCchh..', '...cCCCCc.h..', '...cCCCCc....', '...cccccc....'], { c: '#4DABF7', C: '#8FD3FF', h: '#3E7FC0', s: '#3E7FC0', w: '#E8FAFF' }));
+export const drop = () => cached('drop', () => sprite(['.b.', 'bbb', 'bBb', '.b.'], { b: '#6CC6F0', B: '#E8FAFF' }, { outline: '#3E9AD6' }));
+const POT = ['.kkkkkkk.', 'ttttttttt', '.tTTTTTt.', '.tTTTTTt.', '..ttttt..'];
+const PLANT = [
+  ['....g....'],
+  ['....g.g..', '..g.gg...', '...gg....', '....g....'],
+  ['....p....', '...ppp...', '...gpg...', '....g....', '..g.g....', '...gg.gg.', '....ggg..', '....g....'],
+  ['...ppp...', '..ppypp..', '..pyyyp..', '..ppypp..', '...ppp...', '....g....', '..g.g....', '...gg.gg.', '....ggg..', '....g....', '....g....'],
+];
+const PETAL = ['#FFD43B', '#FF7EB6', '#B9A3F0', '#FF6B6B'];
+/** a flower pot: stage 0 a seed, 1 a sprout, 2 a bud, 3 in bloom */
+export const pot = (stage = 0, seed = 0) => cached('pot' + stage + seed % 4, () => sprite([...PLANT[Math.max(0, Math.min(3, stage))], ...POT], { g: '#5DC88A', p: PETAL[seed % 4], y: seed % 4 ? '#FFD43B' : '#8A5A3B', k: '#6E4630', t: '#D2654A', T: '#E88A6B' }));
+export const emmer = () => cached('emmer', () => sprite(['..hhhhh..', '.h.....h.', 'rrrrrrrrr', 'rRRRRRRRr', '.rRRRRRr.', '.rRRRRRr.', '.rrRRRrr.', '..rrrrr..'], { r: '#FF5E9C', R: '#FF9EC7', h: '#8A5A3B' }));
+const SAND = [
+  ['..ssssss..', '..sSSSSs..', '.ssSSSSss.', '.sSSSSSSs.', '.sSSSSSSs.', 'ssssssssss'],
+  ['...s.ss.s...', '...ssssss...', '...sSSSSs...', '...sSSSSs...', '.s.sSSSSs.s.', '.ssssSSssss.', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '.sSSSSSSSSs.', 'ssssssssssss'],
+  ['.....kff....', '.....kfff...', '.....k......', '...s.ss.s...', '...ssssss...', '...sSSSSs...', '...sSwSSs...', '.s.sSSSSs.s.', '.ssssSSssss.', '.sSSSSSSSSs.', '.sSSSddSSSs.', '.sSwSddSSPs.', 'ssssssddssss'],
+];
+/** a sand tower, 1 to 3 buckets high (the third gets a flag, a door and shells) */
+export const zandtoren = (level = 1) => cached('zand' + level, () => sprite(SAND[Math.max(1, Math.min(3, level)) - 1], { s: '#D9AE6C', S: '#F6DDA6', k: '#8A5A3B', f: '#FF5E9C', d: '#A87B45', w: '#FFFFFF', P: '#FFB3CC' }));
+export const vlieger = () => cached('vlieger', () => gridSprite(11, 13, (x, y) => { const dx = x + .5 - 5.5, dy = y + .5 - 5.5; if (Math.abs(dx) / 5.5 + Math.abs(dy) / (dy < 0 ? 5.5 : 7.5) > 1) return null; if (Math.abs(dx) < .6 || Math.abs(dy) < .6) return '#FFFFFF'; return dx < 0 ? (dy < 0 ? '#FF5E9C' : '#FFD43B') : (dy < 0 ? '#4DABF7' : '#69DB7C'); }));
+export const strikje = (seed = 0) => cached('strikje' + seed % 3, () => sprite(['c.c', 'ccc', 'c.c'], { c: ['#FF5E9C', '#FFD43B', '#4DABF7'][seed % 3] }));
+export const pluis = (full = true) => cached('pluis' + full, () => sprite(full ? ['.wWw.', 'wWwWw', 'WwWwW', 'wWwWw', '.wgw.', '..g..', '..g..', '..g..'] : ['.....', '.....', '.....', '..y..', '..g..', '..g..', '..g..', '..g..'], { w: '#FFFFFF', W: '#E3EAF5', g: '#5DC88A', y: '#F5E08A' }, full ? { outline: '#A9B4CC' } : {}));
+export const pluisje = () => cached('pluisje', () => sprite(['w.w', '.w.', '.k.'], { w: '#FFFFFF', k: '#B8A98A' }, { outline: false }));
+export const PAINTS = ['#FF5E6C', '#FFD43B', '#4DABF7'];
+export const verfplas = col => cached('verf' + col, () => gridSprite(18, 12, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 6) / 6) ** 2; if (dd > 1) return null; return (x + y * 2) % 9 === 0 || (x === 5 && y === 3) || (x === 6 && y === 3) ? mix(col, '#ffffff', .65) : dd > .78 ? mix(col, '#ffffff', .25) : col; }, { outline: mix(col, '#2B1E3A', .35) }));
+export const schans = () => cached('schans', () => gridSprite(20, 10, (x, y) => { const h = 2 + x * .42; if (y < 10 - h) return null; if (y < 10 - h + 2) return Math.floor(x / 3) % 2 ? '#FFD43B' : '#E8484A'; return x % 5 === 4 ? '#8A5A3B' : (y % 3 === 0 ? '#D6A674' : '#C18F5C'); }));
+export const bak = () => cached('bak', () => sprite(['b..........b', 'bbbbbbbbbbbb', 'bBBBBBBBBBBb', 'bBBBBBBBBBBb', '.bbbbbbbbbb.', '....kkkk....', '....kwwk....', '....kkkk....'], { b: '#B5823F', B: '#E8C08A', k: '#3D2B4F', w: '#D8DCE8' }));
+export const boei = () => cached('boei', () => sprite(['...k...', '..yk...', '...k...', '..rrr..', '.rrrrr.', '.wwwww.', '.rrrrr.', '..rrr..'], { k: '#5E4A3A', y: '#FFD43B', r: '#E8484A', w: '#FFFFFF' }));
+export const kistje = () => cached('kistje', () => sprite(['.bbbbbbb.', 'bByyyyyBb', 'bbbbybbbb', 'bBBByBBBb', 'bBBBBBBBb', 'bbbbbbbbb'], { b: '#8A5A3B', B: '#B5823F', y: '#FFD43B' }));
+export const walvis = () => cached('walvis', () => gridSprite(28, 13, (x, y) => { const dd = ((x + .5 - 14) / 14) ** 2 + ((y + .5 - 13) / 12.5) ** 2; if (dd > 1) return null; if (x >= 20 && x <= 21 && y >= 6 && y <= 7) return y === 6 && x === 21 ? '#FFFFFF' : EYE; if (y === 10 && x > 16 && x < 26) return '#2F5FA0'; if (y > 10 && x > 3) return '#DCEBFA'; return (x * 3 + y * 5) % 17 === 0 ? '#7CA8E6' : '#5B8FD6'; }));
+export const walvisschaduw = () => cached('walvisS', () => gridSprite(24, 10, (x, y) => ((x + .5 - 12) / 12) ** 2 + ((y + .5 - 5) / 5) ** 2 <= 1 ? ((x + y) % 2 ? '#2B74B8' : '#2F7FC0') : null, { outline: false }));
+const uil = () => sprite(['b......b', 'bbbbbbbb', 'bwwbbwwb', 'bwkbbkwb', 'bbbyybbb', 'bBBBBBBb', 'bBBBBBBb'], { b: '#B5823F', B: '#F2D7A6', w: '#FFFFFF', k: EYE, y: '#FFD43B' }, { outline: false });
+/** the stall on the village square: an owl behind the counter and a few of the things she makes */
+export const kraam = () => cached('kraam', () => {
+  const base = gridSprite(34, 32, (x, y) => {
+    if (y < 8) return Math.floor((x + 1) / 4) % 2 ? '#FF7EB6' : '#FFFFFF';
+    if (y < 10) return Math.floor((x + 1) / 2) % 2 ? (Math.floor((x + 1) / 4) % 2 ? '#E0559A' : '#E6DDCF') : null;
+    if (x < 2 || x > 31) return '#8A5A3B';
+    if (y >= 22) return y === 22 ? '#F2D7A6' : (x % 8 === 0 ? '#8A5A3B' : (y % 4 === 1 ? '#B5823F' : '#C18F5C'));
+    return '#4A3560';
+  });
+  const c = copy(base), x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.drawImage(uil(), 14, 16); x.drawImage(PX.crown(), 4, 11); x.drawImage(wearIcon('strik'), 21, 12); x.drawImage(PX.heart(), 26, 17, 6, 6);
+  return c;
+});
+const DRESS_ICON = ['..d...d..', '..ddddd..', '...ddd...', '..ddddd..', '.ddddddd.', '.ddddddd.', 'DDDDDDDDD'];
+/** a picture of something to wear (the cards of the stall) */
+export function wearIcon(id) {
+  return cached('wear' + id, () => {
+    switch (id) {
+      case 'krans': return sprite(['..FlGlW..', '.Gl...lF.', '.Wl...lG.', '..lFlGl..'], { F: '#FF7EB6', G: '#FFD43B', W: '#FFFFFF', l: '#5DC88A' });
+      case 'strik': return sprite(['RR.....RR', 'RRRR.RRRR', 'RRRRrRRRR', 'RRRR.RRRR', 'RR.....RR'], { R: '#E8484A', r: '#B5303A' });
+      case 'hoed': return sprite(['...MMMMM...', '.MMwMMMMMM.', 'MMMMMMMwMMM', 'MwMMMMMMMMM', '....sss....', '....sss....'], { M: '#E8484A', w: '#FFFFFF', s: '#FFF1DC' });
+      case 'kroon': return PX.crown();
+      case 'ketting': return sprite(['W.......W', '.P.....P.', '..W...W..', '...PWP...'], { W: '#FFFFFF', P: '#FFB3CC' });
+      case 'knuffel': return sprite(['.b...b.', '.b...b.', '.bbbbb.', '.bkbkb.', '.bbnbb.', '..bbb..', '.bbbbb.', '.b.b.b.'], { b: '#FFFFFF', k: EYE, n: '#FF8FB1' }, { outline: '#B9A3F0' });
+      case 'ballon': return PX.balloon('#FF6B6B');
+      case 'vleugels': return sprite(['vV.....Vv', 'vVV...VVv', '.vVV.VVv.', '..vV.Vv..'], { v: '#D9CCFF', V: '#FFFFFF' }, { outline: '#9B72E8' });
+      case 'jurkgeel': return sprite(DRESS_ICON, { d: '#FFD43B', D: '#E0A020' });
+      case 'jurkblauw': return sprite(DRESS_ICON, { d: '#6CC6F0', D: '#3E9AD6' });
+      case 'jurkregenboog': return sprite(DRESS_ICON.map((r, i) => r.replace(/[dD]/g, String(1 + i % 6))), { 1: PX.RAINBOW[0], 2: PX.RAINBOW[1], 3: PX.RAINBOW[2], 4: PX.RAINBOW[3], 5: PX.RAINBOW[4], 6: PX.RAINBOW[5] });
+      default: return PX.star();
+    }
+  });
+}
 
 /* ================= collectibles ================= */
 export const shell = (seed = 0) => cached('shell' + (seed % 3), () => { const c = ['#FFB3CC', '#FFE8CC', '#D9CCFF'][seed % 3]; return sprite(['..ccccc..', '.cWcLcWc.', 'cWcLcLcWc', 'cWcLcLcWc', '.cWcLcWc.', '..cccc...', '...cc....'], { c, W: '#FFFFFF', L: mix(c, '#8a6fa0', .3) }); });

@@ -123,6 +123,36 @@ export function fenna(frame = 'idle', blink = false) {
   return sprite([...top, ...FENNA_LEGS[frame]], kidPal(KIDS.fenna), { key: 'fenna' + frame + blink });
 }
 
+/* ---- what the girls can wear (bought at the stall, see quest.js SHOP) ---- */
+const KID_ROWS = {
+  anna: { top: ANNA_TOP, legs: ANNA_LEGS, eyes: 4, band: 1, neck: 9, dress: [9, 12], hand: 10 },
+  fenna: { top: FENNA_TOP, legs: FENNA_LEGS, eyes: 6, band: 2, neck: 11, dress: [11, 16], hand: 13 },
+};
+const WEAR_PAL = { F: '#FF7EB6', G: '#FFD43B', W: '#FFFFFF', L: '#5DC88A', R: '#E8484A', r: '#B5303A', M: '#E8484A', w: '#FFFFFF', Y: '#FFD43B', g: '#4DABF7', P: '#FFB3CC', v: '#D9CCFF', V: '#FFFFFF', b: '#FFFFFF', n: '#FF8FB1',
+  1: RAINBOW[0], 2: RAINBOW[1], 3: RAINBOW[2], 4: RAINBOW[3], 5: RAINBOW[4], 6: RAINBOW[5] };
+const DRESS = { jurkgeel: ['#FFD43B', '#E0A020'], jurkblauw: ['#6CC6F0', '#3E9AD6'] };
+const put = (row, at, str) => { const a = row.split(''); for (let i = 0; i < str.length; i++) if (str[i] !== ' ' && at + i >= 0 && at + i < a.length) a[at + i] = str[i]; return a.join(''); };
+/** a girl with what she has on: wear = {head, neck, dress, back, hand}. The balloon is not part of the sprite (it floats). */
+export function kidSprite(who, frame = 'idle', blink = false, wear = {}) {
+  const K = KID_ROWS[who] || KID_ROWS.anna, w = K.top[0].length, mid = w / 2, pal = Object.assign({}, WEAR_PAL, kidPal(KIDS[who] || KIDS.anna));
+  const sig = ['head', 'neck', 'dress', 'back', 'hand'].map(k => wear[k] || '').join(','), key = 'kid' + who + frame + blink + sig;
+  let rows = K.top.map((r, i) => blink && i === K.eyes ? r.replace(/k/g, 's') : r).concat(K.legs[frame] || K.legs.idle), up = [];
+  if (DRESS[wear.dress]) { pal.d = DRESS[wear.dress][0]; pal.D = DRESS[wear.dress][1]; }
+  if (wear.dress === 'jurkregenboog') for (let i = K.dress[0]; i <= K.dress[1]; i++) rows[i] = rows[i].replace(/[dD]/g, String(1 + (i - K.dress[0]) % 6));
+  if (wear.neck === 'ketting') { let n = 0; rows[K.neck] = rows[K.neck].replace(/d|[1-6]/g, () => n++ % 2 ? 'P' : 'W'); }
+  if (wear.head === 'krans') { let n = 0; rows[K.band] = rows[K.band].replace(/h/g, () => 'FLGLWL'[n++ % 6]); }
+  if (wear.head === 'strik') { up = [put('.'.repeat(w), mid - 3, 'RR  RR')]; rows[0] = put(rows[0], mid - 3, 'RRrrRR'); }
+  if (wear.head === 'kroon') { up = [put('.'.repeat(w), mid - 4, 'Y  YY  Y'), put('.'.repeat(w), mid - 4, 'YYYggYYY')]; }
+  if (wear.head === 'hoed') { up = [put('.'.repeat(w), 3, 'M'.repeat(w - 6)), put('.'.repeat(w), 2, 'MMw' + 'M'.repeat(w - 9) + 'wM')]; rows[0] = put(rows[0], 1, 'MMMM' + 'M'.repeat(w - 9) + 'wMMM'); rows[1] = 'MwM' + 'M'.repeat(w - 6) + 'MMM'; }
+  rows = up.concat(rows); const off = up.length;
+  if (wear.back === 'vleugels' || wear.hand === 'knuffel') {
+    rows = rows.map(r => '....' + r + '....');
+    if (wear.back === 'vleugels') ['vVV', 'vVV', 'vV', 'v'].forEach((wing, k) => { const i = off + K.neck - 1 + k, r = rows[i], a = r.search(/[^.]/), b = r.length - 1 - r.split('').reverse().join('').search(/[^.]/); rows[i] = put(put(r, a - wing.length, wing), b + 1, wing.split('').reverse().join('')); });
+    if (wear.hand === 'knuffel') { const i = off + K.hand, r = rows[i], b = r.length - 1 - r.split('').reverse().join('').search(/[^.]/); ['b b', 'bbb', 'bnb', 'bbb'].forEach((t, k) => { rows[i - 2 + k] = put(rows[i - 2 + k], b + 1, t); }); }
+  }
+  return sprite(rows, pal, { key });
+}
+
 /* unicorn (side view, facing right) */
 const UNI_TOP = [
   '....................h.....',

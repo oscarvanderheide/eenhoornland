@@ -6,6 +6,7 @@ import * as Q from './quest.js';
 import { createHud } from './hud.js';
 import { playDream } from './dream.js';
 import { playHatch, playFeed } from './cutscene.js';
+import { openShop } from './shop.js';
 
 const $ = s => document.querySelector(s);
 const ACTS = {
@@ -87,7 +88,7 @@ if (params.get('act')) {
   enter(params.get('act'));
 } else {
   import('./world.js').then(m => {
-    makeWorld = () => m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!'), onMount: () => hud.render(), onShow: show });
+    makeWorld = () => m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!'), onMount: () => hud.render(), onShow: show, onShop: () => openShop(() => world.who()) });
     world = makeWorld(); hud.render();
     syncNight(true);
     if (params.has('night')) world.setNight(true, true);

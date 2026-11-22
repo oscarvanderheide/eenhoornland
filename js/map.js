@@ -34,6 +34,18 @@ export const BOAT = { strand: { dock: [39, 70], moor: [37.4, 71] }, eiland: { do
 export const RAINBOW_TREE = [11, 68];
 export const BIKE = [36.5, 34.5];
 export const BALLS = [[22.5, 42.5], [58.5, 72.5]];
+/* ---- every island has a toy of its own (world-toys.js, world-play.js); none of it is needed for the adventure ---- */
+export const STALL = { x: 36, z: 40, w: 2 };                                          // dorp: the stall where found things are traded for things to wear
+export const POTS = [[29.5, 35.45], [30.45, 35.45], [32.55, 35.45], [33.5, 35.45]];   // dorp: flower pots at the front door
+export const CAN = [28.4, 35.6];                                                      // dorp: the watering can (filled at the pond or the fountain)
+export const RAMPS = [[24.5, 37], [39.5, 46], [61.5, 46.2]];                          // dorp and wei: only a bike takes off from these
+export const HIDES = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]];   // bos: bushes somebody hides in
+export const KITE = [62.5, 44.4];                                                     // wei: a kite for the wind
+export const BUCKET = [57.5, 70.5];                                                   // strand: a bucket for sand towers
+export const PAINT = [[19.5, 69.5], [17.5, 72.5], [15.5, 68.5]];                      // eiland: red, yellow and blue puddles
+/** the part of the sea the boat sails on: marked with buoys, so nobody sails off the map */
+export const LAGOON = { x0: 5, z0: 57, x1: 58, z1: 79 };
+export const WHALE = [32.5, 76.5];
 /** the houses you can go into: one on every island that has people */
 export const HOUSES = {
   huisje: { x: 29, z: 31, w: 5, d: 4 },                  // dorp
@@ -77,7 +89,8 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
       for (let s = 0; s <= n; s++) { const px = ax + (bx - ax) * s / n, pz = az + (bz - az) * s / n; for (let z = Math.floor(pz - r); z <= Math.floor(pz + r); z++) for (let x = Math.floor(px - r); x <= Math.floor(px + r); x++) if ((x + .5 - px) ** 2 + (z + .5 - pz) ** 2 <= r * r) set(x, z, t); }
     }
   };
-  const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]]).map(([x, z]) => I(x, z)));
+  const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -119,6 +132,7 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   const solid = (x0, z0, x1, z1) => { for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (inb(x, z)) block[I(x, z)] = 1; };
   for (const s of solids) solid(...s);
   solid(31, 40, 32, 41);                                         // fountain
+  solid(STALL.x, STALL.z, STALL.x + STALL.w - 1, STALL.z);       // the stall
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) { if (ground[I(x, z)] === SA) ground[I(x, z)] = GR; if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1; }
@@ -179,10 +193,10 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   const open4 = (x, z) => free(x - 1, z) && free(x + 1, z) && free(x, z - 1) && free(x, z + 1);
   const low = (x, z, kind) => { if (!free(x, z) || keepSet.has(I(x, z))) return; obstacles.push({ kind, type: 'low', x, z }); block[I(x, z)] = LOW; };
   low(40, 27, 'log'); low(41, 27, 'log');                         // on the bridge to the forest: the first jump
-  for (const [x, z] of pick(7, (x, z, g, zn) => g === PA && zn !== 'dorp' && open4(x, z), 7)) low(x, z, zone[I(x, z)] === 'bos' ? 'log' : 'plas');
-  for (const [x, z] of pick(9, (x, z, g, zn) => plain(g) && zn !== 'dorp' && !rim[I(x, z)] && !inPen(x, z) && open4(x, z), 6)) low(x, z, ground[I(x, z)] === GR ? 'plas' : 'log');
+  for (const [x, z] of pick(4, (x, z, g, zn) => g === PA && zn !== 'dorp' && open4(x, z), 7)) low(x, z, zone[I(x, z)] === 'bos' ? 'log' : 'plas');
+  for (const [x, z] of pick(5, (x, z, g, zn) => plain(g) && zn !== 'dorp' && !rim[I(x, z)] && !inPen(x, z) && open4(x, z), 6)) low(x, z, ground[I(x, z)] === GR ? 'plas' : 'log');
   const loose = (kind, n, pred) => { for (const [x, z] of pick(n, (x, z, g, zn) => plain(g) && pred(zn) && !inPen(x, z) && !nearBusy(x, z, 1), 5)) { obstacles.push({ kind, type: 'break', tool: TOOL_FOR[kind], x, z, gate: false, g: obstacles.length }); block[I(x, z)] = BREAK; } };
-  loose('bramble', 6, zn => zn === 'bos' || zn === 'wei'); loose('boulder', 6, zn => zn === 'strand' || zn === 'kasteel' || zn === 'eiland');
+  loose('bramble', 4, zn => zn === 'bos' || zn === 'wei'); loose('boulder', 4, zn => zn === 'strand' || zn === 'kasteel' || zn === 'eiland');
 
   /* ---- reachability: walking, jumping over LOW tiles, passing BREAK tiles you own the tool for, riding over the gap, the boat ---- */
   const toolAt = new Map(obstacles.filter(o => o.type !== 'low').map(o => [I(o.x, o.z), o.tool]));
@@ -255,6 +269,13 @@ export function validate(m, keep = []) {
   ok(m.reach2[I(...BOAT.strand.dock)] && !m.reach1[I(...BOAT.strand.dock)], 'boat must lie behind the boulders'); ok(m.reach2[I(...BOAT.eiland.dock)], 'island pier unreachable');
   ok(m.reach2[I(RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1)], 'rainbow tree unreachable');
   ok(m.reach0[I(Math.floor(BIKE[0]), Math.floor(BIKE[1]))], 'bike unreachable'); for (const b of BALLS) ok(m.reach[I(Math.floor(b[0]), Math.floor(b[1]))], 'ball unreachable');
+  // the toys: everything a child sees must be reachable, in the part of the world it belongs to
+  const T = ([x, z]) => I(Math.floor(x), Math.floor(z));
+  for (const p of [...POTS, CAN, [STALL.x, STALL.z + 1]]) ok(m.reach0[T(p)] && !m.block[T(p)], 'village toy unreachable ' + p);
+  ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable');
+  for (const p of RAMPS) ok(m.reach[T(p)] && !m.block[T(p)], 'ramp unreachable ' + p);
+  let sail = 0; for (let z = LAGOON.z0; z <= LAGOON.z1; z++) for (let x = LAGOON.x0; x <= LAGOON.x1; x++) if (m.ground[I(x, z)] === SE && !m.deck[I(x, z)]) sail++;
+  ok(sail > 300, 'the lagoon is too small to sail on'); ok(m.ground[T(WHALE)] === SE, 'the whale lies on land');
   let leak0 = 0, leak1 = 0, leak2 = 0, un = 0, home = 0;
   for (let i = 0; i < m.block.length; i++) {
     const zn = m.zone[i]; if (m.ground[i] === BW) continue;      // bridges belong to both sides

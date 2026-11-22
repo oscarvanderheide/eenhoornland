@@ -11,6 +11,7 @@ import { createExtras } from './world-extras.js';
 import { createTools } from './world-tools.js';
 import { createPlay } from './world-play.js';
 import { createLife } from './world-life.js';
+import { createToys } from './world-toys.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -34,7 +35,7 @@ function canvas(w, h) { const c = document.createElement('canvas'); c.width = w;
 
 /* ------------------------------------------------------------------ */
 let sharedRenderer = null;   // one WebGL context for the page; the world itself is rebuilt for every cycle's new island
-export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
+export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const renderer = sharedRenderer || (sharedRenderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }));
   const ac = new AbortController(), listen = { signal: ac.signal };   // every listener goes away with destroy()
   const mobile = matchMedia('(pointer:coarse)').matches;
@@ -108,8 +109,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
           float dz=d-(.36+lap); if(dz<0.) discard;
           float k=floor(clamp(dz/2.4,0.,1.)*5.)/5.;
           vec3 c=mix(c1,c2,k); c=mix(c,c3,smoothstep(2.4,5.2,dz));
-          float s=sin(p.x*5.3+t*1.6)*sin(p.y*4.1-t*1.3)*sin((p.x+p.y)*2.2+t);
-          if(s>.62) c=foam;
+          float s=sin(p.x*5.3+t*1.1)*sin(p.y*4.1-t*.9)*sin((p.x+p.y)*2.2+t*.7);
+          if(s>.8) c=mix(c,foam,.7);
           if(dz<.12) c=foam;
           float l2=.5+.18*sin(t*.9+p.x*.5+1.5); if(abs(dz-l2)<.045 && sin(p.x*3.+p.y*2.+t)>-.3) c=mix(c,foam,.75);
           gl_FragColor=vec4(c*dim,1.); }`,
@@ -347,7 +348,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
 
   /* particles: fireflies at night, drifting petals by day */
   const motes = (() => {
-    const n = 200, pos = new Float32Array(n * 3), seeds = [];
+    const n = 70, pos = new Float32Array(n * 3), seeds = [];
     for (let i = 0; i < n; i++) seeds.push({ x: 2 + Math.random() * (W - 4), z: 2 + Math.random() * (H - 4), y: .3 + Math.random() * 1.4, p: Math.random() * 10, s: .3 + Math.random() * .6 });
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const mat = new THREE.PointsMaterial({ color: '#FFF1A8', size: .1, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -374,10 +375,15 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   const kidFrames = f => ({ idle: f('idle'), w1: f('w1'), w2: f('w2'), blink: f('idle', true), jump: f('jump') });
   // one girl walks around at a time; the sisters take turns whenever they swap seats (HUD button, saved in state.extra.who)
   const GIRLS = {
-    anna: { name: 'Anna', frames: kidFrames(PX.anna), say: ['Hihi!', 'Hoera!', 'Kom mee!'], blobW: .55 },
-    fenna: { name: 'Fenna', frames: kidFrames(PX.fenna), say: ['Joepie!', 'Hoi!', 'Kom mee!'], blobW: .6 },
+    anna: { name: 'Anna', say: ['Hihi!', 'Hoera!', 'Kom mee!'], blobW: .55 },
+    fenna: { name: 'Fenna', say: ['Joepie!', 'Hoi!', 'Kom mee!'], blobW: .6 },
   };
-  for (const g of Object.values(GIRLS)) { g.frames = hdF(g.frames); g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]); }
+  /** draw a girl with what she has on today (bought at the stall) */
+  function dress(id) {
+    const g = GIRLS[id], w = Q.wearing(id); for (const k in g.texs || {}) g.texs[k].dispose();
+    g.frames = hdF(kidFrames((f, blink) => PX.kidSprite(id, f, blink, w))); g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]);
+  }
+  for (const id in GIRLS) dress(id);
   let who = GIRLS[state.extra.who] ? state.extra.who : 'anna';
   const kid = makeChar(GIRLS[who].frames, { name: GIRLS[who].name, say: GIRLS[who].say, blobW: GIRLS[who].blobW });
   function setWho(id, quiet = false) {
@@ -387,6 +393,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
     if (state.extra.who !== id) { state.extra.who = id; save(); }
     if (!quiet) { sfx.sparkle(); kid.hop = 1; burst(kid.pos, 8); bubble(kid, 'Ik ben ' + g.name + '!'); speak(g.name + ' is aan de beurt!'); }
   }
+  const offWear = Q.on((type, d) => { if (type === 'wear' && GIRLS[d]) { dress(d); if (d === who) { setWho(who, true); kid.hop = 1; burst(kid.pos, 10, true); } } });
   // two billboards on the same spot fight over the same pixels and flicker: everyone gets a depth of their own, the girl in front
   kid.zBias = .06;
   // the companion is whatever the quest says: nothing yet, an egg, or the little unicorn (who never grows into another sprite)
@@ -484,7 +491,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   let after = null;  // what to do on arrival (cut the bramble she walked up to)
   /** deep: do not fall back to "walk up to whatever is in the way" */
   function walkTo(tx, tz, building = null, exact = null, deep = false) {
-    after = null;
+    after = null; if (!deep && play) play.wants(null);
     const s = [Math.floor(kid.pos.x), Math.floor(kid.pos.z)];
     const ok = (x, z) => walkable(x, z) || (x === s[0] && z === s[1]);
     const p = astar(s[0], s[1], tx, tz, ok, true);
@@ -494,7 +501,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
       const p2 = astar(s[0], s[1], tx, tz, (x, z) => ok(x, z) || breakAt(x, z), true), hit = p2 && p2.find(([x, z]) => breakAt(x, z));
       if (hit) return approach(hit[0], hit[1], () => tools.useAt(hit[0], hit[1]), true);
       // over the water: walk to the boat instead (it sails by itself once she stands on the pier)
-      const d = play.detour(tx, tz); return !!d && (d[0] !== tx || d[1] !== tz) && walkTo(d[0], d[1]);
+      const d = play.detour(tx, tz); if (!d || (d[0] === tx && d[1] === tz) || !walkTo(d[0], d[1])) return false;
+      play.wants([tx, tz]); return true;                         // the boat takes her across and she walks on from there
     }
     let pts = p.slice(1).map(([x, z, j]) => { const v = new THREE.Vector3(x + .5, 0, z + .5); v.jump = j; return v; });
     if (exact && freeAt(exact.x, exact.z)) { if (!pts.length || pts[pts.length - 1].jump) pts.push(exact.clone()); else pts[pts.length - 1] = exact.clone(); }
@@ -524,7 +532,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   }
   /** a hop on the spot, just for fun (jumping over things happens by itself while walking) */
   function jump() {
-    if (!interactive || paused || kid.hop > 0) return; sfx.boing(); kid.hop = 1;
+    if (!interactive || paused || kid.hop > 0) return;
+    if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
+    sfx.boing(); kid.hop = 1; toys.stomp();
     if (mount !== 'uni') setTimeout(() => { if (uni.g.visible && uni.hop <= 0) uni.hop = 1; }, 200);
   }
   let lastTile = -1;
@@ -551,18 +561,22 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   }
 
   const alphaCache = new Map();
-  let extras = null; const ctxHooks = { onWish };
+  let extras = null, toys = null; const ctxHooks = { onWish };
   const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
-    walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground,
+    walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground, astar, showMarker: (x, z) => showMarker(x, z),
+    /** walk onto this very tile, then do `then` */
+    walkThen: (x, z, then) => { target = null; if (!walkTo(x, z, null, null, true)) return false; after = then; return true; },
+    onShop: () => onShop && onShop(),
     /** a full-screen moment (hatching, the rainbow fruit): main.js plays it and resolves when it is over */
     show: (type, data) => onShow ? onShow(type, data) : Promise.resolve(), placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
     /** something else moves her for a while (the boat): no walking, no taps */
     setBusy(v) { busy = v; if (v) { kid.path = []; target = null; after = null; keys.clear(); } } };
   let play = null;
-  extras = createExtras(ctx);
+  extras = ctx.extras = createExtras(ctx);
   const tools = createTools(ctx);
   play = createPlay(ctx);
-  const life = createLife(ctx);
+  const life = ctx.life = createLife(ctx);
+  toys = ctx.toys = createToys(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -570,25 +584,28 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   let interactive = false;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   cv.addEventListener('pointerdown', e => {
-    if (!interactive || paused || busy) return;
+    if (!interactive || paused) return;
     const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
+    if (play.aboard()) { const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) play.steer(w.x, w.z); return; }   // in the boat a tap is where to sail
+    if (busy) return;
     const hits = ray.intersectObjects(pick, false); let shook = false;
     for (const h of hits) {
       const d = h.object.userData;
       if (d.char && !d.char.g.visible) continue;
       if ((d.char || d.alpha) && h.uv && !opaqueAt(d.char ? d.char : null, d.alpha, h.uv)) continue;
       if (d.trees) { if (!shook) { shook = true; life.tapProp(d.trees[h.instanceId]); } continue; }   // it shakes, and she still walks there
-      if (d.tap) { d.tap(); return; }
+      if (d.tap) { d.tap(h); return; }
       // an animal can be picked up: a tap makes it talk, a drag lifts it, letting go throws it (it thinks that is great fun)
       if (d.char && animals.includes(d.char)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
-      if (d.fountain) { if (extras.fountain()) return; sfx.splash(); burst(new THREE.Vector3(FOUNT.cx, 0, FOUNT.cz), 8); speak('Plons!'); return; }
+      if (d.fountain) { sfx.splash(); burst(new THREE.Vector3(FOUNT.cx, .5, FOUNT.cz), 8); for (const a of animals) if (a.water && !a.fly) a.hop = 1; toys.fountain(); return; }
     }
     const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane, p)) return;
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
     const fb = footprint.get(I(tx, tz)); if (fb) { sfx.pop(); walkTo(fb.door[0], fb.door[1], fb); return; }
+    if (toys.tapGround(tx, tz)) return;                                         // with the bucket: build a sand tower there
     if (inb(tx, tz) && (ground[I(tx, tz)] === MAP.SE || ground[I(tx, tz)] === WA)) life.splash(p.x, p.z);
     const t = walkable(tx, tz) ? [tx, tz] : nearestWalkable(p.x, p.z);
     if (t) { sfx.click(); target = null; walkTo(t[0], t[1], null, walkable(tx, tz) ? p : null); }
@@ -604,7 +621,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   }, listen);
   const letGo = () => {
     if (!grab) return; const g = grab; grab = null;
-    if (!g.drag) { tapChar(g.c); return; }
+    if (!g.drag) { if (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c)) tapChar(g.c); return; }
     const a = g.pts[0], b = g.pts[g.pts.length - 1], dt = a && b ? Math.max(.03, (b.t - a.t) / 1000) : 1;
     life.toss(g.c, a && b && performance.now() - b.t < 120 ? (b.x - a.x) / dt : 0, a && b && performance.now() - b.t < 120 ? (b.z - a.z) / dt : 0);
   };
@@ -620,6 +637,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   }
   function tapChar(c) {
     if (c === kid && mount) { setMount(null); return; }
+    if (c === kid && toys.carrying()) { toys.putDown(); return; }                // tap her and she puts down what she carries
     c.hop = 1; const txt = c.say[Math.floor(Math.random() * c.say.length)];
     if (c.isUni) { extras.tapCompanion(c); return; }
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
@@ -692,7 +710,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
     for (const w of windowGlows) w.material.opacity = .95 * t;
     for (const u of waterUniforms) u.dim.value = 1 - .62 * t;
     for (const m of spriteMats) m.emissiveIntensity = .28 - .14 * t;
-    motes.mat.opacity = .25 + .75 * t; motes.mat.size = .07 + .06 * t; motes.mat.color.copy(C('#FFFFFF', '#FFF1A8', t));
+    motes.mat.opacity = .1 + .9 * t; motes.mat.size = .07 + .06 * t; motes.mat.color.copy(C('#FFFFFF', '#FFF1A8', t));
     post.uniforms.night.value = t;
   }
   applyNight(nightT);
@@ -766,7 +784,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
     }
     // animals
     for (const a of animals) {
-      if (a.held || a.fly) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
+      if (a.held || a.fly || a.cart) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
       if (a.path.length) stepAlong(a, dt, a.speed);
       else { a.moving = false; a.wait -= dt; if (a.wait < 0) { a.wait = 2 + Math.random() * 4; const t = randomTile(a); const s = [Math.floor(a.pos.x), Math.floor(a.pos.z)]; const ok = a.water ? waterTile : walkable; const p = astar(s[0], s[1], t[0], t[1], (x, z) => ok(x, z) || (x === s[0] && z === s[1])); if (p) a.path = p.slice(1).map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5));
         else if (a.lost) { a.lost = false; burst(a.pos, 6); a.pos.set(t[0] + .5, 0, t[1] + .5); burst(a.pos, 6); sfx.sparkle(); } } }   // thrown too far to walk back: a little magic brings it home
@@ -775,7 +793,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -798,7 +816,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
   };
@@ -812,13 +830,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
     walkToTile(x, z) { target = null; return walkTo(x, z); },
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     pos: () => [kid.pos.x, kid.pos.z],
-    groundCanvas, extras, tools, play, jump, setWho, who: () => who, M,
+    groundCanvas, extras, tools, play, toys, jump, setWho, who: () => who, M,
     /** on or off the unicorn (the HUD button); getting off a bike works the same way */
     ride() { return mount ? setMount(null) : setMount('uni'); }, mount: () => mount,
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); toys.dispose(); offWear(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

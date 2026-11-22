@@ -25,19 +25,22 @@ export const ITEMS = {
   schelp: { one: 'schelp', many: 'schelpen' }, wortel: { one: 'wortel', many: 'wortels' }, diamant: { one: 'diamant', many: 'diamanten' }, munt: { one: 'muntje', many: 'muntjes' },
 };
 /** how many of each lie around on one day */
-export const DAILY = { bloem: 18, appel: 9, paddenstoel: 10, schelp: 12, wortel: 7, diamant: 5, munt: 16 };
-export const FOUNTAIN_PRICE = 5;
+// (fewer than there used to be: a quiet world with a few things worth walking to. Apples do not lie around: shake an apple tree.)
+export const DAILY = { bloem: 10, appel: 0, paddenstoel: 7, schelp: 8, wortel: 6, diamant: 4, munt: 8 };
 const NAMES = ['Sterretje', 'Wolkje', 'Glitter', 'Snoepje', 'Bloesem', 'Maantje', 'Zonnetje', 'Roosje', 'Vlinder', 'Suikerspin', 'Regenboog', 'Parel', 'Sneeuwvlok', 'Madelief', 'Bubbel', 'Fonkel', 'Lolly', 'Dromer', 'Twinkel', 'Zeepbel', 'Hartje', 'Pluisje', 'Knuffel', 'Framboos'];
 const STAGES = ['zoek', 'ei', 'baby', 'vriend', 'feest'];
 
 /* ---------- saved state ---------- */
 function fresh(old) {
   // unicorns and coins from before this adventure existed are kept, so nobody loses their friends
-  return { v: 2, cycle: 0, stage: 'zoek', kind: 'bos', zone: 'bos', spot: 0, day: 1, picked: {}, coins: old && old.coins | 0 || 0, totals: {}, herd: old && Array.isArray(old.herd) ? old.herd : [], seed: Math.floor(Math.random() * 1e9), tools: {}, broken: [], dreamt: -1 };
+  return { v: 2, cycle: 0, stage: 'zoek', kind: 'bos', zone: 'bos', spot: 0, day: 1, picked: {}, coins: old && old.coins | 0 || 0, totals: {}, herd: old && Array.isArray(old.herd) ? old.herd : [], seed: Math.floor(Math.random() * 1e9), tools: {}, broken: [], dreamt: -1,
+    bag: old && old.bag || {}, own: old && old.own || {}, garden: old && old.garden || [], sand: [] };
 }
 let q = state.extra.quest && state.extra.quest.v === 2 && STAGES.includes(state.extra.quest.stage) ? state.extra.quest : null;
 if (!q) { q = state.extra.quest = fresh(state.extra.quest); save(); }
-for (const k of ['picked', 'totals', 'tools']) if (!q[k] || typeof q[k] !== 'object') q[k] = {};
+if (!q.bag) { q.bag = {}; for (const k of Object.keys(q.totals || {})) if (k !== 'munt') q.bag[k] = Math.min(6, q.totals[k] | 0); }   // what was picked up before there was a stall still counts
+for (const k of ['picked', 'totals', 'tools', 'bag', 'own']) if (!q[k] || typeof q[k] !== 'object') q[k] = {};
+for (const k of ['garden', 'sand']) if (!Array.isArray(q[k])) q[k] = [];
 if (!Array.isArray(q.herd)) q.herd = []; if (!Array.isArray(q.broken)) q.broken = [];
 export const quest = q;
 
@@ -59,7 +62,7 @@ export function smash(list, coin) { for (const i of list) if (!q.broken.includes
 export const mapSeed = () => q.cycle ? ((q.seed | 0) + q.cycle * 104729) | 0 || 1 : 0;
 
 const listeners = new Set();
-/** fn(type, data): 'collect' | 'egg' | 'hatch' | 'fed' | 'stage' | 'day' | 'bedtime' | 'coins' | 'herd' | 'tool' — always followed by 'change' */
+/** fn(type, data): 'collect' | 'egg' | 'hatch' | 'fed' | 'stage' | 'day' | 'bedtime' | 'coins' | 'herd' | 'tool' | 'wear' | 'garden' | 'sand' — always followed by 'change' */
 export function on(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function emit(type, data) { for (const fn of [...listeners]) { try { fn(type, data); } catch (e) { console.error(e); } } }
 function commit(...events) { save(); for (const [t, d] of events) emit(t, d); emit('change'); }
@@ -109,16 +112,17 @@ export function activeSpawns(type, total) {
   const r = rng((q.seed | 0) + q.day * 131 + hash(type)), idx = [...Array(total).keys()];
   for (let k = idx.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1));[idx[k], idx[j]] = [idx[j], idx[k]]; }
   const got = new Set(q.picked[type] || []);
-  return idx.slice(0, Math.min(total, DAILY[type] || 6)).filter(i => !got.has(i));
+  return idx.slice(0, Math.min(total, DAILY[type] ?? 6)).filter(i => !got.has(i));
 }
 
 /* ---------- things that happen ---------- */
-/** the child picked up item `type` at spawn index `idx`: nothing depends on it, it is simply nice (coins buy a wish at the fountain) */
+/** the child picked up item `type` at spawn index `idx`: the adventure does not depend on it, but everything found goes
+ *  into her bag and can be traded at the stall in the village for something to wear (see SHOP) */
 export function collect(type, idx) {
   (q.picked[type] = q.picked[type] || []).push(idx);
   q.totals[type] = (q.totals[type] || 0) + 1;
   const ev = [['collect', { type }]];
-  if (type === 'munt') { q.coins++; ev.push(['coins', q.coins]); }
+  if (type === 'munt') { q.coins++; ev.push(['coins', q.coins]); } else q.bag[type] = (q.bag[type] || 0) + 1;
   commit(...ev);
   return { total: q.totals[type] };
 }
@@ -156,7 +160,7 @@ export function deliver() {
 export function sleep() {
   const from = q.stage; let res = { type: 'morning' };
   if (from === 'feest') {
-    q.cycle++; q.stage = 'zoek'; q.broken = [];
+    q.cycle++; q.stage = 'zoek'; q.broken = []; q.sand = [];                   // a new island: the tide took the sand castles
     const r = rnd(q, 5); let k = q.cycle < ORDER.length ? ORDER[q.cycle] : (r() < .22 ? 'ster' : ORDER[Math.floor(r() * ORDER.length)]);
     if (q.cycle >= ORDER.length && k === q.kind) k = ORDER[(ORDER.indexOf(k) + 1) % ORDER.length];
     q.kind = k; q.zone = KINDS[k].zone || ZONES[Math.floor(r() * ZONES.length)]; q.spot = Math.floor(r() * 1000);
@@ -174,5 +178,50 @@ export function dreamShown() { if (q.dreamt !== q.cycle) { q.dreamt = q.cycle; s
 export function spendCoins(n) { if (q.coins < n) return false; q.coins -= n; commit(['coins', q.coins]); return true; }
 /** the unicorn to draw next to the girls: always the little one that came out of the egg */
 export function companionLook() { return state.uni; }
+
+/* ---------- the stall: what was found becomes something to wear ---------- */
+// Prices are things, not numbers: a flower crown is made of flowers, a necklace of shells. Whatever is bought belongs to
+// both sisters; what each of them has on is kept per girl (state.extra.wear).
+export const SHOP = [
+  { id: 'krans', slot: 'head', cost: { bloem: 4 } }, { id: 'strik', slot: 'head', cost: { appel: 3 } }, { id: 'hoed', slot: 'head', cost: { paddenstoel: 4 } }, { id: 'kroon', slot: 'head', cost: { diamant: 3 } },
+  { id: 'ketting', slot: 'neck', cost: { schelp: 4 } }, { id: 'knuffel', slot: 'hand', cost: { wortel: 3 } }, { id: 'ballon', slot: 'hand', cost: { munt: 2 } },
+  { id: 'jurkgeel', slot: 'dress', cost: { munt: 4 } }, { id: 'jurkblauw', slot: 'dress', cost: { munt: 4 } }, { id: 'jurkregenboog', slot: 'dress', cost: { munt: 8 } }, { id: 'vleugels', slot: 'back', cost: { munt: 6 } },
+];
+export const have = type => type === 'munt' ? q.coins : q.bag[type] || 0;
+export const owns = id => !!q.own[id];
+export const canBuy = id => { const it = SHOP.find(s => s.id === id); return !!it && !q.own[id] && Object.entries(it.cost).every(([t, n]) => have(t) >= n); };
+const girl = who => (state.extra.wear = state.extra.wear || {})[who] = state.extra.wear[who] || {};
+/** what this girl has on: {head, neck, dress, back, hand} (each an id from SHOP, or nothing) */
+export const wearing = who => girl(who);
+/** trade for it; the girl who is playing puts it on straight away */
+export function buy(id, who) {
+  if (!canBuy(id)) return false; const it = SHOP.find(s => s.id === id);
+  for (const [t, n] of Object.entries(it.cost)) { if (t === 'munt') q.coins -= n; else q.bag[t] -= n; }
+  q.own[id] = true; girl(who)[it.slot] = id; commit(['coins', q.coins], ['wear', who]); return true;
+}
+/** put on something she owns, or take it off again if she has it on */
+export function wear(id, who) {
+  const it = SHOP.find(s => s.id === id); if (!it || !q.own[id]) return false;
+  const g = girl(who); if (g[it.slot] === id) delete g[it.slot]; else g[it.slot] = id; commit(['wear', who]); return true;
+}
+/** a coin that was not lying around: from a bottle in the sea, from under a boulder */
+export function earn(n = 1) { q.coins += n; commit(['coins', q.coins]); }
+
+/* ---------- things that stay the way the children left them ---------- */
+/** the flower pots at the house: 0 a seed, 1 a sprout, 2 a bud, 3 in bloom. Watering grows a plant one step. */
+export const PLANT_MAX = 3;
+export const plant = i => q.garden[i] | 0;
+export function water(i) { if (plant(i) >= PLANT_MAX) return false; q.garden[i] = plant(i) + 1; commit(['garden', i]); return true; }
+/** pick a flower that is in bloom: it goes into the bag and the pot starts again from a seed */
+export function pluck(i) { if (plant(i) < PLANT_MAX) return false; q.garden[i] = 0; q.bag.bloem = (q.bag.bloem || 0) + 1; q.totals.bloem = (q.totals.bloem || 0) + 1; commit(['garden', i], ['collect', { type: 'bloem' }]); return true; }
+/** sand towers on the beach: [x, z, height 1..3]. They stand until somebody jumps on them (or a new world is dreamt up). */
+export const SAND_MAX = 3, SAND_MOST = 9;
+export function sandAt(x, z) { return q.sand.findIndex(s => s[0] === x && s[1] === z); }
+export function buildSand(x, z) {
+  const i = sandAt(x, z); if (i >= 0) { if (q.sand[i][2] >= SAND_MAX) return 0; q.sand[i][2]++; commit(['sand']); return q.sand[i][2]; }
+  q.sand.push([x, z, 1]); if (q.sand.length > SAND_MOST) q.sand.shift(); commit(['sand']); return 1;
+}
+export function stompSand(x, z) { const i = sandAt(x, z); if (i < 0) return false; q.sand.splice(i, 1); commit(['sand']); return true; }
+
 /** dev / tests only */
 export function _reset(patch) { for (const k of Object.keys(q)) delete q[k]; Object.assign(q, fresh(), { herd: [] }, patch || {}); commit(['stage', q.stage], ['day', { type: 'morning' }]); }

@@ -5,6 +5,7 @@
 import * as PX from './pixel.js';
 import * as ART from './art.js';
 import * as MAP from './map.js';
+import * as Q from './quest.js';
 import { sfx } from './audio.js';
 
 const TREES = ['tree', 'pine', 'apple', 'oak', 'palm', 'rainbowtree'], BUSHES = ['bush', 'hedge', 'rose', 'fern'];
@@ -40,17 +41,17 @@ export function createLife(ctx) {
   function scare(x, z, r) { let n = 0; for (const b of birds) if (b.state === 'sit' && Math.hypot(b.pos.x - x, b.pos.z - z) < r) { flee(b, x, z); n++; } if (n) sfx.whoosh(); return n; }
   // a little flock in the vegetable garden (the scarecrow is supposed to keep them out), and a few birds on every island
   const G = MAP.GARDEN; for (let k = 0; k < 6; k++) addBird(G.x0 + 1.2 + k * 1.05, G.z0 + .9 + (k % 3) * 1.1, k);
-  [...M.spawns.bloem.slice(0, 6), ...M.spawns.schelp.slice(0, 4), ...M.spawns.diamant.slice(0, 3)].forEach(([x, z], k) => addBird(x + .3, z + .7, k));
+  [...M.spawns.bloem.slice(0, 3), ...M.spawns.schelp.slice(0, 3), ...M.spawns.diamant.slice(0, 2)].forEach(([x, z], k) => addBird(x + .3, z + .7, k));
 
   /* ---------------- butterflies ---------------- */
-  const flies = M.spawns.bloem.slice(8, 20).map(([x, z], k) => {
+  const flies = M.spawns.bloem.slice(8, 14).map(([x, z], k) => {
     const m = makeSprite(PX.butterfly(), { lean: .2, shadow: false, scale: .55 }); scene.add(m);
     return { m, home: new THREE.Vector3(x + .5, 0, z + .5), p: k * 1.7, r: rnd(.8, 1.6), sp: rnd(.5, .9) };
   });
 
   /* ---------------- fish ---------------- */
-  const jumps = []; let fishT = 3;
-  function fishJump(x, z) { const m = makeSprite(ART.fish(jumps.length), { lean: .1, shadow: false }); scene.add(m); jumps.push({ m, x, z, t: 0, dir: Math.random() < .5 ? 1 : -1 }); }
+  const jumps = []; let fishT = 9;
+  function fishJump(x, z, quiet = false) { if (groundAt(x, z) !== MAP.SE) return; const m = makeSprite(ART.fish(jumps.length), { lean: .1, shadow: false }); scene.add(m); jumps.push({ m, x, z, t: 0, quiet, dir: Math.random() < .5 ? 1 : -1 }); }
   /** a tap on the sea or the pond */
   function splash(x, z) {
     sfx.splash(); burst(new THREE.Vector3(x, -.4, z), 5);
@@ -64,7 +65,11 @@ export function createLife(ctx) {
     if (k === 'scarecrow') { ctx.wobble(t, .55); sfx.boing(); scare(x, z, 10); burst(new THREE.Vector3(x, .4, z), 4); return; }
     if (TREES.includes(k)) {
       ctx.wobble(t, k === 'oak' ? .07 : .14); sfx.brush(); leaves(x, z, k === 'pine' ? 3 : 6, 1.3 * t.sc);
-      if (k === 'apple') bit(PX.apple(), x + rnd(-.5, .5), 1.2, z + .2, { g: 9, bounce: 2, life: 2.2 });
+      if (k === 'apple') {                                                            // one real apple a day falls out of every apple tree, to keep
+        const idx = 1000 + M.trees.indexOf(t), ax = x + rnd(-.45, .45), spot = ctx.nearestWalkable(ax, z + 1);
+        if (spot && t.gave !== Q.quest.day && !(Q.quest.picked.appel || []).includes(idx)) { t.gave = Q.quest.day; bit(PX.apple(), spot[0] + .5, 1.2, spot[1] + .5, { g: 9, bounce: 1, life: .75 }); setTimeout(() => ctx.extras.dropItem('appel', idx, spot[0] + .5, spot[1] + .55), 700); }
+        else bit(ART.leaf(2), ax, 1.2, z + .2, { g: 4, sway: 3, life: 1.6 });
+      }
       if (k === 'rainbowtree') burst(new THREE.Vector3(x, .9, z), 8, true);
       if (Math.random() < .4) { const b = addBird(x + rnd(-.4, .4), z, Math.floor(rnd(0, 3)), true); b.pos.y = b.y = 1.2 * t.sc; flee(b, x + rnd(-1, 1), z + 1); sfx.whoosh(); }
       return;
@@ -98,7 +103,7 @@ export function createLife(ctx) {
   }
 
   return {
-    dispose() { }, tapProp, splash, scare, hold, toss,
+    dispose() { }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length }),
     update(dt, time, active) {
       for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held) a.mesh.rotation.z = Math.sin(time * 18) * .18;
@@ -127,11 +132,11 @@ export function createLife(ctx) {
         const a = time * f.sp + f.p; f.m.position.set(f.home.x + Math.cos(a) * f.r, .7 + Math.sin(a * 2.3) * .3, f.home.z + Math.sin(a * 1.3) * f.r * .6); f.m.scale.set(.55 * Math.max(.15, Math.abs(Math.sin(time * 13 + f.p))), .55, 1);
       }
       // fish: one jumps somewhere near her now and then
-      fishT -= dt; if (active && fishT < 0) { fishT = rnd(3, 7); for (let k = 0; k < 12; k++) { const x = kid.pos.x + rnd(-9, 9), z = kid.pos.z + rnd(-6, 6); if (groundAt(x, z) === MAP.SE && groundAt(x + 1.5, z) === MAP.SE && groundAt(x - 1.5, z) === MAP.SE && groundAt(x, z - 1) === MAP.SE && !M.deck[M.I(Math.floor(x), Math.floor(z))]) { fishJump(x, z); break; } } }
+      fishT -= dt; if (active && fishT < 0) { fishT = rnd(14, 24); for (let k = 0; k < 12; k++) { const x = kid.pos.x + rnd(-9, 9), z = kid.pos.z + rnd(-6, 6); if (groundAt(x, z) === MAP.SE && groundAt(x + 1.5, z) === MAP.SE && groundAt(x - 1.5, z) === MAP.SE && groundAt(x, z - 1) === MAP.SE && !M.deck[M.I(Math.floor(x), Math.floor(z))]) { fishJump(x, z, true); break; } } }                    // now and then, and without a sound: the sea is alive, but it does not shout
       for (let i = jumps.length - 1; i >= 0; i--) {
         const j = jumps[i]; j.t += dt * 1.25; const k = j.t;
         j.m.position.set(j.x + j.dir * (k - .5) * 1.3, Math.sin(k * Math.PI) * 1.1 - .15, j.z); j.m.rotation.z = j.dir * (.9 - k * 1.8); j.m.scale.set(-j.dir, 1, 1);
-        if (k >= 1) { burst(new THREE.Vector3(j.m.position.x, -.4, j.z), 3); sfx.bubble(); scene.remove(j.m); jumps.splice(i, 1); }
+        if (k >= 1) { if (!j.quiet) { burst(new THREE.Vector3(j.m.position.x, -.4, j.z), 3); sfx.bubble(); } scene.remove(j.m); jumps.splice(i, 1); }
       }
       // leaves, apples, stars
       for (let i = bits.length - 1; i >= 0; i--) {

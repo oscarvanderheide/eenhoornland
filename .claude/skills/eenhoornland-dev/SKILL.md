@@ -12,6 +12,10 @@ The players are two young children who cannot read. A bug that blocks them ends 
 - Anything a child can be sent to must be reachable. `map.js` fills unreachable pockets and `tests/map.test.mjs` asserts it, in the order of the adventure.
 - State changes are saved first, animated after (see `act-huisje.js`), so closing a screen mid-animation never loses progress.
 - The houses are only for fun: nothing in the adventure depends on them. The unicorn never grows into the big sprite.
+- The world waits for the child (learned from Pok Pok and DUPLO World): nothing bobs, spins or makes a sound by itself except the goal of the moment. Things react when touched or when she comes close, always the same way and with the same sound, and what she changed stays changed (saved in `quest.js`).
+- Every island has one toy of its own (table below). Do not copy a toy to a second island; give a new place a new thing to do.
+- A toy is a short loop of real actions (fetch the can, fill it, pour, see it grow, pick). When something is missing, the missing thing wiggles and its picture shows in a bubble; there is no "wrong" sound.
+- Everything that is picked up goes into the bag (`Q.have`) and is traded at the stall for things to wear (`Q.SHOP`): prices are pictures of things, never numbers.
 
 ## The adventure (one cycle)
 Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lies in the forest → `ei`: shears appear in the village, cut the brambles on the bridge, a fallen star in the flower meadow hatches the egg → `baby`: hammer appears in the forest, smash the boulders, take the boat to the rainbow island, eat the rainbow fruit → `vriend`: she can be ridden (tap her or the ride button), jump the hole in the bridge to the castle, ride to the unicorn meadow → `feest`: a rainbow mends the bridge, go to bed → new dream, new egg (on another island), new world seed. Tools are kept; gates close again every cycle.
@@ -25,7 +29,9 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lie
 | `js/world.js` | three.js scene, sea (distance-to-land mask), movement, riding (`setMount`), input, camera. Hands a toolbox (`ctx`) to the files below. |
 | `js/world-extras.js` | Fence, castle, animals, collectibles, hidden egg, star + hatching, fruit, meadow herd. |
 | `js/world-tools.js` | Logs and puddles (jumped), brambles and boulders (tool), the hole in the bridge (ridden unicorn), the two tools. |
-| `js/world-play.js` | Bike, balls, the boat between the beach and the rainbow island. Nothing here is saved. |
+| `js/world-play.js` | Bike (bell on the jump button, trailer for animals, ramps), balls, the boat (takes her across when she is on her way there, otherwise she steers it by tapping, inside `MAP.LAGOON`), floating chests, the whale. |
+| `js/world-toys.js` | One toy per island: watering can + flower pots and the stall (dorp), hide and seek in the bushes (bos), kite + dandelions (wei), bucket + sand towers (strand), paint puddles and footprints (eiland), faces at the castle windows (kasteel). Things she carries (`take` / `putDown`). |
+| `js/shop.js` | The stall's screen: trade, put on, take off. Outfits are drawn by `PX.kidSprite(who, frame, blink, wear)`. |
 | `js/world-life.js` | Just for fun: pick up and throw animals, birds (scarecrow), tappable trees/bushes/props, butterflies, jumping fish. |
 | `js/dream.js` | The opening dream cutscene. |
 | `js/cutscene.js` | Full-screen side-view scenes for hatching and for the rainbow fruit (`?scene=hatch` / `?scene=feed` to watch). `main.js` `show()` saves the stage, then plays them. |
@@ -48,6 +54,7 @@ New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep 
 node tests/map.test.mjs            # add -v for an ASCII map
 node tests/quest.test.mjs          # 12 full cycles without a browser
 node cdp.mjs tests/t-adventure.mjs # start screen, dream and one whole adventure in headless Chrome, screenshots in tmp-shots/a-*.png
+node cdp.mjs tests/t-toys.mjs      # every island's toy, the stall, bike and boat (ONLY=dorp,fiets,bos,wei,strand,boot,eiland,kasteel; tmp-shots/y-*.png)
 node cdp.mjs tests/t-houses.mjs    # every house opens, taking turns between the girls (tmp-shots/h-*.png)
 node cdp.mjs tests/t-areas.mjs     # screenshot every island (ONLY=bos,strand to limit)
 node cdp.mjs tests/t-bed.mjs       # bedroom per stage (STAGE=ei,baby,vriend,feest)
@@ -60,7 +67,8 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - `?go` skips the start screen and the dream, `?dream` replays the dream, `?debug` exposes `window.__w` (`placeAt(x,z)`, `Q`, `MAP`, `extras.info()` (egg, star, fruit, gate), `tools.spot(id)`, `play.info()`, `setMount`, `renderer`).
 - Jump to any stage: `__w.Q._reset({ stage: 'vriend' })` (then `giveTool` if the gates should open).
 - Headless WebGL runs at a few fps: teleport with `placeAt` instead of walking. Run one `cdp.mjs` at a time (they share a port).
-- New sprites: add them to `tmp-art.html`-style sheet and screenshot it before using them in the world.
+- New sprites: add them to `tmp-art.html`-style sheet and screenshot it before using them in the world (`tmp-toys.html` has the toys and every outfit).
+- `__w.toys.info()` / `__w.play.info()` show the state of every toy; `__w.toys.take('gieter' | 'emmer' | 'vlieger')`, `usePot(i)`, `build(x, z)`, `rustle(i)`, `peek()`, `openStall()`, `__w.play.steer(x, z)` drive them without tapping.
 - `dev.html` is generated by `build-dev.py` from `index.html` (the test scripts and shot.sh rebuild it).
 
 ## Pitfalls already hit
@@ -76,3 +84,6 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - Riding must never have to be discovered: after the fruit scene she is mounted, and walking up to the hole in the bridge mounts her and jumps (`world-tools.js`).
 - Cutscenes run several times slower in headless Chrome: tests tap `#scene` to advance or click `#scene .skip`.
 - When ridden, the girl is drawn behind the unicorn (`seat()` in `world.js`), otherwise in front.
+- A trailing `// comment` added by a scripted edit on a one-line `{ ... });` swallows the closing braces: check every module with `node --input-type=module --check < file`.
+- While she is in the boat `busy` is true (no walking, no keys) but taps still arrive: `world.js` hands them to `play.steer`.
+- Toys are plain sprites that do not block: never change `M.block` at runtime for them (reachability is checked once, in `map.js`).

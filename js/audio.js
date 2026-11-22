@@ -1,11 +1,12 @@
 // Sound effects (WebAudio), gentle background music, and Dutch text-to-speech.
 let AC = null, master = null, musicBus = null;
+const MUSIC = .55;   // the music stays in the background: what the child touches is what should be heard
 function ac() {
   if (!AC) {
     try {
       AC = new (window.AudioContext || window.webkitAudioContext)();
       master = AC.createGain(); master.gain.value = 1; master.connect(AC.destination);
-      musicBus = AC.createGain(); musicBus.gain.value = 1; musicBus.connect(master);
+      musicBus = AC.createGain(); musicBus.gain.value = MUSIC; musicBus.connect(master);
     } catch (e) { AC = null; }
   }
   if (AC && AC.state === 'suspended') AC.resume();
@@ -73,11 +74,11 @@ export function startMusic() {
   nextT = a.currentTime + .2; timer = setInterval(schedule, 100);
 }
 export function setMusic(on) {
-  musicOn = on; if (musicBus) musicBus.gain.value = on ? 1 : 0;
+  musicOn = on; if (musicBus) musicBus.gain.value = on ? MUSIC : 0;
   if (on) { const a = ac(); if (a) nextT = Math.max(nextT, a.currentTime + .1); }
 }
 export function setMood(m) { if (SONGS[m]) { mood = m; step = 0; } }
-export function duckMusic(on) { if (musicBus) musicBus.gain.value = musicOn ? (on ? .35 : 1) : 0; }
+export function duckMusic(on) { if (musicBus) musicBus.gain.value = musicOn ? (on ? .35 * MUSIC : MUSIC) : 0; }
 
 /* ---------- speech ---------- */
 // The voice is switched off: the speech that browsers have built in sounds too bad. All calls to speak() stay in place

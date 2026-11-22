@@ -68,7 +68,8 @@ export function createHud(getWorld) {
   let rideSig = '';
   function syncRide() {
     const w = getWorld(), m = w ? w.mount() : null, sig = (Q.canRide() || m ? 1 : 0) + ':' + m + ':' + state.uni.body + state.uni.mane; rideBtn.hidden = !(Q.canRide() || m); rideBtn.classList.toggle('on', !!m); rideBtn.classList.toggle('call', Q.canRide() && !m);   // not riding although she could: the button asks for it
-    if (sig !== rideSig) { rideSig = sig; rideBtn.innerHTML = ''; rideBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.bike() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true }), 3)); }
+    if (sig !== rideSig) { jumpBtn.innerHTML = ''; jumpBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.belIcon() : ART.jumpIcon(), 4));   // on the bike the jump button is the bell
+      rideSig = sig; rideBtn.innerHTML = ''; rideBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.bike() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true }), 3)); }
   }
   // who is playing: the sisters tap their own face when they swap seats
   const whoRow = document.createElement('div'); whoRow.id = 'who'; game.appendChild(whoRow);
@@ -100,7 +101,7 @@ export function createHud(getWorld) {
     // what to do now, as pictures: the first chip is the goal of this moment, a second one shows what comes after it.
     // Nobody can read yet and there is no voice, so tapping a chip opens the map, where the goal is marked.
     Q.wishes().forEach((w, i) => chip(i ? 'next' : 'now', goalIcon(w), w.t === 'egg' || w.t === 'tool' ? '?' : '', () => { speak(Q.wishText(w)); openMap(); }, Q.quest.stage + w.t));
-    chip('coins', ART.coin(), String(Q.quest.coins), () => speak(Q.quest.coins >= Q.FOUNTAIN_PRICE ? 'Je hebt ' + Q.quest.coins + ' muntjes! Tik op de fontein in het dorp en doe een wens.' : 'Je hebt ' + (Q.quest.coins === 1 ? 'één muntje' : Q.quest.coins + ' muntjes') + '. Met ' + Q.FOUNTAIN_PRICE + ' muntjes mag je een wens doen bij de fontein.'), 'coins');
+    chip('coins', ART.coin(), String(Q.quest.coins), () => { speak('Met muntjes en met alles wat je vindt kun je bij de kraam in het dorp iets moois ruilen.'); const w = getWorld(); if (w && !ui.activityOpen()) w.walkToTile(MAP.STALL.x, MAP.STALL.z + 1); }, 'coins');   // coins are for the stall: she walks there
     syncRide();
   }
   function goToBed() { const w = getWorld(); speak('Naar het huisje, lekker slapen!'); if (w && !ui.activityOpen()) w.walkToBuilding('huisje'); }

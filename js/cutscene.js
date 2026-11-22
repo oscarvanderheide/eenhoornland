@@ -2,10 +2,12 @@
 // the fallen star warming the egg until the little unicorn comes out, and the rainbow fruit that makes her strong
 // enough to carry a girl — which ends with the girl climbing on her back and galloping off, so nobody has to be told
 // how riding works. No words; a tap goes on to the next part, the arrow skips. (The opening dream is js/dream.js.)
+import * as Q from './quest.js';
 import * as PX from './pixel.js';
 import * as ART from './art.js';
 import { pixelStage } from './ui.js';
 import { sfx, speak } from './audio.js';
+const Qw = who => Q.wearing(who);   // the scenes show her the way she is dressed today
 
 const CSS = `
 #scene{position:absolute;inset:0;z-index:25;background:#0E1236;display:flex;flex-direction:column;opacity:0;transition:opacity .35s}
@@ -70,7 +72,7 @@ function star(k, x, y, s = 3, rot = 0) { glow(k.ctx, x, y - 16, 34 + Math.sin(k.
 
 /** The star warms the egg and the unicorn is born. who: 'anna' | 'fenna'; kindDef: the egg; look: the unicorn that comes out. */
 export function playHatch(host, who, kindDef, look) {
-  const girl = f => PX[who](f), egg = ART.egg(kindDef), top = ART.egg(kindDef, 'top'), bot = ART.egg(kindDef, 'bottom');
+  const girl = f => PX.kidSprite(who, f, false, Qw(who)), egg = ART.egg(kindDef), top = ART.egg(kindDef, 'top'), bot = ART.egg(kindDef, 'bottom');
   const uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true });
   const EX = 188, GX = 62;
   const SAY = ['Brr, het ei heeft het koud. Kijk, daar komt het sterretje!', 'Het sterretje maakt het ei lekker warm.', 'Het ei beweegt! Tik, tik, tik...', '', 'Krak! Een kleine eenhoorn! Hallo ' + look.name + '!', look.name + ' vindt jou lief!'];
@@ -126,7 +128,7 @@ function island(k, scroll = 0) {
 
 /** She eats the rainbow fruit, grows strong, and the girl rides away on her back. */
 export function playFeed(host, who, look) {
-  const girl = f => PX[who](f), uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true }), fruit = ART.fruit();
+  const girl = f => PX.kidSprite(who, f, false, Qw(who)), uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true }), fruit = ART.fruit();
   const FX = 222, FY = 112;   // where the fruit hangs
   const SAY = [look.name + ' heeft honger. Kijk, daar hangt regenboogfruit!', 'Pluk het maar!', 'Hap, hap, hap. Mmm!', 'Wat gebeurt er? ' + look.name + ' wordt sterk!', 'Kijk eens hoe sterk ze is!', 'Klim maar op haar rug. Hup, daar gaan we!'];
   return run(host, [3, 2.6, 3.4, 4.4, 2.4, 5], k => {
