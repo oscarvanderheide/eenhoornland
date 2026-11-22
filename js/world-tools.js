@@ -36,7 +36,10 @@ export function createTools(ctx) {
     kid.face = here.x >= kid.pos.x ? 1 : -1;
     if (o.type === 'gap') {                                                          // riding, she simply jumps it (that is movement, see world.js)
       if (!M.block[M.I(o.x, o.z)] || ctx.mount() === 'uni') return;
-      sfx.wrong(); bubble(kid, '?', ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true })); speak(GAP_SAY + (Q.canRide() ? ' Tik op ' + Q.uniName() + ' en klim op haar rug!' : '')); if (Q.canRide() && uni.g.visible) uni.hop = 1; return;
+      // nobody has to work out how: if the unicorn can carry her, the girl climbs on by herself and over they go
+      const kx = Math.floor(kid.pos.x), kz = Math.floor(kid.pos.z);
+      if (Q.canRide() && uni.g.visible && ctx.setMount('uni')) { speak('Hup, op de rug van ' + Q.uniName() + '! Spring!'); ctx.walkToTile(kx + (o.x - kx) * 2, kz + (o.z - kz) * 2); return; }
+      sfx.wrong(); bubble(kid, '?', ART.fruit()); speak(GAP_SAY); return;
     }
     if (!Q.hasTool(o.tool)) { sfx.wrong(); bubble(kid, '?', ART.toolIcon(o.tool)); speak(Q.TOOLS[o.tool].need); wobble = { mesh: meshes.get(i), t: .5 }; return; }
     const group = M.obstacles.map((p, k) => k).filter(k => meshes.has(k) && M.obstacles[k].type === 'break' && M.obstacles[k].g === o.g);

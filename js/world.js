@@ -10,6 +10,7 @@ import * as Q from './quest.js';
 import { createExtras } from './world-extras.js';
 import { createTools } from './world-tools.js';
 import { createPlay } from './world-play.js';
+import { createLife } from './world-life.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -33,7 +34,7 @@ function canvas(w, h) { const c = document.createElement('canvas'); c.width = w;
 
 /* ------------------------------------------------------------------ */
 let sharedRenderer = null;   // one WebGL context for the page; the world itself is rebuilt for every cycle's new island
-export function createWorld(cv, { onEnter, onWish, onMount }) {
+export function createWorld(cv, { onEnter, onWish, onMount, onShow }) {
   const renderer = sharedRenderer || (sharedRenderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' }));
   const ac = new AbortController(), listen = { signal: ac.signal };   // every listener goes away with destroy()
   const mobile = matchMedia('(pointer:coarse)').matches;
@@ -154,6 +155,7 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
   function blob(sx, sz) { const m = new THREE.Mesh(blobGeo, blobMat); m.scale.set(sx, 1, sz); m.position.y = .015; return m; }
 
   // trees, bushes
+  const treeMeshes = [];
   {
     const groups = new Map(), d = new THREE.Object3D();
     for (const t of trees) { const k = t.kind + ':' + t.seed; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
@@ -161,8 +163,19 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
       const art = ART.propArt(list[0].kind, list[0].seed), tx = tex(art), sc = ART.propScale(list[0].kind);
       const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), spriteMat(tx), list.length); inst.castShadow = inst.receiveShadow = true;
       inst.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tx, alphaTest: .5 });
-      list.forEach((t, i) => { d.position.set(t.x + .5 + (t.fixed ? 0 : (rng() - .5) * .3), 0, t.z + .55); d.rotation.set(-.22, 0, 0); d.scale.setScalar(sc); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
+      list.forEach((t, i) => { t.px = t.x + .5 + (t.fixed ? 0 : (rng() - .5) * .3); t.inst = inst; t.i = i; t.sc = sc; d.position.set(t.px, 0, t.z + .55); d.rotation.set(-.22, 0, 0); d.scale.setScalar(sc); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
+      inst.userData.trees = list; inst.userData.alpha = art; treeMeshes.push(inst);   // every tree, bush and prop can be tapped (see world-life.js)
       scene.add(inst);
+    }
+  }
+  /** shake a tree, bush or prop for a moment */
+  const wobbles = [], wobD = new THREE.Object3D();
+  function wobble(t, amp = .22) { if (!t.inst || wobbles.some(w => w.t === t)) return false; wobbles.push({ t, k: 0, amp }); return true; }
+  function stepWobbles(dt) {
+    for (let i = wobbles.length - 1; i >= 0; i--) {
+      const w = wobbles[i], t = w.t; w.k = Math.min(1, w.k + dt * 1.5);
+      wobD.position.set(t.px, 0, t.z + .55); wobD.rotation.set(-.22, 0, Math.sin(w.k * 24) * w.amp * (1 - w.k)); const sq = 1 + Math.sin(w.k * 24) * .06 * (1 - w.k); wobD.scale.set(t.sc * sq, t.sc / sq, t.sc); wobD.updateMatrix();
+      t.inst.setMatrixAt(t.i, wobD.matrix); t.inst.instanceMatrix.needsUpdate = true; if (w.k >= 1) wobbles.splice(i, 1);
     }
   }
   // tufts and flowers (instanced)
@@ -345,11 +358,13 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
 
   /* ---------------- characters ---------------- */
   const chars = [];
+  // characters are drawn with twice the pixels of everything else (ART.hd), at the same size in the world
+  const hdF = f => { const o = {}; for (const k in f) o[k] = ART.hd(f[k]); return o; }, charGeom = cv => spriteGeom(cv.width / 2, cv.height / 2);
   function makeChar(frames, { flippable = false, blobW = .7, scale = 1, name, say, sound } = {}) {
-    const texs = {};
+    const texs = {}; frames = hdF(frames);
     for (const k in frames) { texs[k] = tex(frames[k]); if (flippable) texs[k + 'F'] = tex(PX.flipX(frames[k])); }
     const first = frames.idle;
-    const mesh = new THREE.Mesh(spriteGeom(first.width, first.height), spriteMat(texs.idle));
+    const mesh = new THREE.Mesh(charGeom(first), spriteMat(texs.idle));
     mesh.rotation.x = -.3; mesh.scale.setScalar(scale); mesh.receiveShadow = true;
     const g = new THREE.Group(); g.add(mesh); g.add(blob(blobW, blobW * .55)); scene.add(g);
     const c = { g, mesh, texs, frames, flippable, face: 1, moving: false, hop: 0, hopH: .35, pos: new THREE.Vector3(), name, say, sound, path: [], animT: Math.random() * 10, blinkT: 2 + Math.random() * 3,
@@ -362,13 +377,13 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
     anna: { name: 'Anna', frames: kidFrames(PX.anna), say: ['Hihi!', 'Hoera!', 'Kom mee!'], blobW: .55 },
     fenna: { name: 'Fenna', frames: kidFrames(PX.fenna), say: ['Joepie!', 'Hoi!', 'Kom mee!'], blobW: .6 },
   };
-  for (const g of Object.values(GIRLS)) { g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]); }
+  for (const g of Object.values(GIRLS)) { g.frames = hdF(g.frames); g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]); }
   let who = GIRLS[state.extra.who] ? state.extra.who : 'anna';
   const kid = makeChar(GIRLS[who].frames, { name: GIRLS[who].name, say: GIRLS[who].say, blobW: GIRLS[who].blobW });
   function setWho(id, quiet = false) {
     const g = GIRLS[id]; if (!g) return;
     who = id; Object.assign(kid, { texs: g.texs, frames: g.frames, name: g.name, say: g.say });
-    kid.mesh.geometry = spriteGeom(g.frames.idle.width, g.frames.idle.height); kid.g.children[1].scale.set(g.blobW, 1, g.blobW * .55); kid.mesh.material.map = null; kid.setFrame('idle');
+    kid.mesh.geometry = charGeom(g.frames.idle); kid.g.children[1].scale.set(g.blobW, 1, g.blobW * .55); kid.mesh.material.map = null; kid.setFrame('idle');
     if (state.extra.who !== id) { state.extra.who = id; save(); }
     if (!quiet) { sfx.sparkle(); kid.hop = 1; burst(kid.pos, 8); bubble(kid, 'Ik ben ' + g.name + '!'); speak(g.name + ' is aan de beurt!'); }
   }
@@ -379,10 +394,10 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
   const uni = makeChar(uniFrames(), { flippable: true, name: () => state.uni.name, say: ['Hihihi!', 'Ik ben ' + state.uni.name + '!', 'Briesss!'], blobW: 1.2 });
   uni.isUni = true;
   function refreshUnicorn() {
-    const f = uniFrames(), st = Q.quest.stage;
+    const f = hdF(uniFrames()), st = Q.quest.stage;
     for (const k in uni.texs) { uni.texs[k].dispose(); delete uni.texs[k]; }
     for (const k in f) { uni.texs[k] = tex(f[k]); uni.texs[k + 'F'] = tex(PX.flipX(f[k])); }
-    uni.frames = f; uni.mesh.geometry = spriteGeom(f.idle.width, f.idle.height); alphaCache.clear();
+    uni.frames = f; uni.mesh.geometry = charGeom(f.idle); alphaCache.clear();
     uni.baseScale = st === 'vriend' ? 1.3 : 1; uni.follow = st === 'ei' ? 1.5 : 1.8;                       // the rainbow fruit makes her a little stronger, not different
     const bw = st === 'ei' ? .5 : .8 * uni.baseScale; uni.g.children[1].scale.set(bw, 1, bw * .55);
     uni.g.visible = Q.hasCompanion(); uni.mesh.material.map = null; uni.setFrame('idle');
@@ -538,13 +553,17 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
   const alphaCache = new Map();
   let extras = null; const ctxHooks = { onWish };
   const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
-    walkToTile: (x, z) => { target = null; return walkTo(x, z); }, placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
+    walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground,
+    /** a full-screen moment (hatching, the rainbow fruit): main.js plays it and resolves when it is over */
+    show: (type, data) => onShow ? onShow(type, data) : Promise.resolve(), placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
     /** something else moves her for a while (the boat): no walking, no taps */
     setBusy(v) { busy = v; if (v) { kid.path = []; target = null; after = null; keys.clear(); } } };
   let play = null;
   extras = createExtras(ctx);
   const tools = createTools(ctx);
   play = createPlay(ctx);
+  const life = createLife(ctx);
+  for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
   /* ---------------- input ---------------- */
@@ -554,12 +573,15 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
     if (!interactive || paused || busy) return;
     const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hits = ray.intersectObjects(pick, false);
+    const hits = ray.intersectObjects(pick, false); let shook = false;
     for (const h of hits) {
       const d = h.object.userData;
       if (d.char && !d.char.g.visible) continue;
       if ((d.char || d.alpha) && h.uv && !opaqueAt(d.char ? d.char : null, d.alpha, h.uv)) continue;
+      if (d.trees) { if (!shook) { shook = true; life.tapProp(d.trees[h.instanceId]); } continue; }   // it shakes, and she still walks there
       if (d.tap) { d.tap(); return; }
+      // an animal can be picked up: a tap makes it talk, a drag lifts it, letting go throws it (it thinks that is great fun)
+      if (d.char && animals.includes(d.char)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
       if (d.fountain) { if (extras.fountain()) return; sfx.splash(); burst(new THREE.Vector3(FOUNT.cx, 0, FOUNT.cz), 8); speak('Plons!'); return; }
@@ -567,9 +589,26 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
     const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane, p)) return;
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
     const fb = footprint.get(I(tx, tz)); if (fb) { sfx.pop(); walkTo(fb.door[0], fb.door[1], fb); return; }
+    if (inb(tx, tz) && (ground[I(tx, tz)] === MAP.SE || ground[I(tx, tz)] === WA)) life.splash(p.x, p.z);
     const t = walkable(tx, tz) ? [tx, tz] : nearestWalkable(p.x, p.z);
     if (t) { sfx.click(); target = null; walkTo(t[0], t[1], null, walkable(tx, tz) ? p : null); }
   }, listen);
+  let grab = null;
+  const groundAt = e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); return ray.ray.intersectPlane(plane, p) ? p : null; };
+  cv.addEventListener('pointermove', e => {
+    if (!grab) return;
+    if (!grab.drag && Math.hypot(e.clientX - grab.x, e.clientY - grab.y) > 10) { grab.drag = true; life.hold(grab.c); }
+    if (!grab.drag) return; const p = groundAt(e); if (!p) return;
+    p.x = THREE.MathUtils.clamp(p.x, 2, W - 2); p.z = THREE.MathUtils.clamp(p.z, 2, H - 2);
+    grab.c.pos.set(p.x, 0, p.z); grab.pts.push({ x: p.x, z: p.z, t: performance.now() }); if (grab.pts.length > 6) grab.pts.shift();
+  }, listen);
+  const letGo = () => {
+    if (!grab) return; const g = grab; grab = null;
+    if (!g.drag) { tapChar(g.c); return; }
+    const a = g.pts[0], b = g.pts[g.pts.length - 1], dt = a && b ? Math.max(.03, (b.t - a.t) / 1000) : 1;
+    life.toss(g.c, a && b && performance.now() - b.t < 120 ? (b.x - a.x) / dt : 0, a && b && performance.now() - b.t < 120 ? (b.z - a.z) / dt : 0);
+  };
+  cv.addEventListener('pointerup', letGo, listen); cv.addEventListener('pointercancel', letGo, listen);
   function opaqueAt(c, cvs, uv) {
     const src = c ? c.frames.idle : cvs; if (!src) return true;
     if (!alphaCache.has(src)) alphaCache.set(src, src.getContext('2d').getImageData(0, 0, src.width, src.height).data);
@@ -727,14 +766,16 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
     }
     // animals
     for (const a of animals) {
+      if (a.held || a.fly) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
       if (a.path.length) stepAlong(a, dt, a.speed);
-      else { a.moving = false; a.wait -= dt; if (a.wait < 0) { a.wait = 2 + Math.random() * 4; const t = randomTile(a); const s = [Math.floor(a.pos.x), Math.floor(a.pos.z)]; const ok = a.water ? waterTile : walkable; const p = astar(s[0], s[1], t[0], t[1], (x, z) => ok(x, z) || (x === s[0] && z === s[1])); if (p) a.path = p.slice(1).map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5)); } }
+      else { a.moving = false; a.wait -= dt; if (a.wait < 0) { a.wait = 2 + Math.random() * 4; const t = randomTile(a); const s = [Math.floor(a.pos.x), Math.floor(a.pos.z)]; const ok = a.water ? waterTile : walkable; const p = astar(s[0], s[1], t[0], t[1], (x, z) => ok(x, z) || (x === s[0] && z === s[1])); if (p) a.path = p.slice(1).map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5));
+        else if (a.lost) { a.lost = false; burst(a.pos, 6); a.pos.set(t[0] + .5, 0, t[1] + .5); burst(a.pos, 6); sfx.sparkle(); } } }   // thrown too far to walk back: a little magic brings it home
     }
     for (const c of chars) updateChar(c, dt);
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -757,7 +798,7 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
   };
@@ -777,7 +818,7 @@ export function createWorld(cv, { onEnter, onWish, onMount }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

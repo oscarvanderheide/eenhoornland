@@ -38,7 +38,11 @@ export default async function (t) {
   await place(p[0], p[1]); await settle(); ok(await t.ev(`__w.Q.hasTool('schaar')`), 'picked up the shears');
   await place(48.5, 45.5); await t.ev(`__w.tools.useAt(49,45)`); await settle(1200); ok(await t.ev(`__w.walkable(49,45) && __w.walkable(49,46)`), 'the brambles are cut'); await shot('14-bridge-open');
   s = await q(); ok(s.info.star && s.w.join() === 'star:ster', 'the star lies in the meadow'); await place(s.info.star[0] - 2, s.info.star[1] + 1.2); await settle(2000); await shot('15-star');
-  await place(s.info.star[0] - .5, s.info.star[1]); await settle(1500); await shot('16-hatching'); ok(await until(`__w.Q.quest.stage === 'baby'`, 15000), 'the star hatches the egg'); await settle(800); await shot('17-hatched');
+  await place(s.info.star[0] - .5, s.info.star[1]); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the star starts the hatching scene'); ok(await t.ev(`__w.Q.quest.stage`) === 'baby', 'and it is saved right away');
+  const tap = () => t.ev(`document.querySelector('#scene') && document.querySelector('#scene').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})),1`);
+  for (const n of ['16a-cold', '16b-warm', '16c-wobble', '16d-flash', '16e-born', '16f-friends']) { await t.sleep(3200); await shot(n); await tap(); }
+  ok(await until(`!document.querySelector('#scene')`, 30000), 'the hatching scene ends'); await settle(1500); await shot('17-hatched');
+  await place(76.5, 31.5); await settle(600); await t.ev(`__w.walkTo(76,25)`); await settle(5000); s = await q(); ok(s.pos[1] > 28.9 && s.mount === null, 'a baby cannot jump the broken bridge yet (z=' + s.pos[1] + ')');
   s = await q(); ok(s.uni && s.w.join() === 'tool:hamer,fruit:fruit', 'a little unicorn follows; now the hammer');
   // hammer → boulders → boat → fruit
   p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('hamer'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the hammer lies in the forest'); await place(p[0], p[1]); await settle(); ok(await t.ev(`__w.Q.hasTool('hamer')`), 'picked up the hammer');
@@ -46,13 +50,17 @@ export default async function (t) {
   await place(46.5, 70.5); await settle(1500); await shot('19-beach'); ok(await t.ev(`__w.walkTo(12,69)`) === true, 'walking to the island walks to the pier'); ok(await until(`__w.busy()`, 40000), 'the boat leaves by itself'); await t.sleep(2500); await shot('20-sailing');
   ok(await until(`!__w.busy()`, 60000), 'the boat arrives'); s = await q(); ok(s.play.side === 'eiland' && s.pos[0] < 28, 'on the rainbow island'); await settle(1500); await shot('21-island');
   await place(s.info.fruit[0] + 1.6, s.info.fruit[1] + 1.4); await settle(2000); await shot('22-rainbow-tree');
-  await place(s.info.fruit[0] + .3, s.info.fruit[1] + .3); await settle(); s = await q(); ok(s.stage === 'vriend' && s.w.join() === 'wei:wei', 'she ate the fruit: now she can be ridden'); await shot('23-fed');
+  await place(s.info.fruit[0] + .3, s.info.fruit[1] + .3); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the fruit starts the feeding scene');
+  for (const n of ['23a-hungry', '23b-pick', '23c-eat', '23d-magic', '23e-strong', '23f-climb']) { await t.sleep(3200); await shot(n); await tap(); } await t.sleep(4500); await shot('23g-gallop'); await t.ev(`document.querySelector('#scene .skip') && document.querySelector('#scene .skip').click()`);
+  ok(await until(`!document.querySelector('#scene')`, 30000), 'the feeding scene ends'); await settle(1500);
+  s = await q(); ok(s.stage === 'vriend' && s.w.join() === 'wei:wei' && s.mount === 'uni', 'she ate the fruit, and the girl is riding her straight away'); await shot('23-fed');
   ok(await t.ev(`!document.querySelector('#b-ride').hidden`), 'the ride button appears');
   // sail back, ride, jump the broken bridge
   await place(24.5, 71); await settle(600); await place(26.5, 71); ok(await until(`__w.busy()`, 10000), 'sailing back'); ok(await until(`!__w.busy()`, 60000), 'back on the beach'); s = await q(); ok(s.play.side === 'strand' && s.pos[0] > 36, 'on the beach again');
-  await place(76.5, 31.5); await settle(800); ok(await t.ev(`__w.walkTo(76,25)`) === true, 'on foot she walks up to the hole'); await settle(5000); s = await q(); ok(s.pos[1] > 28.9, 'and cannot cross it on foot (z=' + s.pos[1] + ')'); await shot('24-broken-bridge');
-  await t.ev(`document.querySelector('#b-ride').click()`); await settle(1200); s = await q(); ok(s.mount === 'uni', 'riding the unicorn'); await shot('25-riding');
-  ok(await t.ev(`__w.walkTo(76,25)`) === true, 'riding, there is a way across'); ok(await until(`__w.info().pos[1] < 27.5`, 40000), 'she jumps the hole'); await settle(2500); await shot('26-jumped');
+  s = await q(); ok(s.mount === null && await t.ev(`document.querySelector('#b-ride').classList.contains('call')`), 'off the unicorn after the boat: the ride button asks to be tapped');
+  await t.ev(`document.querySelector('#b-ride').click()`); await settle(1200); s = await q(); ok(s.mount === 'uni', 'the button puts her on the unicorn'); await shot('25-riding'); await t.ev(`document.querySelector('#b-ride').click()`); await settle(800);
+  await place(76.5, 31.5); await settle(800); await shot('24-broken-bridge'); ok(await t.ev(`__w.walkTo(76,25)`) === true, 'on foot she walks up to the hole');
+  ok(await until(`__w.info().pos[1] < 28`, 60000), 'there she climbs on by herself and jumps it'); s = await q(); ok(s.mount === 'uni', 'riding'); await settle(2500); await shot('26-jumped');
   await place(84.5, 13.5); await settle(2000); await shot('27-castle');
   // home to the meadow
   s = await q(); await place(s.info.gate[0] - 3, s.info.gate[1]); await settle(1500); await shot('28-meadow-gate'); await place(s.info.gate[0] - .8, s.info.gate[1]); await settle(2500);
@@ -70,6 +78,17 @@ export default async function (t) {
   await t.ev(`__w.walkTo(40,37)`); await settle(4000); await shot('36-cycling'); const b0 = s.play.bike; s = await q(); ok(Math.hypot(s.play.bike[0] - b0[0], s.play.bike[1] - b0[1]) > 1, 'the bike moves with her');
   await t.ev(`__w.play.tapBike()`); await settle(600); s = await q(); ok(s.mount === null, 'off the bike');
   const ball = s.play.balls[0]; await place(ball[0] - 1.2, ball[1]); await settle(1200); await shot('37-ball'); await t.ev(`__w.walkTo(${Math.floor(ball[0]) + 1},${Math.floor(ball[1])})`); await settle(5000); s = await q(); ok(Math.hypot(s.play.balls[0][0] - ball[0], s.play.balls[0][1] - ball[1]) > .5, 'the ball rolls away when she walks into it'); await shot('38-kicked');
+  // the living world: scarecrow and birds, shaking a tree, throwing an animal, musical mushrooms, fish
+  const sc = JSON.parse(await t.ev(`JSON.stringify(__w.M.trees.find(t=>t.kind==='scarecrow'))`.replace('JSON.stringify(', 'JSON.stringify((({x,z})=>({x,z}))(').replace(/\)$/, '))')));
+  await place(sc.x + 3.5, sc.z + 2.5); await settle(1500); const sit = (await t.ev('__w.life.info().birds')); await shot('39-scarecrow');
+  await t.ev(`__w.life.tapProp(__w.M.trees.find(t=>t.kind==='scarecrow'))`); await t.sleep(900); await shot('40-birds-fly'); const li = JSON.parse(await t.ev('JSON.stringify(__w.life.info())')); ok(li.flying >= 3 && li.birds < sit, 'shaking the scarecrow makes the birds fly away (' + li.flying + ' flying)');
+  await t.ev(`__w.life.tapProp(__w.M.trees.find(t=>t.kind==='tree'&&__w.M.zone[__w.M.I(t.x,t.z)]==='dorp'))`); await t.sleep(300); ok(await t.ev('__w.life.info().bits') > 0, 'a tapped tree drops leaves');
+  const a0 = JSON.parse(await t.ev(`JSON.stringify((a=>[a.pos.x,a.pos.z,a.name])(__w.animals[0]))`)); await place(a0[0] - 2, a0[1] + 1.5); await settle(800);
+  await t.ev(`__w.life.hold(__w.animals[0])`); await t.sleep(700); await shot('41-holding'); await t.ev(`__w.life.toss(__w.animals[0], 5, -1)`); await t.sleep(600); await shot('42-thrown');
+  ok(await until(`!__w.animals[0].fly`, 30000), a0[2] + ' lands'); const a1 = JSON.parse(await t.ev(`JSON.stringify((a=>[a.pos.x,a.pos.z,__w.walkable(Math.floor(a.pos.x),Math.floor(a.pos.z)),a.lift])(__w.animals[0]))`)); ok(Math.hypot(a1[0] - a0[0], a1[1] - a0[1]) > 1.5 && a1[2] && a1[3] === 0, 'somewhere else, on its feet, on walkable ground');
+  await t.ev(`__w.life.hold(__w.animals[1]); __w.animals[1].pos.set(8, 0, 44); __w.life.toss(__w.animals[1], -2, 0)`); ok(await until(`!__w.animals[1].fly`, 30000), 'an animal thrown into the sea bounces back onto land'); ok(await t.ev(`(a=>__w.walkable(Math.floor(a.pos.x),Math.floor(a.pos.z)))(__w.animals[1])`), 'and stands on land');
+  await t.ev(`__w.life.splash(10.5, 44.5)`); await t.sleep(200); ok(await t.ev('__w.life.info().fish') > 0, 'a tap on the sea makes a fish jump');
+  await place(16.5, 18.6); await settle(1500); await shot('43-mushrooms');
   ok(!t.logs.some(l => /EXC|Error/.test(l)), 'no page errors ' + t.logs.filter(l => /EXC|Error/.test(l)).join('|'));
   console.log(fail ? 'FAILED ' + fail : 'ADVENTURE OK');
 }

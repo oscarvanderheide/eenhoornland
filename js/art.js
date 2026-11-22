@@ -9,6 +9,26 @@ const copy = cv => { const c = document.createElement('canvas'); c.width = cv.wi
 const memo = new Map();
 const cached = (key, make) => { if (!memo.has(key)) memo.set(key, make()); return memo.get(key); };
 
+/* ================= sharper characters ================= */
+/** Twice the pixels for a character sprite: diagonals and curves are rounded off (Scale2x) and every eye gets a glint.
+ *  The world draws the result at the same size as before, so it only looks finer. Cached per canvas. */
+const hdCache = new WeakMap();
+export function hd(cv) {
+  if (cv.isHD) return cv; if (hdCache.has(cv)) return hdCache.get(cv);
+  const w = cv.width, h = cv.height, src = new Uint32Array(cv.getContext('2d').getImageData(0, 0, w, h).data.buffer);
+  const out = document.createElement('canvas'); out.width = w * 2; out.height = h * 2; const ox = out.getContext('2d'), img = ox.createImageData(w * 2, h * 2), dst = new Uint32Array(img.data.buffer);
+  const at = (x, y) => x < 0 || y < 0 || x >= w || y >= h ? 0 : src[y * w + x], dark = new Uint32Array(new Uint8ClampedArray([...rgb(EYE), 255]).buffer)[0];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const P = at(x, y), A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1);
+    let p1 = P, p2 = P, p3 = P, p4 = P;
+    if (C === A && C !== D && A !== B) p1 = A; if (A === B && A !== C && B !== D) p2 = B; if (D === C && D !== B && C !== A) p3 = C; if (B === D && B !== A && D !== C) p4 = D;
+    // an eye: a dark pixel inside the sprite with something lighter beside it (the outline is dark too, but touches the outside)
+    if (P === dark && A && B && C && D && A !== dark && (B !== dark || C !== dark) && at(x - 1, y - 1) && at(x + 1, y - 1)) p1 = 0xFFFFFFFF;
+    const i = y * 2 * w * 2 + x * 2; dst[i] = p1; dst[i + 1] = p2; dst[i + w * 2] = p3; dst[i + w * 2 + 1] = p4;
+  }
+  ox.putImageData(img, 0, 0); out.isHD = true; hdCache.set(cv, out); return out;
+}
+
 /* ================= ground ================= */
 export function paintGround(M) {
   const { W, H, ground, I, inb } = M, U = 16;
@@ -188,6 +208,19 @@ export const dragon = () => cached('dragon', () => sprite([
   '....y...y.......', '...gg..gg.......', '..gggggggg......', '..gkggggkg...p..', '..gkggggkg..pp..', '..ggnggngg.ppg..', '..gcggggcg.pgg..', '...gggggg.pggg..', '..ggwwwwgggggg..', '.gggwwwwggggg...', '.g.gwwwwgg..gg..', '...gg..gg....gy.', '...ff..ff.......',
 ], { g: '#7ED9A0', y: '#FFD43B', k: EYE, n: '#3A9E69', c: '#FF8FB1', w: '#FFF3A8', p: '#B9A3F0', f: '#3A9E69' }));
 export const gull = () => cached('gull', () => sprite(['...www...', '..wwkwoo.', '..wwww...', 'gggwwww..', '.ggggww..', '..wwww...', '...o.o...'], { w: '#FFFFFF', g: '#B8BCCB', k: EYE, o: '#FF8C42' }));
+
+/* little things that make the world feel alive */
+const BIRD_COL = [['#6FB7E8', '#3F86C4'], ['#F0625A', '#B8323A'], ['#FFD43B', '#E0A020']];
+/** frame: 'sit' | 'up' | 'down' (wings) */
+export const bird = (seed = 0, frame = 'sit') => cached('bird' + (seed % 3) + frame, () => {
+  const [b, B] = BIRD_COL[seed % 3], pal = { b, B, k: EYE, o: '#FF8C42', w: '#FFFFFF' };
+  if (frame === 'sit') return sprite(['..bbb...', '.bbkbo..', 'Bbbbb...', 'BBbww...', '.Bbb....', '..o.o...'], pal);
+  return sprite(frame === 'up' ? ['B.....B..', 'BB...BB..', '.BbbbBko.', '..bbbb...', '...ww....'] : ['.........', '..bbbbko.', '.BbbbbB..', 'BB.ww.BB.', 'B.....B..'], pal);
+});
+export const fish = (seed = 0) => cached('fish' + (seed % 2), () => sprite(['..fff...f', '.fFfff.ff', 'fkfffffff', '.fffff.ff', '..fff...f'], { f: seed % 2 ? '#FF9E6B' : '#FFD43B', F: '#FFFFFF', k: EYE }));
+export const leaf = (seed = 0) => cached('leaf' + (seed % 3), () => sprite(['.gg', 'ggG', 'G..'], { g: ['#7CCB64', '#5DB35A', '#F5B83D'][seed % 3], G: '#3F8A4A' }, { outline: false }));
+export const note = (seed = 0) => cached('note' + (seed % 3), () => sprite(['..nn', '..n.', '..n.', 'nnn.', 'nnn.'], { n: ['#FF5E9C', '#4DABF7', '#FFD43B'][seed % 3] }));
+export const dizzy = () => cached('dizzy', () => sprite(['.y.', 'yyy', '.y.'], { y: '#FFD43B' }));
 
 /* ================= eggs ================= */
 /** k = {base, spot, band} colours; part: 'whole' | 'top' | 'bottom' (cracked halves) */

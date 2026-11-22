@@ -5,6 +5,7 @@ import { sfx, speak, unlock, startMusic, setMusic, setMood, setVoice } from './a
 import * as Q from './quest.js';
 import { createHud } from './hud.js';
 import { playDream } from './dream.js';
+import { playHatch, playFeed } from './cutscene.js';
 
 const $ = s => document.querySelector(s);
 const ACTS = {
@@ -29,6 +30,15 @@ setNightIcon(); ui.updateBookCount();
 
 /** a new cycle brings a new island: the village stays, everything around it is laid out afresh (the girls wake up to it) */
 let makeWorld = null;
+/** the big moments: the new stage is saved first, then the whole screen shows it happening, then the world goes on */
+async function show(type, data) {
+  if (!world) return; const w = world; w.pause(true);
+  try {
+    if (type === 'hatch' && Q.hatch()) await playHatch($('#game'), w.who(), data.kindDef, state.uni);
+    if (type === 'feed' && Q.feed()) await playFeed($('#game'), w.who(), state.uni);
+  } catch (e) { console.error(e); }
+  if (world === w) { w.refreshUnicorn(); w.pause(false); }
+}
 function rebuildIfNewIsland() {
   if (!world || !makeWorld || world.seed === Q.mapSeed()) return;
   world.destroy(); world = makeWorld(); world.setInteractive(true); syncNight(true); hud.render();
@@ -77,11 +87,12 @@ if (params.get('act')) {
   enter(params.get('act'));
 } else {
   import('./world.js').then(m => {
-    makeWorld = () => m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!'), onMount: () => hud.render() });
+    makeWorld = () => m.createWorld($('#world'), { onEnter: enter, onWish: () => ui.reward('Plons! Je wens komt uit!'), onMount: () => hud.render(), onShow: show });
     world = makeWorld(); hud.render();
     syncNight(true);
     if (params.has('night')) world.setNight(true, true);
     if (params.has('go')) { $('#start').hidden = true; Q.dreamShown(); world.setInteractive(true); }
     if (params.has('dream')) playDream($('#game'), world.who(), Q.kind());   // dev: watch the dream again
+    if (params.get('scene') === 'hatch') playHatch($('#game'), world.who(), Q.kind(), state.uni); if (params.get('scene') === 'feed') playFeed($('#game'), world.who(), state.uni);
   }).catch(e => { console.error(e && e.stack || e); $('#start p').textContent = 'Oeps, de wereld kon niet laden. Probeer het opnieuw.'; const d = document.createElement('p'); d.style.cssText = 'font-size:.8rem;opacity:.8;max-width:90vw'; d.textContent = String(e && e.message || e); $('#start').appendChild(d); });
 }

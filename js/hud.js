@@ -35,6 +35,7 @@ const CSS = `
 #b-jump{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0}
 #b-jump canvas{width:44px}
 #b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 84px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0;background:#FFE3F1}
+#b-ride.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #FF7EB6,0 3px 0 var(--ink)}
 #b-ride.on{background:var(--sun);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-ride canvas{width:52px}
 #who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(98px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:center}
@@ -66,7 +67,7 @@ export function createHud(getWorld) {
   rideBtn.onclick = () => { const w = getWorld(); if (w) { w.ride(); render(); } }; game.appendChild(rideBtn);
   let rideSig = '';
   function syncRide() {
-    const w = getWorld(), m = w ? w.mount() : null, sig = (Q.canRide() || m ? 1 : 0) + ':' + m + ':' + state.uni.body + state.uni.mane; rideBtn.hidden = !(Q.canRide() || m); rideBtn.classList.toggle('on', !!m);
+    const w = getWorld(), m = w ? w.mount() : null, sig = (Q.canRide() || m ? 1 : 0) + ':' + m + ':' + state.uni.body + state.uni.mane; rideBtn.hidden = !(Q.canRide() || m); rideBtn.classList.toggle('on', !!m); rideBtn.classList.toggle('call', Q.canRide() && !m);   // not riding although she could: the button asks for it
     if (sig !== rideSig) { rideSig = sig; rideBtn.innerHTML = ''; rideBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.bike() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true }), 3)); }
   }
   // who is playing: the sisters tap their own face when they swap seats

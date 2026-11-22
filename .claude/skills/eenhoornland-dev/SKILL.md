@@ -26,7 +26,9 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lie
 | `js/world-extras.js` | Fence, castle, animals, collectibles, hidden egg, star + hatching, fruit, meadow herd. |
 | `js/world-tools.js` | Logs and puddles (jumped), brambles and boulders (tool), the hole in the bridge (ridden unicorn), the two tools. |
 | `js/world-play.js` | Bike, balls, the boat between the beach and the rainbow island. Nothing here is saved. |
+| `js/world-life.js` | Just for fun: pick up and throw animals, birds (scarecrow), tappable trees/bushes/props, butterflies, jumping fish. |
 | `js/dream.js` | The opening dream cutscene. |
+| `js/cutscene.js` | Full-screen side-view scenes for hatching and for the rainbow fruit (`?scene=hatch` / `?scene=feed` to watch). `main.js` `show()` saves the stage, then plays them. |
 | `js/hud.js` | Goal chips, coins, bed and ride buttons, the map with the goal marker. |
 | `js/act-*.js` | One activity per building: `export const meta`, `export function open(root, api)` returning a cleanup fn. |
 
@@ -70,4 +72,7 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - Trees directly south of a walkable spot hide the player and items; `map.js` thins them in front of trails and never spawns items behind something tall.
 - The stal only opens once a unicorn has hatched; tests that enter it must set a stage first.
 - A teleport or boat arrival next to water: pass `placeAt(x, z, dx, dz)` so the follower lands on land.
+- Characters go through `ART.hd` (2x pixels, eye glints) in `makeChar`; use `charGeom`, not `spriteGeom`, for their meshes.
+- Riding must never have to be discovered: after the fruit scene she is mounted, and walking up to the hole in the bridge mounts her and jumps (`world-tools.js`).
+- Cutscenes run several times slower in headless Chrome: tests tap `#scene` to advance or click `#scene .skip`.
 - When ridden, the girl is drawn behind the unicorn (`seat()` in `world.js`), otherwise in front.
