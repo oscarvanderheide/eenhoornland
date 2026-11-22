@@ -13,6 +13,16 @@ export const PIER = { x0: 30, z0: 41, x1: 31, z1: 46 };
 export const CLEARING = { cx: 49.5, cz: 11.5, rx: 4.2, rz: 3.2 };
 export const ORCHARD = { cx: 40, cz: 18, rx: 3.6, rz: 3.2 };
 export const NOOK = { cx: 58.5, cz: 5.5, rx: 2.6, rz: 2.4 };
+/** the houses you can go into: one in every area, so there is something to discover everywhere */
+export const HOUSES = {
+  huisje: { x: 12, z: 2, w: 5, d: 4 },                 // dorp
+  stal: { x: 33, z: 25, w: 5, d: 4 },                  // wei, next to the unicorn meadow
+  atelier: { x: 32, z: 10, w: 5, d: 4 },               // bos (behind the brambles)
+  bakkerij: { x: 57, z: 34, w: 5, d: 4 },              // kasteel (behind the boulders)
+  kermis: { tent: true, cx: 8.5, cz: 36.5, r: 2.15 },  // strand
+};
+export const houseRect = h => h.tent ? [Math.floor(h.cx) - 2, Math.floor(h.cz) - 2, Math.floor(h.cx) + 2, Math.floor(h.cz) + 2] : [h.x, h.z, h.x + h.w - 1, h.z + h.d - 1];
+export const houseDoor = h => h.tent ? [Math.floor(h.cx), Math.floor(h.cz) + 3] : [h.x + Math.floor(h.w / 2), h.z + h.d];
 /** places you can ask to walk to (map screen, signposts) */
 export const PLACES = {
   dorp: { name: 'Dorp', tile: [14, 15] }, bos: { name: 'Bos', tile: [48, 12] }, wei: { name: 'Eenhoornwei', tile: [17, 28] },
@@ -34,6 +44,7 @@ export const TOOL_FOR = { bramble: 'schaar', boulder: 'hamer' };
 /** Builds the island. `seed` 0 is the first, hand-tuned island; every later cycle passes a new seed, which
  *  reshuffles everything outside the village. A seed that fails `validate` is skipped. */
 export function buildMap(opts = {}) {
+  opts = { solids: Object.values(HOUSES).map(houseRect), keep: Object.values(HOUSES).map(houseDoor).concat([CASTLE.door]), ...opts };
   let seed = opts.seed | 0, m = null; const skipped = [];
   for (let k = 0; k < 12; k++) { m = build({ ...opts, seed }); m.problems = validate(m, opts.keep || []); if (!m.problems.length) break; skipped.push(...m.problems); seed = (seed + 7919) | 0; }
   m.skipped = skipped; return m;
@@ -68,8 +79,9 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   trail([[26, 17], [33, 17], [37, 18.5], [40, 18]]); trail([[43, 17], [45.5, 15], [47, 13]]);
   trail([[49.5, 14], [49.5, 20], [48.5, 24], [48.5, 33]]);
   trail([[53, 11], [56, 8.5], [58, 6.5]], .7);
+  disc({ cx: 34.5, cz: 13.5, rx: 4.6, rz: 3 }, GR); trail([[34.5, 14.5], [34.5, 17]]);   // the atelier's glade
   /* ---- wei + moestuin ---- */
-  rect(14, 22, 15, 34, PA); rect(16, 28, 18, 29, PA); rect(12, 28, 13, 29, PA);
+  rect(14, 22, 15, 34, PA); rect(16, 28, 18, 29, PA); rect(12, 28, 13, 29, PA); rect(35, 29, 36, 34, PA);   // ... and from the stal down to the boardwalk
   rect(GARDEN.x0, GARDEN.z0, GARDEN.x1, GARDEN.z1, SO);
   /* ---- strand ---- */
   rect(14, 35, 15, 37, BW); rect(16, 35, 45, 36, BW);
@@ -95,22 +107,32 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
     for (const [x, z] of tiles) {
       const i = I(x, z); if (!inb(x, z) || block[i] || keepSet.has(i)) { prev = null; continue; }
       const g = ground[i];
-      if (g === PA || g === BW || g === CO) { const o = { kind: gate, type: 'break', tool: TOOL_FOR[gate], x, z, gate: true, g: prev ? prev.g : obstacles.length }; obstacles.push(o); block[i] = BREAK; prev = o; }
+      if (g === PA || g === BW || g === CO) { if (!gate) { prev = null; continue; } const o = { kind: gate, type: 'break', tool: TOOL_FOR[gate], x, z, gate: true, g: prev ? prev.g : obstacles.length }; obstacles.push(o); block[i] = BREAK; prev = o; }
       else { trees.push({ kind: wallKind(x, z, g), x, z, seed: 1 + (x * 5 + z * 3) % 6, fixed: true }); block[i] = 1; prev = null; }
     }
   };
   const pathAt = (x, z) => inb(x, z) && (ground[I(x, z)] === PA || ground[I(x, z)] === BW || ground[I(x, z)] === CO);
   // a tall tree just south of a path would hide the gate and whoever stands at it: keep the edge low there
   const forestEdge = (x, z) => [[0, -1], [0, -2], [0, -3], [-1, -1], [1, -1], [-1, -2], [1, -2]].some(([dx, dz]) => pathAt(x + dx, z + dz)) ? 'bush' : (x + z) % 2 ? 'pine' : 'tree', castleHedge = (x, z, g) => g === SA ? 'rock' : 'hedge';
-  border(line(28, 0, 28, 23), 'bramble', forestEdge); border(line(29, 23, 43, 23), 'bramble', forestEdge);
-  border(line(43, 24, 43, H - 1), 'boulder', castleHedge); border(line(44, 24, W - 1, 24), 'boulder', castleHedge);
+  // The areas are separate places: between them lies a thick belt of trees, hedges or rocks, and the only way through
+  // is a narrow corridor where a path crosses it. `gateAt` is the line of the belt that carries the brambles / boulders.
+  const belt = (lines, kind, gate = null, gateAt = -1) => lines.forEach((l, k) => border(l, k === gateAt ? gate : null, kind));
+  const cols = (x0, x1, z0, z1) => { const o = []; for (let x = x0; x <= x1; x++) o.push(line(x, z0, x, z1)); return o; };
+  const rows = (z0, z1, x0, x1) => { const o = []; for (let z = z0; z <= z1; z++) o.push(line(x0, z, x1, z)); return o; };
+  const lowNorth = z0 => (x, z, g) => z - z0 < 2 ? 'bush' : (x + z) % 2 ? 'pine' : 'tree';   // tall trees would hide whoever walks just north of the belt
+  belt(cols(27, 30, 0, 23), forestEdge, 'bramble', 1);                                        // dorp | bos
+  belt(rows(20, 23, 0, 26), lowNorth(20));                                                    // dorp | wei: open, with the first log to jump
+  belt(rows(22, 23, 31, 43), forestEdge, 'bramble', 1);                                       // bos | wei
+  belt(cols(41, 43, 24, H - 1), castleHedge, 'boulder', 1);                                   // wei, strand | kasteel
+  belt(rows(22, 24, 44, W - 1), (x, z, g) => g === FO ? forestEdge(x, z) : castleHedge(x, z, g), 'boulder', 1);   // bos | kasteel
+  belt(rows(33, 34, 0, 40), (x, z, g) => g === SA ? 'rock' : 'bush');                         // wei | strand: open
 
   /* ---- fixed props (blocked, drawn as billboards) ---- */
   const prop = (kind, x, z, seed = 1) => { if (!inb(x, z) || block[I(x, z)] || keepSet.has(I(x, z))) return; const g = ground[I(x, z)]; if (g === PA || g === BW || g === PL) return; trees.push({ kind, x, z, seed, fixed: true }); block[I(x, z)] = 1; };
   [[38, 15], [42, 15], [37, 20], [42, 21], [40, 16], [47, 9], [52, 14]].forEach(([x, z], k) => prop('apple', x, z, k + 1));
   prop('oak', 50, 10); prop('stump', 46, 13); prop('stump', 57, 4); prop('log', 53, 13);
-  prop('scarecrow', 8, 25); prop('sign', 16, 27, 1); prop('sign', 27, 6, 2); prop('sign', 16, 34, 3); prop('sign', 44, 34, 4);
-  prop('umbrella', 6, 38); prop('sandcastle', 22, 39); prop('boat', 36, 40); prop('umbrella', 26, 38, 2);
+  prop('scarecrow', 8, 25); prop('sign', 16, 27, 1); prop('sign', 26, 6, 2); prop('sign', 16, 32, 3); prop('sign', 44, 34, 4);
+  prop('umbrella', 3, 38); prop('sandcastle', 22, 39); prop('boat', 36, 40); prop('umbrella', 26, 38, 2);
   prop('statue', 54, 36); prop('flag', 46, 34); prop('flag', 46, 37, 2); prop('flag', 49, 33); prop('flag', 59, 33, 2);
   prop('trough', 27, 27); prop('hay', 20, 26);
   for (let x = 47; x <= 61; x += 2) if (x !== 53 && x !== 55) prop('hedge', x, 39, x);

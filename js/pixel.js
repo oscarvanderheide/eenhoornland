@@ -64,10 +64,10 @@ export function drawSprite(ctx, cv, x, y, scale = 1, flip = false) {
 /* ---------------- characters ---------------- */
 const SKIN = '#FFD7BE', EYE = '#2B1E3A', CHEEK = '#FF8FB1', MOUTH = '#C2456E';
 export const KIDS = {
-  anna: { hair: '#7A4A2A', dress: '#9B72E8', dress2: '#7653C4', shoe: '#FF5E9C', clip: '#FFD166' },
-  fenna: { hair: '#E8B95A', dress: '#FF7EB6', dress2: '#E0559A', shoe: '#4DABF7', clip: '#FF5E9C' },
+  anna: { hair: '#E8B95A', dress: '#FF7EB6', dress2: '#E0559A', shoe: '#4DABF7', clip: '#FF5E9C' },   // the little one, blond
+  fenna: { hair: '#7A4A2A', dress: '#9B72E8', dress2: '#7653C4', shoe: '#FF5E9C', clip: '#FFD166' },  // her big sister
 };
-const ANNA_TOP = [
+const FENNA_TOP = [
   '....hhhhhh....',
   '...hhhhhhhh...',
   '..hhhhhhhhhh..',
@@ -86,13 +86,13 @@ const ANNA_TOP = [
   '...dddddddd...',
   '..DddddddddD..',
 ];
-const ANNA_LEGS = {
+const FENNA_LEGS = {
   idle: ['....ss..ss....', '....ss..ss....', '....pp..pp....'],
   w1: ['....ss..ss....', '....pp..ss....', '........pp....'],
   w2: ['....ss..ss....', '....ss..pp....', '....pp........'],
   jump: ['...ss....ss...', '..pp......pp..', '..............'],
 };
-const FENNA_TOP = [
+const ANNA_TOP = [
   '...hhhhhh...',
   '..hhhhhhhh..',
   'yhhhhhhhhhhy',
@@ -107,7 +107,7 @@ const FENNA_TOP = [
   '.sdddddddds.',
   '.DddddddddD.',
 ];
-const FENNA_LEGS = {
+const ANNA_LEGS = {
   idle: ['...ss..ss...', '...pp..pp...'],
   w1: ['...pp..ss...', '.......pp...'],
   w2: ['...ss..pp...', '...pp.......'],
@@ -115,11 +115,11 @@ const FENNA_LEGS = {
 };
 function kidPal(k) { return { h: k.hair, y: k.clip, s: SKIN, k: EYE, c: CHEEK, m: MOUTH, d: k.dress, D: k.dress2, p: k.shoe }; }
 export function anna(frame = 'idle', blink = false) {
-  const top = blink ? ANNA_TOP.map((r, i) => i === 6 ? r.replace(/k/g, 's') : r) : ANNA_TOP;
+  const top = blink ? ANNA_TOP.map((r, i) => i === 4 ? r.replace(/k/g, 's') : r) : ANNA_TOP;
   return sprite([...top, ...ANNA_LEGS[frame]], kidPal(KIDS.anna), { key: 'anna' + frame + blink });
 }
 export function fenna(frame = 'idle', blink = false) {
-  const top = blink ? FENNA_TOP.map((r, i) => i === 4 ? r.replace(/k/g, 's') : r) : FENNA_TOP;
+  const top = blink ? FENNA_TOP.map((r, i) => i === 6 ? r.replace(/k/g, 's') : r) : FENNA_TOP;
   return sprite([...top, ...FENNA_LEGS[frame]], kidPal(KIDS.fenna), { key: 'fenna' + frame + blink });
 }
 

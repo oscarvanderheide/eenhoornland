@@ -2,7 +2,7 @@
 // and a depth-of-field / bloom / vignette post pass.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import * as PX from './pixel.js';
-import { state } from './state.js';
+import { state, save } from './state.js';
 import { sfx, speak } from './audio.js';
 import * as MAP from './map.js';
 import * as ART from './art.js';
@@ -13,13 +13,14 @@ import { createTools } from './world-tools.js';
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
 
+// where each house stands is map data (MAP.HOUSES: one per area); here is only how it looks
 export const BUILDINGS = [
-  { id: 'stal', name: 'Stal', x: 3, z: 3, w: 5, d: 4, h: 2.1, rh: 1.3, wall: '#D2654A', roof: '#7A4A3A', trim: '#FFF1DC', doorCol: '#6B3F2A', exit: [5, 7], icon: () => PX.heart() },
-  { id: 'atelier', name: 'Atelier', x: 21, z: 3, w: 5, d: 4, h: 2.1, rh: 1.3, wall: '#8DBDEB', roof: '#4A6FB8', trim: '#FFF6E3', doorCol: '#9B72E8', exit: [23, 7], icon: () => PX.butterfly() },
-  { id: 'bakkerij', name: 'Bakkerij', x: 3, z: 12, w: 5, d: 4, h: 2.1, rh: 1.2, wall: '#FFD7E2', roof: '#D16A93', trim: '#FFFFFF', doorCol: '#8B5A3C', exit: [5, 16], icon: () => PX.cake() },
-  { id: 'huisje', name: 'Huisje', say: 'Naar het huisje!', x: 12, z: 2, w: 5, d: 4, h: 2.1, rh: 1.3, wall: '#FFF1C9', roof: '#E8616B', trim: '#FFFFFF', doorCol: '#4DABF7', exit: [14, 7], icon: () => ART.bedIcon() },
-  { id: 'kermis', name: 'Kermis', tent: true, cx: 23.5, cz: 13.5, r: 2.15, exit: [23, 16], icon: () => PX.star() },
-];
+  { id: 'stal', name: 'Stal', h: 2.1, rh: 1.3, wall: '#D2654A', roof: '#7A4A3A', trim: '#FFF1DC', doorCol: '#6B3F2A' },
+  { id: 'atelier', name: 'Atelier', h: 2.1, rh: 1.3, wall: '#8DBDEB', roof: '#4A6FB8', trim: '#FFF6E3', doorCol: '#9B72E8' },
+  { id: 'bakkerij', name: 'Bakkerij', h: 2.1, rh: 1.2, wall: '#FFD7E2', roof: '#D16A93', trim: '#FFFFFF', doorCol: '#8B5A3C' },
+  { id: 'huisje', name: 'Huisje', h: 2.1, rh: 1.3, wall: '#FFF1C9', roof: '#E8616B', trim: '#FFFFFF', doorCol: '#4DABF7' },
+  { id: 'kermis', name: 'Kermis' },
+].map(b => Object.assign(b, MAP.HOUSES[b.id], { door: MAP.houseDoor(MAP.HOUSES[b.id]) }));
 
 function rngf(seed) { return PX.rng(seed); }
 function tex(cv, nearest = true) {
@@ -42,10 +43,9 @@ export function createWorld(cv, { onEnter, onWish }) {
   const camera = new THREE.PerspectiveCamera(30, 1, .5, 220);
 
   /* ---------------- map ---------------- */
-  for (const b of BUILDINGS) b.door = b.tent ? [23, 16] : [b.x + Math.floor(b.w / 2), b.z + b.d];
-  const rectOf = b => b.tent ? [21, 11, 25, 15] : [b.x, b.z, b.x + b.w - 1, b.z + b.d - 1];
+  const rectOf = MAP.houseRect;
   const seed = Q.mapSeed();
-  const M = MAP.buildMap({ solids: BUILDINGS.map(rectOf), keep: BUILDINGS.map(b => b.door).concat([MAP.CASTLE.door]), seed });
+  const M = MAP.buildMap({ seed });
   const { ground, block, trees } = M, LANTERNS = MAP.LANTERNS;
   const I = (x, z) => z * W + x, inb = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
   const doors = new Map(BUILDINGS.map(b => [I(b.door[0], b.door[1]), b]));
@@ -210,7 +210,14 @@ export function createWorld(cv, { onEnter, onWish }) {
       group.add(m); windowGlows.push(m);
     }
   }
-  const labels = [];
+  // no signs on the houses: a few quiet twinkles at the door are the only hint that you can go in
+  const twinkles = [];
+  function doorGlow(x, z) {
+    [[-.55, 1.25], [.5, .75], [-.3, .3], [.15, 1.55]].forEach(([dx, y], k) => {
+      const m = makeSprite(PX.sparkle(k % 2 ? '#FFE3F1' : '#FFF6D0'), { lean: 0, shadow: false }); m.material = m.material.clone(); m.material.emissiveIntensity = 1;
+      m.position.set(x + dx, y, z); scene.add(m); twinkles.push({ m, y, p: k * 1.7 + x });
+    });
+  }
   function house(b) {
     const g = new THREE.Group(); g.position.set(b.x + b.w / 2, 0, b.z + b.d / 2);
     const front = wallCanvas(b, 'front', b.w, b.h), side = wallCanvas(b, 'side', b.d, b.h), back = wallCanvas(b, 'back', b.w, b.h);
@@ -247,7 +254,7 @@ export function createWorld(cv, { onEnter, onWish }) {
     }
     g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.building = b; pick.push(o); } });
     scene.add(g);
-    labels.push({ b, pos: new THREE.Vector3(g.position.x, b.h + b.rh + .55, g.position.z + b.d / 2) });
+    doorGlow(b.door[0] + .5, b.z + b.d + .1);
   }
   var chimney = null;
   function tent(b) {
@@ -269,7 +276,7 @@ export function createWorld(cv, { onEnter, onWish }) {
     for (const [dx, col] of [[-2.4, '#FF6B6B'], [-2.1, '#4DABF7'], [2.3, '#FFD43B']]) {
       const bl = makeSprite(PX.balloon(col), { lean: .1, scale: 1.3 }); bl.position.set(b.cx + dx, .2, b.cz + b.r - .2); scene.add(bl); balloons.push(bl);
     }
-    labels.push({ b, pos: new THREE.Vector3(b.cx, 2.6, b.cz + b.r) });
+    doorGlow(b.cx, b.cz + b.r + .1);
   }
   const balloons = [];
   for (const b of BUILDINGS) b.tent ? tent(b) : house(b);
@@ -322,11 +329,26 @@ export function createWorld(cv, { onEnter, onWish }) {
     const g = new THREE.Group(); g.add(mesh); g.add(blob(blobW, blobW * .55)); scene.add(g);
     const c = { g, mesh, texs, frames, flippable, face: 1, moving: false, hop: 0, hopH: .35, pos: new THREE.Vector3(), name, say, sound, path: [], animT: Math.random() * 10, blinkT: 2 + Math.random() * 3,
       setFrame(k) { const key = k + (this.flippable && this.face < 0 ? 'F' : ''); const t = this.texs[key] || this.texs[k]; if (this.mesh.material.map !== t) { this.mesh.material.map = t; this.mesh.material.emissiveMap = t; } } };
-    mesh.userData.char = c; pick.push(mesh); chars.push(c); return c;
+    c.zBias = (chars.length % 7) * .008; mesh.userData.char = c; pick.push(mesh); chars.push(c); return c;
   }
   const kidFrames = f => ({ idle: f('idle'), w1: f('w1'), w2: f('w2'), blink: f('idle', true), jump: f('jump') });
-  const anna = makeChar(kidFrames(PX.anna), { name: 'Anna', say: ['Joepie!', 'Hoi!', 'Kom mee!'], blobW: .6 });
-  const fenna = makeChar(kidFrames(PX.fenna), { name: 'Fenna', say: ['Hihi!', 'Hoera!', 'Wacht op mij!'], blobW: .55 });
+  // one girl walks around at a time; the sisters take turns whenever they swap seats (HUD button, saved in state.extra.who)
+  const GIRLS = {
+    anna: { name: 'Anna', frames: kidFrames(PX.anna), say: ['Hihi!', 'Hoera!', 'Kom mee!'], blobW: .55 },
+    fenna: { name: 'Fenna', frames: kidFrames(PX.fenna), say: ['Joepie!', 'Hoi!', 'Kom mee!'], blobW: .6 },
+  };
+  for (const g of Object.values(GIRLS)) { g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]); }
+  let who = GIRLS[state.extra.who] ? state.extra.who : 'anna';
+  const kid = makeChar(GIRLS[who].frames, { name: GIRLS[who].name, say: GIRLS[who].say, blobW: GIRLS[who].blobW });
+  function setWho(id, quiet = false) {
+    const g = GIRLS[id]; if (!g) return;
+    who = id; Object.assign(kid, { texs: g.texs, frames: g.frames, name: g.name, say: g.say });
+    kid.mesh.geometry = spriteGeom(g.frames.idle.width, g.frames.idle.height); kid.g.children[1].scale.set(g.blobW, 1, g.blobW * .55); kid.mesh.material.map = null; kid.setFrame('idle');
+    if (state.extra.who !== id) { state.extra.who = id; save(); }
+    if (!quiet) { sfx.sparkle(); kid.hop = 1; burst(kid.pos, 8); bubble(kid, 'Ik ben ' + g.name + '!'); speak(g.name + ' is aan de beurt!'); }
+  }
+  // two billboards on the same spot fight over the same pixels and flicker: everyone gets a depth of their own, the girl in front
+  kid.zBias = .06;
   // the companion is whatever the quest says: nothing yet, an egg, a foal, or the growing unicorn
   const uniFrames = () => ART.companionFrames(Q.companionLook(), Q.quest.stage === 'ei' || Q.quest.stage === 'baby' ? Q.quest.stage : 'groot', Q.kind());
   const uni = makeChar(uniFrames(), { flippable: true, name: () => state.uni.name, say: ['Hihihi!', 'Ik ben ' + state.uni.name + '!', 'Briesss!'], blobW: 1.2 });
@@ -363,9 +385,9 @@ export function createWorld(cv, { onEnter, onWish }) {
 
   /* ---------------- party & movement ---------------- */
   const START = [14.5, 15.5];
-  anna.pos.set(START[0], 0, START[1]); fenna.pos.set(START[0], 0, START[1] + 1); uni.pos.set(START[0], 0, START[1] + 2.2);
+  kid.pos.set(START[0], 0, START[1]); uni.pos.set(START[0], 0, START[1] + 2.2);
   let trail = [];
-  function resetTrail() { trail = []; for (let i = 0; i <= 30; i++) trail.push(new THREE.Vector2(anna.pos.x, anna.pos.z + i * .12)); }
+  function resetTrail() { trail = []; for (let i = 0; i <= 30; i++) trail.push(new THREE.Vector2(kid.pos.x, kid.pos.z + i * .12)); }
   resetTrail();
   function trailAt(dist) {
     let acc = 0;
@@ -421,7 +443,7 @@ export function createWorld(cv, { onEnter, onWish }) {
   /** deep: do not fall back to "walk up to whatever is in the way" */
   function walkTo(tx, tz, building = null, exact = null, deep = false) {
     after = null;
-    const s = [Math.floor(anna.pos.x), Math.floor(anna.pos.z)];
+    const s = [Math.floor(kid.pos.x), Math.floor(kid.pos.z)];
     const ok = (x, z) => walkable(x, z) || (x === s[0] && z === s[1]);
     const p = astar(s[0], s[1], tx, tz, ok, true);
     if (!p) {
@@ -433,23 +455,23 @@ export function createWorld(cv, { onEnter, onWish }) {
     let pts = p.slice(1).map(([x, z, j]) => { const v = new THREE.Vector3(x + .5, 0, z + .5); v.jump = j; return v; });
     if (exact && freeAt(exact.x, exact.z)) { if (!pts.length || pts[pts.length - 1].jump) pts.push(exact.clone()); else pts[pts.length - 1] = exact.clone(); }
     if (pts.length && pts[0].jump && freeAt(s[0] + .5, s[1] + .5)) pts.unshift(new THREE.Vector3(s[0] + .5, 0, s[1] + .5));   // take off from the middle of the tile
-    anna.path = smoothPath(anna.pos.clone(), pts);
-    if (!anna.path.length && building) { arrive(building); return true; }
-    target = building; const end = anna.path.length ? anna.path[anna.path.length - 1] : anna.pos; showMarker(end.x, end.z); return true;
+    kid.path = smoothPath(kid.pos.clone(), pts);
+    if (!kid.path.length && building) { arrive(building); return true; }
+    target = building; const end = kid.path.length ? kid.path[kid.path.length - 1] : kid.pos; showMarker(end.x, end.z); return true;
   }
   /** walk to a free tile next to (ox, oz), then do `then` */
   function approach(ox, oz, then, deep = false) {
-    const s = [Math.floor(anna.pos.x), Math.floor(anna.pos.z)];
+    const s = [Math.floor(kid.pos.x), Math.floor(kid.pos.z)];
     const near = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => [ox + dx, oz + dz]).filter(([x, z]) => walkable(x, z) || (x === s[0] && z === s[1]))
-      .sort((a, b) => Math.hypot(a[0] + .5 - anna.pos.x, a[1] + .5 - anna.pos.z) - Math.hypot(b[0] + .5 - anna.pos.x, b[1] + .5 - anna.pos.z));
+      .sort((a, b) => Math.hypot(a[0] + .5 - kid.pos.x, a[1] + .5 - kid.pos.z) - Math.hypot(b[0] + .5 - kid.pos.x, b[1] + .5 - kid.pos.z));
     for (const [x, z] of near) if (walkTo(x, z, null, null, true)) { after = then; return true; }
     return !deep && walkTo(ox, oz);
   }
-  function arrive(b) { target = null; after = null; anna.path = []; onEnter && onEnter(b.id); }
+  function arrive(b) { target = null; after = null; kid.path = []; onEnter && onEnter(b.id); }
   /** a hop on the spot, just for fun (jumping over things happens by itself while walking) */
   function jump() {
-    if (!interactive || paused || anna.hop > 0) return; sfx.boing(); anna.hop = 1;
-    for (const [c, ms] of [[fenna, 140], [uni, 280]]) setTimeout(() => { if (c.g.visible && c.hop <= 0) c.hop = 1; }, ms);
+    if (!interactive || paused || kid.hop > 0) return; sfx.boing(); kid.hop = 1;
+    for (const [c, ms] of [[uni, 200]]) setTimeout(() => { if (c.g.visible && c.hop <= 0) c.hop = 1; }, ms);
   }
   let lastTile = -1;
 
@@ -458,11 +480,6 @@ export function createWorld(cv, { onEnter, onWish }) {
   let markerT = 0;
   function showMarker(x, z) { marker.position.set(x, .03, z); marker.visible = true; markerT = 1; }
   const labelsEl = document.getElementById('labels');
-  for (const l of labels) {
-    const el = document.createElement('div'); el.className = 'blabel'; el.appendChild(PX.domSprite(l.b.icon(), 2)); el.appendChild(document.createTextNode(l.b.name));
-    el.onclick = e => { e.stopPropagation(); if (!interactive) return; sfx.pop(); speak(l.b.say || 'Naar de ' + l.b.name.toLowerCase() + '!'); walkTo(l.b.door[0], l.b.door[1], l.b); };
-    labelsEl.appendChild(el); l.el = el;
-  }
   const bubbles = [];
   function bubble(c, text, icon = null) {
     for (const b of bubbles) if (b.c === c) { b.el.remove(); b.dead = true; }
@@ -481,7 +498,7 @@ export function createWorld(cv, { onEnter, onWish }) {
 
   const alphaCache = new Map();
   let extras = null; const ctxHooks = { onWish };
-  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, anna, fenna, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; } };
+  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; } };
   extras = createExtras(ctx);
   const tools = createTools(ctx);
   refreshUnicorn();
@@ -524,11 +541,11 @@ export function createWorld(cv, { onEnter, onWish }) {
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
   }
   const keys = new Set();
-  const midJump = () => !!(anna.path[0] && anna.path[0].jump);
+  const midJump = () => !!(kid.path[0] && kid.path[0].jump);
   addEventListener('keydown', e => {
     if (!interactive || paused) return;
     if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { anna.path = []; target = null; after = null; } e.preventDefault(); }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
   }, listen);
   addEventListener('keyup', e => keys.delete(e.key.toLowerCase()), listen);
   addEventListener('blur', () => keys.clear(), listen);
@@ -598,14 +615,14 @@ export function createWorld(cv, { onEnter, onWish }) {
 
   /* ---------------- loop ---------------- */
   let paused = false, last = performance.now(), time = 0; const perf = { t: 0, n: 0 };
-  const camTarget = new THREE.Vector3(anna.pos.x, 0, anna.pos.z);
+  const camTarget = new THREE.Vector3(kid.pos.x, 0, kid.pos.z);
   const tmp = new THREE.Vector3();
   function updateChar(c, dt) {
     c.animT += dt;
     if (c.hop > 0) c.hop = Math.max(0, c.hop - dt * 2.5);
     const hopY = Math.sin((1 - c.hop) * Math.PI) * c.hopH * (c.hop > 0 ? 1 : 0); if (c.hop <= 0) c.hopH = .35;
     const bob = c.moving ? Math.abs(Math.sin(c.animT * 10)) * .05 : 0;
-    c.g.position.copy(c.pos); c.mesh.position.y = hopY + bob;
+    c.g.position.copy(c.pos); c.mesh.position.y = hopY + bob; c.mesh.position.z = c.zBias || 0;
     const breathe = (c.moving ? 1 : 1 + Math.sin(c.animT * 2.4) * .012) * (c.baseScale || 1); c.mesh.scale.set(breathe, breathe, 1);
     if (c.hop > 0 && c.texs.jump) c.setFrame('jump');
     else if (c.moving) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
@@ -628,38 +645,38 @@ export function createWorld(cv, { onEnter, onWish }) {
     if (Math.abs(nightT - nightTarget) > .001) { nightT += Math.sign(nightTarget - nightT) * Math.min(Math.abs(nightTarget - nightT), dt * .8); applyNight(nightT); }
     // keyboard
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
-    const prev = anna.pos.clone();
+    const prev = kid.pos.clone();
     if ((kx || kz) && !midJump()) {
-      const l = Math.hypot(kx, kz), sp = 3.4 * dt; const nx = anna.pos.x + kx / l * sp, nz = anna.pos.z + kz / l * sp;
-      const stuck = !freeAt(anna.pos.x, anna.pos.z); // if somehow overlapping, let her walk out
-      if (stuck || freeAt(nx, anna.pos.z)) anna.pos.x = nx; if (stuck || freeAt(anna.pos.x, nz)) anna.pos.z = nz;
-      anna.moving = anna.pos.distanceTo(prev) > .001;
+      const l = Math.hypot(kx, kz), sp = 3.4 * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
+      const stuck = !freeAt(kid.pos.x, kid.pos.z); // if somehow overlapping, let her walk out
+      if (stuck || freeAt(nx, kid.pos.z)) kid.pos.x = nx; if (stuck || freeAt(kid.pos.x, nz)) kid.pos.z = nz;
+      kid.moving = kid.pos.distanceTo(prev) > .001;
       // walking straight into a log or puddle hops over it; into brambles or a boulder uses the tool
-      if (!anna.moving && !stuck && !(kx && kz)) {
-        const ax = Math.floor(anna.pos.x) + kx, az = Math.floor(anna.pos.z) + kz;
-        if (lowAt(ax, az) && walkable(ax + kx, az + kz)) { const land = new THREE.Vector3(ax + kx + .5, 0, az + kz + .5); land.jump = true; anna.path = [land]; target = null; after = null; }
+      if (!kid.moving && !stuck && !(kx && kz)) {
+        const ax = Math.floor(kid.pos.x) + kx, az = Math.floor(kid.pos.z) + kz;
+        if (lowAt(ax, az) && walkable(ax + kx, az + kz)) { const land = new THREE.Vector3(ax + kx + .5, 0, az + kz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
       }
     } else {
-      const land = midJump() ? anna.path[0] : null;
-      if (land && jumpTo !== land) { jumpTo = land; anna.hop = 1; anna.hopH = .6; sfx.boing(); jumpSpeed = Math.max(4.5, Math.hypot(land.x - anna.pos.x, land.z - anna.pos.z) / .38); }
-      stepAlong(anna, dt, land ? jumpSpeed : 3.4);
+      const land = midJump() ? kid.path[0] : null;
+      if (land && jumpTo !== land) { jumpTo = land; kid.hop = 1; kid.hopH = .6; sfx.boing(); jumpSpeed = Math.max(4.5, Math.hypot(land.x - kid.pos.x, land.z - kid.pos.z) / .38); }
+      stepAlong(kid, dt, land ? jumpSpeed : 3.4);
     }
-    if (!anna.path.length && after) { const f = after; after = null; f(); }
+    if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
-    const ti = I(Math.floor(anna.pos.x), Math.floor(anna.pos.z));
+    const ti = I(Math.floor(kid.pos.x), Math.floor(kid.pos.z));
     if (ti !== lastTile) lastTile = ti;
     { const b = doors.get(ti); if (b && interactive && !paused && kz < 0 && !kx) { keys.clear(); arrive(b); } }
-    if (!anna.path.length && target) { const b = target; target = null; if (I(Math.floor(anna.pos.x), Math.floor(anna.pos.z)) === I(b.door[0], b.door[1])) arrive(b); }
-    if (anna.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
+    if (!kid.path.length && target) { const b = target; target = null; if (I(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === I(b.door[0], b.door[1])) arrive(b); }
+    if (kid.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
     // trail followers
-    if (anna.pos.distanceTo(prev) > .0001) { trail.unshift(new THREE.Vector2(anna.pos.x, anna.pos.z)); if (trail.length > 80) trail.pop(); }
-    for (const [c, dist] of [[fenna, .85], [uni, uni.follow || 2]]) {
+    if (kid.pos.distanceTo(prev) > .0001) { trail.unshift(new THREE.Vector2(kid.pos.x, kid.pos.z)); if (trail.length > 80) trail.pop(); }
+    for (const [c, dist] of [[uni, uni.follow || 2]]) {
       let p = trailAt(dist); const before = c.pos.clone();
       // nobody stands on a log: wait in front of it, then hop over when the trail moves on
       if (lowAt(Math.floor(p.x), Math.floor(p.y))) { let back = dist; for (let k = 0; k < 8 && lowAt(Math.floor(p.x), Math.floor(p.y)); k++) p = trailAt(back += .25); p = trailAt(back + .45); }
       else if (c.hop <= 0 && (lowAt(Math.floor((c.pos.x + p.x) / 2), Math.floor((c.pos.z + p.y) / 2)) || lowAt(Math.floor(c.pos.x), Math.floor(c.pos.z))) && Math.hypot(p.x - c.pos.x, p.y - c.pos.z) > .05) { c.hop = 1; c.hopH = .55; } c.pos.x += (p.x - c.pos.x) * Math.min(1, dt * 12); c.pos.z += (p.y - c.pos.z) * Math.min(1, dt * 12);
-      const mv = c.pos.distanceTo(before); c.moving = mv > .004; if (Math.abs(c.pos.x - before.x) > .003) c.face = c.pos.x > before.x ? 1 : -1;
+      const mv = c.pos.distanceTo(before), dx = c.pos.x - before.x; c.moving = mv > .004; if (Math.abs(dx) > .01 && Math.abs(dx) > mv * .35) c.face = dx > 0 ? 1 : -1;   // walking straight up or down must not flip her left-right every frame
     }
     // animals
     for (const a of animals) {
@@ -671,31 +688,31 @@ export function createWorld(cv, { onEnter, onWish }) {
     // fx
     for (const u of waterUniforms) u.t.value = time;
     spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused); tools.update(dt, time, interactive && !paused);
+    for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
     if (markerT > 0) { markerT -= dt * 1.2; marker.material.opacity = Math.max(0, markerT); marker.scale.setScalar(1 + (1 - markerT) * .4); if (markerT <= 0) marker.visible = false; }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.life -= dt * 1.1; s.v.y -= dt * 1.5; s.m.position.addScaledVector(s.v, dt); s.m.scale.setScalar(Math.max(.01, s.life)); if (s.life <= 0) { scene.remove(s.m); sparks.splice(i, 1); } }
     // camera
-    camTarget.x += (anna.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (anna.pos.z - camTarget.z) * Math.min(1, dt * 3);
+    camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3);
     const halfW = viewW / 2; const cx = THREE.MathUtils.clamp(camTarget.x, Math.min(W / 2, halfW - 1), Math.max(W / 2, W - halfW + 1)); const cz = THREE.MathUtils.clamp(camTarget.z, 4, H - 3);
     camera.position.set(cx, Math.sin(camPitch) * camDist, cz + Math.cos(camPitch) * camDist); camera.lookAt(cx, .6, cz - .5); camera.updateMatrixWorld(); aimSun(cx, cz - 2);
-    post.uniforms.focus.value = camera.position.distanceTo(anna.pos);
+    post.uniforms.focus.value = camera.position.distanceTo(kid.pos);
     // DOM
     const wpx = innerWidth, hpx = innerHeight;
-    for (const l of labels) { tmp.copy(l.pos).project(camera); const vis = tmp.z < 1 && Math.abs(l.pos.x - anna.pos.x) < 17 && Math.abs(l.pos.z - anna.pos.z) < 14; l.el.style.display = vis ? '' : 'none'; if (!vis) continue; const off = Math.abs(tmp.x) > .92 || tmp.y > .8 || tmp.y < -.9; const x = THREE.MathUtils.clamp(tmp.x, -.86, .86), y = THREE.MathUtils.clamp(tmp.y, -.85, .76); l.el.style.left = ((x + 1) / 2 * wpx) + 'px'; l.el.style.top = ((1 - y) / 2 * hpx) + 'px'; l.el.classList.toggle('edge', off); }
-    for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; if (b.dead || now > b.until) { b.el.remove(); bubbles.splice(i, 1); continue; } tmp.set(b.c.pos.x, 1.9 * (b.c.isUni ? 1.15 : 1) - (b.c === fenna ? .25 : 0), b.c.pos.z).project(camera); b.el.style.left = ((tmp.x + 1) / 2 * wpx) + 'px'; b.el.style.top = ((1 - tmp.y) / 2 * hpx) + 'px'; }
+    for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; if (b.dead || now > b.until) { b.el.remove(); bubbles.splice(i, 1); continue; } tmp.set(b.c.pos.x, 1.9 * (b.c.isUni ? 1.15 : 1) - (b.c === kid && who === 'anna' ? .25 : 0), b.c.pos.z).project(camera); b.el.style.left = ((tmp.x + 1) / 2 * wpx) + 'px'; b.el.style.top = ((1 - tmp.y) / 2 * hpx) + 'px'; }
     // render
     renderer.setRenderTarget(rt); renderer.render(scene, camera);
     renderer.setRenderTarget(null); renderer.render(postScene, postCam);
   }
   renderer.setAnimationLoop(frame);
 
-  function placeAt(x, z) { anna.pos.set(x, 0, z); anna.path = []; target = null; after = null; resetTrail(); fenna.pos.set(x, 0, z + .85); uni.pos.set(x, 0, z + 2); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
+  function placeAt(x, z) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(); uni.pos.set(x, 0, z + 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    anna, fenna, chars, uni, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, extras, tools, placeAt, jump, seed,
+    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, extras, tools, placeAt, jump, seed,
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
-    info() { return { pos: [+anna.pos.x.toFixed(2), +anna.pos.z.toFixed(2)], path: anna.path.length, target: target && target.id, paused }; },
+    info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
   };
   return {
     pause(p) { paused = p; labelsEl.style.visibility = p ? 'hidden' : ''; renderer.setAnimationLoop(p ? null : frame); if (!p) { last = performance.now(); perf.t = 0; perf.n = 0; } },
@@ -706,8 +723,8 @@ export function createWorld(cv, { onEnter, onWish }) {
     /** walk to a tile, or to a building's door (and go in) */
     walkToTile(x, z) { target = null; return walkTo(x, z); },
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
-    pos: () => [anna.pos.x, anna.pos.z],
-    groundCanvas, extras, tools, jump,
+    pos: () => [kid.pos.x, kid.pos.z],
+    groundCanvas, extras, tools, jump, setWho, who: () => who,
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {

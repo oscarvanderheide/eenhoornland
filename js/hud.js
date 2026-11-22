@@ -6,6 +6,7 @@ import * as MAP from './map.js';
 import * as Q from './quest.js';
 import { sfx, speak } from './audio.js';
 import * as ui from './ui.js';
+import { state } from './state.js';
 
 const ACT_ICON = { stal: () => PX.heart(), bakkerij: () => PX.cake(), kermis: () => PX.star(), atelier: () => PX.butterfly() };
 const CSS = `
@@ -31,9 +32,13 @@ const CSS = `
 .kaart-egg{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;font-family:var(--f-pixel);font-weight:700;font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink)}
 #b-jump{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0}
 #b-jump canvas{width:44px}
+#who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(98px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:center}
+#who .who{width:56px;height:56px;border-radius:50%;padding:0;opacity:.55;transform:scale(.82);transition:transform .15s,opacity .15s}
+#who .who.on{opacity:1;transform:scale(1);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
+#who canvas{image-rendering:pixelated}
 #tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
 .kaart-tool{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;z-index:1;padding:3px;background:var(--paper);border:3px solid var(--ink);border-radius:50%;line-height:0}
-@media (max-width:640px){#b-jump{width:60px;height:60px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+@media (max-width:640px){#b-jump{width:60px;height:60px}#who{bottom:calc(84px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -49,6 +54,17 @@ export function createHud(getWorld) {
   // jumping (bottom right) and the tools the girls own (bottom left)
   const jumpBtn = document.createElement('button'); jumpBtn.className = 'hbtn'; jumpBtn.id = 'b-jump'; jumpBtn.setAttribute('aria-label', 'Springen'); jumpBtn.appendChild(PX.domSprite(ART.jumpIcon(), 4));
   jumpBtn.onclick = () => { const w = getWorld(); w && w.jump(); }; game.appendChild(jumpBtn);
+  // who is playing: the sisters tap their own face when they swap seats
+  const whoRow = document.createElement('div'); whoRow.id = 'who'; game.appendChild(whoRow);
+  const head = (cv, rows) => { const c = document.createElement('canvas'); c.width = cv.width; c.height = rows; c.getContext('2d').drawImage(cv, 0, 0); return PX.domSprite(c, 3); };
+  const whoBtn = {};
+  for (const [id, rows] of [['anna', 9], ['fenna', 11]]) {
+    const b = document.createElement('button'); b.className = 'hbtn who'; b.setAttribute('aria-label', id === 'anna' ? 'Anna speelt' : 'Fenna speelt'); b.appendChild(head(PX[id](), rows));
+    b.onclick = () => { const w = getWorld(); if (!w) return; if (w.who() === id) { sfx.click(); speak((id === 'anna' ? 'Anna' : 'Fenna') + ' speelt nu.'); } else { w.setWho(id); syncWho(); } };
+    whoRow.appendChild(b); whoBtn[id] = b;
+  }
+  function syncWho() { const w = getWorld(), cur = w ? w.who() : (state.extra.who || 'anna'); for (const id in whoBtn) whoBtn[id].classList.toggle('on', id === cur); }
+  syncWho();
   const toolRow = document.createElement('div'); toolRow.id = 'tools'; game.appendChild(toolRow);
   const TOOL_SAY = { schaar: 'Dit is de schaar. Tik op een doornstruik om hem weg te knippen!', hamer: 'Dit is de hamer. Tik op een grote steen om hem kapot te slaan!' };
 
@@ -84,7 +100,9 @@ export function createHud(getWorld) {
     // the sea, and roofs so the map reads at a glance
     for (let z = 0; z < MAP.H * 8; z++) for (let px = 0; px < MAP.W * 8; px += 1) if (z / 8 > MAP.shoreZ(px / 8)) { x.fillStyle = ((px >> 2) + (z >> 2)) % 7 === 0 ? '#BFEFFF' : '#5AB4E6'; x.fillRect(px, z, 1, 1); }
     const roof = (x0, z0, w, d, col) => { x.fillStyle = '#2B1E3A'; x.fillRect(x0 * 8 - 1, z0 * 8 - 1, w * 8 + 2, d * 8 + 2); x.fillStyle = col; x.fillRect(x0 * 8, z0 * 8, w * 8, d * 8); };
-    roof(3, 3, 5, 4, '#7A4A3A'); roof(21, 3, 5, 4, '#4A6FB8'); roof(3, 12, 5, 4, '#D16A93'); roof(12, 2, 5, 4, '#E8616B'); roof(21, 11, 5, 5, '#E85D75'); roof(MAP.CASTLE.x, MAP.CASTLE.z, MAP.CASTLE.w, MAP.CASTLE.d, '#B9B2CF');
+    const RC = { stal: '#7A4A3A', atelier: '#4A6FB8', bakkerij: '#D16A93', huisje: '#E8616B', kermis: '#E85D75' };
+    for (const [id, h] of Object.entries(MAP.HOUSES)) { const [x0, z0, x1, z1] = MAP.houseRect(h); roof(x0, z0, x1 - x0 + 1, z1 - z0 + 1, RC[id]); }
+    roof(MAP.CASTLE.x, MAP.CASTLE.z, MAP.CASTLE.w, MAP.CASTLE.d, '#B9B2CF');
     box.appendChild(cv);
     const at = (el2, tx, tz) => { el2.style.left = (tx + .5) / MAP.W * 100 + '%'; el2.style.top = (tz + .5) / MAP.H * 100 + '%'; box.appendChild(el2); };
     let close = null;
@@ -100,7 +118,7 @@ export function createHud(getWorld) {
     // a tool that still has to be found is shown exactly where it lies
     const tool = Q.neededTool(), ts = tool && world.tools.spot(tool);
     if (ts) { const e = document.createElement('div'); e.className = 'kaart-tool'; e.appendChild(fit(ART.toolIcon(tool), 26)); at(e, ts[0] - .5, ts[1] - .5); }
-    const me = document.createElement('div'); me.className = 'kaart-me'; me.appendChild(fit(PX.anna(), 34)); const [mx, mz] = world.pos(); at(me, mx - .5, mz - .5);
+    const me = document.createElement('div'); me.className = 'kaart-me'; me.appendChild(fit(PX[world.who()](), 34)); const [mx, mz] = world.pos(); at(me, mx - .5, mz - .5);
     close = ui.modal(el);
     speak(ts ? 'Dit is de kaart. Kijk, daar ligt de ' + Q.TOOLS[tool].name + '! Tik op een plek om erheen te lopen.' : Q.quest.stage === 'zoek' ? 'Dit is de kaart. Waar zou het ei liggen? Tik op een plek om erheen te lopen!' : 'Dit is de kaart van Eenhoornland. Tik op een plek om erheen te lopen!');
   }

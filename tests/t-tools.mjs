@@ -18,11 +18,11 @@ export default async function (t) {
   ok(await blk(14, 23) === 2, 'log on the path');
   await t.ev('__w.placeAt(14.5,21.5)'); await t.sleep(1500); await shot('1-log');
   ok(await js('__w.walkTo(14,25)') === true, 'a path over the log exists');
-  let hop = 0, fhop = 0; for (let i = 0; i < 80; i++) { await t.sleep(120); hop = Math.max(hop, await js('__w.anna.mesh.position.y')); fhop = Math.max(fhop, await js('__w.fenna.mesh.position.y')); if (hop > .3 && i % 2 === 0 && !fs.existsSync('tmp-shots/t-2-jump.png')) await shot('2-jump'); if (!(await js('__w.info().path')) && i > 10) break; }
+  let hop = 0, fhop = 0; for (let i = 0; i < 80; i++) { await t.sleep(120); hop = Math.max(hop, await js('__w.kid.mesh.position.y')); fhop = Math.max(fhop, await js('__w.uni.mesh.position.y')); if (hop > .3 && i % 2 === 0 && !fs.existsSync('tmp-shots/t-2-jump.png')) await shot('2-jump'); if (!(await js('__w.info().path')) && i > 10) break; }
   let p = await arrive(); ok(p[1] > 24 && p[1] < 26, 'Anna landed behind the log ' + p); ok(hop > .3, 'she was in the air (' + hop.toFixed(2) + ')');
-  await t.sleep(1500); const f = await js('[__w.fenna.pos.x,__w.fenna.pos.z]'); ok(await blk(Math.floor(f[0]), Math.floor(f[1])) === 0, 'Fenna does not stand on the log ' + f.map(v => v.toFixed(1)));
-  ok(await js('__w.walkTo(14,21)') === true, 'and back'); p = await arrive(); ok(p[1] < 22.6, 'back over the log ' + p); ok(fhop > .2 || (await js('__w.fenna.pos.z')) < 23, 'Fenna follows');
-  await t.ev('__w.jump()'); await t.sleep(200); ok(await js('__w.anna.hop') > 0, 'jump button hops on the spot');
+  await t.sleep(1500); const f = await js('[__w.uni.pos.x,__w.uni.pos.z]'); ok(await blk(Math.floor(f[0]), Math.floor(f[1])) === 0, 'the follower does not stand on the log ' + f.map(v => v.toFixed(1)));
+  ok(await js('__w.walkTo(14,21)') === true, 'and back'); p = await arrive(); ok(p[1] < 22.6, 'back over the log ' + p); ok(fhop > .2 || (await js('__w.uni.pos.z')) < 23, 'the follower follows');
+  await t.ev('__w.jump()'); await t.sleep(200); ok(await js('__w.kid.hop') > 0, 'jump button hops on the spot');
 
   // --- brambles without shears
   await t.ev('__w.placeAt(25.5,8.5)'); await t.sleep(800);
@@ -47,11 +47,11 @@ export default async function (t) {
 
   // --- hammer: boulders before the castle
   await t.ev('__w.placeAt(41.5,35.5)'); await t.sleep(1500); await shot('8-boulders'); await t.ev('__w.walkTo(54,35)'); p = await arrive();
-  ok(p[0] < 43 && await blk(43, 35) === 3, 'stopped at the boulders ' + p);
+  ok(p[0] < 42 && await blk(42, 35) === 3, 'stopped at the boulders ' + p);
   await t.ev(`__w.placeAt(${spots.hamer[0] + .5},${spots.hamer[1] + 1.4})`); await t.sleep(1500); await shot('9-hammer-lying');
   await t.ev(`__w.placeAt(${spots.hamer[0] + .5},${spots.hamer[1] + .5})`); await t.sleep(1500); ok(await js(`__w.Q.hasTool('hamer')`), 'hammer found');
   await t.ev('__w.placeAt(41.5,35.5)'); await t.sleep(800); await t.ev('__w.walkTo(54,35)'); await arrive(); await t.sleep(800);
-  ok(await blk(43, 35) === 0 && await blk(43, 36) === 0, 'boulders smashed'); await t.ev('__w.walkTo(54,35)'); p = await arrive(); ok(p[0] > 53, 'Anna is at the castle ' + p); await shot('10-castle');
+  ok(await blk(42, 35) === 0 && await blk(42, 36) === 0, 'boulders smashed'); await t.ev('__w.walkTo(54,35)'); p = await arrive(); ok(p[0] > 53, 'Anna is at the castle ' + p); await shot('10-castle');
 
   // --- keyboard: walking into a log hops over it
   await t.ev('__w.placeAt(14.5,22.5)'); await t.sleep(800); await t.key('ArrowDown', 6000); p = await arrive(4);

@@ -9,7 +9,7 @@ import { sfx, speak } from './audio.js';
 const FREE = { schaar: 'Knip knip knip! De weg naar het bos is vrij!', hamer: 'Boem boem! De weg naar het kasteel is vrij!' };
 
 export function createTools(ctx) {
-  const { THREE, scene, M, canvas, makeSprite, pick, burst, bubble, anna } = ctx;
+  const { THREE, scene, M, canvas, makeSprite, pick, burst, bubble, kid } = ctx;
   const meshes = new Map();       // obstacle index -> mesh (only what still stands)
   const fading = [], rising = [];
 
@@ -27,12 +27,12 @@ export function createTools(ctx) {
   function use(i) {
     const o = M.obstacles[i]; if (!o || !meshes.has(i)) return;
     const here = new THREE.Vector3(o.x + .5, 0, o.z + .5);
-    anna.face = here.x >= anna.pos.x ? 1 : -1;
-    if (!Q.hasTool(o.tool)) { sfx.wrong(); bubble(anna, '?', ART.toolIcon(o.tool)); speak(Q.TOOLS[o.tool].need + (Q.neededTool() === o.tool ? ' ' + Q.TOOLS[o.tool].seek : '')); wobble = { mesh: meshes.get(i), t: .5 }; return; }
+    kid.face = here.x >= kid.pos.x ? 1 : -1;
+    if (!Q.hasTool(o.tool)) { sfx.wrong(); bubble(kid, '?', ART.toolIcon(o.tool)); speak(Q.TOOLS[o.tool].need + (Q.neededTool() === o.tool ? ' ' + Q.TOOLS[o.tool].seek : '')); wobble = { mesh: meshes.get(i), t: .5 }; return; }
     const group = M.obstacles.map((p, k) => k).filter(k => meshes.has(k) && M.obstacles[k].type === 'break' && M.obstacles[k].g === o.g);
     for (const k of group) { const p = M.obstacles[k], m = meshes.get(k); M.block[M.I(p.x, p.z)] = 0; meshes.delete(k); const pi = pick.indexOf(m); if (pi >= 0) pick.splice(pi, 1); fading.push({ m, t: 0 }); burst(new THREE.Vector3(p.x + .5, 0, p.z + .5), 6); }
     Q.smash(group, !o.gate);                                                         // saved first, animated after
-    (o.tool === 'schaar' ? sfx.snip : sfx.bonk)(); anna.hop = .7; bubble(anna, '', ART.toolIcon(o.tool));
+    (o.tool === 'schaar' ? sfx.snip : sfx.bonk)(); kid.hop = .7; bubble(kid, '', ART.toolIcon(o.tool));
     if (o.gate) speak(FREE[o.tool]);
     else { const c = makeSprite(ART.coin(), { lean: .3, shadow: false }); c.position.copy(here); c.position.y = .3; scene.add(c); rising.push({ m: c, t: 0 }); sfx.chime(5); }
   }
@@ -54,7 +54,7 @@ export function createTools(ctx) {
   }
   function find(id) {
     if (!Q.giveTool(id)) return;                                                     // the 'tool' event below removes it from the ground
-    sfx.tada(); anna.hop = 1; burst(anna.pos, 12, true); bubble(anna, '!', ART.toolIcon(id)); speak(Q.TOOLS[id].found);
+    sfx.tada(); kid.hop = 1; burst(kid.pos, 12, true); bubble(kid, '!', ART.toolIcon(id)); speak(Q.TOOLS[id].found);
   }
   const off = Q.on(type => { if (type === 'tool' || type === 'stage') syncTools(); });
   syncTools();
@@ -72,7 +72,7 @@ export function createTools(ctx) {
       for (const id in lying) {
         const l = lying[id]; l.mesh.position.y = .25 + Math.sin(time * 2.6) * .1; l.mesh.rotation.z = Math.sin(time * 1.7) * .15;
         const s = 1.9 + Math.sin(time * 3) * .3; l.glow.scale.set(s, s, 1); l.glow.material.opacity = .5 + Math.sin(time * 3) * .25;
-        if (active && Math.abs(l.x - anna.pos.x) < .8 && Math.abs(l.z - anna.pos.z) < .8) find(id);
+        if (active && Math.abs(l.x - kid.pos.x) < .8 && Math.abs(l.z - kid.pos.z) < .8) find(id);
       }
     },
   };

@@ -143,7 +143,7 @@ export function open(root, api) {
     if ((x === 4 && y >= 4 && y <= 7) || (y === 5 && x >= 3 && x <= 5) || (y === 6 && x >= 2 && x <= 6 && x !== 4)) return '#FFD43B';
     return (x + y) & 1 ? '#FF7EB6' : '#F56AA8';
   }, { key: 'k-cardicon' });
-  const fennaHead = crop(PX.fenna(), 11), annaHead = crop(PX.anna(), 12);
+  const annaHead = crop(PX.anna(), 11), fennaHead = crop(PX.fenna(), 12);
 
   function bigBalloon(col) {
     const hi = mix(col, '#FFFFFF', .6), sh = mix(col, '#6d4f86', .28);
@@ -292,8 +292,8 @@ export function open(root, api) {
         for (let i = 0; i < 9; i++) { const x = 66 + i * 10, on = (i + ph) % 2 === 0; R(ctx, x, RB + 6, 3, 3, INK); R(ctx, x + 1, RB + 7, 1, 1, on ? '#FFF6D0' : '#C2456E'); }
         // characters
         const bob = Math.floor(t * 2) % 2;
-        draw(PX.anna(bob ? 'idle' : 'idle', (t % 4) < .15), 20, GY + 2);
-        draw(PX.fenna('idle', ((t + 1.3) % 4) < .15), 46, GY + 2, 1, true);
+        draw(PX.fenna(bob ? 'idle' : 'idle', (t % 4) < .15), 20, GY + 2);
+        draw(PX.anna('idle', ((t + 1.3) % 4) < .15), 46, GY + 2, 1, true);
         draw(PX.unicorn(api.state.uni, 'idle', false), 170, GY + 3 - bob, 1, true);
         for (const [i, col] of ['#FF6B6B', '#4DABF7', '#FFD43B'].entries()) draw(PX.balloon(col), 140 + i * 5, GY - 2 + Math.round(Math.sin(t * 2 + i)), 1);
         // best score plaque
@@ -464,8 +464,8 @@ export function open(root, api) {
       enter() {
         clothBg = clothBg || buildCloth();
         bar = setBar([
-          { id: 'easy', label: 'Makkelijk', icon: fennaHead, onClick: () => start('easy') },
-          { id: 'hard', label: 'Moeilijk', icon: annaHead, onClick: () => start('hard') },
+          { id: 'easy', label: 'Makkelijk', icon: annaHead, onClick: () => start('easy') },
+          { id: 'hard', label: 'Moeilijk', icon: fennaHead, onClick: () => start('hard') },
           backTool,
         ]);
         say('Memory! Kies makkelijk of moeilijk.');
@@ -482,10 +482,10 @@ export function open(root, api) {
         if (!mode) {
           drawPicker(t, (cx, y) => {
             for (let i = 0; i < 3; i++) draw(cardIcon, cx - 14 + i * 14, y + 44, 1);
-            draw(PX.fenna(), cx, y + 106, 3);
+            draw(PX.anna(), cx, y + 106, 3);
           }, (cx, y) => {
             for (let i = 0; i < 6; i++) draw(cardIcon, cx - 25 + (i % 3) * 14 + 7, y + 22 + Math.floor(i / 3) * 16, 1);
-            draw(PX.anna(), cx, y + 110, 3);
+            draw(PX.fenna(), cx, y + 110, 3);
           });
           return;
         }
@@ -599,8 +599,8 @@ export function open(root, api) {
       enter() {
         balBg = balBg || buildBalBg();
         bar = setBar([
-          { id: 'color', label: 'Kleuren', icon: fennaHead, onClick: () => start('color') },
-          { id: 'abc', label: 'Cijfers & letters', icon: annaHead, onClick: () => start('abc') },
+          { id: 'color', label: 'Kleuren', icon: annaHead, onClick: () => start('color') },
+          { id: 'abc', label: 'Cijfers & letters', icon: fennaHead, onClick: () => start('abc') },
           { id: 'again', label: 'Herhaal', icon: PX.sprite(['..k.k', '.kk..', 'kkk.k', 'kkk.k', '.kk..', '..k.k'], { k: '#4DABF7' }, { key: 'k-spk' }), onClick: () => { if (mode && target !== null && !waiting) say(qText()); else if (!mode) say('Kies kleuren of cijfers en letters.'); } },
           backTool,
         ]);
@@ -619,10 +619,10 @@ export function open(root, api) {
         if (!mode) {
           drawPicker(t, (cx, y) => {
             for (let i = 0; i < 3; i++) draw(PX.balloon(COLORS[i].c), cx - 14 + i * 14, y + 50 + (i === 1 ? -4 : 0), 1);
-            draw(PX.fenna(), cx, y + 106, 3);
+            draw(PX.anna(), cx, y + 106, 3);
           }, (cx, y) => {
             text(ctx, 'A', cx - 22, y + 10, 2, INK, null); text(ctx, '7', cx + 12, y + 10, 2, INK, null); text(ctx, 'F', cx - 5, y + 24, 2, '#D63F7C', null);
-            draw(PX.anna(), cx, y + 110, 3);
+            draw(PX.fenna(), cx, y + 110, 3);
           });
           return;
         }

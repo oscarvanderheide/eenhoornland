@@ -1,8 +1,8 @@
 // node tests/map.test.mjs [-v] [seed]  — checks the island data: everything a child can be sent to must be reachable,
 // the tools must be findable in order, and that holds for every cycle's reshuffled island.
 import * as M from '../js/map.js';
-const solids = [[3, 3, 7, 6], [21, 3, 25, 6], [3, 12, 7, 15], [21, 11, 25, 15], [12, 2, 16, 5]];
-const keep = [[5, 7], [23, 7], [5, 16], [23, 16], [14, 6], [54, 33]];
+const solids = Object.values(M.HOUSES).map(M.houseRect);
+const keep = Object.values(M.HOUSES).map(M.houseDoor).concat([M.CASTLE.door]);
 const seedArg = +(process.argv.find(a => /^\d+$/.test(a)) || 0);
 const m = M.buildMap({ solids, keep, seed: seedArg });
 let fail = 0; const ok = (c, msg) => { if (!c) { fail++; console.log('FAIL', msg); } };

@@ -16,7 +16,7 @@ const THANKS = {
 };
 
 export function createExtras(ctx) {
-  const { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, anna, uni } = ctx;
+  const { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni } = ctx;
   const { W, H } = MAP;
   const r = PX.rng(4711);
   const lam = c => new THREE.MeshLambertMaterial({ color: c });
@@ -160,7 +160,7 @@ export function createExtras(ctx) {
     const res = Q.collect(it.type, it.idx);
     if (it.type === 'munt') { sfx.chime(5); return; }
     if (res.finished) {
-      sfx.tada(); if (uni.g.visible) { uni.hop = 1; burst(uni.pos, 8, true); } else burst(anna.pos, 6);
+      sfx.tada(); if (uni.g.visible) { uni.hop = 1; burst(uni.pos, 8, true); } else burst(kid.pos, 6);
       speak((THANKS[it.type] ? THANKS[it.type]() : 'Dank je wel!') + ' ' + Q.goalText());
     } else if (res.counted) { sfx.chime(res.wish.have); speak(COUNT[res.wish.have] || 'Nog één!'); if (uni.g.visible) uni.hop = .6; }
     else sfx.pop();
@@ -242,13 +242,13 @@ export function createExtras(ctx) {
       if (eggMesh) { eggMesh.rotation.z = Math.sin(time * 3) * .12; eggGlow.material.opacity = .45 + Math.sin(time * 3) * .25; const s = 1.5 + Math.sin(time * 3) * .25; eggGlow.scale.set(s, s, 1); sparkT -= dt; if (sparkT < 0) { sparkT = .9; burst(eggPos, 2); } }
       if (party > 0) { party -= dt; if (Math.floor(party * 2.5) !== Math.floor((party + dt) * 2.5)) { const x = P.x0 + 2 + Math.random() * (P.x1 - P.x0 - 3), z = P.z0 + 1.5 + Math.random() * (P.z1 - P.z0 - 3); burst(new THREE.Vector3(x, 0, z), 7, Math.random() < .5); sfx.sparkle(); for (const c of herd) if (Math.random() < .4) c.hop = 1; } }
       if (!active) return;
-      for (let i = items.length - 1; i >= 0; i--) { const it = items[i]; if (Math.abs(it.x - anna.pos.x) < .75 && Math.abs(it.z - anna.pos.z) < .75) pickUp(it); }
+      for (let i = items.length - 1; i >= 0; i--) { const it = items[i]; if (Math.abs(it.x - kid.pos.x) < .75 && Math.abs(it.z - kid.pos.z) < .75) pickUp(it); }
       if (eggPos) {
-        const dd = Math.hypot(eggPos.x - anna.pos.x, eggPos.z - anna.pos.z);
+        const dd = Math.hypot(eggPos.x - kid.pos.x, eggPos.z - kid.pos.z);
         if (dd < 1.05) findEgg();
         else if (dd < 9) { peepT -= dt; if (peepT < 0) { peepT = .5 + dd * .32; sfx.bubble(); } }   // warmer = faster peeps
       }
-      if (Q.weiOpen() && uni.g.visible && Math.hypot(gate.x - anna.pos.x, gate.z - anna.pos.z) < 1.6) deliver();
+      if (Q.weiOpen() && uni.g.visible && Math.hypot(gate.x - kid.pos.x, gate.z - kid.pos.z) < 1.6) deliver();
     },
   };
 }

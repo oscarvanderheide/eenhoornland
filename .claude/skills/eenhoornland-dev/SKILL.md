@@ -28,6 +28,9 @@ New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep 
 
 ## Gates, tools and the island per cycle
 - `block[]` in `map.js`: 0 free, 1 solid, `LOW` (jumped over automatically, in a straight line) and `BREAK` (needs the tool in `TOOL_FOR`).
+- Areas are separate places: `belt()` in `map.js` puts a thick strip of trees, hedges or rocks between them, and a path crossing it is the only (narrow) way through.
+- One house per area (`MAP.HOUSES`: huisje dorp, stal wei, kermis strand, atelier bos, bakkerij kasteel). No labels on houses, only twinkles at the door; a wish for a house behind a gate asks for the tool first (`BEHIND` in `quest.js`).
+- One girl is on screen (`kid` in `world.js`); the sisters switch with the two faces in the HUD (`world.setWho`, saved in `state.extra.who`). Anna is the small blond one, Fenna the taller one with brown hair.
 - The forest is closed by brambles (shears), the castle by boulders (hammer). The shears lie where you can walk without tools, the hammer in the forest. `Q.neededTool()` turns a missing tool into the first wish.
 - `Q.mapSeed()` is 0 in the first cycle and new for every later one; `buildMap({ seed })` reshuffles everything outside the village and skips seeds that fail `MAP.validate`. `main.js` destroys and rebuilds the world when the seed changes (on leaving the huisje).
 - Anything added to the world must go away in `destroy()`: pass `listen` to `addEventListener`, return an unsubscribe from `Q.on`.
@@ -39,6 +42,7 @@ node tests/quest.test.mjs          # 12 full cycles without a browser
 node cdp.mjs tests/t-cycle.mjs     # one whole cycle in headless Chrome, screenshots in tmp-shots/c-*.png
 node cdp.mjs tests/t-tools.mjs     # jumping, gates, finding and using both tools (tmp-shots/t-*.png)
 node cdp.mjs tests/t-look.mjs      # screenshots of gates, tools, tool wish and map pin (tmp-shots/l-*.png)
+node cdp.mjs tests/t-houses.mjs    # every house opens, taking turns between the girls (tmp-shots/h-*.png)
 node cdp.mjs tests/t-areas.mjs     # screenshot every area (ONLY=bos,strand to limit)
 node cdp.mjs tests/t-bed.mjs       # bedroom per stage (STAGE=ei,baby,jong,groot)
 node cdp.mjs tests/t-perf.mjs      # draw calls per area
@@ -55,6 +59,7 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 
 ## Pitfalls already hit
 - `speak()` cancels the previous sentence: say everything for one moment in a single call.
+- Two billboards at the same depth flicker: every character has its own `zBias`.
 - World characters are scaled through `c.baseScale`, not `mesh.scale` (the breathing animation overwrites it).
 - Hidden characters are still hit by the raycaster; the tap handler skips `!c.g.visible`.
 - Vegetation is instanced per (kind, seed); things that must be tappable or animated need their own mesh.

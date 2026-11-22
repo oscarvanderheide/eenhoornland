@@ -49,11 +49,11 @@ export const TOOLS = {
   schaar: { name: 'schaar', found: 'Jullie hebben de schaar gevonden! Daarmee knip je doornstruiken weg. Tik maar op een doornstruik!', need: 'Au, doornstruiken! Hier heb je de schaar voor nodig.', seek: 'De weg naar het bos zit dicht met doornstruiken. Zoek de schaar! Kijk maar op de kaart.' },
   hamer: { name: 'hamer', found: 'Jullie hebben de hamer gevonden! Daarmee sla je grote stenen kapot. Tik maar op een steen!', need: 'Wat een grote steen! Hier heb je de hamer voor nodig.', seek: 'Er liggen grote stenen op de weg naar het kasteel. Zoek de hamer! Die ligt in het bos. Kijk maar op de kaart.' },
 };
-const BEHIND = { appel: 'bos', paddenstoel: 'bos', diamant: 'kasteel' };   // where a wish sends you
+const BEHIND = { appel: 'bos', paddenstoel: 'bos', diamant: 'kasteel', atelier: 'bos', bakkerij: 'kasteel' };   // where a wish sends you (items and houses, see MAP.HOUSES)
 export const hasTool = id => !!q.tools[id];
 /** the tool the children still have to find before today's wishes can come true (or null) */
 export function neededTool() {
-  const zones = q.wishes.filter(w => !done(w)).map(w => w.t === 'egg' ? q.zone : w.t === 'item' ? BEHIND[w.id] : null);
+  const zones = q.wishes.filter(w => !done(w)).map(w => w.t === 'egg' ? q.zone : w.t === 'item' || w.t === 'act' ? BEHIND[w.id] : null);
   if ((zones.includes('bos') || zones.includes('kasteel')) && !q.tools.schaar) return 'schaar';   // the hammer lies in the forest
   return zones.includes('kasteel') && !q.tools.hamer ? 'hamer' : null;
 }
@@ -102,7 +102,7 @@ export function wishText(w) {
   if (w.t === 'tool') return TOOLS[w.id].seek;
   if (w.t === 'egg') return 'Er ligt ergens een ei verstopt! ' + (KINDS[q.zone] || KINDS.bloem).hint;
   if (w.t === 'wei') return weiOpen() ? n + ' is nu groot! Breng ' + n + ' naar de eenhoornwei.' : 'Als ' + n + ' alles heeft, mag ze naar de eenhoornwei.';
-  if (w.t === 'act') return ({ stal: 'Verzorg ' + n + ' in de stal!', bakkerij: n + ' heeft zin in taart. Ga naar de bakkerij!', kermis: n + ' wil naar de kermis!', atelier: 'Maak iets moois voor ' + n + ' in het atelier!' })[w.id] || '';
+  if (w.t === 'act') return ({ stal: 'Verzorg ' + n + ' in de stal! De stal staat bij de eenhoornwei.', bakkerij: n + ' heeft zin in taart. De bakkerij staat bij het kasteel!', kermis: n + ' wil naar de kermis! De kermis is op het strand.', atelier: 'Maak iets moois voor ' + n + '. Het atelier staat in het bos!' })[w.id] || '';
   const it = ITEMS[w.id], left = Math.max(0, w.need - w.have);
   if (!left) return 'Alle ' + it.many + ' zijn gevonden!';
   return (q.stage === 'ei' ? 'Het ei wil een zacht nestje. ' : '') + 'Zoek ' + (left === 1 ? 'nog één ' + it.one : (w.have ? 'nog ' : '') + left + ' ' + it.many) + ' ' + it.where + '!';

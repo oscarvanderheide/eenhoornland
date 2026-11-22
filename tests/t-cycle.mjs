@@ -21,8 +21,7 @@ export default async function (t) {
       else if (w.t === 'egg') { const e = JSON.parse(await t.ev('JSON.stringify(__w.extras.info().egg)')); await t.ev(`__w.placeAt(${e[0]},${e[1] + .6})`); await settle(); }
       else if (w.t === 'item') await collect(w.id, w.need - w.have);
       else if (w.t === 'act') {
-        await t.ev(`__w.placeAt(14.5,9.5); __w.walkTo(...__w.BUILDINGS.find(b=>b.id==='${w.id}').door, __w.BUILDINGS.find(b=>b.id==='${w.id}'))`);
-        await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='${w.id}'); __w.placeAt(b.door[0]+.5,b.door[1]+.5); __w.walkTo(b.door[0],b.door[1],b)})()`); await settle(2500);
+                await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='${w.id}'); __w.placeAt(b.door[0]+.5,b.door[1]+.5); __w.walkTo(b.door[0],b.door[1],b)})()`); await settle(2500);
         const open = await t.ev(`!document.querySelector('#act').hidden`); ok(open, 'activity ' + w.id + ' opens'); await shot('act-' + w.id + '-' + s.stage);
         await t.ev(`__w.Q.activityDone('${w.id}')`); await t.ev(`document.querySelector('#act-close').click()`); await settle(800);
       }
@@ -51,11 +50,11 @@ export default async function (t) {
   ok(await sig() !== forest0, 'the forest is laid out differently'); ok(await dorp() === dorp0, 'the village is the same');
   ok(await t.ev(`__w.Q.hasTool('schaar') && __w.Q.hasTool('hamer') && __w.tools.info().lying.length === 0`), 'tools are kept');
   ok(await t.ev(`__w.M.obstacles.filter(o=>o.gate).every(o=>__w.M.block[__w.M.I(o.x,o.z)]===3)`), 'gates have grown back');
-  ok(await t.ev(`document.querySelectorAll('#labels .blabel').length`) === 5 && await t.ev(`document.querySelectorAll('#b-jump').length`) === 1, 'no doubled labels or buttons');
+  ok(await t.ev(`document.querySelectorAll('#labels .blabel').length`) === 0 && await t.ev(`document.querySelectorAll('#who .who').length`) === 2 && await t.ev(`document.querySelectorAll('#b-jump').length`) === 1, 'no doubled labels or buttons');
   const egg = JSON.parse(await t.ev('JSON.stringify(__w.extras.info().egg)')); ok(!!egg, 'a new egg is hidden');
   await t.ev('__w.placeAt(25.5,8.5)'); await settle(800); await t.ev('__w.walkTo(33,8)'); for (let i = 0; i < 60; i++) { await t.sleep(500); if (!(await t.ev('__w.info().path'))) break; } await settle(800);
   await t.ev('__w.walkTo(33,8)'); for (let i = 0; i < 60; i++) { await t.sleep(500); if (!(await t.ev('__w.info().path'))) break; }
-  ok(await t.ev('__w.anna.pos.x') > 32, 'with the shears the regrown brambles are cut on the way'); await shot('14-new-island');
+  ok(await t.ev('__w.kid.pos.x') > 32, 'with the shears the regrown brambles are cut on the way'); await shot('14-new-island');
   await t.ev(`document.querySelector('#b-map').click()`); await settle(600); await shot('15-new-map'); await t.ev(`document.querySelector('#modal [data-close]').click()`);
   ok(!t.logs.some(l => /EXC|Error/.test(l)), 'no page errors');
   console.log(fail ? 'FAILED ' + fail : 'CYCLE OK');

@@ -26,7 +26,7 @@ export function open(root, api) {
     return c;
   }
   const room = paintRoom();
-  const annaHead = PX.anna('idle', true), fennaHead = PX.fenna('idle', true), annaUp = PX.anna(), fennaUp = PX.fenna();
+  const fennaHead = PX.fenna('idle', true), annaHead = PX.anna('idle', true), fennaUp = PX.fenna(), annaUp = PX.anna();
   const zArt = PX.sprite(['zzzz', '..z.', '.z..', 'zzzz'], { z: '#FFFFFF' });
 
   /* ---------- state ---------- */
@@ -84,11 +84,11 @@ export function open(root, api) {
   function drawKids(inBed) {
     if (inBed) {
       px(ctx, '#FFF6FA', 15, 70, 26, 12); px(ctx, '#FFF6FA', 46, 70, 26, 12); px(ctx, '#E8D6E2', 15, 81, 26, 1); px(ctx, '#E8D6E2', 46, 81, 26, 1);
-      ctx.drawImage(annaHead, 0, 0, annaHead.width, 12, 19, 62, annaHead.width, 12); ctx.drawImage(fennaHead, 0, 0, fennaHead.width, 10, 52, 66, fennaHead.width, 10);
+      ctx.drawImage(fennaHead, 0, 0, fennaHead.width, 12, 19, 62, fennaHead.width, 12); ctx.drawImage(annaHead, 0, 0, annaHead.width, 10, 52, 66, annaHead.width, 10);
       px(ctx, '#FF7EB6', 12, 76, 68, 18); px(ctx, '#FF9EC7', 12, 76, 68, 3); for (let X = 16; X < 78; X += 9) for (let Y = 82; Y < 92; Y += 6) px(ctx, '#FFD0E0', X + (Y % 12 ? 4 : 0), Y, 2, 2); px(ctx, '#D85C98', 12, 93, 68, 1);
     } else {
       px(ctx, '#FFF6FA', 15, 70, 26, 10); px(ctx, '#FFF6FA', 46, 70, 26, 10); px(ctx, '#FF7EB6', 12, 80, 68, 14); px(ctx, '#FF9EC7', 12, 80, 68, 3); px(ctx, '#D85C98', 12, 93, 68, 1);
-      PX.drawSprite(ctx, annaUp, 30, 114, 2); PX.drawSprite(ctx, fennaUp, 62, 115, 2);
+      PX.drawSprite(ctx, fennaUp, 30, 114, 2); PX.drawSprite(ctx, annaUp, 62, 115, 2);
     }
   }
 
