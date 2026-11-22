@@ -239,3 +239,18 @@ export function companionFrames(u, stage, kindDef) {
 }
 export const bedIcon = () => cached('bed', () => sprite(['w...........', 'w...........', 'wpp.........', 'wppbbbbbbbbb', 'wwwbbbbbbbbb', 'wwwwwwwwwwww', 'w..........w'], { w: '#A97450', p: '#FFFFFF', b: '#FF7EB6' }));
 export const mapIcon = () => cached('mapi', () => sprite(['pppp.pppp.pp', 'pgpppgbbppgp', 'pggpppbbpggp', 'ppgprppbpppp', 'pppprrpppgpp', 'pp.pppp.pppp'], { p: '#F2DDB4', g: '#69DB7C', b: '#4DABF7', r: '#FF5E9C' }));
+
+/** a tiny picture of a house you can go into, in its own colours (wish chips, map) */
+const HOUSE_COL = { stal: ['#D2654A', '#7A4A3A', '#6B3F2A'], atelier: ['#8DBDEB', '#4A6FB8', '#9B72E8'], bakkerij: ['#FFD7E2', '#D16A93', '#8B5A3C'], huisje: ['#FFF1C9', '#E8616B', '#4DABF7'] };
+export function houseIcon(id) {
+  if (id === 'kermis') return PX.gridSprite(16, 15, (x, y) => {
+    const cx = Math.abs(x - 7.5); if (y < 2) return cx < 1 && y === 1 || (x === 8 || x === 9) && y === 0 ? '#FFD43B' : null;
+    if (y < 8) return cx <= (y - 1) * 1.15 + .5 ? (Math.floor((x + 1) / 2) % 2 ? '#FFF1DC' : '#E85D75') : null;
+    if (cx > 6.5) return null; if (cx < 2 && y > 9) return '#3D2B4F'; return Math.floor(x / 2) % 2 ? '#FFF1DC' : '#E85D75';
+  });
+  const [wall, roof, door] = HOUSE_COL[id] || HOUSE_COL.huisje;
+  return PX.gridSprite(16, 15, (x, y) => {
+    const cx = Math.abs(x - 7.5); if (y < 7) return cx <= y + 1.5 ? roof : null;
+    if (cx > 6) return null; if (cx < 1.6 && y > 9) return door; if (y > 8 && y < 12 && (x === 3 || x === 12)) return '#BFE3FF'; return wall;
+  });
+}

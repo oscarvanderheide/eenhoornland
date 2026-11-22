@@ -8,7 +8,6 @@ import { sfx, speak } from './audio.js';
 import * as ui from './ui.js';
 import { state } from './state.js';
 
-const ACT_ICON = { stal: () => PX.heart(), bakkerij: () => PX.cake(), kermis: () => PX.star(), atelier: () => PX.butterfly() };
 const CSS = `
 #quest{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));top:calc(50px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;gap:6px;max-width:min(70vw,420px);align-items:center}
 .qchip{font-family:var(--f-pixel);font-weight:700;font-size:1.1rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:6px;min-height:46px;padding:4px 10px 4px 7px;
@@ -47,7 +46,8 @@ export function createHud(getWorld) {
   const game = document.getElementById('game');
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
   const panel = document.createElement('div'); panel.id = 'quest'; game.appendChild(panel);
-  const night = document.getElementById('b-night'); if (night) night.hidden = true;     // evening now comes by itself when the wishes are done
+  const night = document.getElementById('b-night'); if (night) night.hidden = true;
+  const voice = document.getElementById('b-voice'); if (voice) voice.hidden = true;                 // there is no voice (see audio.js)     // evening now comes by itself when the wishes are done
   const mapBtn = document.createElement('button'); mapBtn.className = 'hbtn'; mapBtn.id = 'b-map'; mapBtn.setAttribute('aria-label', 'Kaart'); mapBtn.appendChild(PX.domSprite(ART.mapIcon(), 3));
   const tr = document.querySelector('.hud.tr'); tr.insertBefore(mapBtn, tr.firstChild); mapBtn.onclick = openMap;
 
@@ -82,7 +82,7 @@ export function createHud(getWorld) {
     if (Q.bedtime()) chip('bed', ART.bedIcon(), 'Slapen', goToBed, 'bed'); else delete lastSig.bed;
     Q.wishes().forEach((w, i) => {
       const fin = Q.done(w), locked = w.t === 'wei' && !Q.weiOpen();
-      const icon = w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'item' ? ART.itemIcon(w.id) : w.t === 'act' ? (ACT_ICON[w.id] || PX.star)() : w.t === 'egg' ? ART.egg(Q.kind()) : PX.unicorn(Q.companionLook());
+      const icon = w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'item' ? ART.itemIcon(w.id) : w.t === 'act' ? ART.houseIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : PX.unicorn(Q.companionLook());
       const text = fin ? '✓' : w.t === 'egg' || w.t === 'tool' ? '?' : w.need > 1 ? w.have + '/' + w.need : '';
       chip((fin ? 'done' : '') + (locked ? ' locked' : ''), icon, text, () => speak(Q.wishText(w)), Q.quest.stage + i);
     });
@@ -118,9 +118,12 @@ export function createHud(getWorld) {
     // a tool that still has to be found is shown exactly where it lies
     const tool = Q.neededTool(), ts = tool && world.tools.spot(tool);
     if (ts) { const e = document.createElement('div'); e.className = 'kaart-tool'; e.appendChild(fit(ART.toolIcon(tool), 26)); at(e, ts[0] - .5, ts[1] - .5); }
+    // a house the unicorn wishes for today is shown too, so nobody has to search the whole island for it
+    const wanted = Q.wishes().find(w => w.t === 'act' && !Q.done(w)), hs = wanted && MAP.HOUSES[wanted.id];
+    if (hs) { const [x0, z0, x1, z1] = MAP.houseRect(hs); const e = document.createElement('div'); e.className = 'kaart-tool'; e.appendChild(fit(ART.houseIcon(wanted.id), 30)); at(e, (x0 + x1) / 2, (z0 + z1) / 2); }
     const me = document.createElement('div'); me.className = 'kaart-me'; me.appendChild(fit(PX[world.who()](), 34)); const [mx, mz] = world.pos(); at(me, mx - .5, mz - .5);
     close = ui.modal(el);
-    speak(ts ? 'Dit is de kaart. Kijk, daar ligt de ' + Q.TOOLS[tool].name + '! Tik op een plek om erheen te lopen.' : Q.quest.stage === 'zoek' ? 'Dit is de kaart. Waar zou het ei liggen? Tik op een plek om erheen te lopen!' : 'Dit is de kaart van Eenhoornland. Tik op een plek om erheen te lopen!');
+    speak(hs ? 'Dit is de kaart. ' + Q.wishText(wanted) + ' Kijk, daar!' : ts ? 'Dit is de kaart. Kijk, daar ligt de ' + Q.TOOLS[tool].name + '! Tik op een plek om erheen te lopen.' : Q.quest.stage === 'zoek' ? 'Dit is de kaart. Waar zou het ei liggen? Tik op een plek om erheen te lopen!' : 'Dit is de kaart van Eenhoornland. Tik op een plek om erheen te lopen!');
   }
 
   Q.on(type => { if (type === 'change') render(); });

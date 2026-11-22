@@ -79,7 +79,9 @@ export function setMood(m) { if (SONGS[m]) { mood = m; step = 0; } }
 export function duckMusic(on) { if (musicBus) musicBus.gain.value = musicOn ? (on ? .35 : 1) : 0; }
 
 /* ---------- speech ---------- */
-export let voiceOn = true;
+// The voice is switched off: the speech that browsers have built in sounds too bad. All calls to speak() stay in place
+// (they cost nothing) so a recorded or better voice can be plugged in here later.
+export let voiceOn = false;
 let nlVoice = null, tok = 0;
 const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window;
 function pickVoice() {
@@ -89,7 +91,7 @@ function pickVoice() {
   nlVoice = vs.sort((x, y) => score(y) - score(x))[0] || null;
 }
 if (hasTTS) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-export function setVoice(on) { voiceOn = on; if (!on) stopSpeech(); }
+export function setVoice(on) { voiceOn = false; if (!on) stopSpeech(); }
 export function stopSpeech() { tok++; if (hasTTS) speechSynthesis.cancel(); }
 /** speak Dutch text; onword(charIndex) for read-along highlighting; onend() when finished */
 export function speak(text, onword, onend) {

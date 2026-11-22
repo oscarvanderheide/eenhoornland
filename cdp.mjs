@@ -9,10 +9,10 @@ await new Promise(r => ws.onopen = r);
 let id = 0; const pend = new Map(); const logs = [];
 ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } if (m.method === 'Runtime.consoleAPICalled') logs.push(m.params.args.map(a => a.value ?? a.description).join(' ')); if (m.method === 'Runtime.exceptionThrown') logs.push('EXC ' + JSON.stringify(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text)); };
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
-await send('Runtime.enable'); await send('Page.enable');
+await send('Runtime.enable'); await send('Page.enable'); await send('Network.enable'); await send('Network.setCacheDisabled', { cacheDisabled: true });   // the profile is reused: never test yesterday's modules
 const api = {
   sleep, logs,
-  async go(url) { await send('Page.navigate', { url }); await sleep(3000); },
+  async go(url) { const t0 = Date.now(); await send('Page.navigate', { url }); await sleep(1500); if (/debug/.test(url)) for (let i = 0; i < 60 && !(await this.ev(`!!window.__w && performance.timeOrigin > ${t0 - 50}`)); i++) await sleep(500); await sleep(1500); },   // nothing is cached, so wait for the world itself
   async ev(expr) { const r = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (r.result.exceptionDetails) return 'ERR ' + JSON.stringify(r.result.exceptionDetails.exception?.description); return r.result.result.value; },
   async click(x, y) { for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1, pointerType: 'mouse' }); },
   async key(k, ms = 500) { const code = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 }[k]; await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: k, windowsVirtualKeyCode: code }); await sleep(ms); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, windowsVirtualKeyCode: code }); },
