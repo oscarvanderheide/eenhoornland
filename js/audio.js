@@ -84,7 +84,9 @@ let nlVoice = null, tok = 0;
 const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window;
 function pickVoice() {
   const vs = speechSynthesis.getVoices().filter(v => /^nl/i.test(v.lang));
-  nlVoice = vs.find(v => /nl[-_]NL/i.test(v.lang) && /(premium|enhanced|verbeterd|natural)/i.test(v.name)) || vs.find(v => /nl[-_]NL/i.test(v.lang)) || vs[0] || null;
+  // the voices come from the device and differ a lot: take the most natural one it has (the plain built-in ones sound like a robot)
+  const score = v => (/premium|natural|neural|siri/i.test(v.name) ? 40 : /enhanced|verbeterd/i.test(v.name) ? 30 : /^google/i.test(v.name) ? 25 : 0) + (/nl[-_]NL/i.test(v.lang) ? 5 : 0) + (/claire|ellen|google/i.test(v.name) ? 2 : 0);
+  nlVoice = vs.sort((x, y) => score(y) - score(x))[0] || null;
 }
 if (hasTTS) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 export function setVoice(on) { voiceOn = on; if (!on) stopSpeech(); }
@@ -96,7 +98,7 @@ export function speak(text, onword, onend) {
   speechSynthesis.cancel();
   setTimeout(() => {
     if (my !== tok) return;
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'nl-NL'; if (nlVoice) u.voice = nlVoice; u.rate = .92; u.pitch = 1.12;
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'nl-NL'; if (nlVoice) u.voice = nlVoice; u.rate = .95;   // no raised pitch: it makes the built-in voices sound even more artificial
     if (onword) u.onboundary = e => { if (my === tok && (!e.name || e.name === 'word')) onword(e.charIndex); };
     u.onend = () => { if (my === tok) { duckMusic(false); onend && onend(); } };
     duckMusic(true);
