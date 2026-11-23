@@ -33,15 +33,9 @@ export function createPlay(ctx) {
     const i = riders.indexOf(c); if (i < 0) return; riders.splice(i, 1); c.cart = null; c.lift = 0;
     const t = ctx.nearestWalkable(cartP.x, cartP.z + .9) || [Math.floor(kid.pos.x), Math.floor(kid.pos.z)]; c.pos.set(t[0] + .5, 0, t[1] + .5); c.hop = 1; c.lost = true; c.wait = 1.5; (sfx[c.sound] || sfx.pop)();
   }
-  /* ramps: only a bike takes off from them */
-  const rampGeo = (() => {                                                         // a wooden wedge: low on the left, high on the right
-    const L = .7, D = .42, Hh = .52, A = [-L, 0, -D], B = [-L, 0, D], C = [L, Hh, D], Dd = [L, Hh, -D], E = [L, 0, D], F = [L, 0, -D];
-    const g = new THREE.BufferGeometry(), P = [A, B, C, A, C, Dd, B, E, C, A, Dd, F, E, F, Dd, E, Dd, C].flat(), uv = [0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0].concat(new Array(24).fill(0));
-    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.addGroup(0, 6, 0); g.addGroup(6, 12, 1); g.computeVertexNormals(); return g;
-  })();
-  const rampTop = (() => { const [c, x] = ctx.canvas(28, 16); for (let X = 0; X < 28; X++) { x.fillStyle = Math.floor(X / 4) % 2 ? '#FFD43B' : '#E8484A'; x.fillRect(X, 0, 1, 16); } x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, 28, 1); x.fillRect(0, 15, 28, 1); x.fillStyle = '#B5303A'; x.fillRect(27, 0, 1, 16); return c; })();
-  const rampMats = [new THREE.MeshLambertMaterial({ map: ctx.tex(rampTop), side: THREE.DoubleSide }), new THREE.MeshLambertMaterial({ color: '#B5733F', side: THREE.DoubleSide })];
-  const ramps = MAP.RAMPS.map(([x, z]) => { const m = new THREE.Mesh(rampGeo, rampMats); m.castShadow = true; m.receiveShadow = true; m.position.set(x, 0, z); scene.add(m); const r = { x, z, m, cool: 0, wig: 0 }; m.userData.tap = () => { r.wig = .5; sfx.pop(); if (ctx.mount() !== 'fiets') { bubble(kid, '', ART.bike()); hint = .6; } ctx.walkToTile(Math.floor(x), Math.floor(z)); }; pick.push(m); return r; });
+  /* hump bridges on the paths: on the bike she goes over with a happy little hop (on foot they are just a bump) */
+  const ramps = MAP.RAMPS.map(([x, z]) => { const m = makeSprite(ART.hobbel(), { lean: .45, scale: 1.1 }); m.position.set(x, 0, z + .25); scene.add(m); m.userData.alpha = ART.hobbel(); const r = { x, z, m, cool: 0, wig: 0 }; m.userData.tap = () => { r.wig = .5; sfx.pop(); if (ctx.mount() !== 'fiets') { bubble(kid, '', ART.bike()); hint = .6; } ctx.walkToTile(Math.floor(x), Math.floor(z)); }; pick.push(m); return r; });
+  const streamer = makeSprite(ART.linten(0), { lean: .2, shadow: false }); streamer.visible = false; scene.add(streamer);
   let flip = 0, hint = 0;
 
   /* ---------------- balls: walk into one and it rolls away ---------------- */
@@ -191,10 +185,11 @@ export function createPlay(ctx) {
       const riding = ctx.mount() === 'fiets';
       if (riding) {
         bikeFace = kid.face; bike.position.set(kid.pos.x, kid.mesh.position.y - (kid.lift || 0), kid.pos.z + .09); bike.scale.set(BS * bikeFace, BS, 1);
-        if (flip > 0) { flip = Math.max(0, flip - dt * 2.5); bike.rotation.z = -bikeFace * (1 - flip) * Math.PI * 2; if (flip <= 0) { bike.rotation.z = 0; burst(kid.pos, 6); sfx.pop(); } } else bike.rotation.z = 0;
-        for (const r of ramps) if (active && kid.moving && r.cool <= 0 && kid.hop <= 0 && Math.hypot(r.x - kid.pos.x, r.z - kid.pos.z) < .75) { r.cool = 1.6; r.wig = .4; kid.hop = 1; kid.hopH = 1.5; flip = 1; sfx.whoosh(); sfx.bell(); for (const c of riders) bubble(c, 'Wiiii!'); }
-      } else { hint = Math.max(0, hint - dt); bike.rotation.z = hint > 0 ? Math.sin(hint * 40) * .1 : 0; }          // it only rattles when a ramp asks for it
-      for (const r of ramps) { r.cool -= dt; r.wig = Math.max(0, r.wig - dt); r.m.rotation.z = Math.sin(r.wig * 30) * .08 * r.wig * 2; }
+        if (flip > 0) { flip = Math.max(0, flip - dt * 2.5); bike.rotation.z = bikeFace * Math.sin((1 - flip) * Math.PI) * .28; if (flip <= 0) { bike.rotation.z = 0; sfx.pop(); } } else bike.rotation.z = kid.moving ? Math.sin(time * 14) * .02 : 0;   // a little wheelie over the hump
+        streamer.visible = true; streamer.position.set(bike.position.x + bikeFace * .62, bike.position.y + .62, bike.position.z + .02); streamer.scale.x = -bikeFace; const sf = kid.moving ? Math.floor(time * 10) % 2 : 0; if (streamer.userData.f !== sf) { streamer.userData.f = sf; const t = ctx.tex(ART.linten(sf)); streamer.material.map = t; streamer.material.emissiveMap = t; }
+        for (const r of ramps) if (active && kid.moving && r.cool <= 0 && kid.hop <= 0 && Math.hypot(r.x - kid.pos.x, r.z - kid.pos.z) < .75) { r.cool = 1.6; r.wig = .4; kid.hop = 1; kid.hopH = .7; flip = 1; sfx.whoosh(); sfx.bell(); burst(kid.pos, 8, true); bubble(kid, 'Wiiii!'); riders.forEach((c, i) => setTimeout(() => { c.hop = 1; bubble(c, 'Wiii!'); }, 150 + i * 120)); }
+      } else { streamer.visible = false; hint = Math.max(0, hint - dt); bike.rotation.z = hint > 0 ? Math.sin(hint * 40) * .1 : 0; }          // it only rattles when a hump asks for it
+      for (const r of ramps) { r.cool -= dt; r.wig = Math.max(0, r.wig - dt); r.m.scale.y = 1.1 * (1 - Math.sin(r.wig * 30) * .08 * r.wig * 2); }
       const cx = bike.position.x - bikeFace * 1.05, k = Math.min(1, dt * 14); cartP.x += (cx - cartP.x) * k; cartP.z += (bike.position.z + .1 - cartP.z) * k;
       cart.position.set(cartP.x, riding ? Math.max(0, bike.position.y) * .6 : 0, cartP.z); cart.scale.set(1.1 * bikeFace, 1.1, 1);
       riders.forEach((c, i) => {

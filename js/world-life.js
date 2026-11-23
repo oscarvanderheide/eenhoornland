@@ -14,7 +14,7 @@ const NUT = { tree: ART.eikel, oak: ART.eikel, pine: ART.dennenappel, palm: ART.
 const WHEE = ['Wiiii!', 'Joehoe!', 'Nog een keer!', 'Hihihi!', 'Hoppa!'];
 
 export function createLife(ctx) {
-  const { THREE, scene, M, tex, makeSprite, burst, bubble, kid, animals } = ctx;
+  const { THREE, scene, M, tex, makeSprite, burst, bubble, kid, uni, animals } = ctx;
   const rnd = (a, b) => a + Math.random() * (b - a), now = () => performance.now();
   const groundAt = (x, z) => M.inb(Math.floor(x), Math.floor(z)) ? M.ground[M.I(Math.floor(x), Math.floor(z))] : MAP.SE;
 
@@ -135,6 +135,8 @@ export function createLife(ctx) {
     c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, spin: (vx >= 0 ? -1 : 1) * (4 + sp), bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
     sfx.whoosh(); if (!c.stone) bubble(c, WHEE[Math.floor(Math.random() * WHEE.length)]);
   }
+  const dustArt = PX.gridSprite(3, 2, (x, y) => y === 0 && x !== 1 ? null : '#E9DCC4', { outline: false, key: 'dust' });
+  function dust(x, z, n) { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; bit(dustArt, x + Math.cos(a) * .2, .08, z + Math.sin(a) * .12 + .05, { vx: Math.cos(a) * 1.4, vy: .6, g: 1.5, life: .5 }); } }
   function stepFlight(c, dt) {
     const f = c.fly; f.vy -= 12 * dt; f.h += f.vy * dt;
     c.pos.x = THREE.MathUtils.clamp(c.pos.x + f.vx * dt, 2, M.W - 2); c.pos.z = THREE.MathUtils.clamp(c.pos.z + f.vz * dt, 2, M.H - 2);
@@ -161,12 +163,12 @@ export function createLife(ctx) {
       const t = ctx.nearestWalkable(c.pos.x, c.pos.z) || ctx.randomTile(c), T = .65;
       f.vx = (t[0] + .5 - c.pos.x) / T; f.vz = (t[1] + .5 - c.pos.z) / T; f.vy = 12 * T / 2; f.h = .01; return;
     }
-    if (f.bounces < 2 && Math.abs(f.vy) > 2) { f.bounces++; f.vy = -f.vy * .45; f.vx *= .5; f.vz *= .5; f.h = .01; sfx.boing(); return; }
+    if (f.bounces < 2 && Math.abs(f.vy) > 2) { f.bounces++; f.vy = -f.vy * .45; f.vx *= .5; f.vz *= .5; f.h = .01; f.spin *= .35; c.squash = .6; dust(c.pos.x, c.pos.z, 3); sfx.boing(); return; }   // each bounce lower, and the spin runs out
     if (c.stone) { c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; sfx.pop(); for (const a of animals) if (!a.held && !a.fly && !a.cart && !a.swim && Math.hypot(a.pos.x - c.pos.x, a.pos.z - c.pos.z) < 1.6) a.hop = 1; fetchStone(c); return; }   // thud: whoever stands there jumps (and the dog runs to get it)
     const st = Q.sandAt(tx, tz); if (st >= 0) { Q.stompSand(tx, tz); burst(c.pos, 6); }   // landed on a sand tower: flat
     const col = ctx.toys && ctx.toys.paintAt(c.pos.x, c.pos.z); if (col) paint(c, col);
-    c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; c.hop = 1; c.lost = true; c.wait = 1.5; c.path = [];
-    (sfx[c.sound] || sfx.pop)(); burst(c.pos, 5, true); for (let i = 0; i < 3; i++) bit(ART.dizzy(), c.pos.x + rnd(-.3, .3), 1, c.pos.z + .1, { vx: rnd(-.8, .8), vy: 1.2, g: 2, life: 1 });
+    c.fly = null; c.lift = 0; c.upright = { from: Math.atan2(Math.sin(c.mesh.rotation.z), Math.cos(c.mesh.rotation.z)), t: 0 }; c.squash = 1; c.lost = true; c.wait = 1.5; c.path = [];   // lands: squashes flat, wobbles back, rolls upright
+    (sfx[c.sound] || sfx.pop)(); dust(c.pos.x, c.pos.z, 6); for (let i = 0; i < 3; i++) bit(ART.dizzy(), c.pos.x + Math.cos(i * 2.1) * .3, .95, c.pos.z + .1, { vx: -Math.sin(i * 2.1) * .9, vy: .4, g: .5, life: 1.2 });
     // thrown three times in a short while: it is so dizzy it falls over and has a little nap right there
     c.thrown = (c.thrown || []).filter(t => now() - t < 25000); c.thrown.push(now());
     if (c.thrown.length >= 3 && !c.isUni) { c.thrown = []; c.nap = 5; c.zT = .6; c.wait = 6; bubble(c, 'Zzz...'); }
@@ -319,10 +321,37 @@ export function createLife(ctx) {
   /** the little unicorn lets out a big rainbow burp */
   function burp(c) { sfx.burp(); c.hop = 1; bubble(c, 'Boeh!'); for (let i = 0; i < 8; i++) bit(ART.burpBel(i), c.pos.x + c.face * .5 + rnd(-.2, .2), .8, c.pos.z + .1, { vx: c.face * rnd(.2, .7), vy: rnd(.4, .9), g: -.3, sway: rnd(2, 4), life: rnd(1.6, 2.4), scale: rnd(1.2, 1.8) }); }
 
+  /* ---------------- a dip: she jumps into the duck pond or the fountain, the ducks come to see, and out she climbs, dripping ---------------- */
+  const WATERS = { vijver: { cx: MAP.POND.cx, cz: MAP.POND.cz, r: Math.min(MAP.POND.rx, MAP.POND.rz), reach: 1.4 }, fontein: { cx: MAP.FOUNT.cx, cz: MAP.FOUNT.cz + .35, r: 1.3, reach: 1.1 } };
+  let dipping = null, dripT = 0;
+  /** the pond or fountain she stands next to (or null) */
+  function nearWater() { for (const [k, w] of Object.entries(WATERS)) if (Math.hypot(kid.pos.x - w.cx, kid.pos.z - w.cz) < w.r + w.reach + .4) return k; return null; }
+  function dip(kind) {
+    const w = WATERS[kind]; if (!w || dipping || ctx.mount() || ctx.busy()) return false;
+    if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
+    const from = kid.pos.clone(), dx = from.x - w.cx, dz = from.z - w.cz, l = Math.hypot(dx, dz) || 1, k = kind === 'vijver' ? .35 : .25;
+    dipping = { w, kind, from, into: new THREE.Vector3(w.cx + dx / l * w.r * k, 0, w.cz + dz / l * w.r * k + (kind === 'fontein' ? .2 : 0)), t: 0, splashed: false };
+    ctx.setBusy(true); kid.face = dipping.into.x >= from.x ? 1 : -1; sfx.boing(); return true;
+  }
+  function bigSplash(x, z, n) { sfx.splash(); setTimeout(sfx.splash, 120); sfx.bubble(); burst(new THREE.Vector3(x, .2, z), 6); for (let i = 0; i < n; i++) bit(ART.drop(), x + rnd(-.3, .3), .2, z + .1, { vx: rnd(-2.6, 2.6), vy: rnd(3, 6.5), g: 10, life: 1.1 }); }
+  function stepDip(dt) {
+    const d = dipping; d.t += dt; const J = .55, IN = 3.2, OUT = .55;
+    if (d.t < J) { const e = d.t / J; kid.pos.lerpVectors(d.from, d.into, e); kid.lift = Math.sin(e * Math.PI) * 1.1 - .38 * e; kid.hop = 0; return; }
+    if (!d.splashed) {
+      d.splashed = true; bigSplash(d.into.x, d.into.z, 18); bubble(kid, 'Plons!');
+      for (const a of animals) if (a.water && !a.fly && !a.held) { a.hop = 1; a.path = [new THREE.Vector3(d.into.x + rnd(-.8, .8), 0, d.into.z + rnd(-.5, .5))]; a.wait = 4; setTimeout(() => bubble(a, 'Kwak kwak!'), 500); }
+      if (uni.g.visible) { uni.hop = 1; setTimeout(() => bubble(uni, 'Hihihi!'), 300); }
+    }
+    if (d.t < J + IN) { const s = d.t - J; kid.pos.copy(d.into); kid.lift = -.38 + Math.sin(s * 4) * .05; if (Math.floor(s * 1.4) % 2 !== (d.f | 0)) { d.f = Math.floor(s * 1.4) % 2; kid.face = -kid.face; bit(ART.drop(), kid.pos.x + kid.face * .3, .1, kid.pos.z + .1, { vx: kid.face, vy: 3, g: 10, life: .7 }); sfx.bubble(); } return; }   // paddling about
+    const e = Math.min(1, (d.t - J - IN) / OUT); kid.pos.lerpVectors(d.into, d.from, e); kid.lift = Math.sin(e * Math.PI) * .9 - .38 * (1 - e);
+    if (e >= 1) { kid.pos.copy(d.from); kid.lift = 0; dipping = null; ctx.setBusy(false); kid.hop = .5; dripT = 3; sfx.boing(); setTimeout(() => bubble(kid, 'Hihi! Nat!'), 200); }
+  }
   return {
-    dispose() { offQ(); }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, feed, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
+    dispose() { offQ(); }, nearWater, dip, dipping: () => !!dipping, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, feed, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length, friends: friends.map(c => c.name), napping: animals.filter(a => a.nap > 0).map(a => a.name), pending: pending.length, power, blooms: blooms.length }),
     update(dt, time, active) {
+      if (dipping) stepDip(dt);
+      if (dripT > 0) { dripT -= dt; if (Math.random() < dt * 9) bit(ART.drop(), kid.pos.x + rnd(-.25, .25), rnd(.4, 1), kid.pos.z + .1, { vx: 0, vy: 0, g: 6, life: .5 }); }   // dripping wet
       // her footsteps, for the friends to walk in
       if (!steps.length || Math.hypot(kid.pos.x - steps[0].x, kid.pos.z - steps[0].z) > .12) { steps.unshift({ x: kid.pos.x, z: kid.pos.z }); if (steps.length > 120) steps.pop(); }
       for (let i = gifts.length - 1; i >= 0; i--) {                              // the food flies from her hands to its mouth

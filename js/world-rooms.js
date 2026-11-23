@@ -11,7 +11,7 @@ import { sfx } from './audio.js';
 
 export function createRooms(ctx) {
   const { THREE, scene, M, tex, canvas, makeSprite, pick, burst, kid } = ctx;
-  const R = MAP.ROOMS, lights = [], flames = [], v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const R = MAP.ROOMS, lights = [], flames = [], darks = [], v3 = (x, y, z) => new THREE.Vector3(x, y, z);
   const shadowed = m => { m.castShadow = true; m.receiveShadow = true; return m; };
 
   /* ---------------- walls ---------------- */
@@ -43,7 +43,7 @@ export function createRooms(ctx) {
     wall(k, r.x0 - 1, r.z0 - 2, r.x1 + 1, r.z0 - 1, H2);                                   // the back wall
     wall(k, r.x0 - 2, r.z0 - 2, r.x0 - 1, r.z1 + 1, H2); wall(k, r.x1 + 1, r.z0 - 2, r.x1 + 2, r.z1 + 1, H2);   // the side walls
     wall(k, r.x0 - 1, r.z1 + 1, r.exit[0] - 1, r.z1 + 1, .45); wall(k, r.exit[0] + 1, r.z1 + 1, r.x1 + 1, r.z1 + 1, .45);   // a low front wall, so nothing hides her
-    { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); scene.add(dark); }   // the dark beyond the back wall: no sea to be seen from inside
+    { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
     const n = k === 'grot' ? 3 : 5; for (let i = 0; i < n; i++) torch(r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02);
   }
 
@@ -96,7 +96,7 @@ export function createRooms(ctx) {
     where: () => MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)),
     info: () => ({ coins: coins.length, chest: chest.open > 0, bats: bats.filter(b => b.fly >= 0).length }),
     update(dt, time, active) {
-      const inGrot = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === 'grot';
+      const inRoom = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)), inGrot = inRoom === 'grot'; for (const d of darks) d.visible = !!inRoom;
       if (inGrot && !wasIn) scareBats(); wasIn = inGrot;
       for (const b of bats) {
         if (b.fly < 0) { b.m.rotation.z = Math.PI + Math.sin(time * 1.3 + b.k) * .08; continue; }

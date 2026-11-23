@@ -593,6 +593,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function jump() {
     if (!interactive || paused || kid.hop > 0) return;
     if (fishing.tap()) return;
+    if (!mount && !life.carrying() && life.nearWater() && life.dip(life.nearWater())) return;   // next to the duck pond or the fountain: in she jumps
     if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
     if (life.throwIt()) return;                                                  // with an animal above her head the button throws it
     sfx.boing(); kid.hop = 1; toys.stomp(); life.jumped(); weather.stomp();
@@ -667,12 +668,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (d.char && (animals.includes(d.char) || d.char.stone)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
-      if (d.fountain) { sfx.splash(); burst(new THREE.Vector3(FOUNT.cx, .5, FOUNT.cz), 8); for (const a of animals) if (a.water && !a.fly) a.hop = 1; toys.fountain(); return; }
+      if (d.fountain) { if (toys.fountain()) return; sfx.pop(); if (life.nearWater() === 'fontein') life.dip('fontein'); else approach(Math.floor(FOUNT.cx), Math.floor(FOUNT.cz), () => life.dip('fontein')); return; }   // a tap on the fountain: walk to it and jump in (with the can: fill it)
     }
     const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane, p)) return;
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
     const fb = footprint.get(I(tx, tz)); if (fb) { sfx.pop(); walkTo(fb.door[0], fb.door[1], fb); return; }
     if (toys.tapGround(tx, tz)) return;                                         // with the bucket: build a sand tower there
+    if (inb(tx, tz) && ground[I(tx, tz)] === WA && !toys.carrying()) { sfx.pop(); if (life.nearWater() === 'vijver') life.dip('vijver'); else { const e = nearestWalkable(p.x, p.z); if (e && walkTo(e[0], e[1])) after = () => life.dip('vijver'); } return; }   // a tap on the duck pond: in she jumps
     if (inb(tx, tz) && (ground[I(tx, tz)] === MAP.SE || ground[I(tx, tz)] === WA)) life.splash(p.x, p.z);
     const t = walkable(tx, tz) ? [tx, tz] : nearestWalkable(p.x, p.z);
     if (t) { sfx.click(); target = null; walkTo(t[0], t[1], null, walkable(tx, tz) ? p : null); }
@@ -813,7 +815,10 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     const hopY = Math.sin((1 - c.hop) * Math.PI) * c.hopH * (c.hop > 0 ? 1 : 0); if (c.hop <= 0) c.hopH = .35;
     const bob = c.moving ? Math.abs(Math.sin(c.animT * 10)) * .05 : 0;
     c.g.position.copy(c.pos); c.mesh.position.y = hopY + bob + (c.lift || 0); c.mesh.position.z = c.zBias || 0; c.mesh.position.x = (c.dx || 0) * c.face;
-    const breathe = (c.moving ? 1 : 1 + Math.sin(c.animT * 2.4) * .012) * (c.baseScale || 1); c.mesh.scale.set(breathe, breathe, 1);
+    const breathe = (c.moving ? 1 : 1 + Math.sin(c.animT * 2.4) * .012) * (c.baseScale || 1);
+    let sx = 1, sy = 1; if (c.squash > 0) { c.squash = Math.max(0, c.squash - dt * 2.4); const w = Math.cos((1 - c.squash) * 9) * c.squash; sx = 1 + .32 * w; sy = 1 - .28 * w; }   // landing: squash and wobble back
+    if (c.upright) { c.upright.t = Math.min(1, c.upright.t + dt * 3.5); const e = 1 - (1 - c.upright.t) ** 3; c.mesh.rotation.z = c.upright.from * (1 - e); if (c.upright.t >= 1) { c.upright = null; c.mesh.rotation.z = 0; } }
+    c.mesh.scale.set(breathe * sx, breathe * sy, 1);
     if (c.hop > 0 && c.texs.jump && !c.sit) c.setFrame('jump');
     else if (c.moving && !c.sit) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
     else { c.blinkT -= dt; if (c.blinkT < 0) { c.setFrame(c.frames.blink ? 'blink' : 'idle'); if (c.blinkT < -.12) c.blinkT = 2 + Math.random() * 3.5; } else c.setFrame('idle'); }
@@ -849,6 +854,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
         const ax = Math.floor(kid.pos.x) + kx, az = Math.floor(kid.pos.z) + kz;
         if (lowAt(ax, az) && walkable(ax + kx, az + kz)) { const land = new THREE.Vector3(ax + kx + .5, 0, az + kz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
+        else if (time > bumpT && inb(ax, az) && (ground[I(ax, az)] === WA || Math.hypot(ax + .5 - FOUNT.cx, az + .5 - FOUNT.cz) < 1.3) && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater()); }   // walking into the pond or the fountain: in she jumps
       }
     } else {
       const land = midJump() ? kid.path[0] : null;

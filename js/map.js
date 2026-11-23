@@ -240,7 +240,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const puddles = [];                                             // rain puddles block nothing: they are for jumping in (world-toys.js)
   const low = (x, z, kind) => { if (!free(x, z) || keepSet.has(I(x, z))) return; if (kind === 'plas') { puddles.push([x, z]); keepSet.add(I(x, z)); return; } obstacles.push({ kind, type: 'low', x, z }); block[I(x, z)] = LOW; };
   low(40, 27, 'log'); low(41, 27, 'log');                         // on the bridge to the forest: the first jump
-  low(22, 37, 'plas');                                            // one puddle in the whole world, in the village: more is just clutter
+  // (no rain puddles: she splashes in the duck pond and the fountain instead, world-life.js dip)
   for (const [x, z] of pick(3, (x, z, g, zn) => g === PA && zn === 'bos' && open4(x, z), 7)) low(x, z, 'log');
   for (const [x, z] of pick(3, (x, z, g, zn) => g === FO && !rim[I(x, z)] && open4(x, z), 6)) low(x, z, 'log');
   const loose = (kind, n, pred) => { for (const [x, z] of pick(n, (x, z, g, zn) => plain(g) && pred(zn) && !inPen(x, z) && !nearBusy(x, z, 1), 5)) { obstacles.push({ kind, type: 'break', tool: TOOL_FOR[kind], x, z, gate: false, g: obstacles.length }); block[I(x, z)] = BREAK; } };

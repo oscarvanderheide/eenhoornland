@@ -25,9 +25,12 @@ export default async function (t) {
   const kp = await J(`__w.screen(__w.kid.pos.x,.4,__w.kid.pos.z)`); await t.click(kp[0], kp[1]); await t.sleep(600); ok(!(await got()) && !(await scr()).held, 'a tap on her puts it down'); await t.shot('tmp-shots/p-5-down.png');
   await t.sleep(1500); s = await scr(); await t.click(s.x, s.y); up = false; for (let k = 0; k < 30 && !up; k++) { up = await got(); if (!up) await t.sleep(400); } ok(up, 'and up again'); await t.sleep(900);
   s = await J(`__w.screen(__w.kid.pos.x,1.35,__w.kid.pos.z)`); await t.click(s[0], s[1]); await t.sleep(300); h = await scr(); ok(h.fly && !(await got()), 'a tap on the animal above her head throws it'); await t.shot('tmp-shots/p-6-throw.png');
-  // a rain puddle: walking in splashes a little, jumping in it splashes a lot, and with the keys she turns around on the unicorn
-  const pd = await J('__w.MAP ? __w.M.puddles[0] : null'); ok(await t.ev(`__w.walkable(${pd[0]}, ${pd[1]})`), 'a puddle is no obstacle');
-  await t.ev(`__w.placeAt(${pd[0]} + .5, ${pd[1]} + .5)`); await t.sleep(1200); const b0 = await t.ev('__w.life.info().bits'); await t.ev('__w.jump()'); await t.sleep(650); ok(await t.ev('__w.life.info().bits') > b0 + 8, 'jumping in it makes a big splash'); await t.shot('tmp-shots/p-7-splash.png');
+  // no rain puddles: she jumps into the duck pond and the fountain
+  ok(await t.ev('__w.M.puddles.length') === 0, 'no rain puddles lie around');
+  const P = await J('__w.MAP.POND'); await t.ev(`__w.placeAt(${P.cx + P.rx + .9}, ${P.cz + .2})`); await t.sleep(1200); await t.ev('__w.jump()');
+  ok(await until(`__w.life.dipping()`, 3000), 'a jump next to the duck pond: in she goes'); await t.sleep(1800); await t.shot('tmp-shots/p-7-pond.png');
+  ok(await until(`!__w.life.dipping() && !__w.busy()`, 20000), 'and out she climbs again'); await t.sleep(500); await t.shot('tmp-shots/p-7b-wet.png');
+  const F = await J('__w.MAP.FOUNT'); await t.ev(`__w.placeAt(${F.cx + .5}, ${F.cz + 2.3})`); await t.sleep(1000); await t.ev('__w.jump()'); ok(await until(`__w.life.dipping()`, 3000), 'and into the fountain'); await t.sleep(1800); await t.shot('tmp-shots/p-7c-fountain.png'); await until(`!__w.life.dipping()`, 20000);
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.setMount('uni'); 0`); await t.sleep(500); await t.key('ArrowLeft', 900); ok(await t.ev('__w.uni.face') === -1, 'riding left with the keys, the unicorn looks left'); await t.shot('tmp-shots/p-8-ride-left.png');
   // into the water: an animal swims back, a ball is blown back by the wind; behind a tree an animal still shows
   await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(20.5, 45.5); 0`); await t.sleep(1500);

@@ -12,8 +12,22 @@ const $ = s => document.querySelector(s);
  *  Returns {canvas, ctx, w, h, toLocal(evt)->{x,y}, loop(fn(dt,t)), destroy()} */
 export function pixelStage(parent, w, h) {
   const wrap = document.createElement('div'); wrap.className = 'pstage';
-  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; wrap.appendChild(cv); parent.appendChild(wrap);
+  // Drawn at twice the resolution: everything keeps its coordinates (the transform doubles them), and every small sprite
+  // is drawn as its sharper twice-the-pixels version (ART.hd: rounded curves, eye glints), like the characters in the world.
+  const Q2 = 2, cv = document.createElement('canvas'); cv.width = w * Q2; cv.height = h * Q2; wrap.appendChild(cv); parent.appendChild(wrap);
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  { const rawT = ctx.setTransform.bind(ctx), rawD = ctx.drawImage.bind(ctx);
+    ctx.setTransform = (a = 1, b = 0, c = 0, d = 1, e = 0, f = 0) => typeof a === 'object' ? rawT(a) : rawT(a * Q2, b * Q2, c * Q2, d * Q2, e * Q2, f * Q2);
+    ctx.resetTransform = () => rawT(Q2, 0, 0, Q2, 0, 0); ctx.resetTransform();
+    ctx.drawImage = (img, ...a) => {
+      if (img instanceof HTMLCanvasElement && img.width <= 96 && img.height <= 96 && !img.noHD) {
+        const s = ART.hd(img);
+        if (a.length === 2) return rawD(s, a[0], a[1], img.width, img.height);
+        if (a.length === 4) return rawD(s, a[0], a[1], a[2], a[3]);
+        if (a.length === 8) return rawD(s, a[0] * 2, a[1] * 2, a[2] * 2, a[3] * 2, a[4], a[5], a[6], a[7]);
+      }
+      return rawD(img, ...a);
+    }; }
   const fit = () => {
     const r = wrap.getBoundingClientRect(); if (!r.width || !r.height) return;
     let s = Math.min((r.width - 8) / w, (r.height - 8) / h); if (s >= 2) s = Math.floor(s * 4) / 4;

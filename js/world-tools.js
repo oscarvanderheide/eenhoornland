@@ -43,7 +43,7 @@ export function createTools(ctx) {
     }
     if (!Q.hasTool(o.tool)) { sfx.wrong(); bubble(kid, '?', ART.toolIcon(o.tool)); speak(Q.TOOLS[o.tool].need); wobble = { mesh: meshes.get(i), t: .5 }; return; }
     const group = M.obstacles.map((p, k) => k).filter(k => meshes.has(k) && M.obstacles[k].type === 'break' && M.obstacles[k].g === o.g);
-    for (const k of group) { const p = M.obstacles[k], m = meshes.get(k); M.block[M.I(p.x, p.z)] = 0; meshes.delete(k); const pi = pick.indexOf(m); if (pi >= 0) pick.splice(pi, 1); fading.push({ m, t: 0 }); burst(new THREE.Vector3(p.x + .5, 0, p.z + .5), 6); }
+    for (const k of group) { const p = M.obstacles[k], m = meshes.get(k); M.block[M.I(p.x, p.z)] = 0; meshes.delete(k); const pi = pick.indexOf(m); if (pi >= 0) pick.splice(pi, 1); fading.push({ m, t: -.55 }); setTimeout(() => burst(new THREE.Vector3(p.x + .5, 0, p.z + .5), 6), 550); }   // it falls apart when the swing gets there
     Q.smash(group, !o.gate);                                                         // saved first, animated after
     (o.tool === 'zwaard' ? sfx.swish : sfx.bonk)(); kid.hop = .7;
     { const m = makeSprite(ART.toolIcon(o.tool), { lean: .2, shadow: false, scale: 1.2 }); scene.add(m); swings.push({ m, t: 0, sword: o.tool === 'zwaard' }); }   // she swings it: the sword in an arc, the hammer down
@@ -113,11 +113,12 @@ export function createTools(ctx) {
     gates: () => { const seen = new Set(), out = []; M.obstacles.forEach((o, i) => { if (!o.gate || !meshes.has(i) || !M.block[M.I(o.x, o.z)] || seen.has(o.g)) return; seen.add(o.g); out.push({ kind: o.kind, x: o.x + 1, z: o.z + .5 }); }); return out; },
     info: () => ({ standing: meshes.size, waiting: Object.keys(holders).filter(id => !Q.hasTool(id)) }),
     update(dt, time, active) {
-      for (let i = fading.length - 1; i >= 0; i--) { const f = fading[i]; f.t += dt * 3; f.m.scale.setScalar(Math.max(.01, 1.1 * (1 - f.t))); f.m.rotation.z = f.t * .8; if (f.t >= 1) { scene.remove(f.m); fading.splice(i, 1); } }
+      for (let i = fading.length - 1; i >= 0; i--) { const f = fading[i]; f.t += dt * 3; if (f.t < 0) { f.m.rotation.z = Math.sin(f.t * 40) * .04; continue; } f.m.scale.setScalar(Math.max(.01, 1.1 * (1 - f.t))); f.m.rotation.z = f.t * .8; if (f.t >= 1) { scene.remove(f.m); fading.splice(i, 1); } }
       for (let i = rising.length - 1; i >= 0; i--) { const f = rising[i]; f.t += dt * 1.6; f.m.position.y = .3 + f.t * 1.4; f.m.scale.x = Math.cos(f.t * 9); if (f.t >= 1) { scene.remove(f.m); rising.splice(i, 1); } }
       if (wobble) { wobble.t -= dt; wobble.mesh.rotation.z = wobble.t > 0 ? Math.sin(wobble.t * 40) * .12 : 0; if (wobble.t <= 0) wobble = null; }
       for (const id in holders) stepHolder(holders[id], dt, active);
-      for (let i = swings.length - 1; i >= 0; i--) { const w = swings[i]; w.t += dt * 2.6; const a = w.sword ? 1.2 - w.t * 3 : .9 - Math.min(1, w.t * 2) * 1.8; w.m.position.set(kid.pos.x + kid.face * (.3 + Math.cos(a) * .35), .55 + Math.sin(a) * .45, kid.pos.z + .12); w.m.rotation.z = (a - .6) * -kid.face; w.m.scale.x = 1.2 * kid.face; if (w.t >= 1) { scene.remove(w.m); swings.splice(i, 1); } }
+      // the swing: a wind-up, then a big arc that lingers a moment
+      for (let i = swings.length - 1; i >= 0; i--) { const w = swings[i]; w.t += dt * .95; const e = w.t < .35 ? -Math.sin(w.t / .35 * Math.PI / 2) * .35 : Math.min(1, (w.t - .35) / .3) ** 1.5; const a = w.sword ? 1.4 - e * 2.6 : .9 - Math.max(0, e) * 1.8;; w.m.position.set(kid.pos.x + kid.face * (.3 + Math.cos(a) * .35), .55 + Math.sin(a) * .45, kid.pos.z + .12); w.m.rotation.z = (a - .6) * -kid.face; w.m.scale.x = 1.2 * kid.face; if (w.t >= 1) { scene.remove(w.m); swings.splice(i, 1); } }
       for (let i = flyers.length - 1; i >= 0; i--) { const f = flyers[i]; f.t += dt * 1.4; const k = Math.min(1, f.t); f.m.position.set(f.from.x + (kid.pos.x - f.from.x) * k, f.from.y + Math.sin(k * Math.PI) * 1.4 + k * .8, f.from.z + (kid.pos.z - f.from.z) * k + .1); f.m.rotation.z = f.t * 12; if (f.t > 1.4) { scene.remove(f.m); flyers.splice(i, 1); } }
     },
   };
