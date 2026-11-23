@@ -237,6 +237,9 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   /* ---- the fallen star that hatches the egg lies somewhere deep in the flower meadow ---- */
   const starSpots = pick(5, (x, z, g, zn) => g === GR && zn === 'wei' && x > 73 && at(reach1, x, z) && open4(x, z) && clearView(x, z), 3);
 
+  /* ---- pebbles to pick up and throw: on the sand of every island, three of them in the village ---- */
+  const stones = pick(3, (x, z, g, zn) => g === SA && zn === 'dorp' && at(reach0, x, z) && clearView(x, z), 5).concat(pick(8, (x, z, g, zn) => g === SA && zn !== 'dorp' && at(reach, x, z) && clearView(x, z), 9));
+
   /* ---- spawn spots for collectibles & egg hiding places ---- */
   const isTree = (x, z) => inb(x, z) && block[I(x, z)] && !structural[I(x, z)] && ground[I(x, z)] !== SE;
   const nextTo = (x, z, f) => f(x + 1, z) || f(x - 1, z) || f(x, z + 1) || f(x, z - 1);
@@ -254,7 +257,7 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   const hidden = zn => pick(7, (x, z, g, zo) => plain(g) && zo === zn && at(need[zn], x, z) && farFromStart(x, z) && !nearBridge(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
   const eggSpots = { dorp: hidden('dorp'), bos: hidden('bos'), wei: hidden('wei'), strand: hidden('strand'), eiland: hidden('eiland') };
 
-  return { W, H, seed, ground, block, deck, zone, trees, obstacles, puddles, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
+  return { W, H, seed, ground, block, deck, zone, trees, obstacles, puddles, stones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
 }
 
 /** What is wrong with a generated world (empty = fine). Used to skip bad seeds and by tests/map.test.mjs. */

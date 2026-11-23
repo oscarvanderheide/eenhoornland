@@ -378,7 +378,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     mesh.rotation.x = -.3; mesh.scale.setScalar(scale); mesh.receiveShadow = true;
     const g = new THREE.Group(); g.add(mesh); g.add(blob(blobW, blobW * .55)); scene.add(g);
     const c = { g, mesh, texs, frames, flippable, face: 1, moving: false, hop: 0, hopH: .35, pos: new THREE.Vector3(), name, say, sound, path: [], animT: Math.random() * 10, blinkT: 2 + Math.random() * 3,
-      setFrame(k) { const key = k + (this.flippable && this.face < 0 ? 'F' : ''); const t = this.texs[key] || this.texs[k]; if (this.mesh.material.map !== t) { this.mesh.material.map = t; this.mesh.material.emissiveMap = t; } } };
+      setFrame(k) { const key = k + (this.flippable && this.face < 0 ? 'F' : ''); const t = this.texs[key] || this.texs[k]; if (this.mesh.material.map !== t) { this.mesh.material.map = t; this.mesh.material.emissiveMap = t; if (this.ghost) this.ghost.material.map = t; } } };
     c.zBias = (chars.length % 7) * .008; mesh.userData.char = c; pick.push(mesh); chars.push(c); return c;
   }
   const kidFrames = f => ({ idle: f('idle'), w1: f('w1'), w2: f('w2'), blink: f('idle', true), jump: f('jump') });
@@ -423,7 +423,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
 
   const animals = [];
   function animal(frames, opts, home, water = false) {
-    const c = makeChar(frames, opts); c.home = home; c.water = water; c.wait = 1 + Math.random() * 3; c.speed = water ? .6 : .9;
+    const c = makeChar(frames, opts); c.home = home; c.water = water; c.ghost = seeThrough(c.mesh).children.at(-1); c.ghost.material.opacity = .5;   // never lost behind a tree after a throw
+    c.wait = 1 + Math.random() * 3; c.speed = water ? .6 : .9;
     const t = randomTile(c); c.pos.set(t[0] + .5, 0, t[1] + .5); animals.push(c); return c;
   }
   function randomTile(c) {
@@ -607,7 +608,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (d.trees) { if (!shook) { shook = true; life.tapProp(d.trees[h.instanceId]); } continue; }   // it shakes, and she still walks there
       if (d.tap) { d.tap(h); return; }
       // an animal can be picked up: a tap makes it talk, a drag lifts it, letting go throws it (it thinks that is great fun)
-      if (d.char && animals.includes(d.char)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
+      if (d.char && (animals.includes(d.char) || d.char.stone)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
       if (d.fountain) { sfx.splash(); burst(new THREE.Vector3(FOUNT.cx, .5, FOUNT.cz), 8); for (const a of animals) if (a.water && !a.fly) a.hop = 1; toys.fountain(); return; }
@@ -631,7 +632,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }, listen);
   const letGo = () => {
     if (!grab) return; const g = grab; grab = null;
-    if (!g.drag) { if (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c)) life.tapAnimal(g.c); return; }
+    if (!g.drag) { if (g.c.stone || (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c))) life.tapAnimal(g.c); return; }
     const a = g.pts[0], b = g.pts[g.pts.length - 1], dt = a && b ? Math.max(.03, (b.t - a.t) / 1000) : 1;
     life.toss(g.c, a && b && performance.now() - b.t < 120 ? (b.x - a.x) / dt : 0, a && b && performance.now() - b.t < 120 ? (b.z - a.z) / dt : 0);
   };
@@ -653,11 +654,17 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (c.isUni) { extras.tapCompanion(c); return; }
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
   }
+  /** the pick-up key (Enter): throw or put down what she holds, else pick up what is next to her: an animal, a pebble, the can, the bucket, the kite, or get on the bike */
+  function grabKey() {
+    if (life.carrying()) return life.throwIt(); if (toys.carrying()) return toys.putDown();
+    if (life.grabNear() || toys.takeNear()) return; if (mount === 'fiets') return setMount(null); if (play.bikeNear()) return play.tapBike(); kid.hop = .4;
+  }
   const keys = new Set();
   const midJump = () => !!(kid.path[0] && kid.path[0].jump);
   addEventListener('keydown', e => {
     if (!interactive || paused || busy) return;
     if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
+    if (e.key === 'Enter' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!e.repeat) grabKey(); return; }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
   }, listen);
   addEventListener('keyup', e => keys.delete(e.key.toLowerCase()), listen);
@@ -796,7 +803,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     }
     // animals
     for (const a of animals) {
-      if (a.held || a.fly || a.cart) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
+      if (a.held || a.fly || a.cart || a.swim) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
       if (a.path.length) stepAlong(a, dt, a.speed);
       else { a.moving = false; a.wait -= dt; if (a.wait < 0) { a.wait = 2 + Math.random() * 4; const t = randomTile(a); const s = [Math.floor(a.pos.x), Math.floor(a.pos.z)]; const ok = a.water ? waterTile : walkable; const p = astar(s[0], s[1], t[0], t[1], (x, z) => ok(x, z) || (x === s[0] && z === s[1])); if (p) a.path = p.slice(1).map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5));
         else if (a.lost) { a.lost = false; burst(a.pos, 6); a.pos.set(t[0] + .5, 0, t[1] + .5); burst(a.pos, 6); sfx.sparkle(); } } }   // thrown too far to walk back: a little magic brings it home
@@ -828,7 +835,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },

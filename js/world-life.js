@@ -80,23 +80,36 @@ export function createLife(ctx) {
   }
 
   /* ---------------- picking animals up and throwing them ---------------- */
-  function hold(c) { if (carried === c) carried = null; c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
+  function hold(c) { if (carried === c) carried = null; c.swim = null; c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
   // a tap is enough: she walks over, lifts it above her head and carries it. A tap on the animal (or the jump button) throws it,
   // a tap on her puts it down, getting on the bike drops it in the trailer.
   let carried = null;
+  /* pebbles: picked up and thrown like the animals. On land one stays where it falls; in the water it goes plop and sinks,
+     and a little later the sea has washed a new one up where the old one lay. */
+  const stones = M.stones.map(([x, z], k) => {
+    const art = ART.kei(k), c = ctx.makeChar({ idle: art, w1: art, w2: art }, { blobW: .4, name: 'Kei', say: [], sound: 'pop' });
+    c.stone = true; c.home0 = [x + .5, z + .6]; c.pos.set(c.home0[0], 0, c.home0[1]); c.ghost = ctx.seeThrough(c.mesh).children.at(-1); c.back = 0; return c;
+  });
+  const movers = () => animals.concat(stones);
   const dist = c => Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z);
   function lift(c) {
     if (c.fly || c.cart || carried === c) return; if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
-    carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true);
+    carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); if (!c.stone) { bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true); }
   }
   function setDown() {
     const c = carried; if (!c) return false; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; c.hop = 1; c.wait = 2; sfx.pop();
     const x = kid.pos.x + .7 * kid.face, ok = c.water ? false : ctx.walkable(Math.floor(x), Math.floor(kid.pos.z)); c.pos.set(ok ? x : kid.pos.x, 0, kid.pos.z + .05); if (c.water) c.lost = true;
     return true;
   }
-  function throwIt() { const c = carried; if (!c) return false; carried = null; c.pos.set(kid.pos.x, 0, kid.pos.z); c.lift = 1; toss(c, kid.face * 4.5, rnd(-.6, .6)); kid.hop = .5; return true; }
+  function throwIt() { const c = carried; if (!c) return false; carried = null; c.pos.set(kid.pos.x, 0, kid.pos.z); c.lift = 1; toss(c, kid.face * (c.stone ? 6.5 : 4.5), rnd(-.6, .6)); kid.hop = .5; return true; }
+  /** the pick-up key: throw what she holds, or lift the nearest animal or pebble within reach */
+  function grabNear() {
+    if (carried) return throwIt(); let best = null, bd = 1.9;
+    for (const c of movers()) { if (!c.g.visible || c.fly || c.cart || c.swim || c.isUni) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } }
+    if (!best) return false; lift(best); return true;
+  }
   function tapAnimal(c) {
-    if (c.fly || c.cart) return; if (carried === c) return void throwIt();
+    if (c.fly || c.cart || c.swim) return; if (carried === c) return void throwIt();
     c.path = []; c.wait = 8; c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1;                       // it waits for her
     if (dist(c) < 1.8) return lift(c);
     const then = () => { if (dist(c) < 3.6) lift(c); };
@@ -106,7 +119,7 @@ export function createLife(ctx) {
   function toss(c, vx, vz) {
     const sp = Math.hypot(vx, vz), max = 9, f = sp > max ? max / sp : 1;
     c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, spin: (vx >= 0 ? -1 : 1) * (4 + sp), bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
-    sfx.whoosh(); bubble(c, WHEE[Math.floor(Math.random() * WHEE.length)]);
+    sfx.whoosh(); if (!c.stone) bubble(c, WHEE[Math.floor(Math.random() * WHEE.length)]);
   }
   function stepFlight(c, dt) {
     const f = c.fly; f.vy -= 12 * dt; f.h += f.vy * dt;
@@ -114,24 +127,45 @@ export function createLife(ctx) {
     c.lift = Math.max(0, f.h); c.mesh.rotation.z += f.spin * dt;
     if (f.h > 0) return;
     const tx = Math.floor(c.pos.x), tz = Math.floor(c.pos.z);
-    if (!ctx.walkable(tx, tz)) {                                                   // in the water, on a roof, in a tree: bounce on to the nearest free spot
-      const g = groundAt(c.pos.x, c.pos.z), wet = g === MAP.SE || g === MAP.WA; if (wet) { sfx.splash(); burst(new THREE.Vector3(c.pos.x, -.3, c.pos.z), 6); } else sfx.boing();
+    if (!ctx.walkable(tx, tz)) {                                                   // in the water: it swims back. On a roof, in a tree: bounce on to the nearest free spot
+      const g = groundAt(c.pos.x, c.pos.z), wet = g === MAP.SE || g === MAP.WA;
+      if (wet && c.stone) {                                                       // plop
+        sfx.splash(); sfx.bubble(); burst(new THREE.Vector3(c.pos.x, .1, c.pos.z), 5); for (let i = 0; i < 10; i++) bit(ART.drop(), c.pos.x + rnd(-.25, .25), .1, c.pos.z + .1, { vx: rnd(-1.6, 1.6), vy: rnd(2.5, 5.5), g: 10, life: 1 });
+        fishJump(c.pos.x + rnd(-1, 1), c.pos.z + rnd(-.6, .6)); c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; c.g.visible = false; c.back = 12; return;
+      }
+      if (wet && !c.water) {
+        sfx.splash(); burst(new THREE.Vector3(c.pos.x, .1, c.pos.z), 6); for (let i = 0; i < 8; i++) bit(ART.drop(), c.pos.x + rnd(-.3, .3), .1, c.pos.z + .1, { vx: rnd(-2, 2), vy: rnd(2, 4.5), g: 10, life: .9 });
+        const t = ctx.nearestWalkable(c.pos.x, c.pos.z) || ctx.randomTile(c); c.fly = null; c.mesh.rotation.z = 0; c.swim = { x: t[0] + .5, z: t[1] + .5, rip: 0 }; return;
+      }
+      if (wet) { c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; c.path = []; sfx.splash(); burst(new THREE.Vector3(c.pos.x, .1, c.pos.z), 6); return; }   // a duck is at home there
+      sfx.boing();
       const t = ctx.nearestWalkable(c.pos.x, c.pos.z) || ctx.randomTile(c), T = .65;
       f.vx = (t[0] + .5 - c.pos.x) / T; f.vz = (t[1] + .5 - c.pos.z) / T; f.vy = 12 * T / 2; f.h = .01; return;
     }
     if (f.bounces < 2 && Math.abs(f.vy) > 2) { f.bounces++; f.vy = -f.vy * .45; f.vx *= .5; f.vz *= .5; f.h = .01; sfx.boing(); return; }
+    if (c.stone) { c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; sfx.pop(); for (const a of animals) if (!a.held && !a.fly && !a.cart && !a.swim && Math.hypot(a.pos.x - c.pos.x, a.pos.z - c.pos.z) < 1.6) a.hop = 1; return; }   // thud: whoever stands there jumps
     c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; c.hop = 1; c.lost = true; c.wait = 1.5; c.path = [];
     (sfx[c.sound] || sfx.pop)(); burst(c.pos, 5, true); for (let i = 0; i < 3; i++) bit(ART.dizzy(), c.pos.x + rnd(-.3, .3), 1, c.pos.z + .1, { vx: rnd(-.8, .8), vy: 1.2, g: 2, life: 1 });
   }
 
   return {
-    dispose() { }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, carrying: () => carried,
+    dispose() { }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length }),
     update(dt, time, active) {
+      for (const c of stones) { if (c.fly) stepFlight(c, dt); if (c.back > 0 && (c.back -= dt) <= 0) { c.pos.set(c.home0[0], 0, c.home0[1]); c.g.visible = true; c.hop = 1; burst(c.pos, 4); sfx.pop(); } c.ghost.visible = !c.held; }
+      if (carried && carried.stone && ctx.mount()) setDown();
       if (carried && ctx.mount() === 'fiets') { const c = carried; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; ctx.play.tapAnimal(c); }
       else if (carried && (ctx.mount() || (ctx.toys && ctx.toys.carrying()))) setDown();
       if (carried) { const c = carried; c.pos.set(kid.pos.x, 0, kid.pos.z + .04); c.face = kid.face; c.lift = Math.min(1.02, c.lift + dt * 5); c.mesh.rotation.z = Math.sin(time * 5) * .1; }
       for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held && a !== carried) a.mesh.rotation.z = Math.sin(time * 18) * .18;
+      for (const a of animals) {
+        if (a.ghost) a.ghost.visible = !a.cart && !a.held && !a.swim;
+        if (!a.swim) continue; const s = a.swim, dx = s.x - a.pos.x, dz = s.z - a.pos.z, d = Math.hypot(dx, dz), wetNow = [MAP.SE, MAP.WA].includes(groundAt(a.pos.x, a.pos.z));
+        if (Math.abs(dx) > .05) a.face = dx > 0 ? 1 : -1; a.lift = wetNow ? -.2 + Math.sin(time * 7) * .04 : 0; a.mesh.rotation.z = wetNow ? Math.sin(time * 6) * .1 : 0;   // paddling, head above the water
+        if (wetNow && (s.rip -= dt) < 0) { s.rip = .45; bit(ART.drop(), a.pos.x - a.face * .3, .05, a.pos.z + .1, { vx: -a.face * .8, vy: 1.6, g: 8, life: .45 }); sfx.bubble(); }
+        if (d < .08) { a.swim = null; a.lift = 0; a.mesh.rotation.z = 0; a.hop = 1; a.wait = 1.5; a.path = []; (sfx[a.sound] || sfx.pop)(); for (let i = 0; i < 6; i++) bit(ART.drop(), a.pos.x + rnd(-.2, .2), .5, a.pos.z + .1, { vx: rnd(-1.6, 1.6), vy: rnd(1, 2.6), g: 9, life: .6 }); }   // out, and a good shake
+        else { const v = Math.min(d, dt * 2.1); a.pos.x += dx / d * v; a.pos.z += dz / d * v; }
+      }
       // birds: peck around, take off when she comes close, come back when it is quiet again
       for (let i = birds.length - 1; i >= 0; i--) {
         const b = birds[i]; b.t += dt;

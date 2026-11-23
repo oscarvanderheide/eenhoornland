@@ -4,6 +4,7 @@ export default async function (t) {
   fs.mkdirSync('tmp-shots', { recursive: true });
   let fail = 0; const ok = (c, m) => { console.log(c ? '  ok  ' : '  FAIL', m); if (!c) fail++; };
   const J = async e => JSON.parse(await t.ev(`JSON.stringify(${e})`));
+  const until = async (expr, ms = 30000) => { for (let i = 0; i < ms / 400; i++) { if (await t.ev(expr)) return true; await t.sleep(400); } return false; };
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(1500);
   const info = await J(`(()=>{const k=__w.kid.pos; let best=null,d=1e9; __w.animals.forEach((a,i)=>{const e=Math.hypot(a.pos.x-k.x,a.pos.z-k.z); if(a.g.visible&&e<d){d=e;best=i;}}); return {i:best,d}})()`);
@@ -28,5 +29,18 @@ export default async function (t) {
   const pd = await J('__w.MAP ? __w.M.puddles[0] : null'); ok(await t.ev(`__w.walkable(${pd[0]}, ${pd[1]})`), 'a puddle is no obstacle');
   await t.ev(`__w.placeAt(${pd[0]} + .5, ${pd[1]} + .5)`); await t.sleep(1200); const b0 = await t.ev('__w.life.info().bits'); await t.ev('__w.jump()'); await t.sleep(650); ok(await t.ev('__w.life.info().bits') > b0 + 8, 'jumping in it makes a big splash'); await t.shot('tmp-shots/p-7-splash.png');
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.setMount('uni'); 0`); await t.sleep(500); await t.key('ArrowLeft', 900); ok(await t.ev('__w.uni.face') === -1, 'riding left with the keys, the unicorn looks left'); await t.shot('tmp-shots/p-8-ride-left.png');
+  // into the water: an animal swims back, a ball is blown back by the wind; behind a tree an animal still shows
+  await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(20.5, 45.5); 0`); await t.sleep(1500);
+  await t.ev(`(a=>{__w.life.hold(a); a.pos.set(17.5,0,45.5); __w.life.toss(a,-5,0)})(__w.animals[0])`); ok(await until(`!!__w.animals[0].swim`, 20000), 'thrown into the sea it swims'); await t.sleep(700); await t.shot('tmp-shots/p-9-swim.png');
+  ok(await until(`!__w.animals[0].swim && __w.walkable(Math.floor(__w.animals[0].pos.x), Math.floor(__w.animals[0].pos.z))`, 60000), 'and climbs out on the beach');
+  const bw = `__w.M.ground[__w.M.I(Math.floor(__w.play.info().balls[0][0]), Math.floor(__w.play.info().balls[0][1]))]`;
+  await t.ev(`__w.placeAt(19.5, 42.5)`); for (let k = 0; k < 8 && await t.ev(`${bw} !== __w.MAP.SE`); k++) { await t.ev(`__w.play.kick(0, -1, 0)`); await t.sleep(700); } ok(await until(`${bw} === __w.MAP.SE`, 8000), 'the ball rolls into the sea'); await t.sleep(600); await t.shot('tmp-shots/p-10-ball-floats.png');
+  ok(await until(`${bw} !== __w.MAP.SE`, 30000), 'and a gust of wind blows it back'); await t.sleep(1500); await t.shot('tmp-shots/p-11-ball-back.png');
+  const R = await J('__w.MAP.RAMPS[0]'); await t.ev(`__w.placeAt(${R[0]} + 1.6, ${R[1]} + 1.2)`); await t.sleep(2000); await t.shot('tmp-shots/p-12-ramp.png');
+  const B = await J('__w.MAP.BIKE'); await t.ev(`__w.placeAt(${B[0]} - 1.5, ${B[1]} + 1)`); await t.sleep(2000); await t.shot('tmp-shots/p-13-bike.png');
+  // pebbles and the pick-up key
+  const st = await J('__w.M.stones[0]'); await t.ev(`__w.placeAt(${st[0]} + 1.4, ${st[1]} + .6)`); await t.sleep(1500); await t.shot('tmp-shots/p-14-stone.png');
+  await t.ev(`__w.grabKey()`); await t.sleep(900); ok(await t.ev(`!!__w.life.carrying() && __w.life.carrying().stone === true`), 'the pick-up key lifts the pebble next to her'); await t.shot('tmp-shots/p-15-stone-held.png');
+  await t.ev(`__w.grabKey()`); await t.sleep(250); ok(await t.ev(`!__w.life.carrying() && !!__w.life.stones[0].fly`), 'the key again throws it'); ok(await until(`!__w.life.stones[0].fly`, 20000), 'and it lands'); await t.shot('tmp-shots/p-16-stone-thrown.png');
   console.log(fail ? 'PICKUP FAILED ' + fail : 'PICKUP OK');
 }

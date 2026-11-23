@@ -379,6 +379,9 @@ export function houseIcon(id) {
   });
 }
 
+/** a pebble small enough to pick up and throw (world-life.js) */
+export const kei = (seed = 0) => cached('kei' + seed, () => sprite(seed % 2 ? ['.ggg..', 'gGGgg.', 'gGggdg', '.gddd.'] : ['..gg...', '.gGGgg.', 'gGGgggd', 'gggggdd', '.dddd..'], { g: '#B4B9C8', G: '#DCE0EA', d: '#8B90A4' }));
+
 /* ================= the unicorn race (act-race.js) ================= */
 export const raceArch = () => cached('raceArch', () => gridSprite(26, 24, (x, y) => {
   if ((x < 2 || x > 23) && y > 1) return Math.floor((y - 2) / 3) % 2 ? '#FFFFFF' : '#FF5E9C';            // candy-striped poles

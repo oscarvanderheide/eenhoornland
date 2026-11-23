@@ -14,7 +14,7 @@ export function createPlay(ctx) {
   const tileOf = v => [Math.floor(v.x), Math.floor(v.z)];
 
   /* ---------------- bike: tap it to get on, tap it (or her) again to get off ---------------- */
-  const BS = 1.45, bike = makeSprite(ART.bike(), { lean: .25, scale: BS }); bike.position.set(MAP.BIKE[0], 0, MAP.BIKE[1]); scene.add(bike);
+  const BS = 1.1, bike = makeSprite(ART.bike(), { lean: .25, scale: BS }); bike.position.set(MAP.BIKE[0], 0, MAP.BIKE[1]); scene.add(bike);
   let bikeFace = 1;
   bike.userData.alpha = ART.bike();
   bike.userData.tap = () => {
@@ -34,7 +34,14 @@ export function createPlay(ctx) {
     const t = ctx.nearestWalkable(cartP.x, cartP.z + .9) || [Math.floor(kid.pos.x), Math.floor(kid.pos.z)]; c.pos.set(t[0] + .5, 0, t[1] + .5); c.hop = 1; c.lost = true; c.wait = 1.5; (sfx[c.sound] || sfx.pop)();
   }
   /* ramps: only a bike takes off from them */
-  const ramps = MAP.RAMPS.map(([x, z]) => { const m = makeSprite(ART.schans(), { lean: .3, shadow: false }); m.position.set(x, 0, z + .32); scene.add(m); m.userData.alpha = ART.schans(); const r = { x, z, m, cool: 0, wig: 0 }; m.userData.tap = () => { r.wig = .5; sfx.pop(); if (ctx.mount() !== 'fiets') { bubble(kid, '', ART.bike()); hint = .6; } ctx.walkToTile(Math.floor(x), Math.floor(z)); }; pick.push(m); return r; });
+  const rampGeo = (() => {                                                         // a wooden wedge: low on the left, high on the right
+    const L = .7, D = .42, Hh = .52, A = [-L, 0, -D], B = [-L, 0, D], C = [L, Hh, D], Dd = [L, Hh, -D], E = [L, 0, D], F = [L, 0, -D];
+    const g = new THREE.BufferGeometry(), P = [A, B, C, A, C, Dd, B, E, C, A, Dd, F, E, F, Dd, E, Dd, C].flat(), uv = [0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0].concat(new Array(24).fill(0));
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.addGroup(0, 6, 0); g.addGroup(6, 12, 1); g.computeVertexNormals(); return g;
+  })();
+  const rampTop = (() => { const [c, x] = ctx.canvas(28, 16); for (let X = 0; X < 28; X++) { x.fillStyle = Math.floor(X / 4) % 2 ? '#FFD43B' : '#E8484A'; x.fillRect(X, 0, 1, 16); } x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, 28, 1); x.fillRect(0, 15, 28, 1); x.fillStyle = '#B5303A'; x.fillRect(27, 0, 1, 16); return c; })();
+  const rampMats = [new THREE.MeshLambertMaterial({ map: ctx.tex(rampTop), side: THREE.DoubleSide }), new THREE.MeshLambertMaterial({ color: '#B5733F', side: THREE.DoubleSide })];
+  const ramps = MAP.RAMPS.map(([x, z]) => { const m = new THREE.Mesh(rampGeo, rampMats); m.castShadow = true; m.receiveShadow = true; m.position.set(x, 0, z); scene.add(m); const r = { x, z, m, cool: 0, wig: 0 }; m.userData.tap = () => { r.wig = .5; sfx.pop(); if (ctx.mount() !== 'fiets') { bubble(kid, '', ART.bike()); hint = .6; } ctx.walkToTile(Math.floor(x), Math.floor(z)); }; pick.push(m); return r; });
   let flip = 0, hint = 0;
 
   /* ---------------- balls: walk into one and it rolls away ---------------- */
@@ -42,13 +49,29 @@ export function createPlay(ctx) {
     const mesh = ctx.seeThrough(makeSprite(ART.ball(k > 0), { lean: .3, scale: k > 0 ? 1 : .9 })); scene.add(mesh);
     return { mesh, x, z, vx: 0, vz: 0, h: 0, vh: 0, r: k > 0 ? .34 : .25, spin: 0, cool: 0 };
   });
-  const open = (x, z) => M.free(Math.floor(x), Math.floor(z));
+  const wetAt = (x, z) => { const X = Math.floor(x), Z = Math.floor(z); return X > 2 && Z > 2 && X < MAP.W - 3 && Z < MAP.H - 3 && [MAP.SE, MAP.WA].includes(M.ground[M.I(X, Z)]) && !M.deck[M.I(X, Z)]; };
+  const open = (x, z) => M.free(Math.floor(x), Math.floor(z)) || wetAt(x, z);     // a ball may roll into the water: the wind brings it back
+  const gustArt = PX.gridSprite(6, 1, () => '#FFFFFF', { outline: false, key: 'gust' });
   function kick(b, dx, dz, power) {
     const l = Math.hypot(dx, dz) || 1; b.vx = dx / l * power; b.vz = dz / l * power; b.vh = 2.6; b.cool = .25; sfx.boing();
     if (uni.g.visible && ctx.mount() !== 'uni' && uni.hop <= 0) uni.hop = .8;
   }
   function moveBall(b, dt) {
     if (b.cool > 0) b.cool -= dt;
+    if (b.gust) {                                                                  // a gust of wind carries it back to the shore in one long bounce
+      const g = b.gust; g.t += dt; const k = Math.min(1, g.t / g.T); b.x = g.x0 + (g.x1 - g.x0) * k; b.z = g.z0 + (g.z1 - g.z0) * k; b.h = Math.sin(k * Math.PI) * 1.3; b.spin -= dt * 9 * Math.sign(g.x1 - g.x0 || 1);
+      if (k >= 1) { b.gust = null; b.h = 0; b.vh = 2; b.vx = (g.x1 - g.x0) / g.T * .25; b.vz = (g.z1 - g.z0) / g.T * .25; b.float = 0; sfx.boing(); }
+      b.mesh.position.set(b.x, b.h, b.z); b.mesh.rotation.z = b.spin; return;
+    }
+    if (wetAt(b.x, b.z) && b.h <= 0) {                                             // floating: it bobs for a moment, then the wind comes
+      if (!b.float) { b.float = .001; sfx.splash(); burst(new THREE.Vector3(b.x, .1, b.z), 5); } b.float += dt; b.vx *= Math.max(0, 1 - dt * 4); b.vz *= Math.max(0, 1 - dt * 4); b.x += b.vx * dt; b.z += b.vz * dt;
+      if (b.float > 1.1) {
+        const t = ctx.nearestWalkable(b.x, b.z) || [Math.floor(kid.pos.x), Math.floor(kid.pos.z)], x1 = t[0] + .5, z1 = t[1] + .5, d = Math.hypot(x1 - b.x, z1 - b.z) || 1;
+        b.gust = { t: 0, T: Math.min(1.6, .6 + d * .12), x0: b.x, z0: b.z, x1, z1 }; sfx.whoosh();
+        for (let i = 0; i < 7; i++) ctx.life.bit(gustArt, b.x - (x1 - b.x) / d * rnd(.3, 1.4) + rnd(-.3, .3), rnd(.2, .9), b.z - (z1 - b.z) / d * rnd(.3, 1.4) + .1, { vx: (x1 - b.x) / d * rnd(4, 6), vz: (z1 - b.z) / d * rnd(4, 6), vy: 0, g: 0, life: rnd(.4, .8) });
+      }
+      b.mesh.position.set(b.x, -.06 + Math.sin(b.float * 6) * .04, b.z); b.mesh.rotation.z = Math.sin(b.float * 3) * .2; return;
+    }
     const sp = Math.hypot(b.vx, b.vz);
     if (sp > .02) {
       const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
@@ -153,7 +176,7 @@ export function createPlay(ctx) {
     /** on the bike, a tap on an animal: into the trailer (or out again). Returns true if it handled the tap. */
     tapAnimal(c) { if (ctx.mount() !== 'fiets') return false; if (c.cart) hopOut(c); else hopIn(c); return true; },
     info: () => ({ side, sailing: aboard, moving: route.length > 0, boat: [+bp.x.toFixed(2), +bp.z.toFixed(2)], bike: [bike.position.x, bike.position.z], balls: balls.map(b => [+b.x.toFixed(2), +b.z.toFixed(2)]), riders: riders.length, chests: chests.map(c => [c.x, c.z]), whale: whaleT >= 0, flip: flip > 0 }),
-    kick(i, dx, dz) { kick(balls[i], dx, dz, 6); }, tapBike: () => bike.userData.tap(), tapBoat: () => boat.userData.tap(),
+    kick(i, dx, dz) { kick(balls[i], dx, dz, 6); }, bikeNear: () => ctx.mount() !== 'fiets' && Math.hypot(bike.position.x - kid.pos.x, bike.position.z - kid.pos.z) < 1.6, tapBike: () => bike.userData.tap(), tapBoat: () => boat.userData.tap(),
     update(dt, time, active) {
       // bike, trailer, ramps
       const riding = ctx.mount() === 'fiets';

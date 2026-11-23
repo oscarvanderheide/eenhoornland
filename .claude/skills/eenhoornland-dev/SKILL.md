@@ -96,3 +96,5 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - The stable (feed, wash, brush) stands on the castle island; it is open in `baby`, `vriend` and `feest` (`Q.stalOpen`).
 - Small things that roll or lie around (balls, star, fruit) go through `ctx.seeThrough` so they show through whatever stands in front; star and tool spots need `clearView` in `map.js`.
 - `rm` and `cp` are aliased to ask first in this shell: use `command rm -f`.
+- Enter (or E) is the pick-up key (`grabKey` in `world.js`): throw or put down what she holds, else lift the nearest animal, pebble (`M.stones`) or toy, or get on the bike. Space jumps.
+- Thrown into the water: an animal swims back (`c.swim`), a pebble sinks and washes up again at its spot, a ball floats and a gust blows it ashore. Animals and pebbles are see-through behind trees (`c.ghost`).

@@ -214,7 +214,7 @@ export function createToys(ctx) {
     dispose: off, peek, stomp, tapGround, putDown, fountain: fill,
     carrying: () => carry && carry.id,
     /** dev / tests */
-    take: id => take(things[id]), usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
+    take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
     info: () => ({ carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),
     /** with a full can in her hands, a tap on an animal waters it. Returns true if it handled the tap. */
     tapAnimal(c) {
