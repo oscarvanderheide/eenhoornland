@@ -55,7 +55,7 @@ New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep 
 - `Q.mapSeed()` is 0 in the first cycle and new for every later one; `buildMap({ seed })` reshuffles everything outside the village and skips seeds that fail `MAP.validate`. `main.js` destroys and rebuilds the world when the seed changes (on leaving the huisje).
 - Anything added to the world must go away in `destroy()`: pass `listen` to `addEventListener`, return an unsubscribe from `Q.on`.
 
-## Verify (server: `python3 -m http.server 8765` in the project folder)
+## Verify (server: `python3 serve.py` in the project folder; plain `python3 -m http.server` drops connections under load and tests then fail "no page errors")
 ```bash
 node tests/map.test.mjs            # add -v for an ASCII map
 node tests/quest.test.mjs          # 12 full cycles without a browser
