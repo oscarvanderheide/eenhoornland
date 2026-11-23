@@ -1,6 +1,6 @@
 // Sound effects (WebAudio), gentle background music, and Dutch text-to-speech.
 let AC = null, master = null, musicBus = null;
-const MUSIC = .55;   // the music stays in the background: what the child touches is what should be heard
+const MUSIC = .8;   // the music stays in the background: what the child touches is what should be heard
 function ac() {
   if (!AC) {
     try {
@@ -51,22 +51,28 @@ export const sfx = {
   lullaby() { [659, 587, 523, 587, 659, 659, 659].forEach((f, i) => tone(f, i * .42, .7, 'sine', .09)); },
 };
 
-/* ---------- background music: tiny step sequencer ---------- */
+/* ---------- background: a few soft notes now and then, never the same twice ---------- */
+// There is no tune. A tune on a loop is heard a hundred times in an afternoon; this is closer to a wind chime: single
+// notes from a five-note scale, wandering by small steps, with silences in between that are longer than the notes,
+// over a low note that changes once in a long while. Nothing in it can get stuck in your head.
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const SONGS = {
-  day: { tempo: .26, mel: [72, 0, 76, 79, 81, 0, 79, 76, 74, 0, 77, 81, 79, 0, 0, 0, 72, 0, 76, 79, 84, 0, 83, 79, 81, 79, 76, 74, 72, 0, 0, 0], bass: [48, 55, 53, 55, 48, 55, 53, 43] },
-  night: { tempo: .4, mel: [76, 0, 74, 72, 0, 0, 67, 0, 69, 0, 72, 74, 72, 0, 0, 0, 76, 0, 79, 76, 74, 0, 72, 0, 74, 0, 72, 69, 67, 0, 0, 0], bass: [45, 52, 48, 43, 45, 52, 41, 43] },
+  day: { scale: [60, 62, 64, 67, 69, 72, 74, 76, 79], roots: [48, 53, 45, 55], gap: [1.1, 3.4], len: 2.6, vol: .03 },
+  night: { scale: [57, 60, 62, 64, 67, 69, 72, 74], roots: [45, 41, 48, 43], gap: [2, 5], len: 3.6, vol: .024 },
 };
-let musicOn = true, mood = 'day', step = 0, nextT = 0, timer = null;
+let musicOn = true, mood = 'day', step = 0, nextT = 0, timer = null, at = 4, rootT = 0, root = 0;
+const rnd = (a, b) => a + Math.random() * (b - a);
 function schedule() {
   const a = ac(); if (!a || !musicOn) return;
   const song = SONGS[mood];
   while (nextT < a.currentTime + .3) {
-    const m = song.mel[step % song.mel.length];
-    const t0 = nextT - a.currentTime;
-    if (m) { tone(mtof(m), t0, song.tempo * 1.6, 'triangle', .035, 0, musicBus); tone(mtof(m + 12), t0, song.tempo, 'sine', .01, 0, musicBus); }
-    if (step % 4 === 0) { const b = song.bass[(step / 4) % song.bass.length]; tone(mtof(b), t0, song.tempo * 3.5, 'sine', .05, 0, musicBus); }
-    step++; nextT += song.tempo;
+    const t0 = Math.max(0, nextT - a.currentTime);
+    at = Math.max(0, Math.min(song.scale.length - 1, at + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)]));   // a small step up or down
+    const m = song.scale[at];
+    tone(mtof(m), t0, song.len, 'sine', song.vol, 0, musicBus);
+    if (Math.random() < .3) tone(mtof(song.scale[Math.max(0, at - 2)]), t0 + rnd(.25, .6), song.len, 'sine', song.vol * .7, 0, musicBus);   // sometimes a second note answers
+    if (nextT >= rootT) { root = (root + 1 + Math.floor(Math.random() * (song.roots.length - 1))) % song.roots.length; tone(mtof(song.roots[root]), t0, 9, 'sine', song.vol * .9, 0, musicBus); rootT = nextT + rnd(9, 16); }
+    step++; nextT += rnd(song.gap[0], song.gap[1]) * (step % 7 === 0 ? 2.2 : 1);                                   // and now and then a long breath
   }
 }
 export function startMusic() {
@@ -77,7 +83,7 @@ export function setMusic(on) {
   musicOn = on; if (musicBus) musicBus.gain.value = on ? MUSIC : 0;
   if (on) { const a = ac(); if (a) nextT = Math.max(nextT, a.currentTime + .1); }
 }
-export function setMood(m) { if (SONGS[m]) { mood = m; step = 0; } }
+export function setMood(m) { if (SONGS[m] && m !== mood) { mood = m; step = 0; at = 3; rootT = 0; } }
 export function duckMusic(on) { if (musicBus) musicBus.gain.value = musicOn ? (on ? .35 * MUSIC : MUSIC) : 0; }
 
 /* ---------- speech ---------- */

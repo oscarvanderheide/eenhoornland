@@ -64,7 +64,9 @@ async function enter(id) {
 $('#act-close').onclick = () => { sfx.pop(); ui.closeActivity(); };
 $('#b-book').onclick = () => ui.openBook();
 $('#b-night').onclick = () => { state.night = !state.night; save(); setNightIcon(); world && world.setNight(state.night); setMood(state.night ? 'night' : 'day'); sfx.sparkle(); speak(state.night ? 'Welterusten! Het is nacht.' : 'Goedemorgen! Het is dag.'); };
-$('#b-music').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setMusic(on); };
+// whoever switches the music off wants it to stay off, also tomorrow
+$('#b-music').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setMusic(on); state.extra.music = on; save(); };
+if (state.extra.music === false) { $('#b-music').setAttribute('aria-pressed', 'false'); setMusic(false); }
 $('#b-voice').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setVoice(on); };
 
 /* ---------- start: who plays? Then the dream, then outside ---------- */
