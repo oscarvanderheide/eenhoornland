@@ -195,8 +195,12 @@ export function createLife(ctx) {
     sfx.munch(); c.hop = 1; burst(c.pos, 8, true); bubble(c, '', PX.heart());
     if (DRESS[c.name] && !c.dressed) { c.dressed = true; const [a, fx, fy] = DRESS[c.name]; wearOn(c, a(), fx, fy); }
     if (c.name === 'Draakje') setTimeout(() => puff(c), 600);
-    if (c.friend) return; c.friend = true; c.wait = 0; friends.push(c); if (friends.length > 3) goHome(friends[0]);
+    if (c.friend) return; c.friend = true; c.wait = 0; c.joined = now(); friends.push(c); makeRoom();
   }
+  // her own unicorn always comes along, so two friends at most (an old unicorn counts as one): more is too busy to see her
+  const MAX_FRIENDS = 2;
+  /** a new friend joined: the one who has been with her longest goes home */
+  function makeRoom() { while (friends.length > MAX_FRIENDS) goHome(friends.reduce((a, b) => (a.joined || 0) <= (b.joined || 0) ? a : b)); }
   function goHome(c) { const i = friends.indexOf(c); if (i >= 0) friends.splice(i, 1); c.friend = false; c.lost = true; c.wait = .5; c.hop = 1; bubble(c, '', PX.heart()); }
   /** a little dragon happy-sneezes a cloud of sparks */
   function puff(c) { sfx.whoosh(); for (let i = 0; i < 7; i++) bit(PX.sparkle(i % 2 ? '#FFD43B' : '#FF9E6B'), c.pos.x + c.face * .5, .7, c.pos.z + .1, { vx: c.face * rnd(1.5, 3), vy: rnd(.5, 2), g: 1, life: rnd(.6, 1) }); }
@@ -258,7 +262,7 @@ export function createLife(ctx) {
   function tapHerd(c) {
     c.face = kid.pos.x >= c.pos.x ? 1 : -1;
     const act = () => {
-      if (!c.friend) { for (const f of friends.filter(f => f.uniKind)) goHome(f); c.hop = 1; sfx.sparkle(); burst(c.pos, 8, true); bubble(c, 'Kom mee!'); c.friend = true; c.wait = 0; c.path = []; friends.unshift(c); if (friends.length > 3) goHome(friends[friends.length - 1]); return; }
+      if (!c.friend) { for (const f of friends.filter(f => f.uniKind)) goHome(f); c.hop = 1; sfx.sparkle(); burst(c.pos, 8, true); bubble(c, 'Kom mee!'); c.friend = true; c.wait = 0; c.path = []; c.joined = now(); friends.unshift(c); makeRoom(); return; }
       usePower(c);
     };
     if (dist(c) < 2.2 || c.friend) return act();
@@ -358,7 +362,8 @@ export function createLife(ctx) {
       if (carried && carried.stone && ctx.mount()) setDown();
       if (carried && ctx.mount() === 'fiets') { const c = carried; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; ctx.play.tapAnimal(c); }
       else if (carried && (ctx.mount() || (ctx.toys && ctx.toys.carrying()))) setDown();
-      if (carried) { const c = carried; c.pos.set(kid.pos.x, 0, kid.pos.z + .04); c.face = kid.face; c.lift = Math.min(1.02, c.lift + dt * 5); c.mesh.rotation.z = Math.sin(time * 5) * .1; }
+      if (carried) { const c = carried; c.pos.set(kid.pos.x, 0, kid.pos.z + .1); c.face = kid.face;   // just in front of her spot (she sorts at +.06), so it is drawn over her head, not behind it
+      c.lift = Math.min(1.02, c.lift + dt * 5); c.mesh.rotation.z = Math.sin(time * 5) * .1; }
       for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held && a !== carried) a.mesh.rotation.z = Math.sin(time * 18) * .18;
       for (const a of animals) {
         if (a.ghost) a.ghost.visible = !a.cart && !a.held && !a.swim;

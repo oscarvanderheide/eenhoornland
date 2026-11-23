@@ -148,16 +148,44 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const geoCache = new Map();
   function spriteGeom(w, h) { const k = w + 'x' + h; if (!geoCache.has(k)) { const g = new THREE.PlaneGeometry(w / U, h / U); g.translate(0, h / U / 2, 0); geoCache.set(k, g); } return geoCache.get(k); }
   const spriteMats = [];
-  function spriteMat(t) { const m = new THREE.MeshLambertMaterial({ map: t, alphaTest: .5, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .28 }); spriteMats.push(m); return m; }
+  /** Sprites are flat cards leaning back, and houses, walls and the castle are real boxes: a card standing close to a wall pokes
+   *  its top into it and loses half a head. So every pixel of a sprite gets the depth it would have on an upright card at the
+   *  sprite's spot (nudged a little towards the camera so feet stay on top of bridge planks and ramps). Nothing that stands
+   *  behind that spot can cut into it any more, and sprites still sort among each other by where they stand. */
+  function flatDepth(m) {
+    m.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+        {
+          vec4 spot = vec4(0., 0., 0., 1.);
+          #ifdef USE_INSTANCING
+            spot = instanceMatrix * spot;
+          #endif
+          spot = modelMatrix * spot;
+          vec4 wp = vec4(transformed, 1.);
+          #ifdef USE_INSTANCING
+            wp = instanceMatrix * wp;
+          #endif
+          wp = modelMatrix * wp;
+          vec3 ray = wp.xyz - cameraPosition;
+          vec3 up = cameraPosition + ray * ((spot.z + .08 - cameraPosition.z) / ray.z);   // where this pixel's ray meets the upright card
+          vec4 q = projectionMatrix * viewMatrix * vec4(up, 1.);
+          gl_Position.z = clamp(q.z / q.w, -1., 1.) * gl_Position.w;
+        }`);
+    };
+    m.customProgramCacheKey = () => 'flatDepth';
+    m.clone = () => flatDepth(Object.getPrototypeOf(m).clone.call(m));   // copies stay sorted the same way
+    return m;
+  }
+  function spriteMat(t, flat = true) { const m = new THREE.MeshLambertMaterial({ map: t, alphaTest: .5, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .28 }); if (flat) flatDepth(m); spriteMats.push(m); return m; }
   function makeSprite(cvs, { lean = .3, shadow = true, scale = 1 } = {}) {
-    const t = tex(cvs); const mesh = new THREE.Mesh(spriteGeom(cvs.width, cvs.height), spriteMat(t));
+    const t = tex(cvs); const mesh = new THREE.Mesh(spriteGeom(cvs.width, cvs.height), spriteMat(t, lean < 1));   // lying on the ground (puddles, rings): an ordinary depth test
     mesh.scale.setScalar(scale); mesh.castShadow = shadow; mesh.receiveShadow = true; mesh.rotation.x = -lean;
     mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: t, alphaTest: .5 });
     return mesh;
   }
   /** a small thing that must never get lost behind a tree or a house: where something stands in front of it, it shines through */
   function seeThrough(mesh) {
-    const g = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({ map: mesh.material.map, alphaTest: .5, transparent: true, opacity: .6, depthFunc: THREE.GreaterDepth, depthWrite: false, side: THREE.DoubleSide }));
+    const g = new THREE.Mesh(mesh.geometry, flatDepth(new THREE.MeshBasicMaterial({ map: mesh.material.map, alphaTest: .5, transparent: true, opacity: .6, depthFunc: THREE.GreaterDepth, depthWrite: false, side: THREE.DoubleSide })));
     g.renderOrder = 5; g.raycast = () => { }; mesh.add(g); return mesh;
   }
   const blobGeo = new THREE.CircleGeometry(.5, 16); blobGeo.rotateX(-Math.PI / 2);
