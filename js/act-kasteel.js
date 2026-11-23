@@ -3,8 +3,7 @@
 // horn: it opens, sings its note, and its colour rises into the sky. When all six are open the rainbow is whole: that is
 // the party (quest.js `bloom`, saved first, shown after). Nothing can go wrong, and what is open stays open.
 // After the party the garden is a toy: every flower is a note, the dragon on the wall blows hearts.
-// The golden door in the tower leads to the treasure room: a mountain of coins to throw around, and a chest that
-// holds three real coins every day.
+// The golden door in the tower leads back into the castle hall (world-rooms.js), where the coins and the chest are now.
 import * as ART from './art.js';
 import * as Q from './quest.js';
 export const meta = { id: 'kasteel', title: 'Kasteel' };
@@ -105,7 +104,7 @@ export function open(root, api) {
   st.canvas.addEventListener('pointerdown', e => {
     const p = st.toLocal(e); if (doors < 1) { doors = Math.max(doors, .7); return; }
     if (fade > .5) return; if (room === 'schat') return tapTreasure(p);
-    if (p.x < 28 && p.y > 58 && p.y < 98) { sfx.pop(); hero.job = { door: 'schat' }; hero.to = 16; return; }
+    if (p.x < 28 && p.y > 58 && p.y < 98) { sfx.door(); document.querySelector('#act-close') && document.querySelector('#act-close').click(); return; }   // back into the hall
     for (const f of flowers) if (Math.abs(p.x - f.x) < 13 && p.y > f.y - 34 && p.y < f.y + 6) return tapFlower(f);
     if (Math.abs(p.x - dragon.x) < 14 && Math.abs(p.y - (dragon.y - 8)) < 14) { dragon.hop = 1; sfx.boing(); for (let k = 0; k < 3; k++) setTimeout(() => heart(dragon.x - 10 - k * 5, dragon.y - 10), k * 140); return; }
     if (Math.abs(p.x - hero.x) < 22 && p.y > hero.y - 34) { hero.hop = 1; sfx.sparkle(); heart(hero.x, hero.y - 30); return; }

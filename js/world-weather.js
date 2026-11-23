@@ -63,7 +63,8 @@ export function createWeather(ctx) {
     if (on && !snowMap) {
       const src = ctx.groundCanvas, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0);
       const img = x.getImageData(0, 0, c.width, c.height), d = img.data;
-      for (let i = 0; i < d.length; i += 4) { const r = d[i], g = d[i + 1], b = d[i + 2]; if (b > r + 25 && b >= g) continue; const k = .62 + ((i >> 2) * 2654435761 % 7) * .015; d[i] = r + (244 - r) * k; d[i + 1] = g + (248 - g) * k; d[i + 2] = b + (255 - b) * k; }
+      const stop = MAP.OUT_H * (c.height / MAP.H) * c.width * 4;   // only the islands: no snow in the cave or the castle hall
+      for (let i = 0; i < stop; i += 4) { const r = d[i], g = d[i + 1], b = d[i + 2]; if (b > r + 25 && b >= g) continue; const k = .62 + ((i >> 2) * 2654435761 % 7) * .015; d[i] = r + (244 - r) * k; d[i + 1] = g + (248 - g) * k; d[i + 2] = b + (255 - b) * k; }
       x.putImageData(img, 0, 0); snowMap = ctx.tex(c, false); snowMap.colorSpace = sunMap.colorSpace; snowMap.anisotropy = sunMap.anisotropy; snowMap.minFilter = sunMap.minFilter; snowMap.generateMipmaps = true;
     }
     const want = on ? snowMap : sunMap; if (ctx.groundMesh.material.map !== want) { ctx.groundMesh.material.map = want; ctx.groundMesh.material.needsUpdate = true; }
@@ -83,10 +84,11 @@ export function createWeather(ctx) {
     /** she jumped: a pile under her feet goes flying */
     stomp() { for (const p of piles) if (p.m && Math.hypot(p.x - kid.pos.x, p.z - kid.pos.z) < .9) kick(p, true); },
     update(dt, time, active) {
-      const cx = kid.pos.x, cz = kid.pos.z;
+      const cx = kid.pos.x, cz = kid.pos.z, inside = cz >= MAP.ROCK_Z;   // indoors it does not rain
+      rain.visible = wx === 'regen' && !inside; snow.visible = wx === 'sneeuw' && !inside;
       if (wx === 'regen') { for (let i = 0; i < N; i++) { const s = seeds[i]; s.y -= dt * 14 * s.s; if (s.y < 0) { s.y += 9; s.x = rnd(-12, 12); s.z = rnd(-9, 7); } const x = cx + s.x, z = cz + s.z; pos.set([x, s.y, z, x - .03, s.y + .45, z], i * 6); } geo.attributes.position.needsUpdate = true; }
       if (wx === 'sneeuw') { for (let i = 0; i < N; i++) { const s = seeds[i]; s.y -= dt * 1.1 * s.s; if (s.y < 0) { s.y += 9; s.x = rnd(-12, 12); s.z = rnd(-9, 7); } fpos.set([cx + s.x + Math.sin(time * s.s + s.p) * .4, s.y, cz + s.z], i * 3); } fgeo.attributes.position.needsUpdate = true; }
-      if (wx === 'herfst' && active && (leafT -= dt) < 0) { leafT = rnd(.25, .6); const x = cx + rnd(-8, 8), z = cz + rnd(-6, 4); ctx.life.bit(ART.leaf(2 + Math.floor(Math.random() * 2) % 3), x, 4, z, { vy: 0, g: .6, sway: rnd(2, 4), spin: rnd(-2, 2), life: 6 }); }
+      if (wx === 'herfst' && active && !inside && (leafT -= dt) < 0) { leafT = rnd(.25, .6); const x = cx + rnd(-8, 8), z = cz + rnd(-6, 4); ctx.life.bit(ART.leaf(2 + Math.floor(Math.random() * 2) % 3), x, 4, z, { vy: 0, g: .6, sway: rnd(2, 4), spin: rnd(-2, 2), life: 6 }); }
       if (man.hatT > 0 && (man.hatT -= dt) <= 0) setMan();
       if (man.wob > 0) { man.wob = Math.max(0, man.wob - dt * 1.6); man.m.rotation.z = Math.sin(man.wob * 22) * .12 * man.wob; }
       if (active && !ctx.mount()) for (const p of piles) if (p.m && kid.moving && kid.hop <= 0 && Math.hypot(p.x - cx, p.z - cz) < .55) kick(p, false);   // walking into a pile

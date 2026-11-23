@@ -123,15 +123,15 @@ export function createHud(getWorld) {
     const el = document.createElement('div'); el.className = 'book kaart';
     el.innerHTML = `<div class="book-head"><h3>Kaart</h3><button class="x" data-close aria-label="Sluiten">✕</button></div><div class="kaart-map"></div>`;
     const box = el.querySelector('.kaart-map'), src = world.groundCanvas, M = world.M, S = 6;
-    const cv = document.createElement('canvas'); cv.width = MAP.W * S; cv.height = MAP.H * S; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, cv.width, cv.height);
+    const cv = document.createElement('canvas'); cv.width = MAP.W * S; cv.height = MAP.OUT_H * S; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, src.width, src.height * MAP.OUT_H / MAP.H, 0, 0, cv.width, cv.height);   // only the islands, not the rooms under the rock
     // the sea, and roofs so the map reads at a glance
-    for (let tz = 0; tz < MAP.H; tz++) for (let tx = 0; tx < MAP.W; tx++) if (M.ground[M.I(tx, tz)] === MAP.SE) for (let py = 0; py < S; py += 2) for (let px = 0; px < S; px += 2) { x.fillStyle = ((tx * S + px >> 1) + (tz * S + py >> 1) * 3) % 11 === 0 ? '#BFEFFF' : '#5AB4E6'; x.fillRect(tx * S + px, tz * S + py, 2, 2); }
+    for (let tz = 0; tz < MAP.OUT_H; tz++) for (let tx = 0; tx < MAP.W; tx++) if (M.ground[M.I(tx, tz)] === MAP.SE) for (let py = 0; py < S; py += 2) for (let px = 0; px < S; px += 2) { x.fillStyle = ((tx * S + px >> 1) + (tz * S + py >> 1) * 3) % 11 === 0 ? '#BFEFFF' : '#5AB4E6'; x.fillRect(tx * S + px, tz * S + py, 2, 2); }
     const roof = (x0, z0, w, d, col) => { x.fillStyle = '#2B1E3A'; x.fillRect(x0 * S - 1, z0 * S - 1, w * S + 2, d * S + 2); x.fillStyle = col; x.fillRect(x0 * S, z0 * S, w * S, d * S); };
     const RC = { stal: '#7A4A3A', atelier: '#4A6FB8', bakkerij: '#D16A93', huisje: '#E8616B', kermis: '#E85D75' };
     for (const [id, h] of Object.entries(MAP.HOUSES)) { const [x0, z0, x1, z1] = MAP.houseRect(h); roof(x0, z0, x1 - x0 + 1, z1 - z0 + 1, RC[id]); }
     roof(MAP.CASTLE.x, MAP.CASTLE.z, MAP.CASTLE.w, MAP.CASTLE.d, '#B9B2CF');
     box.appendChild(cv);
-    const at = (el2, tx, tz) => { el2.style.left = tx / MAP.W * 100 + '%'; el2.style.top = tz / MAP.H * 100 + '%'; box.appendChild(el2); };
+    const at = (el2, tx, tz) => { const rm = tz >= MAP.ROCK_Z && MAP.roomAt(Math.floor(tx), Math.floor(tz)); if (rm) [tx, tz] = MAP.ROOMS[rm].out; el2.style.left = tx / MAP.W * 100 + '%'; el2.style.top = tz / MAP.OUT_H * 100 + '%'; box.appendChild(el2); };   // inside a room: shown at its door
     let close = null;
     const pin = (label, icon, tx, tz, go, say) => {
       const b = document.createElement('button'); b.className = 'kaart-pin'; b.setAttribute('aria-label', label); b.appendChild(fit(icon, 22)); const s = document.createElement('span'); s.textContent = label; b.appendChild(s);

@@ -13,6 +13,7 @@ import { createPlay } from './world-play.js';
 import { createLife } from './world-life.js';
 import { createToys } from './world-toys.js';
 import { createWeather } from './world-weather.js';
+import { createRooms } from './world-rooms.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -55,7 +56,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const M = MAP.buildMap({ seed });
   const { ground, block, trees } = M, LANTERNS = MAP.LANTERNS;
   const I = (x, z) => z * W + x, inb = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
-  const doors = new Map(BUILDINGS.map(b => [I(b.door[0], b.door[1]), b]));
+  const doors = new Map(BUILDINGS.filter(b => !b.castle).map(b => [I(b.door[0], b.door[1]), b]));   // the castle gate is a way into the hall (MAP.ROOMS), see portal()
   const footprint = new Map();
   for (const b of BUILDINGS) { const [x0, z0, x1, z1] = rectOf(b); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) footprint.set(I(x, z), b); }
   const rng = rngf(20251122);
@@ -558,7 +559,23 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const [x, z] of near) if (walkTo(x, z, null, null, true)) { after = then; return true; }
     return !deep && walkTo(ox, oz);
   }
-  function arrive(b) { setMount(null, true); target = null; after = null; kid.path = []; onEnter && onEnter(b.id); }
+  function arrive(b) { if (b.castle) { target = null; after = null; kid.path = []; goThrough(MAP.ROOMS.hal.door); return; } setMount(null, true); target = null; after = null; kid.path = []; onEnter && onEnter(b.id); }
+  /* ---------------- doors to the rooms (MAP.ROOMS): stepping on one of these tiles takes her through ---------------- */
+  const fadeEl = document.createElement('div'); fadeEl.style.cssText = 'position:fixed;inset:0;background:#120D16;opacity:0;pointer-events:none;transition:opacity .22s;z-index:5'; document.body.appendChild(fadeEl);
+  let moving = false;
+  function goThrough(tile) {
+    if (moving) return false; const R = MAP.ROOMS, i = I(tile[0], tile[1]);
+    let to = null, dx = 0, dz = 1, then = null;
+    for (const [k, r] of Object.entries(R)) {
+      if (i === I(...r.door)) { to = [r.in[0] + .5, r.in[1] + .5]; dx = 1; dz = 0; if (k === 'grot') then = () => speak('Wat is het hier donker! Wat zou er in de grot zijn?'); }
+      else if (i === I(...r.exit)) { to = r.out; dz = 1; }
+      else if (r.garden && i === I(...r.garden)) { kid.path = []; target = null; after = null; setMount(null, true); onEnter && onEnter('kasteel'); return true; }
+    }
+    if (!to) return false;
+    moving = true; kid.path = []; target = null; after = null; keys.clear(); fadeEl.style.opacity = 1; sfx.door();
+    setTimeout(() => { placeAt(to[0], to[1], dx, dz); if (mount === 'uni') uni.pos.copy(kid.pos); fadeEl.style.opacity = 0; moving = false; then && then(); }, 240);
+    return true;
+  }
   /** how she sits: on the unicorn she is drawn behind its body, a little towards the tail, so her legs disappear behind its back */
   function seat() { const u = mount === 'uni', sc = uni.baseScale || 1; kid.lift = u ? .36 * sc : mount === 'fiets' ? .34 : 0; kid.zBias = u ? -.03 : .06; kid.dx = u ? -.2 * sc : 0; }
   /** climb onto the unicorn ('uni') or the bike ('fiets'), or get off (null) */
@@ -619,6 +636,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const life = ctx.life = createLife(ctx);
   toys = ctx.toys = createToys(ctx);
   const weather = ctx.weather = createWeather(ctx);
+  const rooms = ctx.rooms = createRooms(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -766,6 +784,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     post.uniforms.night.value = t;
   }
   applyNight(nightT);
+  /** inside a room the sun and the sky fade away and the torches light it (the cave darker than the castle hall) */
+  let inT = 0, inDark = .8;
+  function stepIndoor(dt) {
+    const where = rooms.where(), want = where ? 1 : 0; if (where) inDark = where === 'grot' ? .82 : .55;
+    if (!want && inT === 0) return;
+    inT += Math.sign(want - inT) * Math.min(Math.abs(want - inT), dt * 4);
+    applyNight(nightT); const k = 1 - inDark * inT;
+    hemi.intensity *= k; sun.intensity *= 1 - Math.min(1, inDark * 1.15) * inT; for (const l of rooms.lights) l.intensity = 9 * inT;
+    post.uniforms.night.value = Math.max(nightT, inT * inDark * .5);
+  }
 
   /* ---------------- loop ---------------- */
   let paused = false, last = performance.now(), time = 0; const perf = { t: 0, n: 0 };
@@ -822,7 +850,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
     const ti = I(Math.floor(kid.pos.x), Math.floor(kid.pos.z));
-    if (ti !== lastTile) lastTile = ti;
+    if (ti !== lastTile) { lastTile = ti; if (interactive && !paused) goThrough([ti % W, Math.floor(ti / W)]); }
     { const b = doors.get(ti); if (b && interactive && !paused && kz < 0 && !kx) { keys.clear(); arrive(b); } }
     if (!kid.path.length && target) { const b = target; target = null; if (I(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === I(b.door[0], b.door[1])) arrive(b); }
     if (kid.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
@@ -848,7 +876,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); rooms.update(dt, time, interactive && !paused && !busy); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -871,7 +899,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -880,7 +908,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     pause(p) { paused = p; labelsEl.style.visibility = p ? 'hidden' : ''; renderer.setAnimationLoop(p ? null : frame); if (!p) { last = performance.now(); perf.t = 0; perf.n = 0; } },
     setInteractive(v) { interactive = v; },
     setNight(n, instant) { nightTarget = n ? 1 : 0; if (instant) { nightT = nightTarget; applyNight(nightT); } },
-    exitBuilding(id) { const b = BUILDINGS.find(b => b.id === id); if (b) placeAt(b.door[0] + .5, b.door[1] + 1.5); },
+    exitBuilding(id) { if (id === 'kasteel') { const g = MAP.ROOMS.hal.garden; placeAt(g[0] + .5, g[1] + 2.5); return; } const b = BUILDINGS.find(b => b.id === id); if (b) placeAt(b.door[0] + .5, b.door[1] + 1.5); },
     refreshUnicorn,
     /** walk to a tile, or to a building's door (and go in) */
     walkToTile(x, z) { target = null; return walkTo(x, z); },

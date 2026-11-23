@@ -1,7 +1,7 @@
 // Art for the bigger island: ground painter, props, collectibles, eggs, baby unicorn and unicorn looks.
 // Builds on pixel.js (same conventions: everything returns a <canvas>, 1px outline added automatically).
 import * as PX from './pixel.js';
-import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, POND } from './map.js';
+import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, CV, HF, RK, POND, ROOMS } from './map.js';
 
 const { sprite, gridSprite, mix, rgb } = PX;
 const EYE = '#2B1E3A';
@@ -51,6 +51,12 @@ export function paintGround(M) {
       else if (t === SA) col = r() < .04 ? (r() < .5 ? '#DCC38C' : '#FFF6D8') : one(sandC);
       else if (t === CO) { const row = Math.floor((tz * U + py) / 8), bx = (tx * U + px + (row % 2) * 4) % 8, by = py % 8; col = (bx === 0 || by === 0) ? '#8F8AA3' : ['#CFCAE0', '#BDB7D2', '#DAD6E8'][(Math.floor((tx * U + px + (row % 2) * 4) / 8) * 5 + row * 3) % 3]; if (bx === 1 && by === 1) col = '#EDEAF6'; }
       else if (t === SO) { const by = py % 8; col = by < 2 ? '#6E4A32' : by === 2 ? '#A07250' : (r() < .1 ? '#9A6B48' : '#8B5E3C'); }
+      else if (t === CV) { const n = (tx * 13 + tz * 7 + Math.floor(px / 5) * 3 + Math.floor(py / 5) * 5) % 9; col = r() < .05 ? '#7C6A5E' : n < 2 ? '#4E4350' : n < 5 ? '#5A4E5C' : '#635666'; if (py % 5 === 0 && (px + tz) % 7 < 3) col = '#3F3646'; }
+      else if (t === HF) {                                                                                     // stone tiles, and a red carpet from the door to the garden
+        const carpet = Math.abs(tx + .5 - (ROOMS.hal.in[0] + .5)) < 1.5 && (px > 2 || tx >= ROOMS.hal.in[0]) && (px < 13 || tx <= ROOMS.hal.in[0]);
+        if (carpet) col = (px === 3 && tx === ROOMS.hal.in[0] - 1) || (px === 12 && tx === ROOMS.hal.in[0] + 1) ? '#F7C548' : (py + px) % 7 === 0 ? '#C23A4E' : '#D9475C';
+        else { const bx = (px + (tz % 2) * 8) % 16, by = py % 16; col = (bx === 0 || by === 0) ? '#8C8199' : ((tx + tz) % 2 ? '#D5CCE0' : '#C6BCD4'); if (r() < .03) col = '#E4DCEC'; } }
+      else if (t === RK) col = r() < .08 ? '#2A2230' : '#221B28';
       else if (t === BW) { const by = py % 4; col = by === 0 ? '#8A5A3B' : ['#CC9A68', '#C18F5C', '#D6A674'][(tx * 3 + Math.floor(py / 4) + Math.floor(px / 8)) % 3]; if (by === 2 && (px === 1 || px === 14)) col = '#7A4E33'; }
       put(tx * U + px, tz * U + py, col);
     }
@@ -196,11 +202,34 @@ export const bike = () => cached('bike', () => sprite([
 ], { k: '#3D2B4F', p: '#FF5E9C', P: '#E0457F', g: '#C3C8D8', s: '#7A4A2A', y: '#F2C14E', Y: '#D99A2B' }));
 export const ball = (beach = false) => cached('ball' + beach, () => { const n = beach ? 11 : 8, c = beach ? ['#FF5E9C', '#FFFFFF', '#4DABF7', '#FFFFFF', '#FFD43B', '#FFFFFF'] : ['#E8484A', '#FFFFFF', '#E8484A', '#FFFFFF']; return gridSprite(n, n, (x, y) => { const dx = x + .5 - n / 2, dy = y + .5 - n / 2; if (dx * dx + dy * dy > (n / 2) ** 2) return null; if (dx * dx + dy * dy < 1.2) return beach ? '#FFFFFF' : '#FFD43B'; const a = Math.atan2(dy, dx) + Math.PI; return c[Math.floor(a / (Math.PI * 2) * c.length) % c.length]; }); });
 
+/* ================= the cave and the castle hall ================= */
+const druipsteen = seed => cached('druip' + seed % 3, () => { const h = 18 + (seed % 3) * 4, w = 12; return gridSprite(w, h, (x, y) => { const half = (y + 1) / h * (w / 2) * (seed % 2 ? 1 : .85); if (Math.abs(x + .5 - w / 2) > half) return null; if (y === h - 1 && (x + seed) % 3 === 0) return null; const v = x + .5 - w / 2; return v < -half * .3 ? '#8C7E8E' : v < half * .4 ? '#6E6272' : '#564B5C'; }); });
+const KRISTAL = [['#9FE8FF', '#5EC4F0', '#E8FBFF'], ['#FFB3E6', '#E86AC0', '#FFE8F7'], ['#C9B3FF', '#8C6BE8', '#F0E8FF']];
+const kristal = seed => cached('krist' + seed % 3, () => { const [a, b, c] = KRISTAL[seed % 3]; return gridSprite(14, 16, (x, y) => {
+  for (const [cx, hh, ww] of [[7, 15, 2.6], [3.5, 9, 1.8], [10.5, 11, 1.9]]) { const top = 16 - hh; if (y < top) continue; const half = Math.min(ww, (y - top + 1) * .9); const d = x + .5 - cx; if (Math.abs(d) <= half) return y === top || d < -half * .3 ? c : d < half * .35 ? a : b; }
+  return y > 13 && x > 1 && x < 13 ? '#5A4E5C' : null; }); });
+const harnas = () => cached('harnas', () => sprite([
+  '.....rr.....', '....rr......', '...ssss.....', '..sSSSSs....', '..sS--Ss....', '..sSSSSs....', '...ssss.....', '.ssSSSSss...', 'sSsSSSSsSs..', 'sSsSyySsSs..', 'sSsSSSSsSsk.', '.s.SSSSs.sk.', '...ssss...k.', '...s..s...k.', '..ss..ss..k.', '.bbbbbbbbbb.',
+], { s: '#9FA5BC', S: '#D8DCE8', '-': '#3D3550', r: '#E8484A', y: '#F7C548', k: '#8A5A3B', b: '#6E6272' }));
+const zuil = () => cached('zuil', () => gridSprite(12, 34, (x, y) => { if (y < 3 || y > 30) return x === 0 || x === 11 ? '#B9B0C9' : '#E4DCEC'; if (x < 2 || x > 9) return null; return x === 2 ? '#F2EEF8' : x === 9 ? '#A79DB8' : (x % 3 === 0 ? '#C6BCD4' : '#D5CCE0'); }));
+const muntberg = seed => cached('mberg' + seed % 2, () => { const r = PX.rng(seed + 9); return gridSprite(22, 12, (x, y) => { const d = ((x + .5 - 11) / 11) ** 2 + ((y + .5 - 12) / 11.5) ** 2; if (d > 1) return null; const v = r(); if (v < .08) return seed % 2 && v < .03 ? '#E8484A' : '#FFFFFF'; return v < .35 ? '#FFF3A8' : v < .75 ? '#FFD43B' : '#E0A020'; }); });
+export const schatkist = (open = false) => cached('kist' + open, () => sprite(open ? [
+  '.bbbbbbbbbbbb.', 'bBBBBBBBBBBBBb', 'bKKKKKKKKKKKKb', '.byyyyyyyyyyb.', 'bbyyYyyyYyyybb', 'bBBBBByyBBBBBb', 'bBBBBByyBBBBBb', 'bbbbbbbbbbbbbb', 'bBBBBBBBBBBBBb', 'bbbbbbbbbbbbbb',
+] : [
+  '..............', '..............', '.bbbbbbbbbbbb.', 'bBBBBByyBBBBBb', 'byyyyyyyyyyyyb', 'bBBBBByyBBBBBb', 'bBBBBkyykBBBBb', 'bbbbbbbbbbbbbb', 'bBBBBBBBBBBBBb', 'bbbbbbbbbbbbbb',
+], { b: '#6E3A24', B: '#B5603F', y: '#F7C548', Y: '#FFF3A8', K: '#2A1A1A', k: '#3D2B1F' }));
+export const fakkel = (f = 0) => cached('fakkel' + f % 2, () => sprite(f % 2 ? ['..r..', '.ryr.', '.yYy.', 'rYWYr', '.yYy.', '.bbb.', '..b..', '..b..', '..b..'] : ['.r...', '..ry.', '.yYy.', 'ryWYr', '.yYy.', '.bbb.', '..b..', '..b..', '..b..'], { r: '#E8484A', y: '#FFA94D', Y: '#FFD43B', W: '#FFF3C8', b: '#6E4630' }));
+/** the dark mouth of the cave, painted on the rock face */
+export const grotmond = () => cached('grotmond', () => gridSprite(30, 30, (x, y) => { const dx = x + .5 - 15, d = dx * dx / (11.5 * 11.5) + ((y + .5 - 30) / 27) ** 2; if (d > 1.12) return null; if (d > 1) return (x + y) % 3 ? '#5A4E5C' : '#4A3F4C'; if (y > 26) return '#2E2433'; return d > .8 ? '#1E1722' : '#120D16'; }));
+export const lichtbundel = () => cached('licht', () => gridSprite(20, 48, (x, y) => { const half = 3 + y * .14, d = Math.abs(x + .5 - 10); if (d > half) return null; return (x + Math.floor(y / 3)) % 4 === 0 ? '#FFF8D8' : '#FFF1B0'; }, { outline: false }));
+export const vleermuis = (f = 0) => cached('vleer' + f % 2, () => sprite(f % 2 ? ['w.......w', 'ww.kkk.ww', 'wwwkWkwww', '.wwkkkww.', '...k.k...'] : ['...kkk...', '..wkWkw..', '.wwkkkww.', 'ww.....ww', 'w.......w'], { k: '#4A3F6B', w: '#6E5FA0', W: '#FFE08A' }));
+export const tuinpoort = () => cached('tuinpoort', () => gridSprite(26, 34, (x, y) => { const cx = x + .5 - 13; if (y < 13 && cx * cx + (y - 13) ** 2 > 169) return null; const edge = Math.abs(cx) > 11 || (y < 13 && cx * cx + (y - 13) ** 2 > 120); if (edge) return '#F7C548'; if (Math.abs(cx) < .8) return '#B8862E'; if ((y > 15 && y < 19) && Math.abs(Math.abs(cx) - 4) < 1.5) return '#FFF3A8'; return (Math.floor(cx + 20) % 5 === 0) ? '#D9A43A' : '#EDBF4E'; }));
 const PROPS = {
+  druipsteen, kristal, harnas, zuil, muntberg,
   bramble, boulder, plas, rainbowtree, gat, regenboogbrug,
   tree: s => PX.treeRound(s), pine: s => PX.pine(s), bush: s => PX.bush(s), palm, rock, apple: appleTree, oak, stump, log, fern, rose, hedge, sign, scarecrow, umbrella, sandcastle, boat, statue, flag, trough, hay,
 };
-const SCALE = { rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
+const SCALE = { zuil: 1.1, harnas: 1.15, rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
 export function propArt(kind, seed = 1) { return (PROPS[kind] || PROPS.bush)(seed); }
 export const propScale = kind => SCALE[kind] || 1;
 export { bigMushroom };
