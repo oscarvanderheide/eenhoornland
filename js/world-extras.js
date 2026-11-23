@@ -201,10 +201,19 @@ export function createExtras(ctx) {
   let greeted = false;                                                           // they know her: when she comes to the fence they all come hopping
 
   /* ---------------- the race arch next to the meadow: ride a unicorn against the others (act-race.js) ---------------- */
+  // Nobody has to know a race exists: once there is a unicorn to ride, two others wait at the start line under the arch,
+  // and walking (or riding) through the arch is the start. Before that the arch is just a pretty gate on the path.
+  const race = { armed: true, waiting: [] };
   {
     const [x, z] = MAP.RACE, art = ART.raceArch(), m = makeSprite(art, { lean: .25, scale: 1.2 }); m.position.set(x, 0, z + .3); m.userData.alpha = art; scene.add(m);
     const go = () => { if (Q.raceMounts().length) ctx.onEnter && ctx.onEnter('race'); else { sfx.pop(); bubble(kid, '', Q.quest.stage === 'baby' ? ART.foodItem(Q.quest.kind) : ART.egg(Q.kind())); } };   // no unicorn to ride yet: this is what is missing
-    m.userData.tap = () => { sfx.pop(); if (Math.hypot(x - kid.pos.x, z - kid.pos.z) < 1.8) go(); else ctx.approach(Math.floor(x), Math.floor(z), go); }; pick.push(m);
+    m.userData.tap = () => { sfx.pop(); if (Math.hypot(x - kid.pos.x, z - kid.pos.z) < 1.8) go(); else ctx.walkThen(Math.floor(x), Math.floor(z), () => { race.armed = false; go(); }); }; pick.push(m);
+    race.go = go; race.x = x; race.z = z;
+    // the two rivals of the race (act-race.js EXTRA), waiting on either side of the start
+    [[{ body: '#DCCBFA', mane: '#4FA3F7', horn: '#F7C548' }, -1.25], [{ body: '#FFF0A6', mane: '#FF7EB6', horn: '#D3DAE6' }, 1.25]].forEach(([look, dx]) => {
+      const a = ART.uniSprite(look, 'idle', false, { baby: true }), s = makeSprite(ART.hd(a), { lean: .3, scale: .5 }); s.position.set(x + dx, 0, z + .15); if (dx > 0) s.scale.x = -.5; s.visible = false; scene.add(s);
+      s.userData.alpha = ART.hd(a); s.userData.tap = () => { sfx.sparkle(); race.hop = { s, t: 0 }; m.userData.tap(); }; pick.push(s); race.waiting.push(s);
+    });
   }
 
 
@@ -240,6 +249,9 @@ export function createExtras(ctx) {
       for (const o of [star, fruit]) if (o.pos) { o.mesh.position.y = .3 + Math.sin(time * 2.4) * .1; o.mesh.rotation.z = Math.sin(time * 1.6) * .2; const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; }
       for (const sh of shrooms) { if (sh.t < 1) { sh.t = Math.min(1, sh.t + dt * 2.6); const q = Math.sin(sh.t * Math.PI * 3) * .3 * (1 - sh.t); sh.m.scale.set(1 + q, 1 - q, 1); } const near = active && Math.hypot(sh.x - kid.pos.x, sh.z - kid.pos.z) < .75; if (near && !sh.near) sh.play(); sh.near = near; }
       { const near = Math.abs(kid.pos.x - penMid.x) < 7 && Math.abs(kid.pos.z - penMid.z) < 5; if (near && !greeted && herd.length) { sfx.sparkle(); herd.forEach((c, i) => setTimeout(() => { c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1; if (i < 2) bubble(c, '', PX.heart()); }, i * 130)); } greeted = near; }
+      { const can = Q.raceMounts().length > 0; for (const s of race.waiting) { s.visible = can; s.position.y = can && race.hop && race.hop.s === s ? Math.sin(Math.min(1, race.hop.t) * Math.PI) * .3 : 0; } if (race.hop && (race.hop.t += dt * 2.5) > 1) race.hop = null;
+        const under = Math.floor(kid.pos.x) === Math.floor(race.x) && Math.floor(kid.pos.z) === Math.floor(race.z);
+        if (!under) race.armed = true; else if (active && race.armed && can) { race.armed = false; kid.path = []; race.go(); } }
       if (!active) return;
       for (let i = items.length - 1; i >= 0; i--) { const it = items[i]; if (Math.abs(it.x - kid.pos.x) < .75 && Math.abs(it.z - kid.pos.z) < .75) pickUp(it); }
       if (eggPos) {

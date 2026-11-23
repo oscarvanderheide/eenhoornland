@@ -91,7 +91,7 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -136,7 +136,6 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   solid(STALL.x, STALL.z, STALL.x + STALL.w - 1, STALL.z);       // the stall
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
-  block[I(Math.floor(RACE[0]), Math.floor(RACE[1]))] = 1;         // the race arch
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) { if (ground[I(x, z)] === SA) ground[I(x, z)] = GR; if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1; }
   const structural = block.slice();                               // everything that is not vegetation
 
@@ -197,9 +196,9 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
   const puddles = [];                                             // rain puddles block nothing: they are for jumping in (world-toys.js)
   const low = (x, z, kind) => { if (!free(x, z) || keepSet.has(I(x, z))) return; if (kind === 'plas') { puddles.push([x, z]); keepSet.add(I(x, z)); return; } obstacles.push({ kind, type: 'low', x, z }); block[I(x, z)] = LOW; };
   low(40, 27, 'log'); low(41, 27, 'log');                         // on the bridge to the forest: the first jump
-  low(34, 46, 'plas'); low(22, 37, 'plas');                         // two in the village, where the game starts
-  for (const [x, z] of pick(4, (x, z, g, zn) => g === PA && zn !== 'dorp' && open4(x, z), 7)) low(x, z, zone[I(x, z)] === 'bos' ? 'log' : 'plas');
-  for (const [x, z] of pick(5, (x, z, g, zn) => plain(g) && zn !== 'dorp' && !rim[I(x, z)] && !inPen(x, z) && open4(x, z), 6)) low(x, z, ground[I(x, z)] === GR ? 'plas' : 'log');
+  low(22, 37, 'plas');                                            // one puddle in the whole world, in the village: more is just clutter
+  for (const [x, z] of pick(3, (x, z, g, zn) => g === PA && zn === 'bos' && open4(x, z), 7)) low(x, z, 'log');
+  for (const [x, z] of pick(3, (x, z, g, zn) => g === FO && !rim[I(x, z)] && open4(x, z), 6)) low(x, z, 'log');
   const loose = (kind, n, pred) => { for (const [x, z] of pick(n, (x, z, g, zn) => plain(g) && pred(zn) && !inPen(x, z) && !nearBusy(x, z, 1), 5)) { obstacles.push({ kind, type: 'break', tool: TOOL_FOR[kind], x, z, gate: false, g: obstacles.length }); block[I(x, z)] = BREAK; } };
   loose('bramble', 4, zn => zn === 'bos' || zn === 'wei'); loose('boulder', 4, zn => zn === 'strand' || zn === 'kasteel' || zn === 'eiland');
 

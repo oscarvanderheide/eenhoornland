@@ -694,7 +694,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const keys = new Set();
   const midJump = () => !!(kid.path[0] && kid.path[0].jump);
   addEventListener('keydown', e => {
-    if (!interactive || paused || busy) return;
+    if (!interactive || paused) return;
+    const arrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key);
+    if (busy) { if (arrow && play.aboard()) { keys.add(e.key.toLowerCase()); e.preventDefault(); } return; }   // in the boat the keys steer it
     if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
     if (e.key === 'Enter' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!e.repeat) grabKey(); return; }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
@@ -799,7 +801,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     const speed = mount === 'uni' ? 5.4 : mount === 'fiets' ? 4.8 : 3.4;
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
     const prev = kid.pos.clone();
-    if ((kx || kz) && !midJump()) {
+    if (busy) { if (play.aboard()) play.drive(kx, kz, dt); }
+    else if ((kx || kz) && !midJump()) {
       if (kx) kid.face = kx;                                                      // with the keys too she (and whoever carries her) looks where she goes
       const l = Math.hypot(kx, kz), sp = speed * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
       const stuck = !freeAt(kid.pos.x, kid.pos.z); // if somehow overlapping, let her walk out
