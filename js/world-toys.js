@@ -111,7 +111,16 @@ export function createToys(ctx) {
     sfx.click(); ctx.showMarker(x + .5, z + .5); ctx.approach(x, z, () => build(x, z)); return true;
   }
   /** the jump button: jumping next to a sand tower flattens it (and nobody minds) */
+  /* ================= everywhere: rain puddles. Walk through one and it splashes a little, jump in it and it splashes a lot ================= */
+  const pools = M.puddles.map(([x, z]) => ({ x: x + .5, z: z + .5, m: sprite(ART.propArt('plas'), x + .5, z + .94, { lean: Math.PI / 2, shadow: false, y: .02 }), in: false }));
+  for (const p of pools) tappable(p.m, () => ctx.walkToTile(Math.floor(p.x), Math.floor(p.z)));
+  function splash(p, big) {
+    sfx.splash(); pop(p, big ? .45 : .2); if (big) { sfx.bubble(); burst(v3(p.x, .2, p.z), 6); }
+    for (let i = 0; i < (big ? 16 : 5); i++) bit(ART.drop(), p.x + rnd(-.35, .35), .12, p.z + .12, { vx: rnd(-1, 1) * (big ? 3.2 : 1.4), vy: rnd(1.5, big ? 5.5 : 2.6), g: 10, life: big ? 1 : .6 });
+    if (big) for (const a of animals) if (!a.held && !a.fly && !a.cart && Math.hypot(a.pos.x - p.x, a.pos.z - p.z) < 3.5) { a.hop = 1; a.face = a.pos.x >= p.x ? 1 : -1; }   // whoever stands close gets wet and jumps
+  }
   function stomp() {
+    for (const p of pools) if (near(p.x, p.z, .75)) { setTimeout(() => splash(p, true), 330); return true; }
     for (const t of towers.values()) if (near(t.x + .5, t.z + .5, 1.15)) {
       setTimeout(() => {
         if (!Q.stompSand(t.x, t.z)) return; syncSand(); sfx.whoosh(); sfx.brush();
@@ -258,6 +267,7 @@ export function createToys(ctx) {
       /* dandelions grow back */
       for (const d of puffs) { if (!d.full && (d.back -= dt) < 0 && !near(d.x, d.z, 4)) { d.full = true; setArt(d.m, ART.pluis(true)); } else if (active && d.full && near(d.x, d.z, .6)) blow(d); }
       /* paint */
+      if (active) for (const p of pools) { const inside = near(p.x, p.z, .6); if (inside && !p.in) splash(p, false); p.in = inside; }
       if (active) for (const p of puddles) { const inside = near(p.x, p.z, .62); if (inside && !p.in) stepIn(p); p.in = inside; }
       if (paint && paint.left > 0 && active && kid.hop <= 0) { const dx = kid.pos.x - lastPrint.x, dz = kid.pos.z - lastPrint.z, gap = ctx.mount() === 'fiets' ? .17 : .4; if (dx * dx + dz * dz > gap * gap) { stamp(dx, dz); lastPrint.copy(kid.pos); } } else if (!paint || paint.left <= 0) lastPrint.copy(kid.pos);
       for (let i = 0; i < NP; i++) { const p = printAt[i]; if (!p) continue; const age = clock - p.born, s = age < 40 ? 1 : Math.max(0, 1 - (age - 40) / 6); pd.position.set(p.x, .021, p.z); pd.rotation.set(0, p.a, 0); pd.scale.setScalar(Math.max(.001, s)); pd.updateMatrix(); prints.setMatrixAt(i, pd.matrix); if (s <= 0) printAt[i] = null; }

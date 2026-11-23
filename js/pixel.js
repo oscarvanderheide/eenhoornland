@@ -92,15 +92,15 @@ const FENNA_LEGS = {
   w2: ['....ss..ss....', '....ss..pp....', '....pp........'],
   jump: ['...ss....ss...', '..pp......pp..', '..............'],
 };
-const ANNA_TOP = [
+const ANNA_TOP = [   // a ponytail on her left (our right), held by a yellow tie
   '...hhhhhh...',
   '..hhhhhhhh..',
-  'yhhhhhhhhhhy',
-  'hhhhhhhhhhhh',
-  'hhsskssksshh',
-  'hhsskssksshh',
-  '.hcssssssch.',
-  '..sssmmsss..',
+  '.hhhhhhhhhh.',
+  '.hhhhhhhhhyh',
+  '.hsskssksshh',
+  '.hsskssksshh',
+  '..cssssssc.h',
+  '..sssmmsss.h',
   '...ssssss...',
   '...dddddd...',
   '..sddyydds..',

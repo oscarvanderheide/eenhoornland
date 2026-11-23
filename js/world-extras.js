@@ -23,13 +23,13 @@ export function createExtras(ctx) {
     const inst = shadowed(new THREE.InstancedMesh(new THREE.BoxGeometry(.16, .8, .16), white, posts.length)); const d = new THREE.Object3D();
     posts.forEach(([x, z], i) => { d.position.set(x, .4, z); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); }); scene.add(inst);
     const rail = (x0, z0, x1, z1) => { for (const y of [.3, .58]) { const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1 - x0) + .08, .09, Math.abs(z1 - z0) + .08), white)); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); scene.add(m); } };
-    const a = P.x0 + .5, b = P.x1 + .5, n = P.z0 + .5, s = P.z1 + .5, g0 = Math.min(...P.gate.map(g => g[1])), g1 = Math.max(...P.gate.map(g => g[1]));
-    rail(a, n, b, n); rail(a, s, b, s); rail(b, n, b, s); rail(a, n, a, g0 - .5); rail(a, g1 + 1.5, a, s);
-    // gate arch with a heart
+    const a = P.x0 + .5, b = P.x1 + .5, n = P.z0 + .5, s = P.z1 + .5, g0 = Math.min(...P.gate.map(g => g[0])), g1 = Math.max(...P.gate.map(g => g[0]));
+    rail(a, s, b, s); rail(a, n, a, s); rail(b, n, b, s); rail(a, n, g0 - .5, n); rail(g1 + 1.5, n, b, n);
+    // gate arch with a heart: it stands open, this is where the unicorns of earlier adventures live
     const pink = lam('#FF7EB6');
-    for (const z of [g0 - .5, g1 + 1.5]) {
-      const p = shadowed(new THREE.Mesh(new THREE.BoxGeometry(.24, 1.25, .24), pink)); p.position.set(a, .625, z); scene.add(p);
-      const heart = makeSprite(PX.heart(), { lean: .2, shadow: false, scale: 1.1 }); heart.position.set(a, 1.25, z + .02); scene.add(heart);
+    for (const x of [g0 - .5, g1 + 1.5]) {
+      const p = shadowed(new THREE.Mesh(new THREE.BoxGeometry(.24, 1.25, .24), pink)); p.position.set(x, .625, n); scene.add(p);
+      const heart = makeSprite(PX.heart(), { lean: .2, shadow: false, scale: 1.1 }); heart.position.set(x, 1.25, n + .02); scene.add(heart);
     }
   }
 
@@ -69,7 +69,8 @@ export function createExtras(ctx) {
       const fl = makeSprite(pennant, { lean: 0, shadow: false, scale: 1.1 }); fl.position.set(x, hT + 1.6, z); g.add(fl);
     }
     // tap the castle and somebody looks out of a window (world-toys.js)
-    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.tap = h => ctx.toys && ctx.toys.peek(h); pick.push(o); } });
+    // the wall with the gate is the way in; tap a tower or the roof and somebody looks out (world-toys.js)
+    g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { if (o === walls) o.userData.building = ctx.castle; else o.userData.tap = h => ctx.toys && ctx.toys.peek(h); pick.push(o); } });
     scene.add(g);
   }
 
@@ -160,7 +161,7 @@ export function createExtras(ctx) {
   // Both only lie there while they are wanted. The star flies to the egg, the egg shakes, and out comes the unicorn.
   const glowAt = (col) => { const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); g.visible = false; scene.add(g); return g; };
   const star = { mesh: makeSprite(ART.starItem(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFF1B0'), pos: null }, fruit = { mesh: makeSprite(ART.fruit(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFD0F0'), pos: null };
-  for (const o of [star, fruit]) { o.mesh.material = o.mesh.material.clone(); o.mesh.material.emissiveIntensity = .8; o.mesh.visible = false; scene.add(o.mesh); }
+  for (const o of [star, fruit]) { o.mesh.material = o.mesh.material.clone(); o.mesh.material.emissiveIntensity = .8; o.mesh.visible = false; ctx.seeThrough(o.mesh); scene.add(o.mesh); }
   let hatching = false;
   const starSpot = () => M.starSpots[Q.quest.spot % M.starSpots.length];
   function syncGoals() {
@@ -181,7 +182,7 @@ export function createExtras(ctx) {
   }
 
   /* ---------------- the unicorn meadow ---------------- */
-  const P = MAP.PEN, penHome = [P.x0 + 1, P.z0 + 1, P.x1 - 1, P.z1 - 1], gate = new THREE.Vector3(P.x0 + .5, 0, (P.gate[0][1] + P.gate[1][1] + 1) / 2);
+  const P = MAP.PEN, penHome = [P.x0 + 1, P.z0 + 1, P.x1 - 1, P.z1 - 1], gate = new THREE.Vector3((P.gate[0][0] + P.gate[1][0] + 1) / 2, 0, P.z0 + .5), penMid = new THREE.Vector3((P.x0 + P.x1 + 1) / 2, 0, (P.z0 + P.z1 + 1) / 2);
   let herd = [];
   function removeChar(c) {
     scene.remove(c.g); for (const arr of [chars, animals]) { const i = arr.indexOf(c); if (i >= 0) arr.splice(i, 1); }
@@ -193,20 +194,20 @@ export function createExtras(ctx) {
     list.forEach((u, i) => {
       const b = { baby: true }, f = { idle: ART.uniSprite(u, 'idle', false, b), w1: ART.uniSprite(u, 'w1', false, b), w2: ART.uniSprite(u, 'w2', false, b), blink: ART.uniSprite(u, 'idle', true, b) };
       const c = animal(f, { flippable: true, name: u.name, say: ['Ik ben ' + u.name + '!', 'Hihihi!', 'Kom je spelen?'], sound: 'sparkle', blobW: .9 }, penHome);
-      c.speed = 1.1; if (arriving && i === list.length - 1) c.pos.set(P.x0 + 1.5, 0, gate.z);
+      c.speed = 1.1; if (arriving && i === list.length - 1) c.pos.set(gate.x, 0, P.z0 + 1.5);
       herd.push(c);
     });
   }
-  let party = 0;
-  function deliver() {
-    const name = state.uni.name; if (!Q.weiOpen()) return;
-    ctx.setMount(null, true); kid.hop = 1; if (!Q.deliver()) return;
-    party = 6; sfx.tada(); for (const c of herd) c.hop = 1;
-    bubble(kid, '', ART.bedIcon());
-    speak('Hoera! ' + name + ' woont nu in de eenhoornwei, bij alle vriendjes! Wat een feest! De regenboog maakt de brug weer heel. Het wordt avond: ga maar lekker slapen in je huisje.');
+  let greeted = false;                                                           // they know her: when she comes to the fence they all come hopping
+
+  /* ---------------- the race arch next to the meadow: ride a unicorn against the others (act-race.js) ---------------- */
+  {
+    const [x, z] = MAP.RACE, art = ART.raceArch(), m = makeSprite(art, { lean: .25, scale: 1.2 }); m.position.set(x, 0, z + .3); m.userData.alpha = art; scene.add(m);
+    const go = () => { if (Q.raceMounts().length) ctx.onEnter && ctx.onEnter('race'); else { sfx.pop(); bubble(kid, '', Q.quest.stage === 'baby' ? ART.fruit() : ART.egg(Q.kind())); } };   // no unicorn to ride yet: this is what is missing
+    m.userData.tap = () => { sfx.pop(); if (Math.hypot(x - kid.pos.x, z - kid.pos.z) < 1.8) go(); else ctx.approach(Math.floor(x), Math.floor(z), go); }; pick.push(m);
   }
 
-  /* ---------------- companion ---------------- */
+
   function tapCompanion(c) {
     if (Q.canRide()) { ctx.setMount(ctx.mount() === 'uni' ? null : 'uni'); return; }   // tap her to climb on, tap again to get off
     c.hop = 1; sfx.sparkle(); burst(c.pos, 9, true);
@@ -215,7 +216,7 @@ export function createExtras(ctx) {
   }
   const off = Q.on(type => {
     if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); syncGoals(); }
-    if (type === 'day') syncItems();
+    if (type === 'day') { syncItems(); syncHerd(false); }
     if (type === 'herd') syncHerd(true);
   });
   syncItems(); syncEgg(); syncGoals(); syncHerd(false);
@@ -237,7 +238,7 @@ export function createExtras(ctx) {
       if (eggMesh) { eggMesh.rotation.z = Math.sin(time * 3) * .12; eggGlow.material.opacity = .45 + Math.sin(time * 3) * .25; const s = 1.5 + Math.sin(time * 3) * .25; eggGlow.scale.set(s, s, 1); sparkT -= dt; if (sparkT < 0) { sparkT = .9; burst(eggPos, 2); } }
       for (const o of [star, fruit]) if (o.pos) { o.mesh.position.y = .3 + Math.sin(time * 2.4) * .1; o.mesh.rotation.z = Math.sin(time * 1.6) * .2; const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; }
       for (const sh of shrooms) { if (sh.t < 1) { sh.t = Math.min(1, sh.t + dt * 2.6); const q = Math.sin(sh.t * Math.PI * 3) * .3 * (1 - sh.t); sh.m.scale.set(1 + q, 1 - q, 1); } const near = active && Math.hypot(sh.x - kid.pos.x, sh.z - kid.pos.z) < .75; if (near && !sh.near) sh.play(); sh.near = near; }
-      if (party > 0) { party -= dt; if (Math.floor(party * 2.5) !== Math.floor((party + dt) * 2.5)) { const x = P.x0 + 2 + Math.random() * (P.x1 - P.x0 - 3), z = P.z0 + 1.5 + Math.random() * (P.z1 - P.z0 - 3); burst(new THREE.Vector3(x, 0, z), 7, Math.random() < .5); sfx.sparkle(); for (const c of herd) if (Math.random() < .4) c.hop = 1; } }
+      { const near = Math.abs(kid.pos.x - penMid.x) < 7 && Math.abs(kid.pos.z - penMid.z) < 5; if (near && !greeted && herd.length) { sfx.sparkle(); herd.forEach((c, i) => setTimeout(() => { c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1; if (i < 2) bubble(c, '', PX.heart()); }, i * 130)); } greeted = near; }
       if (!active) return;
       for (let i = items.length - 1; i >= 0; i--) { const it = items[i]; if (Math.abs(it.x - kid.pos.x) < .75 && Math.abs(it.z - kid.pos.z) < .75) pickUp(it); }
       if (eggPos) {
@@ -247,7 +248,6 @@ export function createExtras(ctx) {
       }
       if (star.pos && Q.quest.stage === 'ei' && Math.hypot(star.pos.x - kid.pos.x, star.pos.z - kid.pos.z) < 1.1) startHatch();
       if (fruit.pos && Math.hypot(fruit.pos.x - kid.pos.x, fruit.pos.z - kid.pos.z) < 1.2) feed();
-      if (Q.weiOpen() && uni.g.visible && Math.hypot(gate.x - kid.pos.x, gate.z - kid.pos.z) < 1.6) deliver();
     },
   };
 }

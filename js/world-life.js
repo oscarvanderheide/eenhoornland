@@ -80,7 +80,29 @@ export function createLife(ctx) {
   }
 
   /* ---------------- picking animals up and throwing them ---------------- */
-  function hold(c) { c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
+  function hold(c) { if (carried === c) carried = null; c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
+  // a tap is enough: she walks over, lifts it above her head and carries it. A tap on the animal (or the jump button) throws it,
+  // a tap on her puts it down, getting on the bike drops it in the trailer.
+  let carried = null;
+  const dist = c => Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z);
+  function lift(c) {
+    if (c.fly || c.cart || carried === c) return; if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
+    carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true);
+  }
+  function setDown() {
+    const c = carried; if (!c) return false; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; c.hop = 1; c.wait = 2; sfx.pop();
+    const x = kid.pos.x + .7 * kid.face, ok = c.water ? false : ctx.walkable(Math.floor(x), Math.floor(kid.pos.z)); c.pos.set(ok ? x : kid.pos.x, 0, kid.pos.z + .05); if (c.water) c.lost = true;
+    return true;
+  }
+  function throwIt() { const c = carried; if (!c) return false; carried = null; c.pos.set(kid.pos.x, 0, kid.pos.z); c.lift = 1; toss(c, kid.face * 4.5, rnd(-.6, .6)); kid.hop = .5; return true; }
+  function tapAnimal(c) {
+    if (c.fly || c.cart) return; if (carried === c) return void throwIt();
+    c.path = []; c.wait = 8; c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1;                       // it waits for her
+    if (dist(c) < 1.8) return lift(c);
+    const then = () => { if (dist(c) < 3.6) lift(c); };
+    if (ctx.approach(Math.floor(c.pos.x), Math.floor(c.pos.z), then, true)) return;
+    const t = ctx.nearestWalkable(c.pos.x, c.pos.z); if (!t || !ctx.walkThen(t[0], t[1], then)) (sfx[c.sound] || sfx.pop)();
+  }
   function toss(c, vx, vz) {
     const sp = Math.hypot(vx, vz), max = 9, f = sp > max ? max / sp : 1;
     c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, spin: (vx >= 0 ? -1 : 1) * (4 + sp), bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
@@ -103,10 +125,13 @@ export function createLife(ctx) {
   }
 
   return {
-    dispose() { }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump,
+    dispose() { }, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, carrying: () => carried,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length }),
     update(dt, time, active) {
-      for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held) a.mesh.rotation.z = Math.sin(time * 18) * .18;
+      if (carried && ctx.mount() === 'fiets') { const c = carried; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; ctx.play.tapAnimal(c); }
+      else if (carried && (ctx.mount() || (ctx.toys && ctx.toys.carrying()))) setDown();
+      if (carried) { const c = carried; c.pos.set(kid.pos.x, 0, kid.pos.z + .04); c.face = kid.face; c.lift = Math.min(1.02, c.lift + dt * 5); c.mesh.rotation.z = Math.sin(time * 5) * .1; }
+      for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held && a !== carried) a.mesh.rotation.z = Math.sin(time * 18) * .18;
       // birds: peck around, take off when she comes close, come back when it is quiet again
       for (let i = birds.length - 1; i >= 0; i--) {
         const b = birds[i]; b.t += dt;

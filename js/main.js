@@ -15,6 +15,8 @@ const ACTS = {
   bakkerij: () => import('./act-bakkerij.js'),
   kermis: () => import('./act-kermis.js'),
   huisje: () => import('./act-huisje.js'),
+  kasteel: () => import('./act-kasteel.js'),
+  race: () => import('./act-race.js'),
 };
 const params = new URLSearchParams(location.search); // dev only: ?act=atelier opens an activity directly
 let world = null;
@@ -46,7 +48,7 @@ function rebuildIfNewIsland() {
 }
 async function enter(id) {
   if (ui.activityOpen()) return;
-  if (id === 'stal' && !Q.hasUnicorn()) {          // nobody lives there yet
+  if (id === 'stal' && !Q.stalOpen()) {          // nobody lives there yet
     sfx.wrong(); speak(Q.quest.stage === 'ei' ? 'In de stal is het nog stil. Eerst moet het ei uitkomen!' : 'De stal is nog leeg. Zoek eerst een ei!');
     world && world.exitBuilding(id); return;
   }

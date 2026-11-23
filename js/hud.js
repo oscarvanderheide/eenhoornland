@@ -93,7 +93,7 @@ export function createHud(getWorld) {
     if (key) { const sig = text + cls; if (lastSig[key] !== undefined && lastSig[key] !== sig) b.classList.add('bump'); lastSig[key] = sig; }
     parent.appendChild(b); return b;
   }
-  const goalIcon = w => w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : w.t === 'star' ? ART.starItem() : w.t === 'fruit' ? ART.fruit() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true });
+  const goalIcon = w => w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : w.t === 'star' ? ART.starItem() : w.t === 'fruit' ? ART.fruit() : PX.rainbow();
   function render() {
     panel.innerHTML = ''; toolRow.innerHTML = '';
     for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id)) chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);
@@ -116,7 +116,7 @@ export function createHud(getWorld) {
     if (w.t === 'egg') { const z = I[Q.quest.zone] ? Q.quest.zone : 'bos'; return { icon: goalIcon(w), text: '?', at: [I[z].cx, I[z].cz + 2], go: walk(P[z].tile) }; }
     if (w.t === 'star') return { icon: goalIcon(w), text: '', at: [I.wei.cx + 6, I.wei.cz], go: walk(P.wei.tile) };
     if (w.t === 'fruit') return { icon: goalIcon(w), text: '', at: [MAP.RAINBOW_TREE[0] + 1, MAP.RAINBOW_TREE[1] + 1], go: walk([MAP.RAINBOW_TREE[0] + 1, MAP.RAINBOW_TREE[1] + 1]) };
-    return { icon: goalIcon(w), text: '', at: [(MAP.PEN.x0 + MAP.PEN.x1) / 2 + .5, (MAP.PEN.z0 + MAP.PEN.z1) / 2 + .5], go: walk([MAP.PEN.gate[0][0] - 1, MAP.PEN.gate[0][1]]) };
+    return { icon: goalIcon(w), text: '', at: [MAP.CASTLE.x + MAP.CASTLE.w / 2, MAP.CASTLE.z + MAP.CASTLE.d / 2 + 2], go: () => world.walkToBuilding('kasteel') };
   }
   function openMap() {
     const world = getWorld(); if (!world || !document.getElementById('modal').hidden) return; sfx.pop();

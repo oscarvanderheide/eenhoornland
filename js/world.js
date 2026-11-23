@@ -24,6 +24,9 @@ export const BUILDINGS = [
   { id: 'huisje', name: 'Huisje', h: 2.1, rh: 1.3, wall: '#FFF1C9', roof: '#E8616B', trim: '#FFFFFF', doorCol: '#4DABF7' },
   { id: 'kermis', name: 'Kermis' },
 ].map(b => Object.assign(b, MAP.HOUSES[b.id], { door: MAP.houseDoor(MAP.HOUSES[b.id]) }));
+/** the castle is a building too (you walk in through the gate), but it is built in world-extras.js */
+const CASTLE = Object.assign({ id: 'kasteel', name: 'Kasteel', castle: true }, MAP.CASTLE);
+BUILDINGS.push(CASTLE);
 
 function rngf(seed) { return PX.rng(seed); }
 function tex(cv, nearest = true) {
@@ -150,6 +153,11 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     mesh.scale.setScalar(scale); mesh.castShadow = shadow; mesh.receiveShadow = true; mesh.rotation.x = -lean;
     mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: t, alphaTest: .5 });
     return mesh;
+  }
+  /** a small thing that must never get lost behind a tree or a house: where something stands in front of it, it shines through */
+  function seeThrough(mesh) {
+    const g = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({ map: mesh.material.map, alphaTest: .5, transparent: true, opacity: .6, depthFunc: THREE.GreaterDepth, depthWrite: false, side: THREE.DoubleSide }));
+    g.renderOrder = 5; g.raycast = () => { }; mesh.add(g); return mesh;
   }
   const blobGeo = new THREE.CircleGeometry(.5, 16); blobGeo.rotateX(-Math.PI / 2);
   const blobMat = new THREE.MeshBasicMaterial({ color: '#1d1430', transparent: true, opacity: .28, depthWrite: false });
@@ -318,7 +326,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     doorGlow(b.cx, b.cz + b.r + .1);
   }
   const balloons = [];
-  for (const b of BUILDINGS) b.tent ? tent(b) : house(b);
+  for (const b of BUILDINGS) if (!b.castle) b.tent ? tent(b) : house(b);
+  doorGlow(CASTLE.x + CASTLE.w / 2, CASTLE.z + CASTLE.d + .1);
 
   /* fountain: pixel-art billboard with 3 animated water frames */
   const fountainFrames = [0, 1, 2].map(f => PX.gridSprite(40, 38, (x, y) => {
@@ -534,6 +543,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function jump() {
     if (!interactive || paused || kid.hop > 0) return;
     if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
+    if (life.throwIt()) return;                                                  // with an animal above her head the button throws it
     sfx.boing(); kid.hop = 1; toys.stomp();
     if (mount !== 'uni') setTimeout(() => { if (uni.g.visible && uni.hop <= 0) uni.hop = 1; }, 200);
   }
@@ -562,7 +572,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
 
   const alphaCache = new Map();
   let extras = null, toys = null; const ctxHooks = { onWish };
-  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
+  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, seeThrough, castle: CASTLE, onEnter, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
     walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground, astar, showMarker: (x, z) => showMarker(x, z),
     /** walk onto this very tile, then do `then` */
     walkThen: (x, z, then) => { target = null; if (!walkTo(x, z, null, null, true)) return false; after = then; return true; },
@@ -574,7 +584,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   let play = null;
   extras = ctx.extras = createExtras(ctx);
   const tools = createTools(ctx);
-  play = createPlay(ctx);
+  play = ctx.play = createPlay(ctx);
   const life = ctx.life = createLife(ctx);
   toys = ctx.toys = createToys(ctx);
   for (const m of treeMeshes) pick.push(m);
@@ -621,7 +631,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }, listen);
   const letGo = () => {
     if (!grab) return; const g = grab; grab = null;
-    if (!g.drag) { if (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c)) tapChar(g.c); return; }
+    if (!g.drag) { if (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c)) life.tapAnimal(g.c); return; }
     const a = g.pts[0], b = g.pts[g.pts.length - 1], dt = a && b ? Math.max(.03, (b.t - a.t) / 1000) : 1;
     life.toss(g.c, a && b && performance.now() - b.t < 120 ? (b.x - a.x) / dt : 0, a && b && performance.now() - b.t < 120 ? (b.z - a.z) / dt : 0);
   };
@@ -637,7 +647,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   function tapChar(c) {
     if (c === kid && mount) { setMount(null); return; }
-    if (c === kid && toys.carrying()) { toys.putDown(); return; }                // tap her and she puts down what she carries
+    if (c === kid && toys.carrying()) { toys.putDown(); return; }
+    if (c === kid && life.setDown()) return;                                     // or the animal she holds above her head                // tap her and she puts down what she carries
     c.hop = 1; const txt = c.say[Math.floor(Math.random() * c.say.length)];
     if (c.isUni) { extras.tapCompanion(c); return; }
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
@@ -750,6 +761,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
     const prev = kid.pos.clone();
     if ((kx || kz) && !midJump()) {
+      if (kx) kid.face = kx;                                                      // with the keys too she (and whoever carries her) looks where she goes
       const l = Math.hypot(kx, kz), sp = speed * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
       const stuck = !freeAt(kid.pos.x, kid.pos.z); // if somehow overlapping, let her walk out
       if (stuck || freeAt(nx, kid.pos.z)) kid.pos.x = nx; if (stuck || freeAt(kid.pos.x, nz)) kid.pos.z = nz;
@@ -817,6 +829,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
     kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
   };

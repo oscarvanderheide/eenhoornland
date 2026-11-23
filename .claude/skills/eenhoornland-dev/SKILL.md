@@ -18,7 +18,7 @@ The players are two young children who cannot read. A bug that blocks them ends 
 - Everything that is picked up goes into the bag (`Q.have`) and is traded at the stall for things to wear (`Q.SHOP`): prices are pictures of things, never numbers.
 
 ## The adventure (one cycle)
-Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lies in the forest → `ei`: shears appear in the village, cut the brambles on the bridge, a fallen star in the flower meadow hatches the egg → `baby`: hammer appears in the forest, smash the boulders, take the boat to the rainbow island, eat the rainbow fruit → `vriend`: she can be ridden (tap her or the ride button), jump the hole in the bridge to the castle, ride to the unicorn meadow → `feest`: a rainbow mends the bridge, go to bed → new dream, new egg (on another island), new world seed. Tools are kept; gates close again every cycle.
+Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lies in the forest → `ei`: shears appear in the village, cut the brambles on the bridge, a fallen star in the flower meadow hatches the egg → `baby`: hammer appears in the forest, smash the boulders, take the boat to the rainbow island, eat the rainbow fruit → `vriend`: she can be ridden (tap her or the ride button), jump the hole in the bridge to the castle, go in through the gate and wake the six sleeping flowers in the castle garden (`act-kasteel.js`, `Q.bloom`) → `feest`: the rainbow is whole, she goes to live with the unicorns of earlier adventures in the meadow in the village (`MAP.PEN`, next to the start), a rainbow mends the bridge, go to bed → new dream, new egg (on another island), new world seed. Tools are kept; gates close again every cycle.
 
 ## Where things live
 | File | Role |
@@ -36,6 +36,8 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lie
 | `js/dream.js` | The opening dream cutscene. |
 | `js/cutscene.js` | Full-screen side-view scenes for hatching and for the rainbow fruit (`?scene=hatch` / `?scene=feed` to watch). `main.js` `show()` saves the stage, then plays them. |
 | `js/hud.js` | Goal chips, coins, bed and ride buttons, the map with the goal marker. |
+| `js/act-kasteel.js` | Inside the castle: the garden with the six flowers and the rainbow (the end of the adventure, afterwards a toy) and the treasure room (coin heap, a chest with three real coins a day). |
+| `js/act-race.js` | The unicorn race, started at the arch in the village (`MAP.RACE`): tap to jump, nobody loses, the place and the stars become coins. Rides `Q.raceMounts()`. |
 | `js/act-*.js` | One activity per building: `export const meta`, `export function open(root, api)` returning a cleanup fn. |
 
 New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep `world.js` edits to small hooks.
@@ -59,6 +61,8 @@ node cdp.mjs tests/t-houses.mjs    # every house opens, taking turns between the
 node cdp.mjs tests/t-areas.mjs     # screenshot every island (ONLY=bos,strand to limit)
 node cdp.mjs tests/t-bed.mjs       # bedroom per stage (STAGE=ei,baby,vriend,feest)
 node cdp.mjs tests/t-perf.mjs      # draw calls per island
+node cdp.mjs tests/t-castle.mjs    # old unicorns in the village, castle garden + treasure room, race (ONLY=wei,kasteel,race; tmp-shots/c-*.png)
+node cdp.mjs tests/t-pickup.mjs    # real pointer: drag and tap to pick up an animal, puddle splash, riding left with the keys
 node cdp.mjs t-doors.mjs           # tapping/walking into every building
 ./shot.sh "?go" out.png 390 700    # any viewport, e.g. phone
 ```
@@ -87,3 +91,8 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - A trailing `// comment` added by a scripted edit on a one-line `{ ... });` swallows the closing braces: check every module with `node --input-type=module --check < file`.
 - While she is in the boat `busy` is true (no walking, no keys) but taps still arrive: `world.js` hands them to `play.steer`.
 - Toys are plain sprites that do not block: never change `M.block` at runtime for them (reachability is checked once, in `map.js`).
+- An animal is picked up with a plain tap (she carries it above her head; tap it again or the jump button throws it, tap her puts it down); dragging still works. Things must not need discovering.
+- Rain puddles (`M.puddles`) block nothing: walking through splashes, jumping in splashes a lot. Only logs are jumped over.
+- The stable (feed, wash, brush) stands on the castle island; it is open in `baby`, `vriend` and `feest` (`Q.stalOpen`).
+- Small things that roll or lie around (balls, star, fruit) go through `ctx.seeThrough` so they show through whatever stands in front; star and tool spots need `clearView` in `map.js`.
+- `rm` and `cp` are aliased to ask first in this shell: use `command rm -f`.

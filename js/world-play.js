@@ -39,7 +39,7 @@ export function createPlay(ctx) {
 
   /* ---------------- balls: walk into one and it rolls away ---------------- */
   const balls = MAP.BALLS.map(([x, z], k) => {
-    const mesh = makeSprite(ART.ball(k > 0), { lean: .3, scale: k > 0 ? 1 : .9 }); scene.add(mesh);
+    const mesh = ctx.seeThrough(makeSprite(ART.ball(k > 0), { lean: .3, scale: k > 0 ? 1 : .9 })); scene.add(mesh);
     return { mesh, x, z, vx: 0, vz: 0, h: 0, vh: 0, r: k > 0 ? .34 : .25, spin: 0, cool: 0 };
   });
   const open = (x, z) => M.free(Math.floor(x), Math.floor(z));

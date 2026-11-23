@@ -11,7 +11,7 @@ ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id && pend.has(m.id)) 
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable'); await send('Network.enable'); await send('Network.setCacheDisabled', { cacheDisabled: true });   // the profile is reused: never test yesterday's modules
 const api = {
-  sleep, logs,
+  sleep, logs, send,
   // nothing is cached, so wait for the world itself; the little python server sometimes resets a connection on a first load, so try again if it never comes
   async go(url) {
     for (let attempt = 0; attempt < 3; attempt++) {

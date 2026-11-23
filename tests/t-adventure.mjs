@@ -61,10 +61,13 @@ export default async function (t) {
   await t.ev(`document.querySelector('#b-ride').click()`); await settle(1200); s = await q(); ok(s.mount === 'uni', 'the button puts her on the unicorn'); await shot('25-riding'); await t.ev(`document.querySelector('#b-ride').click()`); await settle(800);
   await place(76.5, 31.5); await settle(800); await shot('24-broken-bridge'); ok(await t.ev(`__w.walkTo(76,25)`) === true, 'on foot she walks up to the hole');
   ok(await until(`__w.info().pos[1] < 28`, 60000), 'there she climbs on by herself and jumps it'); s = await q(); ok(s.mount === 'uni', 'riding'); await settle(2500); await shot('26-jumped');
-  await place(84.5, 13.5); await settle(2000); await shot('27-castle');
-  // home to the meadow
-  s = await q(); await place(s.info.gate[0] - 3, s.info.gate[1]); await settle(1500); await shot('28-meadow-gate'); await place(s.info.gate[0] - .8, s.info.gate[1]); await settle(2500);
-  s = await q(); ok(s.stage === 'feest' && s.bed && s.herd === 1 && !s.uni && s.mount === null, 'party: she lives in the unicorn meadow, time for bed'); await shot('29-party');
+  await place(84.5, 12.5); await settle(2000); await shot('27-castle');
+  // into the castle: in the garden six flowers are asleep; when they are all awake the rainbow is whole
+  await t.ev(`__w.setMount('uni'); __w.walkToBuilding('kasteel')`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`, 30000), 'riding up to the castle gate goes inside'); await settle(2800); await shot('28-castle-garden');
+  const tapStage = async (x, y) => { const r = JSON.parse(await t.ev(`(()=>{const c=document.querySelector('.pstage canvas'),r=c.getBoundingClientRect();return JSON.stringify({l:r.left,t:r.top,w:r.width,h:r.height,cw:c.width,ch:c.height})})()`)); await t.click(r.l + x / r.cw * r.w, r.t + y / r.ch * r.h); };
+  for (let i = 0; i < 6; i++) { await tapStage(35 + i * 30, 100); await until(`__w.Q.quest.blooms.includes(${i}) || __w.Q.quest.stage === 'feest'`, 10000); await settle(300); }
+  await settle(2500); await shot('29-party'); await t.ev(`document.querySelector('#act-close').click()`); await settle(1500);
+  s = await q(); ok(s.stage === 'feest' && s.bed && s.herd === 1 && !s.uni && s.mount === null, 'party: the rainbow is awake, she lives with the other unicorns, time for bed');
   ok(await t.ev(`__w.walkable(76,28) && __w.walkable(77,28)`), 'a rainbow mends the bridge'); await place(76.5, 30.5); await settle(2000); await shot('30-rainbow-bridge');
   ok(await t.ev(`document.querySelector('#quest .bed') !== null && document.querySelector('#b-ride').hidden`), 'bed button shown, ride button gone');
   // sleep → a new dream → a new egg in a new world

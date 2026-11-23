@@ -34,13 +34,13 @@ const STAGES = ['zoek', 'ei', 'baby', 'vriend', 'feest'];
 function fresh(old) {
   // unicorns and coins from before this adventure existed are kept, so nobody loses their friends
   return { v: 2, cycle: 0, stage: 'zoek', kind: 'bos', zone: 'bos', spot: 0, day: 1, picked: {}, coins: old && old.coins | 0 || 0, totals: {}, herd: old && Array.isArray(old.herd) ? old.herd : [], seed: Math.floor(Math.random() * 1e9), tools: {}, broken: [], dreamt: -1,
-    bag: old && old.bag || {}, own: old && old.own || {}, garden: old && old.garden || [], sand: [] };
+    bag: old && old.bag || {}, own: old && old.own || {}, garden: old && old.garden || [], sand: [], blooms: [] };
 }
 let q = state.extra.quest && state.extra.quest.v === 2 && STAGES.includes(state.extra.quest.stage) ? state.extra.quest : null;
 if (!q) { q = state.extra.quest = fresh(state.extra.quest); save(); }
 if (!q.bag) { q.bag = {}; for (const k of Object.keys(q.totals || {})) if (k !== 'munt') q.bag[k] = Math.min(6, q.totals[k] | 0); }   // what was picked up before there was a stall still counts
 for (const k of ['picked', 'totals', 'tools', 'bag', 'own']) if (!q[k] || typeof q[k] !== 'object') q[k] = {};
-for (const k of ['garden', 'sand']) if (!Array.isArray(q[k])) q[k] = [];
+for (const k of ['garden', 'sand', 'blooms']) if (!Array.isArray(q[k])) q[k] = [];
 if (!Array.isArray(q.herd)) q.herd = []; if (!Array.isArray(q.broken)) q.broken = [];
 export const quest = q;
 
@@ -84,6 +84,8 @@ export const canRide = () => q.stage === 'vriend';
 /** evening falls when the unicorn has come home to the meadow — time for bed, and for a new dream */
 export const bedtime = () => q.stage === 'feest';
 export const hasUnicorn = () => q.stage === 'baby' || q.stage === 'vriend';
+/** the stable at the castle: open for the unicorn of this adventure, also on the evening of the party */
+export const stalOpen = () => hasUnicorn() || q.stage === 'feest';
 export const hasCompanion = () => q.stage === 'ei' || hasUnicorn();
 export const kind = () => KINDS[q.kind] || KINDS.bos;
 export const uniName = () => state.uni.name;
@@ -96,7 +98,7 @@ export function wishText(w) {
     : n + ' heeft honger! Ze wil regenboogfruit. Maar er liggen grote stenen op de brug naar het strand. Zoek de hamer in het bos! Kijk maar op de kaart.';
   if (w.t === 'star') return neededTool() ? 'Met de schaar kun je naar de bloemenwei. Daar ligt een warm sterretje voor het ei.' : 'Het ei heeft het koud! Zoek het gevallen sterretje in de bloemenwei. Knip de doornstruiken op de brug weg.';
   if (w.t === 'fruit') return neededTool() ? 'Met de hamer kun je naar het strand. Daar ligt een boot naar het regenboogeiland.' : n + ' heeft honger! Sla de stenen op de brug kapot, ga naar het strand en neem de boot naar het regenboogeiland. Daar groeit regenboogfruit!';
-  if (w.t === 'wei') return n + ' is nu sterk genoeg. Tik op ' + n + ' en klim op haar rug! Spring over de kapotte brug naar het kasteel. Daar wonen de eenhoorns.';
+  if (w.t === 'wei') return n + ' is nu sterk genoeg. Tik op ' + n + ' en klim op haar rug! Spring over de kapotte brug naar het kasteel en ga naar binnen. In de kasteeltuin slaapt de regenboog: maak hem wakker!';
   return '';
 }
 /** one spoken sentence about what to do now */
@@ -149,7 +151,7 @@ export function feed() {
   q.stage = 'vriend'; commit(['fed'], ['stage', 'vriend']); return true;
 }
 export const weiOpen = () => q.stage === 'vriend';
-/** the unicorn walks through the gate of the unicorn meadow */
+/** the rainbow in the castle garden is awake: she goes to live with the other unicorns, in the meadow in the village */
 export function deliver() {
   if (!weiOpen()) return false;
   q.herd.push(Object.assign({}, state.uni, { kind: q.kind }));
@@ -160,7 +162,7 @@ export function deliver() {
 export function sleep() {
   const from = q.stage; let res = { type: 'morning' };
   if (from === 'feest') {
-    q.cycle++; q.stage = 'zoek'; q.broken = []; q.sand = [];                   // a new island: the tide took the sand castles
+    q.cycle++; q.stage = 'zoek'; q.broken = []; q.sand = []; q.blooms = [];                   // a new island: the tide took the sand castles
     const r = rnd(q, 5); let k = q.cycle < ORDER.length ? ORDER[q.cycle] : (r() < .22 ? 'ster' : ORDER[Math.floor(r() * ORDER.length)]);
     if (q.cycle >= ORDER.length && k === q.kind) k = ORDER[(ORDER.indexOf(k) + 1) % ORDER.length];
     q.kind = k; q.zone = KINDS[k].zone || ZONES[Math.floor(r() * ZONES.length)]; q.spot = Math.floor(r() * 1000);
@@ -222,6 +224,19 @@ export function buildSand(x, z) {
   q.sand.push([x, z, 1]); if (q.sand.length > SAND_MOST) q.sand.shift(); commit(['sand']); return 1;
 }
 export function stompSand(x, z) { const i = sandAt(x, z); if (i < 0) return false; q.sand.splice(i, 1); commit(['sand']); return true; }
+
+/* ---------- the castle garden: six sleeping flowers, one for every colour of the rainbow ---------- */
+export const BLOOMS = 6;
+export const bloomed = i => q.stage === 'feest' || q.blooms.includes(i);
+/** wake flower i. When the last one opens while she is there with her unicorn, the rainbow is whole: that is the party. */
+export function bloom(i) {
+  if (bloomed(i)) return { opened: false, whole: false };
+  q.blooms.push(i); const whole = q.blooms.length >= BLOOMS && weiOpen();
+  if (whole) deliver(); else commit(['bloom', i]);
+  return { opened: true, whole };
+}
+/* ---------- the race: every unicorn she can ride, the one of this adventure first ---------- */
+export const raceMounts = () => (canRide() ? [Object.assign({}, state.uni)] : []).concat(q.herd.slice(-5).reverse());
 
 /** dev / tests only */
 export function _reset(patch) { for (const k of Object.keys(q)) delete q[k]; Object.assign(q, fresh(), { herd: [] }, patch || {}); commit(['stage', q.stage], ['day', { type: 'morning' }]); }

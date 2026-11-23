@@ -162,8 +162,9 @@ const regenboogbrug = () => cached('rbbrug', () => gridSprite(18, 16, (x, y) => 
 export const starItem = () => cached('starItem', () => sprite(['.....y.....', '....yyy....', '....yYy....', 'yyyyyYyyyyy', '.yyYYYYYyy.', '..yYkYkYy..', '..yYYmYYy..', '.yyYYYYYyy.', '.yyyy.yyyy.', 'yyy.....yyy'], { y: '#FFD43B', Y: '#FFF3A8', k: EYE, m: '#FF8FB1' }));
 export const fruit = () => cached('fruit', () => gridSprite(9, 10, (x, y) => { if (y < 2) return (x === 4 && y === 1) ? '#8A5A3B' : (x === 5 || x === 6) && y === 0 ? '#5DC88A' : null; const dd = (x + .5 - 4.5) ** 2 + (y + .5 - 6) ** 2; if (dd > 16.5) return null; if (x === 2 && y === 4) return '#FFFFFF'; return PX.RAINBOW[Math.min(5, Math.floor((y - 2) * .75))]; }));
 export const bike = () => cached('bike', () => sprite([
-  '....kk.......kk...', '.....k......k.....', '....pppppppppp....', '...p.p.....p.p....', '..kkkp.p...p.kkk..', '.k...k.p.p..k...k.', 'k..w..kppp.k..w..k', 'k.....k....k.....k', '.k...k......k...k.', '..kkk........kkk..',
-], { k: '#3D2B4F', p: '#FF5E9C', w: '#D8DCE8' }));
+  '................kkkk....', '......ssss........p.....', '.......ss.........p.yyyy', '........p.........p.yYYy', '.......pppppppppppppyyyy', '......p.p......PP.p.....', '.....pp.p.....PP..p.....',
+  '..kkkp..p...PP...kpk....', '.k.gpk..p..PP...k.p.k...', 'k..gp.k.p.PP...k..p..k..', 'kggppppppp.....kggpggk..', 'k..g..k..k.....k..g..k..', '.k.g.k...kk.....k.g.k...', '..kkk............kkk....',
+], { k: '#3D2B4F', p: '#FF5E9C', P: '#E0457F', g: '#C3C8D8', s: '#7A4A2A', y: '#F2C14E', Y: '#D99A2B' }));
 export const ball = (beach = false) => cached('ball' + beach, () => { const n = beach ? 11 : 8, c = beach ? ['#FF5E9C', '#FFFFFF', '#4DABF7', '#FFFFFF', '#FFD43B', '#FFFFFF'] : ['#E8484A', '#FFFFFF', '#E8484A', '#FFFFFF']; return gridSprite(n, n, (x, y) => { const dx = x + .5 - n / 2, dy = y + .5 - n / 2; if (dx * dx + dy * dy > (n / 2) ** 2) return null; if (dx * dx + dy * dy < 1.2) return beach ? '#FFFFFF' : '#FFD43B'; const a = Math.atan2(dy, dx) + Math.PI; return c[Math.floor(a / (Math.PI * 2) * c.length) % c.length]; }); });
 
 const PROPS = {
@@ -377,3 +378,21 @@ export function houseIcon(id) {
     if (cx > 6) return null; if (cx < 1.6 && y > 9) return door; if (y > 8 && y < 12 && (x === 3 || x === 12)) return '#BFE3FF'; return wall;
   });
 }
+
+/* ================= the unicorn race (act-race.js) ================= */
+export const raceArch = () => cached('raceArch', () => gridSprite(26, 24, (x, y) => {
+  if ((x < 2 || x > 23) && y > 1) return Math.floor((y - 2) / 3) % 2 ? '#FFFFFF' : '#FF5E9C';            // candy-striped poles
+  if (y >= 2 && y <= 7 && x >= 2 && x <= 23) return (Math.floor((x - 2) / 2) + Math.floor((y - 2) / 2)) % 2 ? '#FFFFFF' : '#3D2B4F';   // the chequered banner
+  if (y < 2 && (x === 0 || x === 1 || x === 24 || x === 25)) return '#FFD43B';
+  return null;
+}));
+export const medal = place => cached('medal' + place, () => gridSprite(11, 15, (x, y) => {
+  const col = ['#FFD43B', '#D3DAE6', '#E0965A'][place - 1] || '#E0965A', dk = ['#E0A020', '#9AA5B8', '#B5673A'][place - 1] || '#B5673A';
+  if (y < 6) { const a = Math.abs(x - 5); return a >= 1 + (5 - y) * .55 && a <= 3 + (5 - y) * .55 ? (x < 5 ? '#FF5E9C' : '#4DABF7') : null; }
+  const d = Math.hypot(x - 5, y - 10); if (d > 4.6) return null; if (d > 3.4) return dk;
+  return Math.abs(x - 5) + Math.abs(y - 10) <= 1 ? '#FFFFFF' : col;
+}));
+export const againIcon = () => cached('again', () => gridSprite(15, 15, (x, y) => {
+  if (Math.hypot(x - 7, y - 7) > 7.4) return null;
+  return x >= 5 && x <= 11 && Math.abs(y - 7) <= (11 - x) * .75 ? '#FFFFFF' : '#3EBF6E';                 // a play triangle: once more
+}));
