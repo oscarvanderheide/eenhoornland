@@ -1,7 +1,7 @@
 // The world as pure data (no rendering, no DOM) so it can be checked in node: `node tests/map.test.mjs`.
 // Eenhoornland is a handful of separate islands in the sea. Each island is one area; the only ways between them are
 // narrow wooden bridges (closed by brambles, boulders or a hole only a unicorn can jump) and one boat.
-export const W = 108, H = 112;
+export const W = 150, H = 112;
 /** the islands lie in rows 0..OUT_H-1; below that, under the sea, is solid rock with the places you walk into (ROOMS) */
 export const OUT_H = 84, ROCK_Z = 88;
 export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock
@@ -11,7 +11,7 @@ export const ISLES = {
   bos: { cx: 33, cz: 14, rx: 21, rz: 10 },
   wei: { cx: 71, cz: 43, rx: 15, rz: 11 },
   strand: { cx: 66, cz: 71, rx: 24, rz: 7 },
-  eiland: { cx: 14, cz: 70, rx: 9, rz: 6 },
+  eiland: { cx: 132, cz: 66, rx: 9, rz: 6 },                    // far out in the open sea to the east: a voyage to get there
   kasteel: { cx: 84, cz: 14, rx: 17, rz: 10 },
 };
 const ZONES = Object.keys(ISLES);
@@ -23,7 +23,7 @@ const onLand = (x, z) => ZONES.some(k => metric(ISLES[k], x + .5, z + .5) <= 1 +
 
 export const POND = { cx: 27, cz: 41, rx: 1.95, rz: 1.85 };
 export const FOUNT = { cx: 32, cz: 41 };
-export const START = [31.5, 44.5];
+export const START = [31.5, 36.6];                                                    // at her own front door: every day begins at home
 export const LANTERNS = [[19, 38], [28, 38], [35, 38], [44, 38], [28, 44], [35, 44], [26, 47], [44, 43]];
 export const GARDEN = { x0: 21, z0: 48, x1: 27, z1: 51 };                              // carrot patch
 export const CLEARING = { cx: 30, cz: 12.5, rx: 4.6, rz: 3.4 };
@@ -43,9 +43,17 @@ export const roomAt = (x, z) => Object.keys(ROOMS).find(k => { const r = ROOMS[k
 export const PEN = { x0: 33, z0: 47, x1: 42, z1: 51, gate: [[37, 47], [38, 47]] };    // dorp: the meadow where the unicorns of earlier adventures live (fence on the perimeter tiles, the gate is always open)
 export const RACE = [44.5, 47.5];                                                     // dorp: the arch where the unicorn race starts
 /** the boat sails between the two piers; `dock` is where you stand to step in, `moor` where the boat floats */
-export const BOAT = { strand: { dock: [39, 70], moor: [37.4, 71] }, eiland: { dock: [26, 70], moor: [27.6, 71] } };
-export const RAINBOW_TREE = [11, 68];
-export const BIKE = [36.5, 34.5];
+export const BOAT = { strand: { dock: [95, 70], moor: [96.6, 71] }, eiland: { dock: [117, 65], moor: [115.4, 66] } };
+export const RAINBOW_TREE = [129, 64];
+/** little islands in the open sea that nobody walks on, each with something on it to sail past */
+export const ISLETS = [
+  { kind: 'vuurtoren', cx: 109, cz: 41, rx: 2.2, rz: 1.6 },   // a lighthouse
+  { kind: 'zeehonden', cx: 104, cz: 61, rx: 3, rz: 1.3 },     // a sandbank with seals
+  { kind: 'palmeiland', cx: 139, cz: 40, rx: 2.4, rz: 1.7 },  // one palm and a treasure chest
+  { kind: 'rots', cx: 121, cz: 50, rx: 1.4, rz: 1 }, { kind: 'rots', cx: 98, cz: 78, rx: 1.2, rz: .9 }, { kind: 'rots', cx: 126, cz: 79, rx: 1.5, rz: 1 }, { kind: 'rots', cx: 117, cz: 31, rx: 1.3, rz: .9 },
+];
+export const isletAt = (x, z) => ISLETS.find(i => ((x + .5 - i.cx) / i.rx) ** 2 + ((z + .5 - i.cz) / i.rz) ** 2 <= 1) || null;
+export const BIKE = [42.5, 43.5];                                                     // not at the front door: the morning starts quiet
 export const BALLS = [[22.5, 42.5], [58.5, 72.5]];
 /* ---- every island has a toy of its own (world-toys.js, world-play.js); none of it is needed for the adventure ---- */
 export const STALL = { x: 36, z: 40, w: 2 };                                          // dorp: the stall where found things are traded for things to wear
@@ -55,10 +63,12 @@ export const RAMPS = [[24.5, 37], [25.5, 46], [61.5, 46.2]];                    
 export const HIDES = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]];   // bos: bushes somebody hides in
 export const KITE = [62.5, 44.4];                                                     // wei: a kite for the wind
 export const BUCKET = [57.5, 70.5];                                                   // strand: a bucket for sand towers
-export const PAINT = [[19.5, 69.5], [17.5, 72.5], [15.5, 68.5]];                      // eiland: red, yellow and blue puddles
+export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];                      // eiland: red, yellow and blue puddles
 /** the part of the sea the boat sails on: marked with buoys, so nobody sails off the map */
-export const LAGOON = { x0: 5, z0: 57, x1: 58, z1: 79 };
-export const WHALE = [32.5, 76.5];
+export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 81 };
+export const WHALE = [113.5, 73.5];
+/** the old pier at the west end of the beach: where you fish (world-toys.js) */
+export const FISH = { pier: [39, 70], spot: [36.5, 71] };
 /** the houses you can go into: one on every island that has people */
 export const HOUSES = {
   huisje: { x: 29, z: 31, w: 5, d: 4 },                  // dorp
@@ -72,7 +82,7 @@ export const houseDoor = h => h.tent ? [Math.floor(h.cx), Math.floor(h.cz) + 3] 
 /** places you can ask to walk to (map screen) */
 export const PLACES = {
   dorp: { name: 'Dorp', tile: [31, 44] }, bos: { name: 'Bos', tile: [31, 13] }, wei: { name: 'Bloemenwei', tile: [64, 45] },
-  strand: { name: 'Strand', tile: [62, 67] }, eiland: { name: 'Regenboogeiland', tile: [19, 70] }, kasteel: { name: 'Kasteel', tile: [84, 13] },
+  strand: { name: 'Strand', tile: [62, 67] }, eiland: { name: 'Regenboogeiland', tile: [134, 67] }, kasteel: { name: 'Kasteel', tile: [84, 13] },
 };
 export const inPen = (x, z) => x > PEN.x0 && x < PEN.x1 && z > PEN.z0 && z < PEN.z1;
 
@@ -110,6 +120,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     const i = I(x, z);
     if (z >= ROCK_Z) { const rm = roomAt(x, z); zone[i] = rm || 'rots'; ground[i] = RK; block[i] = 1; continue; }   // rooms are carved out below
     const zn = zone[i] = zoneAt(x + .5, z + .5);
+    if (isletAt(x, z) && !onLand(x, z)) { ground[i] = SA; block[i] = 1; zone[i] = 'zee'; continue; }   // seen, never walked on
     if (!onLand(x, z) || x < 4 || z < 4 || x >= W - 4 || z >= OUT_H - 4) { ground[i] = SE; block[i] = 1; continue; }
     ground[i] = zn === 'bos' ? FO : zn === 'strand' ? SA : zn === 'eiland' ? (metric(ISLES.eiland, x + .5, z + .5) < .42 ? GR : SA) : GR;
   }
@@ -140,14 +151,15 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   /* ---- strand ---- */
   rect(70, 64, 71, 66, BW); rect(46, 66, 86, 67, BW); rect(44, 68, 45, 71, BW); rect(46, 68, 47, 69, BW); rect(79, 68, 80, 68, BW); rect(83, 68, 84, 73, BW); rect(80, 73, 82, 73, BW);
   /* ---- eiland ---- */
-  trail([[22, 71], [16, 71], [13, 70]], .7);
+  trail([[123.5, 66], [128, 66.5], [134, 67]], .7);
   /* ---- kasteel ---- */
   rect(76, 13, 77, 23, PA); rect(78, 11, 91, 14, CO); rect(89, 15, 96, 16, CO); rect(83, 15, 86, 21, CO);
 
   /* ---- bridges and piers lie on the water ---- */
   const plank = (x0, z0, x1, z1) => { for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { if (ground[I(x, z)] === SE) deck[I(x, z)] = 1; ground[I(x, z)] = BW; block[I(x, z)] = 0; } };   // deck: planks over open water
   plank(40, 23, 41, 31); plank(46, 45, 57, 46); plank(70, 53, 71, 65); plank(76, 23, 77, 33);
-  plank(39, 70, 44, 71); plank(22, 70, 26, 71);
+  plank(39, 70, 44, 71);                                            // the old pier: now the fishing spot
+  rect(85, 70, 88, 71, BW); plank(88, 70, 95, 71); plank(117, 65, 123, 66);   // the boat: from the east end of the beach to the rainbow island
   const bridgeTiles = new Set(); for (let i = 0; i < W * H; i++) if (ground[i] === BW) bridgeTiles.add(i);
 
   /* ---- solid things ---- */
@@ -200,13 +212,14 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     const zn = zone[i], beach = zn === 'strand' || zn === 'eiland'; let kind = null;
     const r = zn === 'dorp' ? rDorp : rOut;
     const inFront = [[0, -1], [0, -2], [0, -3], [-1, -1], [1, -1], [-1, -2], [1, -2]].some(([dx, dz]) => inb(x + dx, z + dz) && pd[I(x + dx, z + dz)] === 0);   // a tree here would hide whoever walks the trail behind it
-    if (g === SA) { if (rim[i]) { if (r() < (beach ? .22 : zn === 'bos' ? .5 : .34)) kind = 'rock'; } else if (beach && !nearBusy(x, z, 1) && r() < .07) kind = 'palm'; }
-    else if (g === FO) { if (r() < (inFront ? .03 : pd[i] <= 2 ? .13 : .58)) kind = r() < .5 ? 'pine' : 'tree'; }
+    // every island has plants of its own (VEG): nothing grows on two islands
+    if (g === SA) { if (rim[i]) { if (r() < (beach ? .22 : zn === 'bos' ? .5 : .34)) kind = 'rots-' + (zn === 'eiland' || zn === 'zee' ? 'eiland' : zn); } else if (zn === 'strand' && !nearBusy(x, z, 1) && r() < .1) kind = r() < .55 ? 'palm' : 'helm'; else if (zn === 'eiland' && !nearBusy(x, z, 1) && r() < .05) kind = 'kristalbloem'; }
+    else if (g === FO) { if (r() < (inFront ? .03 : pd[i] <= 2 ? .13 : .58)) kind = r() < .55 ? 'pine' : 'berk'; }
     else if (zn === 'bos') { /* clearings stay open */ }
-    else if (zn === 'dorp') { if (!nearBusy(x, z, 1) && !inFront && r() < .17) kind = r() < .3 ? 'bush' : (r() < .3 ? 'pine' : 'tree'); }
-    else if (zn === 'wei') { if (!nearBusy(x, z, 1) && !inFront && r() < .05) kind = r() < .5 ? 'tree' : 'bush'; }
-    else if (zn === 'kasteel') { if (!nearBusy(x, z, 1) && !inFront && r() < .12) kind = r() < .55 ? 'rose' : 'tree'; }
-    else if (zn === 'eiland') { if (!nearBusy(x, z, 1) && r() < .1) kind = r() < .5 ? 'palm' : 'bush'; }
+    else if (zn === 'dorp') { if (!nearBusy(x, z, 1) && !inFront && r() < .17) kind = r() < .35 ? 'bol' : 'tree'; }
+    else if (zn === 'wei') { if (!nearBusy(x, z, 1) && !inFront && r() < .06) kind = r() < .5 ? 'bloesem' : 'zonnebloemen'; }
+    else if (zn === 'kasteel') { if (!nearBusy(x, z, 1) && !inFront && r() < .12) kind = r() < .4 ? 'rose' : r() < .6 ? 'cipres' : 'lavendel'; }
+    else if (zn === 'eiland') { if (!nearBusy(x, z, 1) && r() < .1) kind = r() < .45 ? 'lolly' : 'wolkstruik'; }
     if (kind) { trees.push({ kind, x, z, seed: Math.floor(r() * 6) + 1 }); block[i] = 1; }
   }
 
@@ -254,9 +267,10 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   };
   // everything walkable must be reachable in the end; pockets get filled in
   const reach = flood({ zwaard: 1, hamer: 1, rit: 1 });
-  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) { const i = I(x, z); if (!block[i] && !reach[i]) { block[i] = 1; const g = ground[i]; trees.push({ kind: g === SA ? 'rock' : g === FO ? 'fern' : 'bush', x, z, seed: 1 + (x * 7 + z * 3) % 6 }); } }
+  const FILL = { dorp: 'bol', bos: 'fern', wei: 'zonnebloemen', strand: 'helm', eiland: 'wolkstruik', kasteel: 'lavendel' };
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) { const i = I(x, z); if (!block[i] && !reach[i]) { block[i] = 1; const g = ground[i], zn = zone[i]; trees.push({ kind: g === SA ? 'rots-' + (zn === 'zee' ? 'eiland' : zn) : g === FO ? 'fern' : FILL[zn] || 'fern', x, z, seed: 1 + (x * 7 + z * 3) % 6 }); } }
   // a log that lost its landing spot to a filled pocket becomes an ordinary bush
-  for (let k = obstacles.length - 1; k >= 0; k--) { const o = obstacles[k]; if (o.type !== 'low' || (free(o.x - 1, o.z) && free(o.x + 1, o.z)) || (free(o.x, o.z - 1) && free(o.x, o.z + 1))) continue; obstacles.splice(k, 1); block[I(o.x, o.z)] = 1; trees.push({ kind: 'bush', x: o.x, z: o.z, seed: 1 + (o.x + o.z) % 6 }); }
+  for (let k = obstacles.length - 1; k >= 0; k--) { const o = obstacles[k]; if (o.type !== 'low' || (free(o.x - 1, o.z) && free(o.x + 1, o.z)) || (free(o.x, o.z - 1) && free(o.x, o.z + 1))) continue; obstacles.splice(k, 1); block[I(o.x, o.z)] = 1; trees.push({ kind: 'fern', x: o.x, z: o.z, seed: 1 + (o.x + o.z) % 6 }); }
   const reach0 = flood({}), reach1 = flood({ zwaard: 1 }), reach2 = flood({ zwaard: 1, hamer: 1 });   // no tools / shears / shears and hammer
   const at = (m, x, z) => !!m[I(x, z)];
 

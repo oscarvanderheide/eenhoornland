@@ -85,7 +85,7 @@ export function createExtras(ctx) {
   scatter(ART.propArt('fern', 1), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO); scatter(ART.propArt('fern', 2), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO);
   const beach = (x, z) => M.free(x, z) && g(x, z) === MAP.SA && (M.zone[M.I(x, z)] === 'strand' || M.zone[M.I(x, z)] === 'eiland');
   scatter(ART.starfish(), 9, beach);                                              // (no loose shells for show: every shell on the beach can be picked up)
-  for (const c of ['#FF7EB6', '#FFFFFF', '#B9A3F0']) scatter(PX.smallFlower(c), 45, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow
+  for (const art of [ART.ISLE.madelief(), ART.ISLE.klaproos(), ART.ISLE.korenbloem()]) scatter(art, 45, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow: daisies, poppies, cornflowers
   // the ring of big mushrooms in the forest plays music: every one is a note, tap them (or walk into them)
   const shrooms = [];
   for (let k = 0; k < 9; k++) {
@@ -100,10 +100,14 @@ export function createExtras(ctx) {
   animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Nootjes!', 'Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [26, 10, 34, 15]);
   animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [42, 10, 48, 15]);
   animal(one(ART.deer()), { name: 'Hertje', say: ['Hallo!', 'Het bos is mooi, hè?'], sound: 'boing', blobW: .7, flippable: true }, [26, 10, 35, 16]);
-  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [60, 36, 66, 44]);
-  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Bloemetjes!'], sound: 'boing', blobW: .5 }, [74, 44, 82, 50]);
+  // every island has animals of its own: nobody lives on two islands
+  animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [36, 12, 46, 16]);
+  animal(one(ART.ISLE.uil()), { name: 'Uil', say: ['Oehoe!', 'Oehoe oehoe!'], sound: 'pop', blobW: .45 }, [19, 14, 25, 17]);
+  animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bèè bèè!'], sound: 'boing', blobW: .7, flippable: true }, [60, 36, 66, 44]);
+  animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bloemetjes!'], sound: 'boing', blobW: .7, flippable: true }, [74, 44, 82, 50]);
   animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
-  animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!'], sound: 'pop', blobW: .5 }, [9, 68, 18, 73]);
+  animal(one(ART.ISLE.papegaai()), { name: 'Papegaai', say: ['Hallo hallo!', 'Kraaa! Mooi!'], sound: 'pop', blobW: .45, flippable: true }, [126, 63, 138, 69]);
+  animal(one(ART.ISLE.pauw()), { name: 'Pauw', say: ['Kijk mijn staart!', 'Mi-auw!'], sound: 'sparkle', blobW: .7, flippable: true }, [86, 15, 96, 18]);
   animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [62, 69, 74, 74]);
   animal(one(ART.dragon()), { name: 'Draakje', say: ['Rawr! Hihi!', 'Ik ben een lief draakje!', 'Ik pas op het kasteel!'], sound: 'boing', blobW: .7 }, [78, 11, 90, 14]);
 

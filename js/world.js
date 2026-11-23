@@ -14,6 +14,8 @@ import { createLife } from './world-life.js';
 import { createToys } from './world-toys.js';
 import { createWeather } from './world-weather.js';
 import { createRooms } from './world-rooms.js';
+import { createSea } from './world-sea.js';
+import { createFishing } from './world-fish.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -230,7 +232,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     inst.count = k; scene.add(inst);
   }
   const grassFree = (x, z) => inb(x, z) && ground[I(x, z)] === GR && !block[I(x, z)];
-  scatterInstanced(PX.tuft(0), 300, grassFree); scatterInstanced(PX.tuft(1), 300, grassFree); scatterInstanced(PX.tuft(2), 200, grassFree);
+  for (const zn of ['dorp', 'wei', 'kasteel', 'eiland']) for (let k = 0; k < 3; k++) scatterInstanced(ART.ISLE.tuftZone(zn, k), zn === 'wei' ? 120 : 70, (x, z) => grassFree(x, z) && M.zone[I(x, z)] === zn);   // every island its own grass
   for (const c of ['#FF7EB6', '#FFFFFF', '#FFD43B', '#B9A3F0']) scatterInstanced(PX.smallFlower(c), 22, (x, z) => grassFree(x, z) && M.zone[I(x, z)] === 'dorp');
 
   // lanterns
@@ -466,7 +468,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Wortel?'], sound: 'boing', blobW: .5 }, [25, 44, 30, 50]);
   animal(one(PX.cat()), { name: 'Poes', say: ['Miauw!', 'Prrr...'], sound: 'purr', blobW: .5 }, [35, 37, 43, 39]);
   animal(one(PX.puppy()), { name: 'Hondje', say: ['Woef woef!', 'Spelen?'], sound: 'boing', blobW: .55 }, [28, 43, 37, 49]);
-  animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [19, 38, 26, 40]);
+  animal(one(ART.ISLE.kip()), { name: 'Kip', say: ['Tok tok!', 'Tok tok tok!'], sound: 'pop', blobW: .5, flippable: true }, [19, 38, 26, 40]);
+  animal(one(ART.ISLE.kip()), { name: 'Kip', say: ['Tok!'], sound: 'pop', blobW: .5, flippable: true }, [21, 47, 27, 50]);
   animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
   animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
   for (const a of animals) if (a.water) a.g.children[1].visible = false;
@@ -589,6 +592,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** a hop on the spot, just for fun (jumping over things happens by itself while walking) */
   function jump() {
     if (!interactive || paused || kid.hop > 0) return;
+    if (fishing.tap()) return;
     if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
     if (life.throwIt()) return;                                                  // with an animal above her head the button throws it
     sfx.boing(); kid.hop = 1; toys.stomp(); life.jumped(); weather.stomp();
@@ -623,7 +627,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground, astar, showMarker: (x, z) => showMarker(x, z),
     /** walk onto this very tile, then do `then` */
     walkThen: (x, z, then) => { target = null; if (!walkTo(x, z, null, null, true)) return false; after = then; return true; },
-    onShop: () => onShop && onShop(),
+    onShop: () => onShop && onShop(), night: () => nightT,
     /** a full-screen moment (hatching, the rainbow fruit): main.js plays it and resolves when it is over */
     show: (type, data) => onShow ? onShow(type, data) : Promise.resolve(), placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
     /** something else moves her for a while (the boat): no walking, no taps */
@@ -637,6 +641,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   toys = ctx.toys = createToys(ctx);
   const weather = ctx.weather = createWeather(ctx);
   const rooms = ctx.rooms = createRooms(ctx);
+  const seaLife = ctx.sea = createSea(ctx);
+  const fishing = ctx.fishing = createFishing(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -649,6 +655,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     ray.setFromCamera(ndc, camera);
     if (play.aboard()) { const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) play.steer(w.x, w.z); return; }   // in the boat a tap is where to sail
     if (busy) return;
+    if (fishing.tap()) return;                                                   // fishing: a tap reels in
     const hits = ray.intersectObjects(pick, false); let shook = false;
     for (const h of hits) {
       const d = h.object.userData;
@@ -706,6 +713,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   /** the pick-up key (Enter): throw or put down what she holds, else pick up what is next to her: an animal, a pebble, the can, the bucket, the kite, or get on the bike */
   function grabKey() {
+    if (fishing.tap()) return;
     if (life.carrying()) return life.throwIt(); if (toys.carrying()) return toys.putDown();
     if (life.grabNear() || toys.takeNear()) return; if (mount === 'fiets') return setMount(null); if (play.bikeNear()) return play.tapBike(); kid.hop = .4;
   }
@@ -876,7 +884,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); rooms.update(dt, time, interactive && !paused && !busy); stepWobbles(dt); stepIndoor(dt);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); rooms.update(dt, time, interactive && !paused && !busy); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, interactive && !paused && !busy); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -885,7 +893,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     // camera
     camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3);
     const halfW = viewW / 2; const cx = THREE.MathUtils.clamp(camTarget.x, Math.min(W / 2, halfW - 1), Math.max(W / 2, W - halfW + 1)); const cz = THREE.MathUtils.clamp(camTarget.z, 4, H - 3);
-    camera.position.set(cx, Math.sin(camPitch) * camDist, cz + Math.cos(camPitch) * camDist); camera.lookAt(cx, .6, cz - .5); camera.updateMatrixWorld(); aimSun(cx, cz - 2);
+    if (wake) { wake.t += dt; const k = Math.min(1, wake.t / 6), e = k * k * (3 - 2 * k); zoom = .5 + .5 * e; wakeEl.style.opacity = String(.55 * (1 - Math.min(1, wake.t / 14))); if (wake.t > 1.4 && !wake.yawn) { wake.yawn = true; kid.hop = .4; bubble(kid, 'Mmmm!', PX.sparkle('#FFD43B')); sfx.purr(); } if (wake.t > 14) { wake = null; wakeEl.style.opacity = 0; zoom = 1; } }
+    const camD = camDist * zoom;
+    camera.position.set(cx, Math.sin(camPitch) * camD, cz + Math.cos(camPitch) * camD); camera.lookAt(cx, .6, cz - .5); camera.updateMatrixWorld(); aimSun(cx, cz - 2);
     post.uniforms.focus.value = camera.position.distanceTo(kid.pos);
     // DOM
     const wpx = innerWidth, hpx = innerHeight;
@@ -895,11 +905,19 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     renderer.setRenderTarget(null); renderer.render(postScene, postCam);
   }
   renderer.setAnimationLoop(frame);
+  /* ---------------- a quiet morning: the day starts close by her front door, in warm early light, and slowly opens up.
+     The animals of the village are still asleep and wake up one by one as she walks past. ---------------- */
+  let wake = null, zoom = 1;
+  const wakeEl = document.createElement('div'); wakeEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;background:radial-gradient(ellipse at 50% 30%,rgba(255,214,150,.0),rgba(255,170,110,.55) 75%),linear-gradient(rgba(255,200,140,.35),rgba(255,180,120,.15));mix-blend-mode:multiply;transition:opacity .4s'; document.body.appendChild(wakeEl);
+  function wakeUp() {
+    wake = { t: 0 }; zoom = .5; kid.face = 1; fadeEl.style.transition = 'none'; fadeEl.style.opacity = 1; requestAnimationFrame(() => { fadeEl.style.transition = 'opacity 1.6s'; fadeEl.style.opacity = 0; setTimeout(() => { fadeEl.style.transition = 'opacity .22s'; }, 1700); });
+    for (const a of animals) if (!a.water && !a.uniKind && M.zone[I(Math.floor(a.pos.x), Math.floor(a.pos.z))] === 'dorp') { a.nap = 80 + Math.random() * 40; a.morning = true; a.zT = Math.random(); a.path = []; }
+  }
 
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, sea: seaLife, fishing, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -908,6 +926,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     pause(p) { paused = p; labelsEl.style.visibility = p ? 'hidden' : ''; renderer.setAnimationLoop(p ? null : frame); if (!p) { last = performance.now(); perf.t = 0; perf.n = 0; } },
     setInteractive(v) { interactive = v; },
     setNight(n, instant) { nightTarget = n ? 1 : 0; if (instant) { nightT = nightTarget; applyNight(nightT); } },
+    wakeUp,
     exitBuilding(id) { if (id === 'kasteel') { const g = MAP.ROOMS.hal.garden; placeAt(g[0] + .5, g[1] + 2.5); return; } const b = BUILDINGS.find(b => b.id === id); if (b) placeAt(b.door[0] + .5, b.door[1] + 1.5); },
     refreshUnicorn,
     /** walk to a tile, or to a building's door (and go in) */
@@ -920,7 +939,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); toys.dispose(); weather.dispose(); offWear(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

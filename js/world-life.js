@@ -9,7 +9,7 @@ import * as Q from './quest.js';
 import { sfx } from './audio.js';
 import { state, save } from './state.js';
 
-const TREES = ['tree', 'pine', 'apple', 'oak', 'palm', 'rainbowtree'], BUSHES = ['bush', 'hedge', 'rose', 'fern'];
+const TREES = ['tree', 'pine', 'apple', 'oak', 'palm', 'rainbowtree', 'berk', 'bloesem', 'lolly', 'cipres'], BUSHES = ['bush', 'hedge', 'rose', 'fern', 'bol', 'wolkstruik', 'lavendel', 'zonnebloemen', 'helm', 'kristalbloem'];
 const NUT = { tree: ART.eikel, oak: ART.eikel, pine: ART.dennenappel, palm: ART.kokosnoot };
 const WHEE = ['Wiiii!', 'Joehoe!', 'Nog een keer!', 'Hihihi!', 'Hoppa!'];
 
@@ -86,11 +86,11 @@ export function createLife(ctx) {
       return;
     }
     if (k === 'statue') { ctx.wobble(t, .08); sfx.sparkle(); burst(new THREE.Vector3(x, .6, z), 8); return; }
-    ctx.wobble(t, k === 'rock' ? .1 : .3); sfx.pop();
+    ctx.wobble(t, k === 'rock' || k.startsWith('rots') ? .1 : .3); sfx.pop();
   }
 
   /* ---------------- picking animals up and throwing them ---------------- */
-  function hold(c) { if (carried === c) carried = null; c.swim = null; c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
+  function hold(c) { if (c.nap > 0) { c.nap = 0; c.morning = false; c.mesh.rotation.z = 0; } if (carried === c) carried = null; c.swim = null; c.held = true; c.fly = null; c.path = []; c.lift = .9; sfx.pop(); bubble(c, '!'); }
   // a tap is enough: she walks over, lifts it above her head and carries it. A tap on the animal (or the jump button) throws it,
   // a tap on her puts it down, getting on the bike drops it in the trailer.
   let carried = null;
@@ -130,6 +130,7 @@ export function createLife(ctx) {
     const t = ctx.nearestWalkable(c.pos.x, c.pos.z); if (!t || !ctx.walkThen(t[0], t[1], then)) (sfx[c.sound] || sfx.pop)();
   }
   function toss(c, vx, vz) {
+    if (c.nap > 0) { c.nap = 0; c.morning = false; c.mesh.rotation.z = 0; }
     const sp = Math.hypot(vx, vz), max = 9, f = sp > max ? max / sp : 1;
     c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, spin: (vx >= 0 ? -1 : 1) * (4 + sp), bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
     sfx.whoosh(); if (!c.stone) bubble(c, WHEE[Math.floor(Math.random() * WHEE.length)]);
@@ -342,6 +343,7 @@ export function createLife(ctx) {
         const food = Q.FAVOURITE[a.name]; if (!food || a.friend || a.held || a.fly || a.swim || a.cart || a.fedDay === Q.quest.day || !a.g.visible) continue;
         if (dist(a) < 2.3 && (a.askT || 0) < now()) { a.askT = now() + 30000; a.face = kid.pos.x >= a.pos.x ? 1 : -1; a.hop = 1; bubble(a, '', ART.itemIcon(food)); }
       }
+      for (const a of animals) if (a.morning && a.nap > 0 && dist(a) < 2.4) { a.morning = false; wake(a); bubble(a, a.say[0]); }   // still asleep this morning: she wakes it as she walks by
       for (const a of animals) if (a.nap > 0) {                                  // napping: on its side, little z's
         a.path = []; a.moving = false; a.mesh.rotation.z = a.face * 1.3; a.wait = Math.max(a.wait, 1);
         if ((a.zT -= dt) < 0) { a.zT = .9; bit(ART.zzz(), a.pos.x + .2, .6, a.pos.z + .1, { vx: .3, vy: .5, g: -.2, sway: 2, life: 1.3, scale: .8 }); }

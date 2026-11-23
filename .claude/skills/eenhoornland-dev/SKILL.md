@@ -8,6 +8,8 @@ description: How to add features to or fix bugs in Eenhoornland (the HD-2D pixel
 The players are two young children who cannot read. A bug that blocks them ends the fun, so every change is verified in a real browser before it is called done.
 
 ## Rules of the game design
+- Every island has its own plants, rocks and animals (`map.js` vegetation per zone, `art-isles.js`): nothing grows or lives on two islands. A new thing for an island gets new art.
+- Nothing the adventure needs just lies around: every tool and goal item comes with a small funny moment (sword in a stone, sleepy gnome, shy star, fruit shaken out of a tree).
 - No fail states, no timers, no text-only information: nobody can read and the voice is off (`audio.js`), so every goal is a picture chip, a picture bubble, or a marker on the map. `speak()` calls stay (for a later voice).
 - Anything a child can be sent to must be reachable. `map.js` fills unreachable pockets and `tests/map.test.mjs` asserts it, in the order of the adventure.
 - State changes are saved first, animated after (see `act-huisje.js`), so closing a screen mid-animation never loses progress.
@@ -20,7 +22,7 @@ The players are two young children who cannot read. A bug that blocks them ends 
 - Everything that is picked up goes into the bag (`Q.have`) and is traded at the stall for things to wear (`Q.SHOP`): prices are pictures of things, never numbers.
 
 ## The adventure (one cycle)
-Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lies in the forest → `ei`: shears appear in the village, cut the brambles on the bridge, a fallen star in the flower meadow hatches the egg → `baby`: hammer appears in the forest, smash the boulders, take the boat to the rainbow island, eat the rainbow fruit → `vriend`: she can be ridden (tap her or the ride button), jump the hole in the bridge to the castle, go in through the gate and wake the six sleeping flowers in the castle garden (`act-kasteel.js`, `Q.bloom`) → `feest`: the rainbow is whole, she goes to live with the unicorns of earlier adventures in the meadow in the village (`MAP.PEN`, next to the start), a rainbow mends the bridge, go to bed → new dream, new egg (on another island), new world seed. Tools are kept; gates close again every cycle.
+Start screen (pick Anna or Fenna) → dream (`dream.js`) → a quiet morning at her front door (`world.wakeUp()`: close camera, warm light, village animals asleep until she walks past, goal chip after 6 s) → `zoek`: the egg lies in the cave in the forest (`MAP.ROOMS.grot`) → `ei`: pull the sword out of its stone in the village, slash the brambles on the bridge, catch the shy warm thing in the flower meadow (it hops away twice) → `baby`: wake the gnome in the forest for his hammer, smash the boulders, sail the boat yourself across the open sea (arrow by the boat points the way) to the rainbow island, shake the fruit out of the rainbow tree → `vriend`: she can be ridden (tap her or the ride button), jump the hole in the bridge to the castle, go in through the gate into the hall (`MAP.ROOMS.hal`), through its golden door into the garden, and wake the six sleeping flowers (`act-kasteel.js`, `Q.bloom`) → `feest`: the rainbow is whole, she goes to live with the unicorns of earlier adventures in the meadow in the village (`MAP.PEN`, next to the start), a rainbow mends the bridge, go to bed → new dream, new egg (on another island), new world seed. Tools are kept; gates close again every cycle.
 
 ## Where things live
 | File | Role |
@@ -42,6 +44,10 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lie
 | `js/hud.js` | Goal chips, coins, bed and ride buttons, the map with the goal marker. |
 | `js/act-kasteel.js` | Inside the castle: the garden with the six flowers and the rainbow (the end of the adventure, afterwards a toy) and the treasure room (coin heap, a chest with three real coins a day). |
 | `js/act-race.js` | The unicorn race, started at the arch in the village (`MAP.RACE`): tap to jump, nobody loses, the place and the stars become coins. Rides `Q.raceMounts()`. |
+| `js/world-rooms.js` | Walk-in rooms (`MAP.ROOMS`, carved into rock rows below `MAP.OUT_H`): the cave (egg, bats, crystals) and the castle hall (coins on the floor, chest, golden door to the garden). Door tiles are handled by `goThrough` in `world.js`; indoors the light dims (`stepIndoor`). |
+| `js/world-sea.js` | The open sea east of the beach: islets (`MAP.ISLETS`: lighthouse, seals, palm islet chest), dolphins, a swimmer, a fishing boat, a turtle, and the rainbow arrow to the island while the fruit is the goal. |
+| `js/world-fish.js` | Fishing at the end of the old pier (`MAP.FISH`): cast, the float bobs, a tap or the jump key reels in a fish (bag `vis`, the cat's favourite), a boot, seaweed, a duck, a shell, a bottle with a coin once a day. |
+| `js/art-isles.js` | The plants, rocks and animals that make each island its own. |
 | `js/act-*.js` | One activity per building: `export const meta`, `export function open(root, api)` returning a cleanup fn. |
 
 New art goes in `art.js`, new rules in `quest.js`, new places in `map.js`; keep `world.js` edits to small hooks.
@@ -75,7 +81,7 @@ node cdp.mjs tests/t-weather.mjs   # rain/frogs, leaf piles, snow + snowman (tmp
 ```
 Always look at the screenshots; passing asserts do not show a sprite drawn in the wrong place.
 
-- `?go` skips the start screen and the dream, `?dream` replays the dream, `?debug` exposes `window.__w` (`placeAt(x,z)`, `Q`, `MAP`, `extras.info()` (egg, star, fruit, gate), `tools.spot(id)`, `play.info()`, `setMount`, `renderer`).
+- `?go` skips the start screen, the dream and the wake-up, `?dream` replays the dream, `?debug` exposes `window.__w` (`placeAt(x,z)`, `Q`, `MAP`, `extras.info()` (egg, star, fruit, gate), `tools.spot(id)`, `play.info()`, `setMount`, `renderer`).
 - Jump to any stage: `__w.Q._reset({ stage: 'vriend' })` (then `giveTool` if the gates should open).
 - Headless WebGL runs at a few fps: teleport with `placeAt` instead of walking. Run one `cdp.mjs` at a time (they share a port).
 - New sprites: add them to `tmp-art.html`-style sheet and screenshot it before using them in the world (`tmp-toys.html` has the toys and every outfit).
@@ -104,6 +110,8 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - Rain puddles (`M.puddles`) block nothing: walking through splashes, jumping in splashes a lot. Only logs are jumped over.
 - The stable (feed, wash, brush) stands on the castle island; it is open in `baby`, `vriend` and `feest` (`Q.stalOpen`).
 - Small things that roll or lie around (balls, star, fruit) go through `ctx.seeThrough` so they show through whatever stands in front; star and tool spots need `clearView` in `map.js`.
+- Map rows `OUT_H`..`H` are rock with the rooms; anything that picks spots outdoors must stay below `OUT_H` (`pick` in map.js does). The map screen shows only rows `< OUT_H`.
+- The boat is steered by the child (keys or taps); it never sails off by itself. Docks: east end of the beach ↔ west pier of the rainbow island.
 - `rm` and `cp` are aliased to ask first in this shell: use `command rm -f`.
 - Enter (or E) is the pick-up key (`grabKey` in `world.js`): throw or put down what she holds, else lift the nearest animal, pebble (`M.stones`) or toy, or get on the bike. Space jumps.
 - Thrown into the water: an animal swims back (`c.swim`), a pebble sinks and washes up again at its spot, a ball floats and a gust blows it ashore. Animals and pebbles are see-through behind trees (`c.ghost`).

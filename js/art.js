@@ -1,6 +1,8 @@
 // Art for the bigger island: ground painter, props, collectibles, eggs, baby unicorn and unicorn looks.
 // Builds on pixel.js (same conventions: everything returns a <canvas>, 1px outline added automatically).
 import * as PX from './pixel.js';
+import * as ISLE from './art-isles.js';
+export { ISLE };
 import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, CV, HF, RK, POND, ROOMS } from './map.js';
 
 const { sprite, gridSprite, mix, rgb } = PX;
@@ -202,6 +204,45 @@ export const bike = () => cached('bike', () => sprite([
 ], { k: '#3D2B4F', p: '#FF5E9C', P: '#E0457F', g: '#C3C8D8', s: '#7A4A2A', y: '#F2C14E', Y: '#D99A2B' }));
 export const ball = (beach = false) => cached('ball' + beach, () => { const n = beach ? 11 : 8, c = beach ? ['#FF5E9C', '#FFFFFF', '#4DABF7', '#FFFFFF', '#FFD43B', '#FFFFFF'] : ['#E8484A', '#FFFFFF', '#E8484A', '#FFFFFF']; return gridSprite(n, n, (x, y) => { const dx = x + .5 - n / 2, dy = y + .5 - n / 2; if (dx * dx + dy * dy > (n / 2) ** 2) return null; if (dx * dx + dy * dy < 1.2) return beach ? '#FFFFFF' : '#FFD43B'; const a = Math.atan2(dy, dx) + Math.PI; return c[Math.floor(a / (Math.PI * 2) * c.length) % c.length]; }); });
 
+/* ================= fishing ================= */
+export const hengel = () => cached('hengel', () => sprite(['...........k', '..........k.', '.........k..', '........k...', '.......k....', '......k.....', '.....b......', '....bb......', '...bb.......', '..rb........', '.rr.........'], { k: '#8A5A3B', b: '#B5823F', r: '#E8484A' }));
+export const dobber = () => cached('dobber', () => sprite(['.k.', 'rrr', 'rwr', 'www'], { k: '#3D2B4F', r: '#E8484A', w: '#FFFFFF' }));
+export const laars = () => cached('laars', () => sprite(['.gggg..', '.gGgg..', '.gggg..', '.gggg..', '.ggggg.', '.gggggg', 'gggggGg', 'kkkkkkk'], { g: '#6B8E3A', G: '#8FB35A', k: '#3D2B1F' }));
+export const badeend = () => cached('badeend', () => sprite(['..yyy...', '.yykyoo.', '.yyyy...', 'yyyyyyy.', 'yyyyyyyy', '.yyyyyy.'], { y: '#FFD43B', k: EYE, o: '#FF8C42' }));
+export const fles = () => cached('fles', () => sprite(['..kk..', '..gg..', '..gg..', '.gggg.', 'gGgggg', 'gGyygg', 'gGyygg', 'gggggg', '.gggg.'], { k: '#B5823F', g: '#8FE3C8', G: '#E8FFF7', y: '#FFD43B' }));
+export const zeewier = () => cached('zeewier', () => sprite(['g.g..g.g', 'gGg.gGg.', '.gGggg.g', '..gGgGg.', '..g.g.g.', '.g..g..g'], { g: '#3A9E69', G: '#7CCB64' }));
+
+/* ================= the open sea ================= */
+export const vuurtoren = () => cached('vuurtoren', () => gridSprite(16, 44, (x, y) => {
+  if (y < 4) return Math.abs(x + .5 - 8) < 4 - y * .6 + 2 ? '#E8484A' : null;                                     // the red cap
+  if (y < 10) { if (x < 3 || x > 12) return null; return x === 3 || x === 12 || y === 4 || y === 9 ? '#3D2B4F' : (y > 5 && y < 9 && x > 4 && x < 11 ? '#FFF3A8' : '#BFE3FF'); }   // the lamp
+  if (y === 10) return x > 1 && x < 14 ? '#3D2B4F' : null;
+  const half = 4 + (y - 10) * .1; if (Math.abs(x + .5 - 8) > half) return null;
+  return Math.floor((y - 11) / 6) % 2 ? '#E8484A' : '#FFFFFF';
+}));
+export const zeehond = (f = 0) => cached('zeehond' + f % 2, () => sprite(f % 2 ? [
+  '..ggg.......', '.gkggg......', 'gggggg......', '.nggggg..f.f', '..gggggg.ff.', '..ggGGGgggg.', '.ggGGGGGggg.', 'f.gggggggg..',
+] : [
+  '............', '..ggg.......', '.gkggg......', 'gggggggg....', '.nggGGGggg..', '..gGGGGGgggf', '..gggggggggf', '.ff.........',
+], { g: '#8C93A8', G: '#C9CEDC', k: EYE, n: '#3D2B4F', f: '#6E7488' }));
+export const dolfijn = (f = 0) => cached('dolfijn' + f % 2, () => sprite(f % 2 ? [
+  '......b.......', '.....bb.......', '..bbbbbbbb....', '.bbbbbbbbbbb..', 'bbkbbbbbbbbbbb', '.wwwwwwbbbb.bb', '..wwwww...b..b',
+] : [
+  '.......bb.....', '..bbbbbbbbb...', '.bbbbbbbbbbbb.', 'bbkbbbbbbbbbbb', '.wwwwwbbb..bbb', '..www.....b..b', '..............',
+], { b: '#5B9BD6', w: '#E3F1FF', k: EYE }));
+export const zwemmer = (f = 0) => cached('zwemmer' + f % 2, () => sprite([
+  f % 2 ? '.h......h.' : '..........', f % 2 ? '.s.hhhh.s.' : '...hhhh...', f % 2 ? '.s.hsss.s.' : '..hssss...', f % 2 ? '..ssksks..' : '..sksks...', f % 2 ? '...sssm...' : '.ssssms.s.', 'rrwwrrwwrr', 'rwwrrwwrrw', '.rrrrrrrr.',
+], { h: '#5E3A24', s: '#FFD7B5', k: EYE, m: '#E8616B', r: '#FF5E9C', w: '#FFFFFF' }));
+export const vissersboot = () => cached('vboot', () => sprite([
+  '.......k..........', '.......kyy........', '.......kyyy.......', '.......k...bbb....', '.......k..bBBBb...', '.......k..bkBkb...', '.......k...bmb....', 'wwwwwwwwwwwwwwwwww', 'rRRRRRRRRRRRRRRRRr', '.rRRRRRRRRRRRRRRr.', '..rrrrrrrrrrrrrr..',
+], { k: '#6E4630', y: '#FFD43B', b: '#A0703E', B: '#D9A066', m: '#3D2B1F', w: '#FFFFFF', r: '#3E7FC0', R: '#5DA3E8' }));
+export const schildpad = (f = 0) => cached('schildpad' + f % 2, () => sprite(f % 2 ? [
+  '...gggg.....', '..gGgGgg....', '.gGgGgGgg.hh', 'ggggggggghkh', 'l.l....l.hh.',
+] : [
+  '...gggg.....', '..gGgGgg..hh', '.gGgGgGgghkh', 'ggggggggg.hh', '.l.l..l.l...',
+], { g: '#3A9E69', G: '#7CCB64', h: '#9ACB7A', k: EYE, l: '#7AAE62' }));
+export const pijl = () => cached('pijl', () => gridSprite(13, 9, (x, y) => { const tip = x - 7; if (tip >= 0) return Math.abs(y - 4) <= 4 - tip * .75 ? '#FFFFFF' : null; return y >= 3 && y <= 5 ? PX.RAINBOW[Math.min(5, Math.floor(x / 1.2))] : null; }));
+
 /* ================= the cave and the castle hall ================= */
 const druipsteen = seed => cached('druip' + seed % 3, () => { const h = 18 + (seed % 3) * 4, w = 12; return gridSprite(w, h, (x, y) => { const half = (y + 1) / h * (w / 2) * (seed % 2 ? 1 : .85); if (Math.abs(x + .5 - w / 2) > half) return null; if (y === h - 1 && (x + seed) % 3 === 0) return null; const v = x + .5 - w / 2; return v < -half * .3 ? '#8C7E8E' : v < half * .4 ? '#6E6272' : '#564B5C'; }); });
 const KRISTAL = [['#9FE8FF', '#5EC4F0', '#E8FBFF'], ['#FFB3E6', '#E86AC0', '#FFE8F7'], ['#C9B3FF', '#8C6BE8', '#F0E8FF']];
@@ -225,12 +266,13 @@ export const lichtbundel = () => cached('licht', () => gridSprite(20, 48, (x, y)
 export const vleermuis = (f = 0) => cached('vleer' + f % 2, () => sprite(f % 2 ? ['w.......w', 'ww.kkk.ww', 'wwwkWkwww', '.wwkkkww.', '...k.k...'] : ['...kkk...', '..wkWkw..', '.wwkkkww.', 'ww.....ww', 'w.......w'], { k: '#4A3F6B', w: '#6E5FA0', W: '#FFE08A' }));
 export const tuinpoort = () => cached('tuinpoort', () => gridSprite(26, 34, (x, y) => { const cx = x + .5 - 13; if (y < 13 && cx * cx + (y - 13) ** 2 > 169) return null; const edge = Math.abs(cx) > 11 || (y < 13 && cx * cx + (y - 13) ** 2 > 120); if (edge) return '#F7C548'; if (Math.abs(cx) < .8) return '#B8862E'; if ((y > 15 && y < 19) && Math.abs(Math.abs(cx) - 4) < 1.5) return '#FFF3A8'; return (Math.floor(cx + 20) % 5 === 0) ? '#D9A43A' : '#EDBF4E'; }));
 const PROPS = {
+  berk: ISLE.berk, bloesem: ISLE.bloesem, zonnebloemen: ISLE.zonnebloemen, lolly: ISLE.lolly, wolkstruik: ISLE.wolkstruik, kristalbloem: ISLE.kristalbloem, cipres: ISLE.cipres, lavendel: ISLE.lavendel, bol: ISLE.bol, helm: ISLE.helm,
   druipsteen, kristal, harnas, zuil, muntberg,
   bramble, boulder, plas, rainbowtree, gat, regenboogbrug,
   tree: s => PX.treeRound(s), pine: s => PX.pine(s), bush: s => PX.bush(s), palm, rock, apple: appleTree, oak, stump, log, fern, rose, hedge, sign, scarecrow, umbrella, sandcastle, boat, statue, flag, trough, hay,
 };
-const SCALE = { zuil: 1.1, harnas: 1.15, rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
-export function propArt(kind, seed = 1) { return (PROPS[kind] || PROPS.bush)(seed); }
+const SCALE = { berk: 1.25, bloesem: 1.3, lolly: 1.2, cipres: 1.25, zonnebloemen: 1.1, zuil: 1.1, harnas: 1.15, rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };
+export function propArt(kind, seed = 1) { if (kind.startsWith('rots-')) return ISLE.rots(seed, kind.slice(5)); return (PROPS[kind] || PROPS.bush)(seed); }
 export const propScale = kind => SCALE[kind] || 1;
 export { bigMushroom };
 
@@ -320,6 +362,7 @@ export function itemArt(type, seed = 0) {
     case 'wortel': return carrotTop();
     case 'diamant': return PX.gem();
     case 'munt': return coin();
+    case 'vis': return fish(seed);
     default: return PX.star();
   }
 }

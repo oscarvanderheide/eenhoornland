@@ -22,7 +22,7 @@ const HINT = {
 };
 export const ITEMS = {
   bloem: { one: 'bloem', many: 'bloemen' }, appel: { one: 'appel', many: 'appels' }, paddenstoel: { one: 'paddenstoel', many: 'paddenstoelen' },
-  schelp: { one: 'schelp', many: 'schelpen' }, wortel: { one: 'wortel', many: 'wortels' }, diamant: { one: 'diamant', many: 'diamanten' }, munt: { one: 'muntje', many: 'muntjes' },
+  schelp: { one: 'schelp', many: 'schelpen' }, wortel: { one: 'wortel', many: 'wortels' }, diamant: { one: 'diamant', many: 'diamanten' }, vis: { one: 'visje', many: 'visjes' }, munt: { one: 'muntje', many: 'muntjes' },
 };
 /** how many of each lie around on one day */
 // (fewer than there used to be: a quiet world with a few things worth walking to. Apples do not lie around: shake an apple tree.)
@@ -214,7 +214,7 @@ export function wear(id, who) {
 }
 /* ---------- animals that like something from the bag (world-life.js) ---------- */
 // Given one, the animal is her friend for the rest of the day and walks along behind her. What it is given is gone from the bag.
-export const FAVOURITE = { Konijn: 'wortel', Hertje: 'appel', Eekhoorn: 'paddenstoel', Egel: 'appel', Krab: 'schelp', Draakje: 'diamant' };
+export const FAVOURITE = { Poes: 'vis', Schaap: 'bloem', Papegaai: 'diamant', Pauw: 'diamant', Kip: 'wortel', Uil: 'paddenstoel', Konijn: 'wortel', Hertje: 'appel', Eekhoorn: 'paddenstoel', Egel: 'appel', Krab: 'schelp', Draakje: 'diamant' };
 export function giveFood(type) { if (!(q.bag[type] > 0)) return false; q.bag[type]--; commit(['gave', type]); return true; }
 /** a present that comes once a day (the pearl in the clam under the sea, a coin from the chest, stars in the clouds): true if it was given now */
 export const gotToday = key => (q.gifts || {})[key] === q.day;

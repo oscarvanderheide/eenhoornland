@@ -59,7 +59,7 @@ async function enter(id) {
   sfx.door();
   try {
     const mod = await ACTS[id]();
-    ui.openActivity(mod, () => { rebuildIfNewIsland(); if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
+    const day0 = Q.quest.day; ui.openActivity(mod, () => { rebuildIfNewIsland(); if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); if (id === 'huisje' && Q.quest.day !== day0) { world.wakeUp(); quietHud(); } } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
   } catch (e) {
     console.error(e); speak('Dit huisje is nog in aanbouw!');
     if (world) { world.exitBuilding(id); world.pause(false); }
@@ -73,6 +73,8 @@ $('#b-music').onclick = e => { const on = e.currentTarget.getAttribute('aria-pre
 if (state.extra.music === false) { $('#b-music').setAttribute('aria-pressed', 'false'); setMusic(false); }
 $('#b-voice').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setVoice(on); };
 
+/** the first seconds of a morning: just her, her house and the morning light; the goal shows up after a little while */
+function quietHud() { const q = $('#quest'); if (!q) return; q.style.transition = 'opacity .8s'; q.style.opacity = 0; setTimeout(() => { q.style.opacity = 1; }, 6000); }
 /* ---------- start: who plays? Then the dream, then outside ---------- */
 // The girl who is picked dreams of a mysterious egg and a unicorn, wakes up, and the adventure begins at her own front door.
 for (const b of document.querySelectorAll('#start .pick')) {
@@ -84,7 +86,7 @@ for (const b of document.querySelectorAll('#start .pick')) {
     const dream = Q.needsDream();
     if (dream) { setMood('night'); await playDream($('#game'), who, Q.kind()); Q.dreamShown(); world && world.exitBuilding('huisje'); }
     setMood(state.night ? 'night' : 'day');
-    $('#start').hidden = true; world && world.setInteractive(true);
+    $('#start').hidden = true; world && world.setInteractive(true); world && world.wakeUp(); quietHud();
     speak((dream ? '' : 'Welkom terug in Eenhoornland! ') + 'Tik ergens om te lopen. ' + Q.goalText());
   };
 }

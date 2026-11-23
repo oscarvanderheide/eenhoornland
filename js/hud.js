@@ -23,7 +23,7 @@ const CSS = `
 .qchip.bump{animation:qbump .45s cubic-bezier(.22,1,.36,1)}
 @keyframes qpulse{50%{transform:scale(1.08)}}
 @keyframes qbump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
-.kaart{display:flex;flex-direction:column;gap:10px;width:min(640px,calc(100vw - 76px),calc((100vh - 150px) * 1.28))}
+.kaart{display:flex;flex-direction:column;gap:10px;width:min(640px,calc(100vw - 76px),calc((100vh - 150px) * 1.78))}
 #modal .card:has(.kaart){max-width:min(720px,100%)}
 .kaart-map{position:relative;border:3px solid var(--ink);border-radius:6px;overflow:hidden;line-height:0}
 .kaart-map canvas{width:100%;height:auto;image-rendering:pixelated;display:block}

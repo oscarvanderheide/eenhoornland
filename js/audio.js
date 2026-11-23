@@ -39,6 +39,7 @@ export const sfx = {
   swish() { [0, .16].forEach(t => { noise(t, .12, .12, 2600); tone(900, t, .1, 'sine', .05, 1800); }); tone(1568, .34, .25, 'triangle', .06); },
   tug() { tone(200, 0, .25, 'triangle', .14, 150); noise(0, .2, .05, 700); },
   snore() { tone(95, 0, .7, 'sawtooth', .05, 70); noise(0, .7, .03, 300); tone(320, .8, .5, 'sine', .04, 520); },
+  toot() { tone(392, 0, .28, 'square', .05); tone(392, .36, .4, 'square', .05); tone(196, 0, .7, 'triangle', .08); },
   bonk() { [0, .22].forEach(t => { tone(120, t, .18, 'triangle', .22, 60); noise(t, .08, .12, 500); }); noise(.44, .3, .1, 300); },
   boing() { tone(180, 0, .35, 'triangle', .2, 560); },
   burp() { tone(110, 0, .32, 'sawtooth', .1, 55); tone(80, .05, .3, 'square', .05, 45); noise(0, .28, .05, 260); },

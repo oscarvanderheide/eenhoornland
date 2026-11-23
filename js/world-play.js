@@ -89,10 +89,10 @@ export function createPlay(ctx) {
   // itself. Otherwise it pushes off a little and waits: a tap on the water sails there, a tap on land sails to the pier
   // on that side and she walks on. The boat only sails inside the buoys (MAP.LAGOON), so nobody gets lost at sea.
   const B = MAP.BOAT, L = MAP.LAGOON, boat = makeSprite(ART.propArt('boat'), { lean: .2, shadow: false, scale: 1.5 });
-  let side = 'strand', aboard = false, armed = true, pending = null, route = [], landing = null, dir = -1, fishT = 2, wake = 0, fromDock = 'strand', clearOfDock = false;
+  let side = 'strand', aboard = false, armed = true, pending = null, route = [], landing = null, dir = -1, fishT = 2, wake = 0, fromDock = 'strand', clearOfDock = false, drivenAt = 0;
   /** steering with the keys: the boat goes where the arrows point, and sailing up to a pier is landing there */
   function drive(kx, kz, dt) {
-    if (!aboard || (!kx && !kz)) return; route = []; landing = null;
+    if (!aboard || (!kx && !kz)) return; route = []; landing = null; drivenAt = performance.now();
     const l = Math.hypot(kx, kz), st = 3.6 * dt, nx = bp.x + kx / l * st, nz = bp.z + kz / l * st, ok = (x, z) => sailable(Math.floor(x), Math.floor(z)) || Object.values(B).some(b => Math.hypot(x - b.moor[0], z - b.moor[1]) < .9);
     if (kx) dir = kx > 0 ? 1 : -1;
     if (ok(nx, bp.z)) bp.x = nx; if (ok(bp.x, nz)) bp.z = nz;
@@ -126,12 +126,12 @@ export function createPlay(ctx) {
   function board(from) {
     ctx.setMount(null, true); ctx.setBusy(true); aboard = true; side = from; kid.sit = true; bp.set(B[from].moor[0], 0, B[from].moor[1]); route = []; landing = null; sfx.splash();
     // she sails it herself (keys or taps): it only pushes off a little, so it is plain that this thing sails
-    { const t = nearestSea(bp.x + (from === 'strand' ? -4 : 4), bp.z - 3); if (t) sailTo(t[0], t[1]); }
+    { const t = nearestSea(bp.x + (from === 'strand' ? 4 : -4), bp.z - 3); if (t) sailTo(t[0], t[1]); }
     pending = null; fromDock = from; clearOfDock = false; speak('Alle hens aan dek! Waar varen we heen?');
   }
   function disembark(s, then) {
     aboard = false; armed = false; side = s; landing = null; route = []; kid.sit = false; kid.lift = 0; uni.lift = 0; bp.set(B[s].moor[0], 0, B[s].moor[1]);
-    const d = B[s].dock; ctx.placeAt(d[0] + .5, d[1] + 1, s === 'strand' ? 1 : -1, 0); ctx.setBusy(false); kid.hop = 1; sfx.tada(); burst(kid.pos, 8);
+    const d = B[s].dock; ctx.placeAt(d[0] + .5, d[1] + 1, s === 'strand' ? -1 : 1, 0); ctx.setBusy(false); kid.hop = 1; sfx.tada(); burst(kid.pos, 8);   // the unicorn lands on the pier, on the side of the land
     if (then) ctx.walkToTile(then[0], then[1]);
   }
   /** a tap while she is in the boat */
@@ -179,7 +179,7 @@ export function createPlay(ctx) {
     detour(tx, tz) { const a = sideOf(kid.pos.x, kid.pos.z); return a !== sideOf(tx + .5, tz + .5) ? B[a].dock.slice() : null; },
     /** where she was going when she set off for the pier (world.js): the boat takes her on */
     wants(t) { pending = t; },
-    aboard: () => aboard, steer, whaleUp, drive,
+    aboard: () => aboard, steer, whaleUp, drive, boatAt: () => bp, driving: () => performance.now() - drivenAt < 200,
     /** on the bike the jump button is the bell: birds fly up and every animal nearby looks */
     bell() { sfx.bell(); ctx.life.scare(kid.pos.x, kid.pos.z, 7); for (const a of animals) if (!a.cart && !a.fly && !a.held && Math.hypot(a.pos.x - kid.pos.x, a.pos.z - kid.pos.z) < 6) { a.hop = 1; a.face = kid.pos.x >= a.pos.x ? 1 : -1; } },
     /** on the bike, a tap on an animal: into the trailer (or out again). Returns true if it handled the tap. */
