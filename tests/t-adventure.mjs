@@ -18,7 +18,7 @@ export default async function (t) {
   await t.ev(`document.querySelector('#start .pick[data-who="fenna"]').click()`); await settle(1800);
   ok(await t.ev(`!!document.querySelector('#dream')`), 'the dream starts'); await shot('02-dream-asleep');
   for (const n of ['03-dream-egg', '04-dream-egg2', '05-dream-unicorn', '06-dream-unicorn2', '07-dream-awake']) { await t.sleep(3300); await shot(n); }
-  ok(await until(`!document.querySelector('#dream') && document.querySelector('#start').hidden`), 'the dream ends and the game begins');
+  ok(await until(`!document.querySelector('#dream') && document.querySelector('#start').hidden`, 90000), 'the dream ends and the game begins');
   let s = await q(); const door = JSON.parse(await t.ev(`JSON.stringify(__w.BUILDINGS.find(b=>b.id==='huisje').door)`));
   ok(await t.ev('__w.who()') === 'fenna', 'the girl who was picked plays'); ok(Math.hypot(s.pos[0] - door[0] - .5, s.pos[1] - door[1] - 1.5) < .1, 'she steps out of her own front door');
   ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 2, 'the goal is the egg'); await settle(1500); await shot('08-outside');

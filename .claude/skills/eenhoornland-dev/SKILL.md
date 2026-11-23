@@ -15,6 +15,8 @@ The players are two young children who cannot read. A bug that blocks them ends 
 - The world waits for the child (learned from Pok Pok and DUPLO World): nothing bobs, spins or makes a sound by itself except the goal of the moment. Things react when touched or when she comes close, always the same way and with the same sound, and what she changed stays changed (saved in `quest.js`).
 - Every island has one toy of its own (table below). Do not copy a toy to a second island; give a new place a new thing to do.
 - A toy is a short loop of real actions (fetch the can, fill it, pour, see it grow, pick). When something is missing, the missing thing wiggles and its picture shows in a bubble; there is no "wrong" sound.
+- Each kind of egg has its own warm thing and food (`Q.WARM`/`Q.FOOD`, `ART.warmItem`/`ART.foodItem`); the forest egg of the first adventure keeps the star and the rainbow fruit.
+- Never show completion: no found/total counters, collection grids or locked markers. Secrets just happen (Oscar: no FOMO).
 - Everything that is picked up goes into the bag (`Q.have`) and is traded at the stall for things to wear (`Q.SHOP`): prices are pictures of things, never numbers.
 
 ## The adventure (one cycle)
@@ -32,7 +34,9 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → `zoek`: the egg lie
 | `js/world-play.js` | Bike (bell on the jump button, trailer for animals, ramps), balls, the boat (takes her across when she is on her way there, otherwise she steers it by tapping, inside `MAP.LAGOON`), floating chests, the whale. |
 | `js/world-toys.js` | One toy per island: watering can + flower pots and the stall (dorp), hide and seek in the bushes (bos), kite + dandelions (wei), bucket + sand towers (strand), paint puddles and footprints (eiland), faces at the castle windows (kasteel). Things she carries (`take` / `putDown`). |
 | `js/shop.js` | The stall's screen: trade, put on, take off. Outfits are drawn by `PX.kidSprite(who, frame, blink, wear)`. |
-| `js/world-life.js` | Just for fun: pick up and throw animals, birds (scarecrow), tappable trees/bushes/props, butterflies, jumping fish. |
+| `js/world-life.js` | Just for fun: pick up and throw animals, birds (scarecrow), tappable trees/bushes/props, butterflies, jumping fish. Friends: an animal given its favourite from the bag (`Q.FAVOURITE`, `Q.giveFood`) follows her for the day (max 3; hedgehog wears the apple, crab the shell). Rare jokes (nut on her head, squirrel/frog, nap after 3 throws, twirl on 3 taps, unicorn burp). Things on things: hits shake trees (`hitAt`), paint puddles paint animals, the dog chases kicked balls and fetches pebbles, pebble in the fountain = a coin a day (`Q.wish`), ducks come to a plop. Old unicorns from the meadow (`c.uniKind`): a tap = come along, a second tap = her power (bos: trees shake + mushroom ring, bloem: flowers in her footsteps, regenboog: rainbow slide to somewhere she can walk back from, zee: `act-zee` near the sea, ster: `act-wolken`). |
+| `js/world-weather.js` | `Q.weather()` per day (first day sunny): rain (+ frogs), herfst (falling leaves, piles to kick, one hides the hedgehog), sneeuw (white ground, flakes, heaps to stomp, snowman whose nose the rabbit eats). Kicked piles saved per day (`Q.kickPile`). Force with `Q.quest.wxForce = 'sneeuw'; __w.weather.sync()`. |
+| `js/act-zee.js`, `js/act-wolken.js` | Side-view places only an old unicorn's power reaches: under the sea (fish, octopus ink, pufferfish, clam pearl and chest coin once a day via `Q.giftOnce`) and the clouds (bouncy rain clouds, rainbow under the rain, sleepy moon, balloon bear, stars → coins). The rider's look is `state.extra.power.look`. `?debug` exposes `__zee` / `__wolk` with `tap(x, y)`. |
 | `js/dream.js` | The opening dream cutscene. |
 | `js/cutscene.js` | Full-screen side-view scenes for hatching and for the rainbow fruit (`?scene=hatch` / `?scene=feed` to watch). `main.js` `show()` saves the stage, then plays them. |
 | `js/hud.js` | Goal chips, coins, bed and ride buttons, the map with the goal marker. |
@@ -64,6 +68,9 @@ node cdp.mjs tests/t-perf.mjs      # draw calls per island
 node cdp.mjs tests/t-castle.mjs    # old unicorns in the village, castle garden + treasure room, race (ONLY=wei,kasteel,race; tmp-shots/c-*.png)
 node cdp.mjs tests/t-pickup.mjs    # real pointer: drag and tap to pick up an animal, puddle splash, riding left with the keys
 node cdp.mjs t-doors.mjs           # tapping/walking into every building
+node cdp.mjs tests/t-life.mjs      # feeding/friends, naps, jokes, dog fetch, fountain, paint (tmp-shots/l-*.png)
+node cdp.mjs tests/t-powers.mjs    # old unicorns come along and use their power, under the sea, the clouds (tmp-shots/u-*.png)
+node cdp.mjs tests/t-weather.mjs   # rain/frogs, leaf piles, snow + snowman (tmp-shots/w-*.png)
 ./shot.sh "?go" out.png 390 700    # any viewport, e.g. phone
 ```
 Always look at the screenshots; passing asserts do not show a sprite drawn in the wrong place.
@@ -92,6 +99,8 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - While she is in the boat `busy` is true (no walking, no keys) but taps still arrive: `world.js` hands them to `play.steer`.
 - Toys are plain sprites that do not block: never change `M.block` at runtime for them (reachability is checked once, in `map.js`).
 - An animal is picked up with a plain tap (she carries it above her head; tap it again or the jump button throws it, tap her puts it down); dragging still works. Things must not need discovering.
+- Headless Chrome can be slow: the opening dream took ~60 s there on 2026-11-23 (tests wait 90 s). Random animal spots make tests flaky; put animals on a fixed open tile (e.g. 32.5, 46.5).
+- An old unicorn from the meadow is not lifted by a tap (it comes along); other animals are. `life.update` drops friends that `syncHerd` removed.
 - Rain puddles (`M.puddles`) block nothing: walking through splashes, jumping in splashes a lot. Only logs are jumped over.
 - The stable (feed, wash, brush) stands on the castle island; it is open in `baby`, `vriend` and `feest` (`Q.stalOpen`).
 - Small things that roll or lie around (balls, star, fruit) go through `ctx.seeThrough` so they show through whatever stands in front; star and tool spots need `clearView` in `map.js`.

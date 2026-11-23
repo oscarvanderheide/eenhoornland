@@ -38,6 +38,7 @@ export const sfx = {
   snip() { [0, .14, .28].forEach(t => { noise(t, .05, .09, 5000); tone(1400, t, .04, 'square', .03, 900); }); },
   bonk() { [0, .22].forEach(t => { tone(120, t, .18, 'triangle', .22, 60); noise(t, .08, .12, 500); }); noise(.44, .3, .1, 300); },
   boing() { tone(180, 0, .35, 'triangle', .2, 560); },
+  burp() { tone(110, 0, .32, 'sawtooth', .1, 55); tone(80, .05, .3, 'square', .05, 45); noise(0, .28, .05, 260); },
   munch() { [0, .13, .26].forEach(t => { tone(160, t, .07, 'square', .05, 110); noise(t, .06, .08, 900); }); },
   purr() { tone(90, 0, .5, 'sawtooth', .035, 80); tone(660, .05, .4, 'sine', .1, 880); },
   tada() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, .7, 'triangle', .15)); },

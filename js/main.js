@@ -17,6 +17,8 @@ const ACTS = {
   huisje: () => import('./act-huisje.js'),
   kasteel: () => import('./act-kasteel.js'),
   race: () => import('./act-race.js'),
+  zee: () => import('./act-zee.js'),          // under the sea, with the sea unicorn (world-life.js)
+  wolken: () => import('./act-wolken.js'),    // up in the clouds, with the star unicorn
 };
 const params = new URLSearchParams(location.search); // dev only: ?act=atelier opens an activity directly
 let world = null;

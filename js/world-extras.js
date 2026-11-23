@@ -160,7 +160,7 @@ export function createExtras(ctx) {
   /* ---------------- the fallen star that hatches the egg, and the rainbow fruit ---------------- */
   // Both only lie there while they are wanted. The star flies to the egg, the egg shakes, and out comes the unicorn.
   const glowAt = (col) => { const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col, transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending })); g.visible = false; scene.add(g); return g; };
-  const star = { mesh: makeSprite(ART.starItem(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFF1B0'), pos: null }, fruit = { mesh: makeSprite(ART.fruit(), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFD0F0'), pos: null };
+  const star = { mesh: makeSprite(ART.warmItem(Q.quest.kind), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFF1B0'), pos: null }, fruit = { mesh: makeSprite(ART.foodItem(Q.quest.kind), { lean: .3, shadow: false, scale: 1.2 }), glow: glowAt('#FFD0F0'), pos: null };
   for (const o of [star, fruit]) { o.mesh.material = o.mesh.material.clone(); o.mesh.material.emissiveIntensity = .8; o.mesh.visible = false; ctx.seeThrough(o.mesh); scene.add(o.mesh); }
   let hatching = false;
   const starSpot = () => M.starSpots[Q.quest.spot % M.starSpots.length];
@@ -194,7 +194,7 @@ export function createExtras(ctx) {
     list.forEach((u, i) => {
       const b = { baby: true }, f = { idle: ART.uniSprite(u, 'idle', false, b), w1: ART.uniSprite(u, 'w1', false, b), w2: ART.uniSprite(u, 'w2', false, b), blink: ART.uniSprite(u, 'idle', true, b) };
       const c = animal(f, { flippable: true, name: u.name, say: ['Ik ben ' + u.name + '!', 'Hihihi!', 'Kom je spelen?'], sound: 'sparkle', blobW: .9 }, penHome);
-      c.speed = 1.1; if (arriving && i === list.length - 1) c.pos.set(gate.x, 0, P.z0 + 1.5);
+      c.speed = 1.1; c.uniKind = u.kind || 'bos'; c.look = u; if (arriving && i === list.length - 1) c.pos.set(gate.x, 0, P.z0 + 1.5);
       herd.push(c);
     });
   }
@@ -203,16 +203,17 @@ export function createExtras(ctx) {
   /* ---------------- the race arch next to the meadow: ride a unicorn against the others (act-race.js) ---------------- */
   {
     const [x, z] = MAP.RACE, art = ART.raceArch(), m = makeSprite(art, { lean: .25, scale: 1.2 }); m.position.set(x, 0, z + .3); m.userData.alpha = art; scene.add(m);
-    const go = () => { if (Q.raceMounts().length) ctx.onEnter && ctx.onEnter('race'); else { sfx.pop(); bubble(kid, '', Q.quest.stage === 'baby' ? ART.fruit() : ART.egg(Q.kind())); } };   // no unicorn to ride yet: this is what is missing
+    const go = () => { if (Q.raceMounts().length) ctx.onEnter && ctx.onEnter('race'); else { sfx.pop(); bubble(kid, '', Q.quest.stage === 'baby' ? ART.foodItem(Q.quest.kind) : ART.egg(Q.kind())); } };   // no unicorn to ride yet: this is what is missing
     m.userData.tap = () => { sfx.pop(); if (Math.hypot(x - kid.pos.x, z - kid.pos.z) < 1.8) go(); else ctx.approach(Math.floor(x), Math.floor(z), go); }; pick.push(m);
   }
 
 
   function tapCompanion(c) {
-    if (Q.canRide()) { ctx.setMount(ctx.mount() === 'uni' ? null : 'uni'); return; }   // tap her to climb on, tap again to get off
+    if (Q.canRide()) { const off = ctx.mount() === 'uni'; ctx.setMount(off ? null : 'uni'); if (off && Math.random() < .2) setTimeout(() => ctx.life.burp(c), 450); return; }   // now and then a burp when she gets off   // tap her to climb on, tap again to get off
     c.hop = 1; sfx.sparkle(); burst(c.pos, 9, true);
-    if (Q.quest.stage === 'ei') { bubble(c, 'Brr!', ART.starItem()); speak('Tik tik! Er beweegt iets in het ei! ' + Q.goalText()); }
-    else { bubble(c, '', ART.fruit()); speak('Hihihi! Ik ben ' + state.uni.name + '! ' + Q.goalText()); }
+    if (Q.quest.stage === 'ei') { bubble(c, 'Brr!', ART.warmItem(Q.quest.kind)); speak('Tik tik! Er beweegt iets in het ei! ' + Q.goalText()); }
+    else if (Math.random() < .25) ctx.life.burp(c);
+    else { bubble(c, '', ART.foodItem(Q.quest.kind)); speak('Hihihi! Ik ben ' + state.uni.name + '! ' + Q.goalText()); }
   }
   const off = Q.on(type => {
     if (type === 'stage') { ctx.refreshUnicorn(); syncEgg(); syncGoals(); }

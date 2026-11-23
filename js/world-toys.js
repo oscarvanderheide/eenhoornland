@@ -212,6 +212,8 @@ export function createToys(ctx) {
 
   return {
     dispose: off, peek, stomp, tapGround, putDown, fountain: fill,
+    /** the colour of the paint puddle at (x, z), or null (world-life.js: animals that land or walk in it) */
+    paintAt: (x, z) => { const p = puddles.find(p => Math.abs(p.x - x) < .8 && Math.abs(p.z - z) < .55); return p ? ART.PAINTS[p.k] : null; },
     carrying: () => carry && carry.id,
     /** dev / tests */
     take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,

@@ -75,8 +75,9 @@ export function createPlay(ctx) {
     const sp = Math.hypot(b.vx, b.vz);
     if (sp > .02) {
       const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
-      if (open(nx, b.z)) b.x = nx; else { b.vx *= -.6; sfx.pop(); }
-      if (open(b.x, nz)) b.z = nz; else { b.vz *= -.6; sfx.pop(); }
+      if (open(nx, b.z)) b.x = nx; else { if (sp > 2) ctx.life.hitAt(nx, b.z); b.vx *= -.6; sfx.pop(); }      // a hard kick against a tree shakes it
+      if (open(b.x, nz)) b.z = nz; else { if (sp > 2) ctx.life.hitAt(b.x, nz); b.vz *= -.6; sfx.pop(); }
+      if (sp > 1.4) for (const a of animals) { if (a.held || a.fly || a.cart || a.swim || a.water || a.hop > 0) continue; const ax = b.x - a.pos.x, az = b.z - a.pos.z, d = Math.hypot(ax, az); if (d < .5) { a.hop = 1; a.face = ax > 0 ? 1 : -1; (sfx[a.sound] || sfx.pop)(); const l = d || 1; b.vx = ax / l * sp * .6; b.vz = az / l * sp * .6; } }   // whoever stands in the way jumps aside
       const f = Math.max(0, 1 - dt * 1.4); b.vx *= f; b.vz *= f; b.spin -= b.vx * dt * 2.2;
     } else { b.vx = b.vz = 0; }
     if (b.h > 0 || b.vh > 0) { b.vh -= dt * 9; b.h += b.vh * dt; if (b.h <= 0) { b.h = 0; b.vh = b.vh < -1.2 ? -b.vh * .5 : 0; } }
@@ -176,7 +177,7 @@ export function createPlay(ctx) {
     /** on the bike, a tap on an animal: into the trailer (or out again). Returns true if it handled the tap. */
     tapAnimal(c) { if (ctx.mount() !== 'fiets') return false; if (c.cart) hopOut(c); else hopIn(c); return true; },
     info: () => ({ side, sailing: aboard, moving: route.length > 0, boat: [+bp.x.toFixed(2), +bp.z.toFixed(2)], bike: [bike.position.x, bike.position.z], balls: balls.map(b => [+b.x.toFixed(2), +b.z.toFixed(2)]), riders: riders.length, chests: chests.map(c => [c.x, c.z]), whale: whaleT >= 0, flip: flip > 0 }),
-    kick(i, dx, dz) { kick(balls[i], dx, dz, 6); }, bikeNear: () => ctx.mount() !== 'fiets' && Math.hypot(bike.position.x - kid.pos.x, bike.position.z - kid.pos.z) < 1.6, tapBike: () => bike.userData.tap(), tapBoat: () => boat.userData.tap(),
+    kick(i, dx, dz) { kick(balls[i], dx, dz, 6); }, balls, kickBall: kick, wetAt, bikeNear: () => ctx.mount() !== 'fiets' && Math.hypot(bike.position.x - kid.pos.x, bike.position.z - kid.pos.z) < 1.6, tapBike: () => bike.userData.tap(), tapBoat: () => boat.userData.tap(),
     update(dt, time, active) {
       // bike, trailer, ramps
       const riding = ctx.mount() === 'fiets';

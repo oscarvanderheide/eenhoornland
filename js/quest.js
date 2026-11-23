@@ -29,6 +29,10 @@ export const ITEMS = {
 export const DAILY = { bloem: 10, appel: 0, paddenstoel: 7, schelp: 8, wortel: 6, diamant: 4, munt: 8 };
 const NAMES = ['Sterretje', 'Wolkje', 'Glitter', 'Snoepje', 'Bloesem', 'Maantje', 'Zonnetje', 'Roosje', 'Vlinder', 'Suikerspin', 'Regenboog', 'Parel', 'Sneeuwvlok', 'Madelief', 'Bubbel', 'Fonkel', 'Lolly', 'Dromer', 'Twinkel', 'Zeepbel', 'Hartje', 'Pluisje', 'Knuffel', 'Framboos'];
 const STAGES = ['zoek', 'ei', 'baby', 'vriend', 'feest'];
+/** what warms each kind of egg (it lies in the flower meadow) and what each little unicorn is hungry for (it grows on the rainbow island) */
+export const WARM = { bos: 'een warm sterretje', bloem: 'een warme zonnebloem', zee: 'een gouden schelp', regenboog: 'een stukje regenboog', ster: 'een maantje' };
+export const FOOD = { bos: 'regenboogfruit', bloem: 'aardbeien', zee: 'zeebessen', regenboog: 'honing', ster: 'sterrenkoekjes' };
+const warmName = () => WARM[q.kind] || WARM.bos, foodName = () => FOOD[q.kind] || FOOD.bos;
 
 /* ---------- saved state ---------- */
 function fresh(old) {
@@ -94,10 +98,10 @@ export function wishText(w) {
   const n = uniName();
   if (w.t === 'egg') return (q.cycle ? 'Er ligt weer ergens een ei verstopt! ' : 'Je droomde van een geheimzinnig ei. Zou het echt bestaan? ') + (HINT[q.zone] || HINT.bos);
   if (w.t === 'tool') return w.id === 'schaar'
-    ? 'Het ei heeft het koud! In de bloemenwei ligt een warm sterretje. Maar de brug zit dicht met doornstruiken. Zoek de schaar in het dorp! Kijk maar op de kaart.'
-    : n + ' heeft honger! Ze wil regenboogfruit. Maar er liggen grote stenen op de brug naar het strand. Zoek de hamer in het bos! Kijk maar op de kaart.';
-  if (w.t === 'star') return neededTool() ? 'Met de schaar kun je naar de bloemenwei. Daar ligt een warm sterretje voor het ei.' : 'Het ei heeft het koud! Zoek het gevallen sterretje in de bloemenwei. Knip de doornstruiken op de brug weg.';
-  if (w.t === 'fruit') return neededTool() ? 'Met de hamer kun je naar het strand. Daar ligt een boot naar het regenboogeiland.' : n + ' heeft honger! Sla de stenen op de brug kapot, ga naar het strand en neem de boot naar het regenboogeiland. Daar groeit regenboogfruit!';
+    ? 'Het ei heeft het koud! In de bloemenwei ligt ' + warmName() + '. Maar de brug zit dicht met doornstruiken. Zoek de schaar in het dorp! Kijk maar op de kaart.'
+    : n + ' heeft honger! Ze wil ' + foodName() + '. Maar er liggen grote stenen op de brug naar het strand. Zoek de hamer in het bos! Kijk maar op de kaart.';
+  if (w.t === 'star') return neededTool() ? 'Met de schaar kun je naar de bloemenwei. Daar ligt ' + warmName() + ' voor het ei.' : 'Het ei heeft het koud! Zoek ' + warmName() + ' in de bloemenwei. Knip de doornstruiken op de brug weg.';
+  if (w.t === 'fruit') return neededTool() ? 'Met de hamer kun je naar het strand. Daar ligt een boot naar het regenboogeiland.' : n + ' heeft honger! Sla de stenen op de brug kapot, ga naar het strand en neem de boot naar het regenboogeiland. Daar groeit ' + foodName() + '!';
   if (w.t === 'wei') return n + ' is nu sterk genoeg. Tik op ' + n + ' en klim op haar rug! Spring over de kapotte brug naar het kasteel en ga naar binnen. In de kasteeltuin slaapt de regenboog: maak hem wakker!';
   return '';
 }
@@ -206,6 +210,19 @@ export function wear(id, who) {
   const it = SHOP.find(s => s.id === id); if (!it || !q.own[id]) return false;
   const g = girl(who); if (g[it.slot] === id) delete g[it.slot]; else g[it.slot] = id; commit(['wear', who]); return true;
 }
+/* ---------- animals that like something from the bag (world-life.js) ---------- */
+// Given one, the animal is her friend for the rest of the day and walks along behind her. What it is given is gone from the bag.
+export const FAVOURITE = { Konijn: 'wortel', Hertje: 'appel', Eekhoorn: 'paddenstoel', Egel: 'appel', Krab: 'schelp', Draakje: 'diamant' };
+export function giveFood(type) { if (!(q.bag[type] > 0)) return false; q.bag[type]--; commit(['gave', type]); return true; }
+/** a present that comes once a day (the pearl in the clam under the sea, a coin from the chest, stars in the clouds): true if it was given now */
+export const gotToday = key => (q.gifts || {})[key] === q.day;
+export function giftOnce(key, type) {
+  if (gotToday(key)) return false; (q.gifts = q.gifts || {})[key] = q.day;
+  if (type === 'munt') { q.coins++; commit(['coins', q.coins]); } else { q.bag[type] = (q.bag[type] || 0) + 1; q.totals[type] = (q.totals[type] || 0) + 1; commit(['collect', { type }]); }
+  return true;
+}
+/** a pebble thrown into the fountain is a wish: the first one every day brings up a coin */
+export function wish() { if (q.wished === q.day) return false; q.wished = q.day; q.coins++; commit(['coins', q.coins]); return true; }
 /** a coin that was not lying around: from a bottle in the sea, from under a boulder */
 export function earn(n = 1) { q.coins += n; commit(['coins', q.coins]); }
 
@@ -224,6 +241,18 @@ export function buildSand(x, z) {
   q.sand.push([x, z, 1]); if (q.sand.length > SAND_MOST) q.sand.shift(); commit(['sand']); return 1;
 }
 export function stompSand(x, z) { const i = sandAt(x, z); if (i < 0) return false; q.sand.splice(i, 1); commit(['sand']); return true; }
+
+/* ---------- the weather: a new one every morning (the very first day is always sunny) ---------- */
+// 'zon' | 'regen' (rain, frogs come out) | 'herfst' (falling leaves, piles to jump in) | 'sneeuw' (snowflakes, a snowman, snow to stomp)
+export const WEATHERS = ['zon', 'regen', 'herfst', 'sneeuw'];
+export function weather() {
+  if (q.wxForce && WEATHERS.includes(q.wxForce)) return q.wxForce;
+  if (q.day <= 1) return 'zon'; const r = rng((q.seed | 0) + q.day * 7717)();
+  return r < .45 ? 'zon' : r < .65 ? 'regen' : r < .82 ? 'herfst' : 'sneeuw';
+}
+/** a pile of leaves or snow she jumped in stays flat for the rest of the day */
+export const pileGone = i => !!q.wx && q.wx.day === q.day && q.wx.gone.includes(i);
+export function kickPile(i) { if (!q.wx || q.wx.day !== q.day) q.wx = { day: q.day, gone: [] }; if (q.wx.gone.includes(i)) return false; q.wx.gone.push(i); commit(['pile', i]); return true; }
 
 /* ---------- the castle garden: six sleeping flowers, one for every colour of the rainbow ---------- */
 export const BLOOMS = 6;

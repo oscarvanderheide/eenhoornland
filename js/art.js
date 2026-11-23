@@ -161,6 +161,17 @@ const gat = () => cached('gat', () => gridSprite(18, 16, (x, y) => { const top =
 const regenboogbrug = () => cached('rbbrug', () => gridSprite(18, 16, (x, y) => mix(PX.RAINBOW[Math.floor(x / 3)], '#ffffff', y % 4 === 0 ? .45 : .2)));
 export const starItem = () => cached('starItem', () => sprite(['.....y.....', '....yyy....', '....yYy....', 'yyyyyYyyyyy', '.yyYYYYYyy.', '..yYkYkYy..', '..yYYmYYy..', '.yyYYYYYyy.', '.yyyy.yyyy.', 'yyy.....yyy'], { y: '#FFD43B', Y: '#FFF3A8', k: EYE, m: '#FF8FB1' }));
 export const fruit = () => cached('fruit', () => gridSprite(9, 10, (x, y) => { if (y < 2) return (x === 4 && y === 1) ? '#8A5A3B' : (x === 5 || x === 6) && y === 0 ? '#5DC88A' : null; const dd = (x + .5 - 4.5) ** 2 + (y + .5 - 6) ** 2; if (dd > 16.5) return null; if (x === 2 && y === 4) return '#FFFFFF'; return PX.RAINBOW[Math.min(5, Math.floor((y - 2) * .75))]; }));
+
+/* every kind of egg needs its own warm thing to hatch and its own food to grow strong (quest.js WARM / FOOD); the forest
+   egg of the very first adventure keeps the fallen star and the rainbow fruit */
+const honing = () => cached('honing', () => sprite(['.kkkkkk.', '.kKKKKk.', 'oooooooo', 'oOOyOOOo', 'oOyyyOOo', 'oOOyOOOo', 'oOOOOOOo', '.oooooo.'], { o: '#E0A020', O: '#FFC94D', y: '#FFF3A8', k: '#B5823F', K: '#E8C08A' }));
+const aardbei = () => cached('aardbei', () => sprite(['...gg...', '..gGGg..', '.rrrrrr.', 'rrwrrwrr', 'rRrrrrrr', '.rwrrwr.', '..rrrr..', '...rr...'], { r: '#F0525A', R: '#FFB3B3', w: '#FFE08A', g: '#5DC88A', G: '#3A9E69' }));
+const sterkoek = () => cached('sterkoek', () => sprite(['....b....', '...bBb...', 'bbbbBbbbb', '.bBBpBBb.', '..bBpBb..', '.bBb.bBb.', '.bb...bb.'], { b: '#C18F5C', B: '#F2C98A', p: '#FF7EB6' }));
+const zeebes = () => cached('zeebes', () => sprite(['..g.g..', '...g...', '.bb.bb.', 'bBbbBbb', 'bbbbbbb', '.bBbbb.', '..bbb..'], { b: '#4FA3F7', B: '#BFE3FF', g: '#3A9E69' }));
+const goudschelp = () => cached('goudschelp', () => sprite(['..yyyyy..', '.yWyLyWy.', 'yWyLyLyWy', 'yWyLyLyWy', '.yWyLyWy.', '..yyyy...', '...yy....'], { y: '#FFD43B', W: '#FFF3A8', L: '#E0A020' }));
+const zonnebloem = () => cached('zonnebloem', () => sprite(['..y.y.y..', '.yyyyyyy.', 'yyybbbyyy', '.yybBbyy.', 'yyybbbyyy', '.yyyyyyy.', '..y.g.y..', '....g....', '...gg....', '....g....'], { y: '#FFD43B', b: '#8A5A3B', B: '#B5823F', g: '#5DC88A' }));
+export const warmItem = kind => kind === 'bloem' ? zonnebloem() : kind === 'zee' ? goudschelp() : kind === 'regenboog' ? PX.rainbow() : kind === 'ster' ? PX.moon() : starItem();
+export const foodItem = kind => kind === 'bloem' ? aardbei() : kind === 'zee' ? zeebes() : kind === 'regenboog' ? honing() : kind === 'ster' ? sterkoek() : fruit();
 export const bike = () => cached('bike', () => sprite([
   '................kkkk....', '......ssss........p.....', '.......ss.........p.yyyy', '........p.........p.yYYy', '.......pppppppppppppyyyy', '......p.p......PP.p.....', '.....pp.p.....PP..p.....',
   '..kkkp..p...PP...kpk....', '.k.gpk..p..PP...k.p.k...', 'k..gp.k.p.PP...k..p..k..', 'kggppppppp.....kggpggk..', 'k..g..k..k.....k..g..k..', '.k.g.k...kk.....k.g.k...', '..kkk............kkk....',
@@ -291,6 +302,24 @@ export const fish = (seed = 0) => cached('fish' + (seed % 2), () => sprite(['..f
 export const leaf = (seed = 0) => cached('leaf' + (seed % 3), () => sprite(['.gg', 'ggG', 'G..'], { g: ['#7CCB64', '#5DB35A', '#F5B83D'][seed % 3], G: '#3F8A4A' }, { outline: false }));
 export const note = (seed = 0) => cached('note' + (seed % 3), () => sprite(['..nn', '..n.', '..n.', 'nnn.', 'nnn.'], { n: ['#FF5E9C', '#4DABF7', '#FFD43B'][seed % 3] }));
 export const dizzy = () => cached('dizzy', () => sprite(['.y.', 'yyy', '.y.'], { y: '#FFD43B' }));
+/* rare surprises (world-life.js): what falls out of a tree on her head, a frog in a bush, a burp, a nap */
+export const eikel = () => cached('eikel', () => sprite(['..k..', '.ccc.', 'cCcCc', '.aAa.', '.aaa.', '..a..'], { k: '#6E4630', c: '#8A5A3B', C: '#B5823F', a: '#D9A066', A: '#F2C98A' }));
+export const dennenappel = () => cached('denappel', () => sprite(['..b..', '.bBb.', 'bBbBb', '.bBb.', 'bBbBb', '.bBb.', '..b..'], { b: '#8A5A3B', B: '#C18F5C' }));
+export const kokosnoot = () => cached('kokos', () => sprite(['.bbbb.', 'bBbbkb', 'bbbbbb', 'bkbbBb', '.bbbb.'], { b: '#7A5236', B: '#A87B55', k: '#3D2B1F' }));
+export const kikker = (frame = 'sit') => cached('kikker' + frame, () => sprite(frame === 'sit'
+  ? ['.ww..ww.', 'wkgggkwg', 'ggggggg.', 'gLLLLLg.', 'gglllgg.', 'g.g..g.g']
+  : ['.ww..ww.', 'wkgggkw.', 'ggggggg.', '.gLLLg..', 'g.lll.g.', 'g.....g.'], { g: '#69C46A', L: '#FF8FB1', l: '#C8F0B0', w: '#FFFFFF', k: EYE }));
+export const burpBel = (seed = 0) => cached('burp' + seed % 6, () => { const c = PX.RAINBOW[seed % PX.RAINBOW.length]; return gridSprite(6, 6, (x, y) => { const d = (x + .5 - 3) ** 2 + (y + .5 - 3) ** 2; return d > 8 ? null : x === 1 && y === 1 ? '#FFFFFF' : d > 5 ? c : mix(c, '#FFFFFF', .7); }); });
+export const appeltje = () => cached('appeltje', () => sprite(['..g.', '.rrr', 'rRrr', 'rrrr', '.rr.'], { r: '#F0525A', R: '#FFB3B3', g: '#5DC88A' }));
+/* weather (world-weather.js) */
+export const sneeuwhoop = () => cached('sneeuwhoop', () => gridSprite(14, 6, (x, y) => { const d = ((x + .5 - 7) / 7) ** 2 + ((y + .5 - 6) / 6) ** 2; return d > 1 ? null : y < 2 && x > 4 && x < 8 ? '#FFFFFF' : (x + y) % 5 === 0 ? '#DDEBFA' : '#F4F9FF'; }, { outline: '#A9B9D6' }));
+export const bladerhoop = (seed = 0) => cached('blader' + seed % 2, () => gridSprite(16, 7, (x, y) => { const d = ((x + .5 - 8) / 8) ** 2 + ((y + .5 - 7) / 7) ** 2; if (d > 1) return null; const k = (x * 7 + y * 13 + seed * 5) % 9; return ['#F5B83D', '#E8743A', '#D9532F', '#FFD43B', '#C9773F', '#F5B83D', '#E8743A', '#B5823F', '#FF9E6B'][k]; }, { outline: '#8A4A2B' }));
+/** the snowman: nose true/false (the rabbit may have eaten it), hatUp lifts the hat */
+export const sneeuwpop = (nose = true, hatUp = 0) => cached('sneeuwpop' + nose + hatUp, () => sprite([
+  ...(hatUp ? ['.....kkkk.....', '.....kkkk.....', '....kkkkkk....', '..............'] : ['..............', '.....kkkk.....', '.....kkkk.....', '....kkkkkk....']),
+  '....wwwwww....', '...wwewwewW...', '...wwwwnnoo...', '...wwwwwwwW...', '....wwwwww....', '..wwwwwwwwww..', '.wwwwwkwwwwWw.', 'swwwwwwwwwwWWs', '.wwwwwkwwwwWw.', '..wwwwwwwwWW..', '.wwwwwwwwwwwW.',
+  'wwwwwwwwwwwwWW', 'wwwwwwwwwwwwWW', '.wwwwwwwwwwWW.', '..wwwwwwwwWW..'].map(r => nose ? r : r.replace(/n|o/g, 'w')), { w: '#F7FBFF', W: '#D6E4F5', k: '#3D2B4F', e: '#2B1E3A', n: '#FF8C42', o: '#FF8C42', s: '#8A5A3B' }));
+export const zzz = () => cached('zzz', () => sprite(['zzzz', '..z.', '.z..', 'zzzz'], { z: '#8FA8FF' }));
 
 /* ================= eggs ================= */
 /** k = {base, spot, band} colours; part: 'whole' | 'top' | 'bottom' (cracked halves) */

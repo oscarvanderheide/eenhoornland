@@ -68,14 +68,14 @@ function meadow(k, scroll = 0) {
   for (let i = 0; i < 80; i++) { const x = ((i * 67 + 13 - scroll * (1 + (i % 3) * .3)) % (FW + 20) + FW + 20) % (FW + 20) - 10 + X0, y = GY - 14 + (i * 29) % 70; px('#4E9A51', x, y + 2, 1, 3); px(fc[i % 5], x - 1, y, 3, 3); px('#FFF3A8', x, y + 1); }
 }
 /** the fallen star: a little face, glowing */
-function star(k, x, y, s = 3, rot = 0) { glow(k.ctx, x, y - 16, 34 + Math.sin(k.time * 4) * 4, '255,240,170', .55); k.D(ART.starItem(), x, y, s, false, rot); }
+function star(k, x, y, s = 3, rot = 0) { glow(k.ctx, x, y - 16, 34 + Math.sin(k.time * 4) * 4, '255,240,170', .55); k.D(ART.warmItem(Q.quest.kind), x, y, s, false, rot); }
 
 /** The star warms the egg and the unicorn is born. who: 'anna' | 'fenna'; kindDef: the egg; look: the unicorn that comes out. */
 export function playHatch(host, who, kindDef, look) {
   const girl = f => PX.kidSprite(who, f, false, Qw(who)), egg = ART.egg(kindDef), top = ART.egg(kindDef, 'top'), bot = ART.egg(kindDef, 'bottom');
   const uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true });
   const EX = 188, GX = 62;
-  const SAY = ['Brr, het ei heeft het koud. Kijk, daar komt het sterretje!', 'Het sterretje maakt het ei lekker warm.', 'Het ei beweegt! Tik, tik, tik...', '', 'Krak! Een kleine eenhoorn! Hallo ' + look.name + '!', look.name + ' vindt jou lief!'];
+  const SAY = ['Brr, het ei heeft het koud. Kijk, daar komt ' + Q.WARM[Q.quest.kind] + '!', 'Het ei wordt lekker warm.', 'Het ei beweegt! Tik, tik, tik...', '', 'Krak! Een kleine eenhoorn! Hallo ' + look.name + '!', look.name + ' vindt jou lief!'];
   return run(host, [3, 3.2, 3.4, 1, 5, 4], k => {
     const { ctx, scene, t, time, px, D, spark } = k;
     if (k.first) { if (SAY[scene]) speak(SAY[scene]); [sfx.sparkle, () => sfx.chime(3), sfx.pop, sfx.whoosh, sfx.tada, sfx.sparkle][scene](); }
@@ -128,9 +128,9 @@ function island(k, scroll = 0) {
 
 /** She eats the rainbow fruit, grows strong, and the girl rides away on her back. */
 export function playFeed(host, who, look) {
-  const girl = f => PX.kidSprite(who, f, false, Qw(who)), uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true }), fruit = ART.fruit();
+  const girl = f => PX.kidSprite(who, f, false, Qw(who)), uni = (f, sleep = false) => ART.uniSprite(look, f, sleep, { baby: true }), fruit = ART.foodItem(Q.quest.kind);
   const FX = 222, FY = 112;   // where the fruit hangs
-  const SAY = [look.name + ' heeft honger. Kijk, daar hangt regenboogfruit!', 'Pluk het maar!', 'Hap, hap, hap. Mmm!', 'Wat gebeurt er? ' + look.name + ' wordt sterk!', 'Kijk eens hoe sterk ze is!', 'Klim maar op haar rug. Hup, daar gaan we!'];
+  const SAY = [look.name + ' heeft honger. Kijk, daar hangen ' + Q.FOOD[Q.quest.kind] + '!', 'Pluk het maar!', 'Hap, hap, hap. Mmm!', 'Wat gebeurt er? ' + look.name + ' wordt sterk!', 'Kijk eens hoe sterk ze is!', 'Klim maar op haar rug. Hup, daar gaan we!'];
   return run(host, [3, 2.6, 3.4, 4.4, 2.4, 5], k => {
     const { ctx, scene, t, time, px, D, spark } = k;
     if (k.first) { if (SAY[scene]) speak(SAY[scene]); [sfx.bubble, sfx.boing, sfx.munch, sfx.sparkle, sfx.tada, sfx.boing][scene](); }

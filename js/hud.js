@@ -93,7 +93,7 @@ export function createHud(getWorld) {
     if (key) { const sig = text + cls; if (lastSig[key] !== undefined && lastSig[key] !== sig) b.classList.add('bump'); lastSig[key] = sig; }
     parent.appendChild(b); return b;
   }
-  const goalIcon = w => w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : w.t === 'star' ? ART.starItem() : w.t === 'fruit' ? ART.fruit() : PX.rainbow();
+  const goalIcon = w => w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : w.t === 'star' ? ART.warmItem(Q.quest.kind) : w.t === 'fruit' ? ART.foodItem(Q.quest.kind) : PX.rainbow();
   function render() {
     panel.innerHTML = ''; toolRow.innerHTML = '';
     for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id)) chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);

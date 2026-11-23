@@ -12,6 +12,7 @@ import { createTools } from './world-tools.js';
 import { createPlay } from './world-play.js';
 import { createLife } from './world-life.js';
 import { createToys } from './world-toys.js';
+import { createWeather } from './world-weather.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -545,7 +546,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!interactive || paused || kid.hop > 0) return;
     if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
     if (life.throwIt()) return;                                                  // with an animal above her head the button throws it
-    sfx.boing(); kid.hop = 1; toys.stomp();
+    sfx.boing(); kid.hop = 1; toys.stomp(); life.jumped(); weather.stomp();
     if (mount !== 'uni') setTimeout(() => { if (uni.g.visible && uni.hop <= 0) uni.hop = 1; }, 200);
   }
   let lastTile = -1;
@@ -573,7 +574,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
 
   const alphaCache = new Map();
   let extras = null, toys = null; const ctxHooks = { onWish };
-  const ctx = { THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, seeThrough, castle: CASTLE, onEnter, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
+  const ctx = { groundMesh, groundCanvas, THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, seeThrough, castle: CASTLE, onEnter, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
     walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground, astar, showMarker: (x, z) => showMarker(x, z),
     /** walk onto this very tile, then do `then` */
     walkThen: (x, z, then) => { target = null; if (!walkTo(x, z, null, null, true)) return false; after = then; return true; },
@@ -581,6 +582,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** a full-screen moment (hatching, the rainbow fruit): main.js plays it and resolves when it is over */
     show: (type, data) => onShow ? onShow(type, data) : Promise.resolve(), placeAt: (x, z, dx, dz) => placeAt(x, z, dx, dz), mount: () => mount, setMount, who: () => who,
     /** something else moves her for a while (the boat): no walking, no taps */
+    busy: () => busy,
     setBusy(v) { busy = v; if (v) { kid.path = []; target = null; after = null; keys.clear(); } } };
   let play = null;
   extras = ctx.extras = createExtras(ctx);
@@ -588,6 +590,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   play = ctx.play = createPlay(ctx);
   const life = ctx.life = createLife(ctx);
   toys = ctx.toys = createToys(ctx);
+  const weather = ctx.weather = createWeather(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -649,7 +652,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function tapChar(c) {
     if (c === kid && mount) { setMount(null); return; }
     if (c === kid && toys.carrying()) { toys.putDown(); return; }
-    if (c === kid && life.setDown()) return;                                     // or the animal she holds above her head                // tap her and she puts down what she carries
+    if (c === kid && life.setDown()) return;
+    if (c === kid && life.tapKid()) return;                                      // three quick taps: she twirls                                     // or the animal she holds above her head                // tap her and she puts down what she carries
     c.hop = 1; const txt = c.say[Math.floor(Math.random() * c.say.length)];
     if (c.isUni) { extras.tapCompanion(c); return; }
     (sfx[c.sound] || sfx.pop)(); bubble(c, txt); speak(txt); if (Math.random() < .4) burst(c.pos, 4, true);
@@ -804,6 +808,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     // animals
     for (const a of animals) {
       if (a.held || a.fly || a.cart || a.swim) { a.moving = false; continue; }                          // in her hands or flying through the air (world-life.js)
+      if (a.friend) continue;                                                                             // walking along behind her (world-life.js)
       if (a.path.length) stepAlong(a, dt, a.speed);
       else { a.moving = false; a.wait -= dt; if (a.wait < 0) { a.wait = 2 + Math.random() * 4; const t = randomTile(a); const s = [Math.floor(a.pos.x), Math.floor(a.pos.z)]; const ok = a.water ? waterTile : walkable; const p = astar(s[0], s[1], t[0], t[1], (x, z) => ok(x, z) || (x === s[0] && z === s[1])); if (p) a.path = p.slice(1).map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5));
         else if (a.lost) { a.lost = false; burst(a.pos, 6); a.pos.set(t[0] + .5, 0, t[1] + .5); burst(a.pos, 6); sfx.sparkle(); } } }   // thrown too far to walk back: a little magic brings it home
@@ -812,7 +817,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
+    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); stepWobbles(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -835,7 +840,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -856,7 +861,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); toys.dispose(); offWear(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); toys.dispose(); weather.dispose(); offWear(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }
