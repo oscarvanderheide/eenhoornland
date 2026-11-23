@@ -83,7 +83,7 @@ export function createHud(getWorld) {
   function syncWho() { const w = getWorld(), cur = w ? w.who() : (state.extra.who || 'anna'); for (const id in whoBtn) whoBtn[id].classList.toggle('on', id === cur); }
   syncWho();
   const toolRow = document.createElement('div'); toolRow.id = 'tools'; game.appendChild(toolRow);
-  const TOOL_SAY = { schaar: 'Dit is de schaar. Tik op een doornstruik om hem weg te knippen!', hamer: 'Dit is de hamer. Tik op een grote steen om hem kapot te slaan!' };
+  const TOOL_SAY = { zwaard: 'Dit is het zwaard. Tik op een doornstruik om hem weg te hakken!', hamer: 'Dit is de hamer. Tik op een grote steen om hem kapot te slaan!' };
 
   let lastSig = {};
   function chip(cls, icon, text, onTap, key, parent = panel) {

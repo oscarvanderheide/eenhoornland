@@ -24,7 +24,7 @@ export default async function (t) {
   ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 2, 'the goal is the egg'); await settle(1500); await shot('08-outside');
   await t.ev(`document.querySelector('#quest .qchip').click()`); await settle(700); ok(await t.ev(`!!document.querySelector('.kaart-goal') && document.querySelectorAll('.kaart-gate').length === 3`), 'the chip opens the map with the goal and the three closed bridges'); await shot('09-map');
   await t.ev(`document.querySelector('#modal [data-close]').click()`);
-  ok(await t.ev(`__w.tools.spot('schaar') === null && __w.tools.spot('hamer') === null`), 'no tools lie around yet'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
+  ok(await t.ev(`!!__w.tools.spot('zwaard') && !!__w.tools.spot('hamer')`), 'the sword waits in its stone and the gnome sleeps on his hammer'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
   ok(await t.ev(`document.querySelector('#b-ride').hidden`), 'no ride button yet');
   // the world is closed: the meadow cannot be walked to
   await place(45.5, 45.5); ok(await t.ev(`__w.walkTo(64,45)`) === true, 'walking to the meadow walks up to the brambles'); await settle(5000); s = await q(); ok(s.pos[0] < 49, 'and stops there (x=' + s.pos[0] + ')'); await shot('10-brambles');
@@ -32,25 +32,27 @@ export default async function (t) {
   // the egg in the forest
   ok(await t.ev(`__w.M.zone[__w.M.I(Math.floor(${s.info.egg[0]}),Math.floor(${s.info.egg[1]}))]`) === 'bos', 'the egg lies in the forest');
   await place(s.info.egg[0] - 2.5, s.info.egg[1] + 1.5); await settle(2000); await shot('11-egg-hidden');
-  await place(s.info.egg[0], s.info.egg[1] + .6); await settle(); s = await q(); ok(s.stage === 'ei' && s.uni && s.w.join() === 'tool:schaar,star:ster', 'egg found, it follows; now the shears'); await shot('12-egg-found');
+  await place(s.info.egg[0], s.info.egg[1] + .6); await settle(); s = await q(); ok(s.stage === 'ei' && s.uni && s.w.join() === 'tool:zwaard,star:ster', 'egg found, it follows; now the shears'); await shot('12-egg-found');
   // shears → brambles → star → hatch
-  let p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('schaar'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'dorp', 'the shears lie in the village'); await place(p[0] - 1.5, p[1] + 1); await settle(1500); await shot('13-shears');
-  await place(p[0], p[1]); await settle(); ok(await t.ev(`__w.Q.hasTool('schaar')`), 'picked up the shears');
+  let p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('zwaard'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'dorp', 'the sword stands in a stone in the village'); await place(p[0] - 2.5, p[1] + 1); await settle(1500); await shot('13-sword');
+  await place(p[0] - .9, p[1] + .1); await t.sleep(1400); await shot('13b-tug'); ok(await until(`__w.Q.hasTool('zwaard')`, 20000), 'she tugs it out of the stone'); await t.sleep(400); await shot('13c-pop'); await settle(2500);
   await place(48.5, 45.5); await t.ev(`__w.tools.useAt(49,45)`); await settle(1200); ok(await t.ev(`__w.walkable(49,45) && __w.walkable(49,46)`), 'the brambles are cut'); await shot('14-bridge-open');
-  s = await q(); ok(s.info.star && s.w.join() === 'star:ster', 'the star lies in the meadow'); await place(s.info.star[0] - 2, s.info.star[1] + 1.2); await settle(2000); await shot('15-star');
-  await place(s.info.star[0] - .5, s.info.star[1]); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the star starts the hatching scene'); ok(await t.ev(`__w.Q.quest.stage`) === 'baby', 'and it is saved right away');
+  s = await q(); ok(s.info.star && s.w.join() === 'star:ster', 'the star lies in the meadow'); await place(s.info.star[0] - 3, s.info.star[1] + 1.2); await settle(2000); await shot('15-star');
+  for (let k = 0; k < 2; k++) { s = await q(); const st = s.info.star; await place(st[0] - 1.5, st[1] + .3); ok(await until(`__w.extras.info().starHops === ${k + 1}`, 15000), 'it giggles and hops away (' + (k + 1) + ')'); await t.sleep(400); await shot('15' + 'ab'[k] + '-hop'); await until(`!__w.extras.info().starMoving`, 15000); }
+  s = await q(); await place(s.info.star[0] - .5, s.info.star[1]); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the star starts the hatching scene'); ok(await t.ev(`__w.Q.quest.stage`) === 'baby', 'and it is saved right away');
   const tap = () => t.ev(`document.querySelector('#scene') && document.querySelector('#scene').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})),1`);
   for (const n of ['16a-cold', '16b-warm', '16c-wobble', '16d-flash', '16e-born', '16f-friends']) { await t.sleep(3200); await shot(n); await tap(); }
   ok(await until(`!document.querySelector('#scene')`, 30000), 'the hatching scene ends'); await settle(1500); await shot('17-hatched');
   await place(76.5, 31.5); await settle(600); await t.ev(`__w.walkTo(76,25)`); await settle(5000); s = await q(); ok(s.pos[1] > 28.9 && s.mount === null, 'a baby cannot jump the broken bridge yet (z=' + s.pos[1] + ')');
   s = await q(); ok(s.uni && s.w.join() === 'tool:hamer,fruit:fruit', 'a little unicorn follows; now the hammer');
   // hammer → boulders → boat → fruit
-  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('hamer'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the hammer lies in the forest'); await place(p[0], p[1]); await settle(); ok(await t.ev(`__w.Q.hasTool('hamer')`), 'picked up the hammer');
+  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('hamer'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the gnome with the hammer sleeps in the forest'); await place(p[0] - 2.5, p[1] + 1); await settle(1800); await shot('17b-gnome'); await place(p[0] - .9, p[1] + .1); await t.sleep(1200); await shot('17c-awake'); ok(await until(`__w.Q.hasTool('hamer')`, 15000), 'he wakes up and gives her the hammer'); await settle(2000);
   await place(70.5, 56.5); await settle(1500); await shot('18-boulders'); await t.ev(`__w.tools.useAt(70,58)`); await settle(1200); ok(await t.ev(`__w.walkable(70,58) && __w.walkable(71,58)`), 'the boulders are smashed');
   await place(46.5, 70.5); await settle(1500); await shot('19-beach'); ok(await t.ev(`__w.walkTo(12,69)`) === true, 'walking to the island walks to the pier'); ok(await until(`__w.busy()`, 40000), 'she gets into the boat'); await t.sleep(2500); await shot('20-sailing'); await t.ev(`__w.play.steer(14.5, 70.5)`);
   ok(await until(`!__w.busy()`, 60000), 'the boat arrives'); s = await q(); ok(s.play.side === 'eiland' && s.pos[0] < 28, 'on the rainbow island');  await settle(1500); await shot('21-island');
-  await place(s.info.fruit[0] + 1.6, s.info.fruit[1] + 1.4); await settle(2000); await shot('22-rainbow-tree');
-  await place(s.info.fruit[0] + .3, s.info.fruit[1] + .3); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the fruit starts the feeding scene');
+  ok(s.info.fruitInTree, 'the fruit hangs in the rainbow tree'); await place(s.info.fruit[0] + 1, s.info.fruit[1] + .9); await settle(2000); await shot(`22-rainbow-tree`);
+  for (let k = 0; k < 2; k++) { await until(`__w.kid.hop <= 0`, 8000); await t.ev(`__w.jump()`); await t.sleep(1200); } await shot('22b-shaken'); ok(await until(`!__w.extras.info().fruitInTree`, 8000), 'two jumps shake it out of the tree'); await t.sleep(1500); s = await q();
+  if (s.info.fruit) await place(s.info.fruit[0] + .3, s.info.fruit[1] + .3); ok(await until(`!!document.querySelector('#scene')`, 15000), 'catching the fruit starts the feeding scene');
   for (const n of ['23a-hungry', '23b-pick', '23c-eat', '23d-magic', '23e-strong', '23f-climb']) { await t.sleep(3200); await shot(n); await tap(); } await t.sleep(4500); await shot('23g-gallop'); await t.ev(`document.querySelector('#scene .skip') && document.querySelector('#scene .skip').click()`);
   ok(await until(`!document.querySelector('#scene')`, 30000), 'the feeding scene ends'); await settle(1500);
   s = await q(); ok(s.stage === 'vriend' && s.w.join() === 'wei:wei' && s.mount === 'uni', 'she ate the fruit, and the girl is riding her straight away'); await shot('23-fed');
@@ -74,7 +76,7 @@ export default async function (t) {
   await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='huisje'); __w.placeAt(b.door[0]+.5,b.door[1]+.5); __w.walkTo(b.door[0],b.door[1],b)})()`); ok(await until(`!document.querySelector('#act').hidden`, 15000), 'bedroom opens'); await settle(800); await shot('31-bed');
   await t.ev(`document.querySelector('.act-huisje .tool').click()`); await t.sleep(4200); await shot('32-dreaming');
   ok(await until(`!!document.querySelector('.act-huisje .btn')`, 40000), 'morning arrives'); await shot('33-morning'); await t.ev(`document.querySelector('.act-huisje .btn').click()`); await settle(3000);
-  s = await q(); ok(s.stage === 'zoek' && s.cycle === 1 && s.seed !== 0 && s.w.join() === 'egg:ei', 'a new egg in a new world'); ok(await t.ev(`__w.Q.hasTool('schaar') && __w.Q.hasTool('hamer') && __w.tools.gates().length === 3`), 'tools are kept, the bridges are closed again'); await shot('34-next-day');
+  s = await q(); ok(s.stage === 'zoek' && s.cycle === 1 && s.seed !== 0 && s.w.join() === 'egg:ei', 'a new egg in a new world'); ok(await t.ev(`__w.Q.hasTool('zwaard') && __w.Q.hasTool('hamer') && __w.tools.gates().length === 3`), 'tools are kept, the bridges are closed again'); await shot('34-next-day');
 
   // just for fun: the bike and the ball
   s = await q(); await place(s.play.bike[0] - 1, s.play.bike[1] + 1); await settle(1500); await shot('35-bike'); await t.ev(`__w.play.tapBike()`); await settle(1500); s = await q(); ok(s.mount === 'fiets', 'on the bike');

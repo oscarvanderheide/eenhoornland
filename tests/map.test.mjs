@@ -12,7 +12,7 @@ const mark = new Map(); for (const [k, v] of Object.entries(m.spawns)) for (cons
 for (const v of Object.values(m.eggSpots)) for (const [x, z] of v) mark.set(m.I(x, z), '0');
 for (const o of m.obstacles) mark.set(m.I(o.x, o.z), o.type === 'low' ? '^' : o.kind === 'bramble' ? '%' : o.kind === 'gat' ? '?' : '@');
 for (const s of m.starSpots) mark.set(m.I(...s), '*');
-mark.set(m.I(...m.toolSpots.schaar), '1'); mark.set(m.I(...m.toolSpots.hamer), '2');
+mark.set(m.I(...m.toolSpots.zwaard), '1'); mark.set(m.I(...m.toolSpots.hamer), '2');
 for (const h of Object.values(M.HOUSES)) mark.set(m.I(...M.houseDoor(h)), 'D');
 if (process.argv.includes('-v')) for (let z = 0; z < M.H; z++) { let s = ''; for (let x = 0; x < M.W; x++) { const i = m.I(x, z); s += mark.get(i) || tree.get(i) || (m.block[i] && m.ground[i] !== 5 && m.ground[i] !== 2 ? 'X' : ch[m.ground[i]]); } console.log(s); }
 for (const [k, v] of Object.entries(m.spawns)) console.log(k, v.length);

@@ -68,7 +68,7 @@ function mulberry(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79
 
 /** block[] values: 0 free, 1 solid, LOW can be jumped over, BREAK is removed with a tool, GAP only a ridden unicorn jumps */
 export const LOW = 2, BREAK = 3, GAP = 4;
-export const TOOL_FOR = { bramble: 'schaar', boulder: 'hamer', gat: 'rit' };
+export const TOOL_FOR = { bramble: 'zwaard', boulder: 'hamer', gat: 'rit' };
 
 /** Builds the world. `seed` 0 is the first, hand-tuned one; every later cycle passes a new seed, which reshuffles
  *  everything outside the village. A seed that fails `validate` is skipped. */
@@ -221,16 +221,16 @@ function build({ solids = [], keep = [], seed = 0 } = {}) {
     return re;
   };
   // everything walkable must be reachable in the end; pockets get filled in
-  const reach = flood({ schaar: 1, hamer: 1, rit: 1 });
+  const reach = flood({ zwaard: 1, hamer: 1, rit: 1 });
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) { const i = I(x, z); if (!block[i] && !reach[i]) { block[i] = 1; const g = ground[i]; trees.push({ kind: g === SA ? 'rock' : g === FO ? 'fern' : 'bush', x, z, seed: 1 + (x * 7 + z * 3) % 6 }); } }
   // a log that lost its landing spot to a filled pocket becomes an ordinary bush
   for (let k = obstacles.length - 1; k >= 0; k--) { const o = obstacles[k]; if (o.type !== 'low' || (free(o.x - 1, o.z) && free(o.x + 1, o.z)) || (free(o.x, o.z - 1) && free(o.x, o.z + 1))) continue; obstacles.splice(k, 1); block[I(o.x, o.z)] = 1; trees.push({ kind: 'bush', x: o.x, z: o.z, seed: 1 + (o.x + o.z) % 6 }); }
-  const reach0 = flood({}), reach1 = flood({ schaar: 1 }), reach2 = flood({ schaar: 1, hamer: 1 });   // no tools / shears / shears and hammer
+  const reach0 = flood({}), reach1 = flood({ zwaard: 1 }), reach2 = flood({ zwaard: 1, hamer: 1 });   // no tools / shears / shears and hammer
   const at = (m, x, z) => !!m[I(x, z)];
 
   /* ---- where the tools lie: the shears in the village, the hammer in the forest ---- */
   const toolSpots = {
-    schaar: pick(1, (x, z, g, zn) => g === GR && zn === 'dorp' && at(reach0, x, z) && farFromStart(x, z) && !nearBusy(x, z, 1) && clearView(x, z), 0)[0] || [24, 47],
+    zwaard: pick(1, (x, z, g, zn) => g === GR && zn === 'dorp' && at(reach0, x, z) && farFromStart(x, z) && !nearBusy(x, z, 1) && clearView(x, z), 0)[0] || [24, 47],
     hamer: pick(1, (x, z, g, zn) => zn === 'bos' && x < 28 && at(reach0, x, z) && open4(x, z) && clearView(x, z), 0)[0] || [18, 16],
   };
   /* ---- the fallen star that hatches the egg lies somewhere deep in the flower meadow ---- */
@@ -272,7 +272,7 @@ export function validate(m, keep = []) {
   ok(m.reach[I(...CASTLE.door)] && !m.reach2[I(...CASTLE.door)], 'the castle door must need the unicorn');
   // the adventure in order: egg and hammer in the forest, shears in the village, star behind the brambles, fruit over the sea
   const free = ([x, z]) => !m.block[I(x, z)];
-  ok(m.reach0[I(...m.toolSpots.schaar)] && free(m.toolSpots.schaar), 'shears unreachable'); ok(m.reach0[I(...m.toolSpots.hamer)] && free(m.toolSpots.hamer), 'hammer unreachable');
+  ok(m.reach0[I(...m.toolSpots.zwaard)] && free(m.toolSpots.zwaard), 'shears unreachable'); ok(m.reach0[I(...m.toolSpots.hamer)] && free(m.toolSpots.hamer), 'hammer unreachable');
   ok(m.starSpots.length >= 3, 'too few star spots'); for (const s of m.starSpots) ok(m.reach1[I(...s)] && !m.reach0[I(...s)], 'star spot must lie behind the brambles');
   ok(m.reach2[I(...BOAT.strand.dock)] && !m.reach1[I(...BOAT.strand.dock)], 'boat must lie behind the boulders'); ok(m.reach2[I(...BOAT.eiland.dock)], 'island pier unreachable');
   ok(m.reach2[I(RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1)], 'rainbow tree unreachable');
@@ -292,7 +292,7 @@ export function validate(m, keep = []) {
   }
   ok(!leak0, leak0 + ' tiles beyond the brambles reachable without tools'); ok(!leak1, leak1 + ' tiles beyond the boulders reachable without the hammer'); ok(!leak2, leak2 + ' castle tiles reachable without riding');
   ok(!un, un + ' walkable-but-unreachable tiles'); ok(!home, home + ' village/forest tiles need a tool');
-  for (const t of ['schaar', 'hamer', 'rit']) ok(m.obstacles.some(o => o.gate && o.tool === t), 'no gate for ' + t);
+  for (const t of ['zwaard', 'hamer', 'rit']) ok(m.obstacles.some(o => o.gate && o.tool === t), 'no gate for ' + t);
   for (const o of m.obstacles) if (o.type === 'low') ok([[1, 0], [0, 1]].some(([dx, dz]) => !m.block[I(o.x + dx, o.z + dz)] && !m.block[I(o.x - dx, o.z - dz)]), 'cannot jump over ' + o.x + ',' + o.z);
   return bad;
 }

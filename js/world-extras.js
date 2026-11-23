@@ -164,11 +164,27 @@ export function createExtras(ctx) {
   for (const o of [star, fruit]) { o.mesh.material = o.mesh.material.clone(); o.mesh.material.emissiveIntensity = .8; o.mesh.visible = false; ctx.seeThrough(o.mesh); scene.add(o.mesh); }
   let hatching = false;
   const starSpot = () => M.starSpots[Q.quest.spot % M.starSpots.length];
+  // The warm thing is shy: when she comes close it giggles and hops away to another spot in the meadow, twice, and the
+  // third time it is out of breath and lets itself be caught. The fruit hangs in the rainbow tree: shake the tree (tap it,
+  // jump next to it, throw something at it) and on the second shake it drops.
+  const TREE = MAP.RAINBOW_TREE, inTree = new THREE.Vector3(TREE[0] + .5, 1.55, TREE[1] + .62), underTree = new THREE.Vector3(TREE[0] + 1.5, 0, TREE[1] + 1.5);
   function syncGoals() {
     const st = Q.quest.stage;
-    if (st === 'ei') { const [x, z] = starSpot(); star.pos = new THREE.Vector3(x + .5, 0, z + .5); } else star.pos = null;
-    fruit.pos = st === 'baby' ? new THREE.Vector3(MAP.RAINBOW_TREE[0] + 1.5, 0, MAP.RAINBOW_TREE[1] + 1.5) : null;
+    if (st === 'ei') { const [x, z] = starSpot(); star.pos = new THREE.Vector3(x + .5, 0, z + .5); star.hops = 0; star.hop = null; } else star.pos = null;
+    if (st === 'baby') { fruit.pos = inTree.clone(); fruit.shakes = 0; fruit.fall = null; } else fruit.pos = null;
     for (const o of [star, fruit]) { o.mesh.visible = o.glow.visible = !!o.pos; if (o.pos) { o.mesh.position.copy(o.pos); o.glow.position.set(o.pos.x, .8, o.pos.z + .1); } }
+  }
+  /** the rainbow tree was shaken (world-life.js tapProp) */
+  function shakeTree() {
+    if (!fruit.pos || fruit.fall || fruit.pos.y < 1) return;
+    fruit.shakes++; sfx.boing();
+    if (fruit.shakes >= 2) { fruit.fall = { t: 0, from: fruit.pos.clone() }; sfx.whoosh(); setTimeout(() => { sfx.pop(); bubble(kid, '!', ART.foodItem(Q.quest.kind)); }, 650); }
+    else bubble(kid, '', ART.foodItem(Q.quest.kind));
+  }
+  function hopStar() {
+    const cur = star.pos, spots = M.starSpots.map(([x, z]) => new THREE.Vector3(x + .5, 0, z + .5)).filter(p => p.distanceTo(cur) > 2.5).sort((a, b) => a.distanceTo(cur) - b.distanceTo(cur));
+    const to = spots.find(p => p.distanceTo(kid.pos) > 4) || spots[0]; if (!to) return false;
+    star.hop = { t: 0, from: cur.clone(), to }; star.hops++; sfx.sparkle(); sfx.boing(); bubble(kid, 'Hihi!', ART.warmItem(Q.quest.kind)); return true;
   }
   // Both big moments are shown full-screen from the side (js/cutscene.js, played by main.js through ctx.show, which also
   // saves the new stage first); back in the world she is simply there, and after the fruit the girl is already riding.
@@ -232,8 +248,8 @@ export function createExtras(ctx) {
   syncItems(); syncEgg(); syncGoals(); syncHerd(false);
 
   return {
-    tapCompanion, eggSpot, dropItem, dispose: off,
-    info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], star: star.pos && [star.pos.x, star.pos.z], fruit: fruit.pos && [fruit.pos.x, fruit.pos.z], gate: [gate.x, gate.z], herd: herd.length, hatching: !!hatching }),
+    tapCompanion, eggSpot, dropItem, shakeTree, dispose: off,
+    info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], star: star.pos && [star.pos.x, star.pos.z], starHops: star.hops, starMoving: !!star.hop, fruit: fruit.pos && [fruit.pos.x, fruit.pos.z], fruitInTree: !!fruit.pos && fruit.pos.y > 1, gate: [gate.x, gate.z], herd: herd.length, hatching: !!hatching }),
     items: () => items.map(it => ({ type: it.type, x: it.x, z: it.z })),
     /** active: the child can play (not paused, start screen gone) */
     update(dt, time, active) {
@@ -246,7 +262,13 @@ export function createExtras(ctx) {
       }
       for (let i = flying.length - 1; i >= 0; i--) { const f = flying[i]; f.t += dt * 2.2; f.m.position.y = .3 + f.t * 1.5; f.m.scale.setScalar(Math.max(.01, 1.25 - f.t * f.t)); if (f.t >= 1.1) { scene.remove(f.m); flying.splice(i, 1); } }
       if (eggMesh) { eggMesh.rotation.z = Math.sin(time * 3) * .12; eggGlow.material.opacity = .45 + Math.sin(time * 3) * .25; const s = 1.5 + Math.sin(time * 3) * .25; eggGlow.scale.set(s, s, 1); sparkT -= dt; if (sparkT < 0) { sparkT = .9; burst(eggPos, 2); } }
-      for (const o of [star, fruit]) if (o.pos) { o.mesh.position.y = .3 + Math.sin(time * 2.4) * .1; o.mesh.rotation.z = Math.sin(time * 1.6) * .2; const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; }
+      if (star.hop) { const h = star.hop; h.t += dt * 1.1; const k = Math.min(1, h.t); star.pos.set(h.from.x + (h.to.x - h.from.x) * k, 0, h.from.z + (h.to.z - h.from.z) * k); star.lift = Math.sin(k * Math.PI) * 1.8; if (k >= 1) { star.hop = null; star.lift = 0; burst(star.pos, 4); } }
+      if (fruit.fall) { const f = fruit.fall; f.t += dt * 1.6; const k = Math.min(1, f.t); fruit.pos.set(f.from.x + (underTree.x - f.from.x) * k, f.from.y * (1 - k * k) + Math.sin(k * Math.PI) * .5, f.from.z + (underTree.z - f.from.z) * k); if (k >= 1) { fruit.fall = null; fruit.pos.y = 0; sfx.pop(); burst(fruit.pos, 6, true); } }
+      for (const o of [star, fruit]) if (o.pos) {
+        const high = o === fruit && (fruit.fall || fruit.pos.y > 1);
+        o.mesh.position.set(o.pos.x, high ? o.pos.y : .3 + (o.lift || 0) + Math.sin(time * 2.4) * .1, o.pos.z); o.mesh.rotation.z = high ? Math.sin(time * 1.6) * .1 : Math.sin(time * 1.6) * .2;
+        const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; o.glow.position.set(o.mesh.position.x, o.mesh.position.y + .5, o.pos.z + .1);
+      }
       for (const sh of shrooms) { if (sh.t < 1) { sh.t = Math.min(1, sh.t + dt * 2.6); const q = Math.sin(sh.t * Math.PI * 3) * .3 * (1 - sh.t); sh.m.scale.set(1 + q, 1 - q, 1); } const near = active && Math.hypot(sh.x - kid.pos.x, sh.z - kid.pos.z) < .75; if (near && !sh.near) sh.play(); sh.near = near; }
       { const near = Math.abs(kid.pos.x - penMid.x) < 7 && Math.abs(kid.pos.z - penMid.z) < 5; if (near && !greeted && herd.length) { sfx.sparkle(); herd.forEach((c, i) => setTimeout(() => { c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1; if (i < 2) bubble(c, '', PX.heart()); }, i * 130)); } greeted = near; }
       { const can = Q.raceMounts().length > 0; for (const s of race.waiting) { s.visible = can; s.position.y = can && race.hop && race.hop.s === s ? Math.sin(Math.min(1, race.hop.t) * Math.PI) * .3 : 0; } if (race.hop && (race.hop.t += dt * 2.5) > 1) race.hop = null;
@@ -259,8 +281,8 @@ export function createExtras(ctx) {
         if (dd < 1.05) findEgg();
         else if (dd < 9) { peepT -= dt; if (peepT < 0) { peepT = .5 + dd * .32; sfx.bubble(); } }   // warmer = faster peeps
       }
-      if (star.pos && Q.quest.stage === 'ei' && Math.hypot(star.pos.x - kid.pos.x, star.pos.z - kid.pos.z) < 1.1) startHatch();
-      if (fruit.pos && Math.hypot(fruit.pos.x - kid.pos.x, fruit.pos.z - kid.pos.z) < 1.2) feed();
+      if (star.pos && Q.quest.stage === 'ei' && !star.hop) { const d = Math.hypot(star.pos.x - kid.pos.x, star.pos.z - kid.pos.z); if (d < 2 && star.hops < 2) hopStar(); else if (d < 1.1) startHatch(); }
+      if (fruit.pos && !fruit.fall && fruit.pos.y < 1 && Math.hypot(fruit.pos.x - kid.pos.x, fruit.pos.z - kid.pos.z) < 1.2) feed();
     },
   };
 }

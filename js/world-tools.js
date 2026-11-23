@@ -6,7 +6,7 @@ import * as ART from './art.js';
 import * as Q from './quest.js';
 import { sfx, speak } from './audio.js';
 
-const FREE = { schaar: 'Knip knip knip! De brug naar de bloemenwei is vrij!', hamer: 'Boem boem! De brug naar het strand is vrij!' };
+const FREE = { zwaard: 'Zwiep zwiep! De brug naar de bloemenwei is vrij!', hamer: 'Boem boem! De brug naar het strand is vrij!' };
 const GAP_SAY = 'O jee, de brug is kapot! Alleen een eenhoorn kan over het gat springen.';
 
 export function createTools(ctx) {
@@ -45,50 +45,80 @@ export function createTools(ctx) {
     const group = M.obstacles.map((p, k) => k).filter(k => meshes.has(k) && M.obstacles[k].type === 'break' && M.obstacles[k].g === o.g);
     for (const k of group) { const p = M.obstacles[k], m = meshes.get(k); M.block[M.I(p.x, p.z)] = 0; meshes.delete(k); const pi = pick.indexOf(m); if (pi >= 0) pick.splice(pi, 1); fading.push({ m, t: 0 }); burst(new THREE.Vector3(p.x + .5, 0, p.z + .5), 6); }
     Q.smash(group, !o.gate);                                                         // saved first, animated after
-    (o.tool === 'schaar' ? sfx.snip : sfx.bonk)(); kid.hop = .7; bubble(kid, '', ART.toolIcon(o.tool));
+    (o.tool === 'zwaard' ? sfx.swish : sfx.bonk)(); kid.hop = .7;
+    { const m = makeSprite(ART.toolIcon(o.tool), { lean: .2, shadow: false, scale: 1.2 }); scene.add(m); swings.push({ m, t: 0, sword: o.tool === 'zwaard' }); }   // she swings it: the sword in an arc, the hammer down
     if (o.gate) speak(FREE[o.tool]);
     else { const c = makeSprite(ART.coin(), { lean: .3, shadow: false }); c.position.copy(here); c.position.y = .3; scene.add(c); rising.push({ m: c, t: 0 }); sfx.chime(5); }
   }
   let wobble = null;
 
-  /* ---------------- the tools, lying somewhere until they are found ---------------- */
-  const glowTex = (() => { const [c, x] = canvas(32, 32), gr = x.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,220,240,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
-  const lying = {};
-  function syncTools() {
-    for (const id of Object.keys(Q.TOOLS)) {
-      const out = Q.toolOut(id), l = lying[id];                                      // the shears only turn up once there is an egg, the hammer once it has hatched
-      if (!out && l) { scene.remove(l.mesh, l.glow); delete lying[id]; }
-      if (out && !l) {
-        const [x, z] = M.toolSpots[id], mesh = makeSprite(ART.toolIcon(id), { lean: .3, scale: 1.25 });
-        const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#FFE3F1', transparent: true, opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending }));
-        mesh.position.set(x + .5, .2, z + .5); glow.position.set(x + .5, .7, z + .6); scene.add(mesh, glow); lying[id] = { mesh, glow, x: x + .5, z: z + .5 };
-      }
+  /* ---------------- the tools: nothing just lies around ---------------- */
+  // The sword stands in a stone in the village: walk up to it and she tugs, tugs harder, and on the third tug it pops
+  // out and she tumbles over. The hammer belongs to a gnome who sleeps on it in the forest: walk up to him and he wakes
+  // with a start, yawns, and hands it over. Both can be done any time; afterwards the empty stone and the awake gnome stay.
+  const holders = {}, flyers = [], swings = [];
+  function makeHolder(id) {
+    const [x, z] = M.toolSpots[id], art = id === 'zwaard' ? ART.zwaardSteen(!Q.hasTool(id)) : ART.kabouter(Q.hasTool(id));
+    const mesh = makeSprite(art, { lean: .3, scale: id === 'zwaard' ? 1.1 : 1 }); mesh.position.set(x + .5, 0, z + .55); mesh.userData.alpha = art; scene.add(mesh);
+    const h = holders[id] = { id, mesh, x: x + .5, z: z + .5, step: Q.hasTool(id) ? 9 : 0, t: 0, near: false, zz: 0 };
+    mesh.userData.tap = () => { sfx.pop(); if (Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z) < 1.3) start(h); else ctx.approach(x, z, () => start(h)); };
+    pick.push(mesh);
+  }
+  const setArt = (h, art) => { const t = ctx.tex(art); h.mesh.material.map = t; h.mesh.material.emissiveMap = t; h.mesh.material.needsUpdate = true; h.mesh.userData.alpha = art; if (h.mesh.customDepthMaterial) h.mesh.customDepthMaterial.map = t; };
+  /** begin the little scene (or, once it is done, a wave / a wobble) */
+  function start(h) {
+    if (h.step === 9) { if (h.id === 'hamer') { h.wave = .6; sfx.pop(); bubble(kid, 'Hoi!'); } else { h.wob = .4; sfx.tug(); } return; }
+    if (h.step === 0) { h.step = 1; h.t = 0; kid.path = []; kid.face = h.x >= kid.pos.x ? 1 : -1; }
+  }
+  function give(id, from) {
+    if (!Q.giveTool(id)) return;
+    const m = makeSprite(ART.toolIcon(id), { lean: .2, shadow: false, scale: 1.3 }); scene.add(m); flyers.push({ m, t: 0, from: from.clone() });
+    sfx.tada(); burst(kid.pos, 12, true); bubble(kid, '!', ART.toolIcon(id)); speak(Q.TOOLS[id].found);
+  }
+  function stepHolder(h, dt, active) {
+    const d = Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z);
+    if (active && h.step === 0 && d < 1.05) start(h);
+    if (h.wob > 0) { h.wob -= dt; h.mesh.rotation.z = Math.sin(h.wob * 50) * .05; } else if (h.step < 2 && h.id === 'zwaard') h.mesh.rotation.z = 0;
+    if (h.wave > 0) { h.wave -= dt; h.mesh.position.y = Math.abs(Math.sin(h.wave * 10)) * .15; }
+    if (h.id === 'hamer' && h.step === 0 && d < 6 && (h.zz -= dt) < 0) { h.zz = 1.4; sfx.snore && d < 3 && sfx.snore(); ctx.life.bit(ART.zzz(), h.x + .2, .6, h.z + .1, { vx: .35, vy: .5, g: 0, life: 1.6 }); }   // only snores when she is close: the world waits for her
+    if (h.step === 0 || h.step === 9) return;
+    h.t += dt; kid.path = []; kid.face = h.x >= kid.pos.x ? 1 : -1;
+    if (h.id === 'zwaard') {
+      // tug ... tug harder ... pop!
+      const beats = [[.1, () => { sfx.tug(); kid.hop = .3; h.wob = .35; bubble(kid, 'Hmpf!'); }], [1.0, () => { sfx.tug(); kid.hop = .45; h.wob = .5; bubble(kid, 'Hmmmpf!!'); if (uni.g.visible) uni.hop = 1; }],
+        [2.0, () => { sfx.swish(); sfx.boing(); setArt(h, ART.zwaardSteen(false)); kid.hop = 1; kid.hopH = .7; burst(new THREE.Vector3(h.x, .6, h.z), 10); give('zwaard', new THREE.Vector3(h.x, 1, h.z)); }],
+        [2.6, () => { sfx.pop(); bubble(kid, 'Hihihi!'); }]];
+      for (let k = h.step - 1; k < beats.length && h.t >= beats[k][0]; k++) { beats[k][1](); h.step = k + 2; }
+      if (h.t > 2.0 && h.t < 2.9) kid.mesh.rotation.z = -kid.face * Math.sin(Math.min(1, (h.t - 2) / .45) * Math.PI) * .9; else kid.mesh.rotation.z = 0;   // she tumbles over backwards
+      if (h.step > beats.length) { h.step = 9; kid.mesh.rotation.z = 0; }
+    } else {
+      // he wakes with a start, yawns, stands up and hands over the hammer
+      const beats = [[.1, () => { sfx.boing(); setArt(h, ART.kabouter(true)); h.jump = 1; bubble(kid, '!'); }], [.9, () => { sfx.purr(); bubble(kid, 'Goedemorgen!'); }],
+        [1.8, () => { sfx.sparkle(); give('hamer', new THREE.Vector3(h.x, .8, h.z)); }], [2.6, () => { h.wave = .6; }]];
+      for (let k = h.step - 1; k < beats.length && h.t >= beats[k][0]; k++) { beats[k][1](); h.step = k + 2; }
+      if (h.jump > 0) { h.jump = Math.max(0, h.jump - dt * 2.2); h.mesh.position.y = Math.sin((1 - h.jump) * Math.PI) * .6; }
+      if (h.step > beats.length) h.step = 9;
     }
   }
-  function find(id) {
-    if (!Q.giveTool(id)) return;                                                     // the 'tool' event below removes it from the ground
-    sfx.tada(); kid.hop = 1; burst(kid.pos, 12, true); bubble(kid, '!', ART.toolIcon(id)); speak(Q.TOOLS[id].found);
-  }
-  const off = Q.on((type, d) => { if (type === 'tool' || type === 'stage') syncTools(); if (type === 'stage' && d === 'feest') mend(); });
-  syncTools();
+  makeHolder('zwaard'); makeHolder('hamer');
+  const off = Q.on((type, d) => { if (type === 'stage' && d === 'feest') mend(); });
 
   return {
     use, dispose: off,
     /** the thing to cut or smash on this tile, if any */
     useAt(x, z) { const i = indexAt(x, z); if (i >= 0) use(i); },
-    spot: id => lying[id] ? [lying[id].x, lying[id].z] : null,
+    /** where the tool still waits for her (null once she has it) */
+    spot: id => holders[id] && !Q.hasTool(id) ? [holders[id].x, holders[id].z] : null,
     /** the gates that still stand (one entry per gate), for the map */
     gates: () => { const seen = new Set(), out = []; M.obstacles.forEach((o, i) => { if (!o.gate || !meshes.has(i) || !M.block[M.I(o.x, o.z)] || seen.has(o.g)) return; seen.add(o.g); out.push({ kind: o.kind, x: o.x + 1, z: o.z + .5 }); }); return out; },
-    info: () => ({ standing: meshes.size, lying: Object.keys(lying) }),
+    info: () => ({ standing: meshes.size, waiting: Object.keys(holders).filter(id => !Q.hasTool(id)) }),
     update(dt, time, active) {
       for (let i = fading.length - 1; i >= 0; i--) { const f = fading[i]; f.t += dt * 3; f.m.scale.setScalar(Math.max(.01, 1.1 * (1 - f.t))); f.m.rotation.z = f.t * .8; if (f.t >= 1) { scene.remove(f.m); fading.splice(i, 1); } }
       for (let i = rising.length - 1; i >= 0; i--) { const f = rising[i]; f.t += dt * 1.6; f.m.position.y = .3 + f.t * 1.4; f.m.scale.x = Math.cos(f.t * 9); if (f.t >= 1) { scene.remove(f.m); rising.splice(i, 1); } }
       if (wobble) { wobble.t -= dt; wobble.mesh.rotation.z = wobble.t > 0 ? Math.sin(wobble.t * 40) * .12 : 0; if (wobble.t <= 0) wobble = null; }
-      for (const id in lying) {
-        const l = lying[id]; l.mesh.position.y = .25 + Math.sin(time * 2.6) * .1; l.mesh.rotation.z = Math.sin(time * 1.7) * .15;
-        const s = 1.9 + Math.sin(time * 3) * .3; l.glow.scale.set(s, s, 1); l.glow.material.opacity = .5 + Math.sin(time * 3) * .25;
-        if (active && Math.abs(l.x - kid.pos.x) < .8 && Math.abs(l.z - kid.pos.z) < .8) find(id);
-      }
+      for (const id in holders) stepHolder(holders[id], dt, active);
+      for (let i = swings.length - 1; i >= 0; i--) { const w = swings[i]; w.t += dt * 2.6; const a = w.sword ? 1.2 - w.t * 3 : .9 - Math.min(1, w.t * 2) * 1.8; w.m.position.set(kid.pos.x + kid.face * (.3 + Math.cos(a) * .35), .55 + Math.sin(a) * .45, kid.pos.z + .12); w.m.rotation.z = (a - .6) * -kid.face; w.m.scale.x = 1.2 * kid.face; if (w.t >= 1) { scene.remove(w.m); swings.splice(i, 1); } }
+      for (let i = flyers.length - 1; i >= 0; i--) { const f = flyers[i]; f.t += dt * 1.4; const k = Math.min(1, f.t); f.m.position.set(f.from.x + (kid.pos.x - f.from.x) * k, f.from.y + Math.sin(k * Math.PI) * 1.4 + k * .8, f.from.z + (kid.pos.z - f.from.z) * k + .1); f.m.rotation.z = f.t * 12; if (f.t > 1.4) { scene.remove(f.m); flyers.splice(i, 1); } }
     },
   };
 }

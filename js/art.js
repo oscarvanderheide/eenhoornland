@@ -141,7 +141,25 @@ const boulder = seed => cached('boulder' + (seed % 2), () => gridSprite(18, 15, 
 const plas = () => cached('plas', () => gridSprite(18, 12, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 6) / 6) ** 2; if (dd > 1) return null; if (dd > .78) return '#8FD6F5'; return (x + y * 2) % 9 === 0 || (x === 5 && y === 3) || (x === 6 && y === 3) ? '#E8FAFF' : (y < 5 ? '#4FA8DE' : '#3E9AD6'); }, { outline: '#2F7FC0' }));
 export const toolIcon = id => id === 'hamer'
   ? cached('hamer', () => sprite(['..ssssssss..', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '..ssssssss..', '.....hh.....', '.....hh.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hh.....'], { s: '#9FA5BC', S: '#D8DCE8', h: '#B5823F', H: '#8A5A3B' }))
-  : cached('schaar', () => sprite(['s........s', 'ss......ss', '.ss....ss.', '..ss..ss..', '...ssss...', '....kk....', '...rrrr...', '.rr.rr.rr.', 'r..rrrr..r', 'r..r..r..r', '.rr....rr.'], { s: '#D8DCE8', k: '#6B7088', r: '#FF5E9C' }));
+  : cached('zwaard', () => sprite(['......Ws', '.....WSs', '....WSs.', '...WSs..', 'g.WSs...', 'ggSs....', '.yg.....', 'y.gg....', '...g....'], { W: '#FFFFFF', S: '#D8DCE8', s: '#9FA5BC', g: '#F7C548', y: '#FF5E9C' }));
+/** the sword standing in its stone in the village (pulled out, only the stone is left) */
+export const zwaardSteen = (withSword = true) => cached('zwsteen' + withSword, () => gridSprite(20, 26, (x, y) => {
+  const sx = 9.5;
+  if (withSword) {
+    if (y >= 1 && y <= 2 && Math.abs(x + .5 - sx) < 3.5) return x === 6 || x === 12 ? '#FF5E9C' : '#F7C548';          // cross guard
+    if (y === 0 && Math.abs(x + .5 - sx) < 1) return '#FF5E9C';                                                          // pommel
+    if (y >= 3 && y <= 14 && Math.abs(x + .5 - sx) < 1.2) return x < sx ? '#FFFFFF' : '#C9CEDC';                        // blade
+  }
+  const dd = ((x + .5 - 10) / 9.5) ** 2 + ((y + .5 - 20) / 6) ** 2; if (dd > 1 || y < 14) return null;
+  if (withSword && y < 16 && Math.abs(x + .5 - sx) < 1.5) return '#5E6378';
+  const v = (x - 3) * .4 + (y - 14) * .9; return (x * 7 + y * 3) % 13 === 0 ? '#6FB86A' : v < 2.5 ? '#E2E5EE' : v < 6 ? '#BFC4D4' : v < 9 ? '#9FA5BC' : '#848AA2';
+}));
+/** the forest gnome who sleeps on his hammer; awake, he stands and waves */
+export const kabouter = (awake = false) => cached('kabouter' + awake, () => sprite(awake ? [
+  '....r.....', '...rrr....', '...rRr....', '..rrrrr...', '..rrrrrr..', '.ssssss...', '.skssks...', '.ssmsss...', 'wwwwwww...', 'wwwwwww.s.', 'bbbbbbbbs.', 'bBBBBbb...', '.bbbbb....', '.gg.gg....', 'kk..kk....',
+] : [
+  '...........r', '........rrr.', '......rrrRr.', '.....rrrrrr.', '....ssssss..', '....s-ss-s..', '....ssmsss..', '...wwwwwww..', '.hh.wwwwww..', 'hHHhbbbbbbb.', '.hh.bBBBBbb.', '....gggggg..', '...kk...kk..',
+], { r: '#E8484A', R: '#FF9A9A', s: '#FFD7B5', k: '#5E3A24', '-': '#5E3A24', m: '#E8616B', w: '#FFFFFF', b: '#4DABF7', B: '#8FD3FF', g: '#6B8E3A', h: '#9FA5BC', H: '#D8DCE8' }));
 export const belIcon = () => cached('beli', () => sprite(['....kk....', '...yyyy...', '..yYyyyy..', '..yYyyyy..', '.yyYyyyyy.', '.yyyyyyyy.', 'yyyyyyyyyy', '....oo....'], { y: '#FFD43B', Y: '#FFF3A8', k: '#8A5A3B', o: '#E0A020' }));
 /** a little picture for "press here to jump" */
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));

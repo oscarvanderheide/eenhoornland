@@ -10,7 +10,7 @@ export default async function (t) {
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null, run = n => !only || only.includes(n);
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL);
-  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('schaar'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
   const M = await J('({POTS:__w.MAP.POTS,CAN:__w.MAP.CAN,STALL:__w.MAP.STALL,BUCKET:__w.MAP.BUCKET,KITE:__w.MAP.KITE,RAMPS:__w.MAP.RAMPS,WHALE:__w.MAP.WHALE,POND:__w.MAP.POND,C:__w.MAP.CASTLE})');
 
   if (run('dorp')) {   // the watering can and the flower pots

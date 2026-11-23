@@ -76,7 +76,7 @@ export function createLife(ctx) {
         if (spot && t.gave !== Q.quest.day && !(Q.quest.picked.appel || []).includes(idx)) { t.gave = Q.quest.day; bit(PX.apple(), spot[0] + .5, 1.2, spot[1] + .5, { g: 9, bounce: 1, life: .75 }); setTimeout(() => ctx.extras.dropItem('appel', idx, spot[0] + .5, spot[1] + .55), 700); }
         else bit(ART.leaf(2), ax, 1.2, z + .2, { g: 4, sway: 3, life: 1.6 });
       }
-      if (k === 'rainbowtree') burst(new THREE.Vector3(x, .9, z), 8, true);
+      if (k === 'rainbowtree') { burst(new THREE.Vector3(x, .9, z), 8, true); ctx.extras.shakeTree(); }
       if (Math.random() < .4) { const b = addBird(x + rnd(-.4, .4), z, Math.floor(rnd(0, 3)), true); b.pos.y = b.y = 1.2 * t.sc; flee(b, x + rnd(-1, 1), z + 1); sfx.whoosh(); }
       return;
     }
@@ -206,7 +206,8 @@ export function createLife(ctx) {
   function puff(c) { sfx.whoosh(); for (let i = 0; i < 7; i++) bit(PX.sparkle(i % 2 ? '#FFD43B' : '#FF9E6B'), c.pos.x + c.face * .5, .7, c.pos.z + .1, { vx: c.face * rnd(1.5, 3), vy: rnd(.5, 2), g: 1, life: rnd(.6, 1) }); }
   function stepAt(d) { let acc = 0; for (let i = 0; i < steps.length - 1; i++) { const a = steps[i], b = steps[i + 1], s = Math.hypot(b.x - a.x, b.z - a.z); if (acc + s >= d) { const t = (d - acc) / (s || 1); return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t }; } acc += s; } return steps.length ? steps[steps.length - 1] : null; }
   /** she jumps: her friends jump too (follow the leader) */
-  function jumped() { friends.forEach((c, i) => setTimeout(() => { if (c.held || c.fly || c.swim || c.nap > 0) return; c.hop = 1; if (c.name === 'Draakje') puff(c); }, 180 + i * 140)); }
+  function jumped() { { let best = null, bd = 1.9; for (const t of M.trees) { const d = Math.hypot((t.px || t.x + .5) - kid.pos.x, t.z + .5 - kid.pos.z); if (d < bd && TREES.includes(t.kind)) { bd = d; best = t; } } if (best) setTimeout(() => tapProp(best), 250); }   // a jump right next to a tree shakes it
+    friends.forEach((c, i) => setTimeout(() => { if (c.held || c.fly || c.swim || c.nap > 0) return; c.hop = 1; if (c.name === 'Draakje') puff(c); }, 180 + i * 140)); }
   const offQ = Q.on(type => { if (type === 'day') { for (const c of [...friends]) goHome(c); unpaint(); flowerWalk = false; } });
 
   /* ---------------- things that do something to other things ---------------- */
