@@ -39,9 +39,9 @@ const t0 = Date.now();
 function run([file, only], k) {
   return new Promise(res => {
     const t1 = Date.now(), env = { ...process.env, PORT: String(9400 + k) }; if (only) env.ONLY = only;
-    const p = spawn('node', ['cdp.mjs', `tests/${file}.mjs`], { env }); let out = '';
+    const p = spawn('node', ['cdp.mjs', `tests/${file}.mjs`], { env }); kids.add(p); let out = '';
     p.stdout.on('data', d => out += d); p.stderr.on('data', d => out += d);
-    p.on('close', () => {
+    p.on('close', () => { kids.delete(p);
       const lines = out.split('\n'), bad = lines.filter(l => /FAIL|TEST ERROR|EXC |Error/.test(l) && !/favicon/.test(l));
       const name = file + (only ? ' [' + only + ']' : ''), secs = ((Date.now() - t1) / 1000).toFixed(0) + 's';
       if (bad.length) { fails++; console.log(`✗ ${name} ${secs}\n  ` + bad.slice(0, 12).join('\n  ')); } else console.log(`✓ ${name} ${secs}`);
@@ -49,6 +49,7 @@ function run([file, only], k) {
     });
   });
 }
+const kids = new Set(); for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { for (const p of kids) p.kill('SIGTERM'); process.exit(1); });
 let next = 0; await Promise.all(Array.from({ length: Math.min(PARALLEL, jobs.length) }, async (_, w) => { while (next < jobs.length) { const k = next++; await run(jobs[k], k); } }));
 console.log(`${fails ? fails + ' failed' : 'all ok'} in ${((Date.now() - t0) / 1000).toFixed(0)}s — screenshots in tmp-shots/`);
 process.exit(fails ? 1 : 0);
