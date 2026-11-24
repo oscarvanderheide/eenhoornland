@@ -63,7 +63,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const footprint = new Map();
   for (const b of BUILDINGS) { const [x0, z0, x1, z1] = rectOf(b); for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) footprint.set(I(x, z), b); }
   const rng = rngf(20251122);
-  const walkable = (x, z) => inb(x, z) && !block[I(x, z)];
+  const solids = new Set();   // tiles a standing thing fills at runtime (the sword stone, the gnome, the flower pots): she walks round them, never through
+  const walkable = (x, z) => inb(x, z) && !block[I(x, z)] && !solids.has(I(x, z));
+  const solid = (x, z, on = true) => { if (on) solids.add(I(x, z)); else solids.delete(I(x, z)); };
   let mount = null, busy = false;   // riding the unicorn ('uni') or the bike ('fiets'); busy: something else moves her (the boat)
   // the hole in the bridge is a jump for a ridden unicorn and a closed gate for everybody else
   const lowAt = (x, z) => inb(x, z) && (block[I(x, z)] === MAP.LOW || (block[I(x, z)] === MAP.GAP && mount === 'uni'));
@@ -650,23 +652,28 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
    *  get on the bike, or (with nothing around) jump */
   const A = (key, icon, run) => ({ key, icon, run });
   const near = (c, r) => c.g.visible && Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) < r;
-  function action() {
+  function action(grab = false) {                                               // grab: the pick-up key (E/Enter) asks; it never jumps
     if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
-    if (mount === 'fiets') return A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
+    if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
+    const use = toys.nearUse(); if (use) return A(use.key, use.art, use.run);    // the can next to a flower pot: water it (never drop it there)
     const toy = toys.carryArt(); if (toy) return A('put' + toys.carrying(), toy, () => toys.putDown());
     const t = tools.nearAction(); if (t) return t;
-    if (life.swimming()) return A('splash', ART.jumpIcon(), () => life.splashJump());
-    { const fi = extras.info(); if (fi.fruitInTree && fi.fruit && Math.hypot(fi.fruit[0] - kid.pos.x, fi.fruit[1] - kid.pos.z) < 2.4) return A('jump', ART.jumpIcon(), hop); }   // under the rainbow tree with the fruit: a jump shakes it
-    if (perch || (!mount && leapDir()) || toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
+    if (!grab) {
+      if (life.swimming()) return A('splash', ART.jumpIcon(), () => life.splashJump());
+      { const fi = extras.info(); if (fi.fruitInTree && fi.fruit && Math.hypot(fi.fruit[0] - kid.pos.x, fi.fruit[1] - kid.pos.z) < 2.4) return A('jump', ART.jumpIcon(), hop); }   // under the rainbow tree with the fruit: a jump shakes it
+      if (perch || (!mount && leapDir()) || toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
+    }
     if (!mount) {
-      const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w));
-      if (Q.quest.stage !== 'zoek' && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));
-      const c = life.nearMover(); if (c) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : A('lift' + c.name, c.frames.idle, () => life.lift(c));
-      const ta = toys.nearArt(); if (ta) return A('take', ta, () => toys.takeNear());
+      if (!grab) { const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w)); }
+      if (!grab && Q.quest.stage !== 'zoek' && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));
+      // the nearest thing wins, animal, pebble or toy alike: what lies right at her feet is what she picks up
+      const c = life.nearMover(), ta = toys.nearest(), dc = c ? Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) : 1e9;
+      if (c && (!ta || dc <= ta.d)) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : A('lift' + c.name, c.frames.idle, () => life.lift(c));
+      if (ta) return A('take', ta.art, () => toys.take(ta.id));
       if (play.bikeNear()) return A('bike', ART.bike(), () => play.tapBike());
     }
-    return A('jump', ART.jumpIcon(), hop);
+    return grab ? A('hop', ART.jumpIcon(), () => { kid.hop = .4; }) : A('jump', ART.jumpIcon(), hop);
   }
   const actionNow = () => interactive && !paused && !busy ? action() : null;
   /** the action button (and Space) */
@@ -699,7 +706,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
 
   const alphaCache = new Map();
   let extras = null, toys = null; const ctxHooks = { onWish };
-  const ctx = { groundMesh, groundCanvas, THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, seeThrough, castle: CASTLE, onEnter, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
+  const ctx = { solid, groundMesh, groundCanvas, THREE, scene, M, tex, canvas, spriteGeom, spriteMat, makeSprite, seeThrough, castle: CASTLE, onEnter, makeChar, animal, animals, chars, pick, burst, bubble, waterUniforms, windowGlows, kid, uni, refreshUnicorn, approach, get onWish() { return ctxHooks.onWish; },
     walkToTile: (x, z) => { target = null; return walkTo(x, z); }, walkable, nearestWalkable, randomTile, wobble, ground, astar, showMarker: (x, z) => showMarker(x, z),
     /** walk onto this very tile, then do `then` */
     walkThen: (x, z, then) => { target = null; if (!walkTo(x, z, null, null, true)) return false; after = then; return true; },
@@ -759,7 +766,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (d.char && (animals.includes(d.char) || d.char.stone)) { if (e.replay) { if (!d.char.fly) life.tapAnimal(d.char); return; } if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
-      if (d.fountain) { if (toys.fountain()) return; sfx.pop(); if (life.nearWater() === 'fontein') life.dip('fontein'); else approach(Math.floor(FOUNT.cx), Math.floor(FOUNT.cz), () => life.dip('fontein')); return; }   // a tap on the fountain: walk to it and jump in (with the can: fill it)
+      if (d.fountain) { if (toys.carrying() === 'gieter') { if (!toys.fountain()) approach(Math.floor(FOUNT.cx), Math.floor(FOUNT.cz), () => toys.fountain()); return; } sfx.splash(); for (let i = 0; i < 5; i++) life.bit(ART.drop(), FOUNT.cx + (Math.random() - .5) * .8, 1.1, FOUNT.cz + .7, { vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 1.5, g: 9, life: .7 }); return; }   // a tap on the fountain: a splash (with the can: walk over and fill it). She does not climb in: it is a fountain, the pond is for paddling
     }
     const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane, p)) return;
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
@@ -811,9 +818,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   /** the pick-up key (Enter): throw or put down what she holds, else pick up what is next to her: an animal, a pebble, the can, the bucket, the kite, or get on the bike */
   function grabKey() {
+    if (!interactive || paused || busy) return;
     if (fishing.tap()) return;
-    if (life.carrying()) return life.throwIt(); if (toys.carrying()) return toys.putDown();
-    if (life.grabNear() || toys.takeNear()) return; if (mount === 'fiets') return setMount(null); if (play.bikeNear()) return play.tapBike(); kid.hop = .4;
+    action(true).run();
   }
   const keys = new Set();
   const midJump = () => !!(kid.path[0] && kid.path[0].jump);
@@ -970,8 +977,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
         const ax = Math.floor(kid.pos.x) + ix, az = Math.floor(kid.pos.z) + iz;
         if (lowAt(ax, az) && walkable(ax + ix, az + iz)) { const land = new THREE.Vector3(ax + ix + .5, 0, az + iz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
-        else if (time > bumpT && rooms.pushAt(ax, az, ix, iz)) bumpT = time + .45;   // the cave's crate slides one tile
-        else if (time > bumpT && inb(ax, az) && (ground[I(ax, az)] === WA || Math.hypot(ax + .5 - FOUNT.cx, az + .5 - FOUNT.cz) < 1.3) && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater(), kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into the pond or the fountain: in she jumps
+        else if (time > bumpT && rooms.pushAt(ax, az, ix, iz)) bumpT = time + .45;
+        else if (time > bumpT && toys.bumpAt(ax, az)) bumpT = time + 1.2;   // walking into a flower pot with the can: she waters it   // the cave's crate slides one tile
+        else if (time > bumpT && inb(ax, az) && ground[I(ax, az)] === WA && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater(), kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into the pond: in she jumps
       }
     } else {
       const land = midJump() ? kid.path[0] : null;

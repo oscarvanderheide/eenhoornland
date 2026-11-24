@@ -303,10 +303,10 @@ export function createLife(ctx) {
   /** the little unicorn lets out a big rainbow burp */
   function burp(c) { sfx.burp(); c.hop = 1; bubble(c, 'Boeh!'); for (let i = 0; i < 8; i++) bit(ART.burpBel(i), c.pos.x + c.face * .5 + rnd(-.2, .2), .8, c.pos.z + .1, { vx: c.face * rnd(.2, .7), vy: rnd(.4, .9), g: -.3, sway: rnd(2, 4), life: rnd(1.6, 2.4), scale: rnd(1.2, 1.8) }); }
 
-  /* ---------------- a dip: she hops into the duck pond or the fountain and stays in, paddling, as long as she likes ----------------
+  /* ---------------- a dip: she hops into the duck pond and stays in, paddling, as long as she likes ----------------
      In the water she is as free as on land: a tap in the water swims her there, a tap on land (or walking against the edge)
      hops her out, dripping. The ducks come to see when she lands with a splash. */
-  const WATERS = { vijver: { cx: MAP.POND.cx, cz: MAP.POND.cz, r: Math.min(MAP.POND.rx, MAP.POND.rz), reach: 1.4, swim: Math.min(MAP.POND.rx, MAP.POND.rz) * .7, sink: .38 }, fontein: { cx: MAP.FOUNT.cx, cz: MAP.FOUNT.cz + .5, r: 1.3, reach: 1.1, swim: .4, sink: -.22 } };
+  const WATERS = { vijver: { cx: MAP.POND.cx, cz: MAP.POND.cz, r: Math.min(MAP.POND.rx, MAP.POND.rz), reach: 1.4, swim: Math.min(MAP.POND.rx, MAP.POND.rz) * .7, sink: .38 } };   // only the pond: the fountain is too small to stand in (she vanished behind its rim)
   let inWater = null, dripT = 0, paddleT = 0, wade = 0, sink = .38;
   /** the pond or fountain she stands next to (or null) */
   function nearWater() { for (const [k, w] of Object.entries(WATERS)) if (Math.hypot(kid.pos.x - w.cx, kid.pos.z - w.cz) < w.r + w.reach + .4) return k; return null; }

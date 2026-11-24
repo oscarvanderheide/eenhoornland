@@ -25,6 +25,12 @@ export default async function (t) {
     for (let k = 0; k < 3; k++) { await t.ev(`__w.toys.usePot(1)`); await t.sleep(1100); if (k === 0) await shot('03-watering'); }
     s = await toys(); ok(s.pots[1] === 3 && s.water === 0, 'three pours and the flower is in bloom (' + s.pots + ')'); await t.sleep(600); await shot('04-bloom');
     ok(await t.ev(`__w.Q.quest.garden[1]`) === 3, 'and that is saved');
+    // walking up to a thirsty pot with water in the can waters it; the pick-up key there waters too and never drops the can
+    await place(M.POND.cx + 2.6, M.POND.cz); await t.sleep(1200); ok((await toys()).water === 3, 'the can is full again');
+    await place(33.5, 37.4); await t.sleep(300); await t.key('ArrowUp', 900); ok(await until(`__w.toys.info().pots[3] >= 1`, 3000), 'walking up to a thirsty pot waters it');
+    await t.sleep(1500); const w0 = (await toys()).water; await t.ev('__w.grabKey()'); await t.sleep(700); s = await toys(); ok(s.carry === 'gieter' && s.water < w0, 'the pick-up key next to a pot pours, it does not drop the can');
+    ok(await t.ev(`!__w.walkable(Math.floor(__w.MAP.POTS[0][0]), Math.floor(__w.MAP.POTS[0][1])) && !__w.walkable(...__w.M.toolSpots.zwaard)`), 'pots and the sword stone are solid');
+    await t.ev(`__w.toys.take('gieter')`); await place(31.5, 36.6); await t.sleep(300);
     await t.ev(`__w.toys.putDown()`); await t.sleep(300);
     await t.ev(`__w.toys.usePot(1)`); await t.sleep(1000); await shot('04b-sneeze'); s = await toys(); ok(s.pots[1] === 0, 'picking the flower: a sneeze, and the pot starts again');
     // watering an animal

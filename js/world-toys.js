@@ -53,7 +53,7 @@ export function createToys(ctx) {
   const P = MAP.POND, F = MAP.FOUNT;
   function fill() {
     if (carry !== can || can.water >= 3) return false;
-    can.water = 3; setArt(can.m, ART.gieter(true)); sfx.splash(); sfx.bubble(); kid.hop = .4; pop(can);
+    can.water = 3; setArt(can.m, ART.gieter(true)); sfx.splash(); sfx.bubble(); kid.hop = .6; kid.hopH = .45; can.tilt = .8; pop(can, .5); bubble(kid, '', ART.gieter(true)); setTimeout(() => sfx.chime(5), 250);   // glug glug: she dips it in, it is full, and she shows it
     for (let i = 0; i < 4; i++) bit(ART.drop(), kid.pos.x + kid.face * .4 + rnd(-.2, .2), .7, kid.pos.z + .15, { vx: rnd(-.8, .8), vy: rnd(1.5, 2.5), g: 7, life: .7 }); return true;
   }
   /** tip the can over (x, z). Returns false, with a hint where water comes from, when it is empty. */
@@ -67,16 +67,18 @@ export function createToys(ctx) {
   const pots = MAP.POTS.map(([x, z], i) => {
     const p = { i, x, z, m: sprite(ART.pot(Q.plant(i), i), x, z, { scale: 1.25 }) };
     tappable(p.m, () => { pop(p, .15); near(p.x, p.z + .5, 1.4) ? usePot(p) : ctx.approach(Math.floor(p.x), Math.floor(p.z), () => usePot(p)); });
+    ctx.solid(Math.floor(x), Math.floor(z));                                          // a pot stands in the way: she walks up to it, not into it
     return p;
   });
   function usePot(p) {
     const st = Q.plant(p.i), here = v3(p.x, .5, p.z);
     if (carry === can && !can.water && st < Q.PLANT_MAX) {                             // no water in it: off to the fountain first, then back to this pot
       sfx.pop(); bubble(kid, '', ART.drop()); fetching = p;
-      ctx.approach(Math.floor(F.cx), Math.floor(F.cz) + 1, () => {}); return;
+      ctx.approach(Math.floor(F.cx), Math.floor(F.cz), () => {}); return;
     }
     if (carry === can && st < Q.PLANT_MAX) {
-      if (!pour(p.x, p.z)) return;
+      if (performance.now() - lastPour < 900) return;                                 // one pour at a time (walking up and a tap can both ask)
+      if (!pour(p.x, p.z)) return; lastPour = performance.now();
       setTimeout(() => {
         if (Q.water(p.i)) { setArt(p.m, ART.pot(Q.plant(p.i), p.i)); pop(p, .45); sfx.chime(Q.plant(p.i) * 2); if (Q.plant(p.i) >= Q.PLANT_MAX) { sfx.sparkle(); burst(here, 8, true); } }
         else { pop(p, .3); sfx.chime(7); burst(here, 4, true); }                    // already in bloom: it simply likes the water
@@ -89,6 +91,9 @@ export function createToys(ctx) {
       }, 900);
     } else { sfx.pop(); bubble(kid, '', ART.gieter(true)); pop(can, .5); }              // it is thirsty: the can wiggles (and glows)
   }
+  /** the flower pot right in front of her (or null) */
+  const potNear = (r = 1.25) => pots.map(p => [p, Math.hypot(p.x - kid.pos.x, p.z + .3 - kid.pos.z)]).filter(([, d]) => d < r).sort((a, b) => a[1] - b[1]).map(([p]) => p)[0] || null;
+  let lastPour = -1e9;
   const syncPots = () => { for (const p of pots) setArt(p.m, ART.pot(Q.plant(p.i), p.i)); };
 
   /* ================= strand: sand towers ================= */
@@ -258,6 +263,9 @@ export function createToys(ctx) {
     /** for the action button: the picture of what she carries, or of the thing she could pick up here (or null) */
     carryArt: () => carry && carry.art, nearArt() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) return t.art; return null; },
     /** dev / tests */
+    nearUse() { if (carry !== can) return null; const p = potNear(1.4); return p ? { key: 'water', art: ART.gieter(!!can.water), run: () => usePot(p) } : null; },
+    bumpAt(x, z) { if (carry !== can) return false; const p = pots.find(p => Math.floor(p.x) === x && Math.floor(p.z) === z); if (!p) return false; usePot(p); return true; },
+    nearest() { let b = null; for (const t of Object.values(things)) { if (t === carry) continue; const d = Math.hypot(t.x - kid.pos.x, t.z - kid.pos.z); if (d < 1.5 && (!b || d < b.d)) b = { id: t.id, art: t.art, d }; } return b; },
     take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
     info: () => ({ ahead: sandAhead(), carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),
     /** with a full can in her hands, a tap on an animal waters it. Returns true if it handled the tap. */
@@ -279,8 +287,10 @@ export function createToys(ctx) {
       if (carry && carry !== kite) {
         const t = carry; t.tilt = Math.max(0, t.tilt - dt); t.x = kid.pos.x; t.z = kid.pos.z;
         t.m.position.set(kid.pos.x + kid.face * .4, kid.mesh.position.y + .26, kid.pos.z + (kid.zBias || 0) + .03); t.m.scale.set(-kid.face * t.scale * .85, t.scale * .85, 1); t.m.rotation.z = kid.face * -Math.min(1, t.tilt * 3) * .9;
-        if (active && t === can && can.water < 3 && (Math.hypot((kid.pos.x - P.cx) / (P.rx + 1.1), (kid.pos.z - P.cz) / (P.rz + 1.1)) < 1 || Math.hypot(kid.pos.x - F.cx, kid.pos.z - F.cz - .6) < 2.3)) fill();
+        if (active && t === can && can.water < 3 && (Math.hypot((kid.pos.x - P.cx) / (P.rx + 1.1), (kid.pos.z - P.cz) / (P.rz + 1.1)) < 1 || Math.hypot(kid.pos.x - F.cx, kid.pos.z - F.cz - .6) < 1.9)) fill();
       }
+      // with water in the can, coming up to a thirsty pot waters it by itself (as the can fills by itself at the water): a pour, a pause, a pour
+      if (active && carry === can && can.water && !fetching && !kid.moving && !kid.path.length && performance.now() - lastPour > 1300) { const p = potNear(1.15); if (p && Q.plant(p.i) < Q.PLANT_MAX) usePot(p); }
       if (fetching && carry === can && can.water) { const p = fetching; fetching = null; setTimeout(() => near(p.x, p.z + .5, 1.4) ? usePot(p) : ctx.approach(Math.floor(p.x), Math.floor(p.z), () => usePot(p)), 350); }
       if (carry !== can) fetching = null;
       { const n = active ? nextStep() : null; beckon.visible = !!n; if (n) { const k = Math.sin(time * 3); beckon.position.set(n[0], n[1], n[2]); beckon.scale.setScalar(n[3] * (1 + .08 * k)); beckon.material.opacity = .5 + .22 * k; } }

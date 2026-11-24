@@ -68,6 +68,7 @@ export function createTools(ctx) {
     const h = holders[id] = { id, mesh, x: x + .5, z: z + .5, step: Q.hasTool(id) ? 9 : 0, t: 0, near: false, zz: 0, spark: 0 };
     const tap = () => { sfx.pop(); if (!waiting(id) && h.step === 0) { h.wob = .3; return; } if (Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z) < 1.3) start(h); else ctx.approach(x, z, () => start(h)); };
     mesh.userData.tap = tap; pick.push(mesh);
+    ctx.solid(x, z);                                                               // the stone (and the gnome) is a thing: she walks up to it, not through it
     if (id === 'hamer') { const ha = ART.hamerGroot(); h.tool = makeSprite(ha, { lean: .3, scale: 1.1 }); h.tool.position.set(x + 1.45, 0, z + .5); h.tool.userData.alpha = ha; h.tool.userData.tap = tap; scene.add(h.tool); pick.push(h.tool); }
     h.glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     h.glow.position.set(id === 'zwaard' ? x + .5 : x + 1.45, id === 'zwaard' ? 1.05 : .75, z + .45); scene.add(h.glow);
