@@ -68,8 +68,9 @@ export function createRooms(ctx) {
   /* ---------------- the cave's puzzle: push the crate onto the button and the crystal gate to the back room sinks ----------------
      Walking into the crate pushes it one tile; a tap on it pushes it the right way (she walks round to the right side
      first). A crate pushed where it can never reach the button any more puffs back to where it started: no getting stuck.
-     She can also jump on top of it (ctx.tops). Once open the gate stays open (state.extra.grotOpen). */
-  const pz = { box: g.box.slice(), slide: null, poof: 0, sink: 0 };
+     She can also jump on top of it (ctx.tops). Once open the gate stays open (state.extra.grotOpen).
+     Standing on the button herself sinks the bars too, but they come back up when she steps off: the hint to put something heavy there. */
+  const pz = { box: g.box.slice(), slide: null, poof: 0, sink: 0, hold: 0, on: false };   // hold: how far the bars are down while she stands on the button herself
   let open = !!state.extra.grotOpen;
   const I = M.I, room1 = (x, z) => x >= g.x0 && x < g.wall && z >= g.z0 && z <= g.z1;
   const isGate = (x, z) => g.gate.some(([a, b]) => a === x && b === z);
@@ -153,7 +154,7 @@ export function createRooms(ctx) {
     towardGate(x, z) { if (open || x <= g.wall || MAP.roomAt(x, z) !== 'grot' || !room1(Math.floor(kid.pos.x), Math.floor(kid.pos.z))) return false; tapBox(); return true; },
     /** walking into (x, z) pushes the crate when it stands there */
     pushAt(x, z, dx, dz) { return x === pz.box[0] && z === pz.box[1] && push(dx, dz); },
-    puzzle: () => ({ box: pz.box.slice(), open, plate: g.plate }),
+    puzzle: () => ({ box: pz.box.slice(), open, plate: g.plate, hold: pz.hold, on: pz.on }),
     /** which room she is in (or null) */
     where: () => MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)),
     info: () => ({ coins: coins.length, chest: chest.open > 0 }),
@@ -166,11 +167,17 @@ export function createRooms(ctx) {
       for (let i = rising.length - 1; i >= 0; i--) { const f = rising[i]; f.t += dt * 1.3; f.m.position.y = .6 + f.t * 1.6; f.m.scale.x = Math.cos(f.t * 10) * 1.2; if (f.t >= 1) { scene.remove(f.m); rising.splice(i, 1); } }
       // the crate slides, puffs back home when it got stuck, and the gate sinks once the button is down
       if (pz.slide) { const sl = pz.slide; sl.t = Math.min(1, sl.t + dt * 4.5); boxMesh.position.set(sl.x0 + (sl.x1 - sl.x0) * sl.t, 0, sl.z0 + (sl.z1 - sl.z0) * sl.t);
-        if (sl.t >= 1) { pz.slide = null; if (open) { setPlate(true); sfx.click(); setTimeout(() => { sfx.tada(); burst(v3(g.gate[0][0] + .5, .5, g.gate[0][1] + 1), 14, true); pz.sink = .001; }, 450); } else if (stuck()) pz.poof = 1.2; } }
+        if (sl.t >= 1) { pz.slide = null; if (open) { setPlate(true); sfx.click(); setTimeout(() => { sfx.tada(); burst(v3(g.gate[0][0] + .5, .5, g.gate[0][1] + 1), 14, true); pz.sink = Math.max(.001, pz.hold); }, 450); } else if (stuck()) pz.poof = 1.2; } }
       if (pz.poof > 0 && (pz.poof -= dt) <= 0) { pz.poof = 0; if (!open) { const at = Math.floor(kid.pos.x) === g.box[0] && Math.floor(kid.pos.z) === g.box[1]; if (!at) { burst(v3(boxMesh.position.x, .3, boxMesh.position.z), 8); placeBox(...g.box); boxMesh.position.set(g.box[0] + .5, 0, g.box[1] + .55); sfx.sparkle(); burst(v3(g.box[0] + .5, .3, g.box[1] + .5), 8); } else pz.poof = .5; } }
       if (pz.wob > 0) { pz.wob -= dt; boxMesh.rotation.z = Math.sin(pz.wob * 50) * .05; } else boxMesh.rotation.z = 0;
       if (pz.sink > 0) { pz.sink = Math.min(1, pz.sink + dt * .9); for (const m of bars) { m.position.y = -1.4 * pz.sink; m.rotation.z = Math.sin(time * 40) * .03 * (1 - pz.sink); } if (pz.sink >= 1) { pz.sink = 0; for (const m of bars) m.visible = false; for (const [x, z] of g.gate) M.block[I(x, z)] = 0; } }
-      plateGlow.visible = !open; if (!open) { const k = Math.sin(time * 3); plateGlow.material.opacity = .45 + .25 * k; plateGlow.scale.setScalar(1.3 * (1 + .08 * k)); }
+      if (!open) {                                                               // she stands on the button: down go the bars, until she steps off
+        const on = Math.floor(kid.pos.x) === g.plate[0] && Math.floor(kid.pos.z) === g.plate[1] && !(kid.lift > 0);
+        if (on !== pz.on) { pz.on = on; setPlate(on); if (on) { sfx.click(); kid.squash = .4; } else sfx.pop(); }
+        pz.hold = on ? Math.min(1, pz.hold + dt * 1.6) : Math.max(0, pz.hold - dt * 2.4);
+        if (!pz.sink) for (const m of bars) { m.position.y = -1.4 * pz.hold; m.rotation.z = pz.hold > 0 && pz.hold < 1 ? Math.sin(time * 40) * .03 : 0; }
+      }
+      plateGlow.visible = !open && !pz.on; if (!open) { const k = Math.sin(time * 3); plateGlow.material.opacity = .45 + .25 * k; plateGlow.scale.setScalar(1.3 * (1 + .08 * k)); }
       if (!active) return;
       for (let i = coins.length - 1; i >= 0; i--) { const c = coins[i]; if (Math.abs(c.x - kid.pos.x) < .7 && Math.abs(c.z - kid.pos.z) < .7) { coins.splice(i, 1); rising.push({ m: c.m, t: 0 }); Q.collect('munt', 3000 + c.k); sfx.chime(5 + (i % 3)); } }
       if (chest.open <= 0 && Math.hypot(chest.x - kid.pos.x, chest.z - kid.pos.z) < .9) openChest();

@@ -44,6 +44,9 @@ export default async function (t) {
   let pz = await J('__w.rooms.puzzle()'); ok(!pz.open && !await t.ev(`__w.walkable(35, 101)`), 'the crystal gate to the back room is closed');
   ok(await t.ev(`__w.walkTo(42, 100)`) && await until(`__w.rooms.puzzle().box.join() !== '${pz.box.join()}'`, 6000) && await t.ev(`__w.info().pos[0] < 35`), 'walking to the egg room goes to the crate and pushes it instead');
   await t.ev(`__w.rooms.reset()`); pz = await J('__w.rooms.puzzle()');
+  { const [px, pzz] = pz.plate; await t.ev(`__w.placeAt(${px + .5}, ${pzz + .5})`); await until(`__w.rooms.puzzle().hold >= 1`, 3000); await t.shot('tmp-shots/j-4b-onbutton.png');
+    const h = await J('__w.rooms.puzzle()'); ok(h.on && h.hold >= 1 && !h.open && !await t.ev(`__w.walkable(35, 101)`), 'standing on the button herself sinks the bars (a hint), the gate stays shut');
+    await t.ev(`__w.placeAt(${px + 2.5}, ${pzz + .5})`); ok(await until(`__w.rooms.puzzle().hold === 0`, 3000) && !(await J('__w.rooms.puzzle()')).open, 'stepping off: the bars come back up'); }
   // walking into the crate pushes it; pushing it into a corner puffs it back
   const bx = pz.box; await t.ev(`__w.placeAt(${bx[0] + .5}, ${bx[1] - .5 + 2})`); await t.sleep(300); await t.key('ArrowUp', 350);
   pz = await J('__w.rooms.puzzle()'); ok(pz.box[1] === bx[1] - 1, 'walking into the crate pushes it ' + JSON.stringify(pz.box));
