@@ -466,11 +466,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     return [x0, z0];
   }
   const one = cv => ({ idle: cv, w1: cv, w2: cv });
-  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!', 'Wortel?'], sound: 'boing', blobW: .5 }, [25, 44, 30, 50]);
-  animal(one(PX.cat()), { name: 'Poes', say: ['Miauw!', 'Prrr...'], sound: 'purr', blobW: .5 }, [35, 37, 43, 39]);
   animal(one(PX.puppy()), { name: 'Hondje', say: ['Woef woef!', 'Spelen?'], sound: 'boing', blobW: .55 }, [28, 43, 37, 49]);
   animal(one(ART.ISLE.kip()), { name: 'Kip', say: ['Tok tok!', 'Tok tok tok!'], sound: 'pop', blobW: .5, flippable: true }, [19, 38, 26, 40]);
-  animal(one(ART.ISLE.kip()), { name: 'Kip', say: ['Tok!'], sound: 'pop', blobW: .5, flippable: true }, [21, 47, 27, 50]);
   animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
   animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
   for (const a of animals) if (a.water) a.g.children[1].visible = false;
@@ -571,7 +568,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (moving) return false; const R = MAP.ROOMS, i = I(tile[0], tile[1]);
     let to = null, dx = 0, dz = 1, then = null;
     for (const [k, r] of Object.entries(R)) {
-      if (i === I(...r.door)) { to = [r.in[0] + .5, r.in[1] + .5]; dx = 1; dz = 0; if (k === 'grot') then = () => speak('Wat is het hier donker! Wat zou er in de grot zijn?'); }
+      if (i === I(...r.door)) { to = [r.in[0] + .5, r.in[1] + .5]; dx = 1; dz = 0; if (k === 'grot') then = () => speak('Wat een mooie grot! Wat glinstert daar?'); }
       else if (i === I(...r.exit)) { to = r.out; dz = 1; }
       else if (r.garden && i === I(...r.garden)) { kid.path = []; target = null; after = null; setMount(null, true); onEnter && onEnter('kasteel'); return true; }
     }
@@ -808,11 +805,11 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** inside a room the sun and the sky fade away and the torches light it (the cave darker than the castle hall) */
   let inT = 0, inDark = .8;
   function stepIndoor(dt) {
-    const where = rooms.where(), want = where ? 1 : 0; if (where) inDark = where === 'grot' ? .82 : .55;
+    const where = rooms.where(), want = where ? 1 : 0; if (where) inDark = where === 'grot' ? .3 : .55;
     if (!want && inT === 0) return;
     inT += Math.sign(want - inT) * Math.min(Math.abs(want - inT), dt * 4);
     applyNight(nightT); const k = 1 - inDark * inT;
-    hemi.intensity *= k; sun.intensity *= 1 - Math.min(1, inDark * 1.15) * inT; for (const l of rooms.lights) l.intensity = 9 * inT;
+    hemi.intensity *= k; sun.intensity *= 1 - Math.min(1, inDark * 1.15) * inT; for (const l of rooms.lights) l.intensity = 9 * inT * (l.userData.k || 1);
     post.uniforms.night.value = Math.max(nightT, inT * inDark * .5);
   }
 

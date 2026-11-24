@@ -97,15 +97,13 @@ export function createExtras(ctx) {
 
   /* ---------------- more animals ---------------- */
   const one = cv => ({ idle: cv, w1: cv, w2: cv });
-  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Nootjes!', 'Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [26, 10, 34, 15]);
-  animal(one(PX.flipX(ART.squirrel())), { name: 'Eekhoorn', say: ['Tsjk tsjk!'], sound: 'pop', blobW: .5, flippable: true }, [42, 10, 48, 15]);
-  animal(one(ART.deer()), { name: 'Hertje', say: ['Hallo!', 'Het bos is mooi, hè?'], sound: 'boing', blobW: .7, flippable: true }, [26, 10, 35, 16]);
+  animal(one(ART.deer()), { name: 'Hertje', say: ['Hallo!', 'Wat een bloemen!'], sound: 'boing', blobW: .7, flippable: true }, [74, 44, 82, 50]);
   // every island has animals of its own: nobody lives on two islands
   animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [36, 12, 46, 16]);
   animal(one(ART.ISLE.uil()), { name: 'Uil', say: ['Oehoe!', 'Oehoe oehoe!'], sound: 'pop', blobW: .45 }, [19, 14, 25, 17]);
   animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bèè bèè!'], sound: 'boing', blobW: .7, flippable: true }, [60, 36, 66, 44]);
-  animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bloemetjes!'], sound: 'boing', blobW: .7, flippable: true }, [74, 44, 82, 50]);
   animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
+  animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [122, 60, 134, 68]);
   animal(one(ART.ISLE.papegaai()), { name: 'Papegaai', say: ['Hallo hallo!', 'Kraaa! Mooi!'], sound: 'pop', blobW: .45, flippable: true }, [126, 63, 138, 69]);
   animal(one(ART.ISLE.pauw()), { name: 'Pauw', say: ['Kijk mijn staart!', 'Mi-auw!'], sound: 'sparkle', blobW: .7, flippable: true }, [86, 15, 96, 18]);
   animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [62, 69, 74, 74]);

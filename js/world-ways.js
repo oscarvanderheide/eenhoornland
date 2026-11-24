@@ -1,17 +1,19 @@
-// Every animal has its own way of saying hello. A tap on an animal shows it (the first time; the next tap picks it up,
-// as before, unless the tap itself is the game, like with the sheep's wool). Nothing here asks for attention: an animal
-// only does its thing when somebody taps it, and whatever it does it does the same way every time.
-//   dorp     konijn: down its hole, up out of another one        poes: rolls on her side and purrs
-//            hondje: rolls over and wags                          kip: flutters up and leaves an egg; a chick comes out
-//            eendje: dives in the pond
-//   bos      eekhoorn: up the nearest tree, a nut comes down     hertje: shy; stand still and it comes to you
-//            egel: rolls up into a ball, and a tap rolls the ball uil: asleep in the daytime, opens one eye
+// Every animal has its own way of saying hello, and something more if she keeps playing. Two animals per island, each
+// with a little story (Oscar: fewer animals, each more interesting). A tap shows it (the first time; the next tap
+// picks it up, unless the tap itself is the game). Nothing here asks for attention: an animal only does its thing when
+// somebody taps it, and whatever it does it does the same way every time.
+//   dorp     hondje: rolls over and wags; every third hello it digs, and once a day a coin comes up (else an old boot)
+//            kip: flutters up and leaves an egg; a chick comes out and follows her       (eendjes dive in the pond)
+//   bos      egel: rolls up into a ball; a tap bowls it, and what it bumps into shakes
+//            uil: asleep in the daytime; a tap: one eye, oehoe; a tap while awake: stars twinkle round its head
 //   wei      schaap: every tap fluffs it up more, until poof, the wool floats away and it grows back
-//   strand   krab: a sideways dance, then into the sand           meeuw: dives into the sea and brings her a fish
-//   eiland   papegaai: flies onto her shoulder and rides along
-//   kasteel  pauw: fans out its tail                              draakje: blows smoke rings
-// Food still comes first: with an animal's favourite in her bag a tap gives it that (world-life.js). Without it, the
-// first tap of the day ends with the animal thinking of what it likes, once, as a little picture.
+//            hertje: shy; stand still and it comes to nuzzle her, and flowers come up around them
+//   strand   krab: a sideways dance, then into the sand; while it dances it copies her jumps
+//            meeuw: dives into the sea and brings her a fish
+//   eiland   konijn: down its hole, up out of another one; tap it while it peeks out and it pops up laughing
+//            papegaai: flies onto her shoulder and rides along, and repeats every sound she makes
+//   kasteel  pauw: fans out its tail; every tap changes its colour
+//            draakje: tries to roar: a smoke ring, another one, and the third time a little flame: fireworks
 import * as PX from './pixel.js';
 import * as ART from './art.js';
 import * as AW from './art-ways.js';
@@ -67,22 +69,25 @@ export function createWays(ctx) {
         if (w.t > 1.6 && !w.peek) { w.peek = makeSprite(AW.konijnKop(), { lean: .3, shadow: false, scale: .9 }); w.peek.position.set(c.pos.x, 0, c.pos.z + .06); scene.add(w.peek); sfx.pop(); }
         if (w.peek) { w.peek.scale.set(.9, .9 * Math.min(1, (w.t - 1.6) * 3), 1); w.peek.position.y = w.t > 2.4 && w.t < 2.9 ? .02 * Math.abs(Math.sin(w.t * 50)) : 0; }   // up it comes, and the nose twitches
         if (w.t < 3.1) return false;
-        if (w.peek) scene.remove(w.peek); c.g.visible = true; c.sq = null; c.hop = 1; c.hopH = .6; sfx.boing(); return true;
+        if (w.peek) scene.remove(w.peek); c.g.visible = true; c.sq = null; c.hop = 1; c.hopH = w.found ? 1.1 : .6; sfx.boing(); if (w.found) bubble(c, '', PX.heart()); return true;
       },
-    },
-    Poes: {     // lies down on her side, rolls a little and purrs; a tap on her tummy makes her purr louder
-      start(c) { c.way = { kind: 'buik', t: 0, n: 0 }; sfx.purr(); },
-      step(c, dt) {
-        const w = c.way; w.t += dt; const k = Math.min(1, w.t / .4); c.mesh.rotation.z = c.face * (1.35 * k + (w.t > .4 ? Math.sin((w.t - .4) * 3) * .18 : 0)); c.lift = .08 * k;
-        if ((w.n -= dt) < 0 && w.t > .4) { w.n = .7; bit(ART.note(Math.floor(rnd(0, 3))), c.pos.x + rnd(-.2, .2), .5, c.pos.z + .1, { vx: rnd(-.3, .3), vy: .5, g: -.25, sway: 2, life: 1.5, scale: .7 }); }
-        if (w.t < (w.long || 3.2)) return false; c.lift = 0; c.upright = { from: c.mesh.rotation.z, t: 0 }; return true;
+      again(c) {   // caught peeking out: it pops up laughing, hearts, and is ready for another round
+        const w = c.way; if (!w.peek || w.found) return true;
+        w.found = true; w.t = 3.1; sfx.chime(5); burst(c.pos, 8, true); return true;
       },
-      again(c) { c.way.long = c.way.t + 2.5; sfx.purr(); burst(c.pos, 4, true); return true; },
+      repeat: true,
     },
-    Hondje: {   // rolls right over, then sits and wags
-      start(c) { c.way = { kind: 'rol', t: 0 }; c.hop = 1; c.hopH = .5; sfx.boing(); },
+    Hondje: {   // rolls right over, then sits and wags. Every third hello it digs instead: a coin once a day, else an old boot
+      start(c) { c.hellos = (c.hellos || 0) + 1; if (c.hellos % 3 === 0) { c.way = { kind: 'graaf', t: 0 }; sound(c); return; } c.way = { kind: 'rol', t: 0 }; c.hop = 1; c.hopH = .5; sfx.boing(); },
       step(c, dt) {
-        const w = c.way; w.t += dt; const k = Math.min(1, w.t / .8);
+        const w = c.way; w.t += dt;
+        if (w.kind === 'graaf') {
+          c.sq = [1, 1 + Math.sin(w.t * 26) * .08]; c.face = Math.floor(w.t * 3) % 2 ? 1 : -1;
+          if (Math.random() < dt * 14) { sfx.brush(); bit(PX.gridSprite(2, 2, () => '#A9784F', { outline: false, key: 'aarde' }), c.pos.x - c.face * .3, .15, c.pos.z + .1, { vx: -c.face * rnd(1, 2.5), vy: rnd(1.5, 3), g: 10, life: .6 }); }
+          if (w.t > 1.6 && !w.found) { w.found = true; c.sq = null; c.hop = 1; const coin = Q.giftOnce('hondmunt', 'munt'); sfx[coin ? 'tada' : 'boing'](); bit(coin ? ART.coin() : ART.laars(), c.pos.x, .3, c.pos.z + .15, { vy: 4, g: 9, bounce: 1, life: 1.6 }); bubble(c, '!'); if (coin) burst(c.pos, 8, true); }
+          return w.t > 2.6;
+        }
+        const k = Math.min(1, w.t / .8);
         c.mesh.rotation.z = -c.face * k * Math.PI * 2;
         if (k >= 1) { c.mesh.rotation.z = 0; if (!w.wag) { w.wag = true; sound(c); bubble(c, '', PX.heart()); } c.sq = [1 + Math.sin(w.t * 30) * .05, 1]; }
         if (w.t < 2.2) return false; c.sq = null; return true;
@@ -106,25 +111,6 @@ export function createWays(ctx) {
         if (w.t < 1.9) return false; c.sq = null; c.hop = 1; return true;
       },
     },
-    Eekhoorn: { // up the nearest tree; the tree rustles and a nut drops down for her; then it slides down again
-      start(c) {
-        let tree = null, bd = 4.5; for (const t of M.trees) { if (!['tree', 'pine', 'oak', 'berk', 'apple'].includes(t.kind)) continue; const d = Math.hypot((t.px || t.x + .5) - c.pos.x, t.z + .5 - c.pos.z); if (d < bd) { bd = d; tree = t; } }
-        c.way = { kind: 'boom', t: 0, tree }; sound(c);
-        if (tree) leapTo(c, (tree.px || tree.x + .5), tree.z + .7, .5, .6); else c.way.spin = true;
-      },
-      step(c, dt) {
-        const w = c.way; w.t += dt;
-        if (w.spin) { c.face = Math.floor(w.t * 8) % 2 ? 1 : -1; c.hop = c.hop || (w.t < 1.2 ? 1 : 0); return w.t > 1.4; }   // no tree near: it chases its own tail
-        if (!stepLeap(c, dt)) return false;
-        if (!w.up) { w.up = w.t; sfx.brush(); }
-        const u = w.t - w.up; c.lift = Math.min(1.7, u * 3);
-        if (u > .6 && !w.hid) { w.hid = true; c.g.visible = false; ctx.life.tapProp(w.tree); }
-        if (u > 1.1 && !w.nut) { w.nut = true; bit(ART.eikel(), kid.pos.x + kid.face * .5, 1.8, kid.pos.z + .15, { g: 9, bounce: 2, life: 2.2 }); setTimeout(sfx.bonk, 300); }
-        if (u > 3.2 && !c.g.visible) { c.g.visible = true; sfx.brush(); }
-        if (u > 3.2) c.lift = Math.max(0, 1.7 - (u - 3.2) * 2.4);
-        if (u < 4) return false; c.lift = 0; c.hop = 1; return true;
-      },
-    },
     Hertje: { far: true,   // shy: if she rushes up it leaps away; if she stands still it comes to nuzzle her (see `update` too)
       start(c) {
         c.way = { kind: 'hert', t: 0 };
@@ -134,7 +120,8 @@ export function createWays(ctx) {
       step(c, dt) {
         const w = c.way; w.t += dt; if (w.shy) return stepLeap(c, dt);
         if (w.walk) { const d = dist(c); const dx = kid.pos.x - c.pos.x, dz = kid.pos.z - c.pos.z, v = Math.min(d - .9, dt * 1.2), nx = c.pos.x + dx / d * v, nz = c.pos.z + dz / d * v;
-        if (d > .95 && w.t < 9 && ctx.walkable(Math.floor(nx), Math.floor(nz))) { c.pos.x = nx; c.pos.z = nz; c.moving = true; c.face = dx > 0 ? 1 : -1; return false; } w.walk = false; w.at = w.t; c.moving = false; if (d > 2.2) return true; c.face = kid.pos.x >= c.pos.x ? 1 : -1; kid.face = -c.face; sfx.purr(); bubble(c, '', PX.heart()); burst(c.pos, 5, true); }
+        if (d > .95 && w.t < 9 && ctx.walkable(Math.floor(nx), Math.floor(nz))) { c.pos.x = nx; c.pos.z = nz; c.moving = true; c.face = dx > 0 ? 1 : -1; return false; } w.walk = false; w.at = w.t; c.moving = false; if (d > 2.2) return true; c.face = kid.pos.x >= c.pos.x ? 1 : -1; kid.face = -c.face; sfx.purr(); bubble(c, '', PX.heart()); burst(c.pos, 5, true);
+          const mx = (c.pos.x + kid.pos.x) / 2, mz = (c.pos.z + kid.pos.z) / 2; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; setTimeout(() => { ctx.life.plantBloom(mx + Math.cos(a) * 1.1, mz + Math.sin(a) * .7 + .1); if (i % 2) sfx.chime(i); }, 300 + i * 140); } }   // flowers come up all around them
         const u = w.t - w.at; c.mesh.rotation.z = -c.face * Math.max(0, Math.sin(u * 4)) * .12;   // nuzzles her
         return u > 2.4;
       },
@@ -143,19 +130,21 @@ export function createWays(ctx) {
       start(c) { c.way = { kind: 'bal', t: 0, quiet: 0 }; wear(c, AW.egelBal()); c.squash = .6; sfx.pop(); },
       step(c, dt) {
         const w = c.way; w.t += dt; w.quiet += dt;
-        const r = w.roll; if (r) { r.t += dt; const k = Math.min(1, r.t / r.T), e = 1 - (1 - k) ** 2; const x = r.x0 + (r.x1 - r.x0) * e, z = r.z0 + (r.z1 - r.z0) * e; c.pos.set(x, 0, z); c.mesh.rotation.z -= r.dir * dt * 9 * (1 - k); if (k >= 1) { w.roll = null; c.mesh.rotation.z = 0; } }
+        const r = w.roll; if (r) { r.t += dt; const k = Math.min(1, r.t / r.T), e = 1 - (1 - k) ** 2; const x = r.x0 + (r.x1 - r.x0) * e, z = r.z0 + (r.z1 - r.z0) * e; c.pos.set(x, 0, z); c.mesh.rotation.z -= r.dir * dt * 9 * (1 - k); if (k >= 1) { w.roll = null; c.mesh.rotation.z = 0; ctx.life.hitAt(c.pos.x + r.dir * .6, c.pos.z); } }
         if (w.quiet < 5.5) return false; wear(c, null); c.mesh.rotation.z = 0; c.hop = 1; bubble(c, 'Snuf snuf!'); sound(c); return true;
       },
       again(c) {
         const w = c.way; w.quiet = 0; const dir = c.pos.x >= kid.pos.x ? 1 : -1; let to = null;
         for (const d of [2.6, 1.8, 1]) { const x = c.pos.x + dir * d, z = c.pos.z + rnd(-.4, .4); if (ctx.walkable(Math.floor(x), Math.floor(z))) { to = [x, z]; break; } }
-        if (!to) { c.squash = .8; sfx.boing(); return true; }
+        if (!to) { c.squash = .8; sfx.boing(); ctx.life.hitAt(c.pos.x + dir * .8, c.pos.z); return true; }   // bonk: whatever it bumps into shakes
         w.roll = { x0: c.pos.x, z0: c.pos.z, x1: to[0], z1: to[1], t: 0, T: .9, dir }; sfx.whoosh(); return true;
       },
       repeat: true,
     },
     Uil: {      // asleep in the daytime: a tap opens its eyes, it turns its head right round, says oehoe and dozes off again
       start(c) { c.way = { kind: 'uil', t: 0 }; wear(c, null); c.hop = 1; sfx.hoot(); bubble(c, 'Oehoe!'); },
+      again(c) { const w = c.way; w.t = Math.min(w.t, 1.6); c.hop = 1; sfx.hoot(); sfx.sparkle(); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; bit(PX.sparkle(i % 2 ? '#FFF3A8' : '#FFFFFF'), c.pos.x + Math.cos(a) * .45, .9 + Math.sin(a) * .3, c.pos.z + .12, { vx: -Math.sin(a) * .8, vy: Math.cos(a) * .5, g: 0, life: 1.2 }); } return true; },
+      repeat: true,
       step(c, dt) { const w = c.way; w.t += dt; if (w.t > .5 && w.t < 1.5) c.face = Math.floor(w.t * 6) % 2 ? 1 : -1; if (w.t < 3) return false; if (ctx.night() < .5) { wear(c, AW.uilSlaap()); bit(ART.zzz(), c.pos.x + .2, .7, c.pos.z + .1, { vx: .3, vy: .5, g: -.2, sway: 2, life: 1.3, scale: .8 }); } return true; },
     },
     Schaap: {   // every tap makes the wool fluffier; on the fifth, poof: it floats off in tufts and the sheep is all skinny. It grows back
@@ -216,9 +205,9 @@ export function createWays(ctx) {
       repeat: true,
     },
     Pauw: {     // the tail goes up in a big fan of eyes; it turns to show both sides; after a while it folds it again
-      start(c) { c.way = { kind: 'staart', t: 0 }; wear(c, null); c.squash = .8; sfx.sparkle(); burst(c.pos, 6); },
-      step(c, dt) { const w = c.way; w.t += dt; if (w.t > 1 && w.t < 2.6) c.face = Math.floor((w.t - 1) / .8) % 2 ? 1 : -1; if (w.t < 5) return false; wear(c, AW.pauwDicht()); c.squash = .4; sfx.brush(); return true; },
-      again(c) { c.way.t = Math.min(c.way.t, 1); sfx.sparkle(); burst(c.pos, 4); return true; },
+      start(c) { c.way = { kind: 'staart', t: 0, n: 0 }; wear(c, null); c.squash = .8; sfx.sparkle(); burst(c.pos, 6); },
+      step(c, dt) { const w = c.way; w.t += dt; if (w.t > 1 && w.t < 2.6) c.face = Math.floor((w.t - 1) / .8) % 2 ? 1 : -1; if (w.t < 5) return false; wear(c, AW.pauwDicht()); c.squash = .4; sfx.brush(); c.mesh.material.color.set('#FFFFFF'); return true; },
+      again(c) { const w = c.way; w.t = Math.min(w.t, 1); w.n++; c.squash = .5; sfx.chime(w.n % 8); burst(c.pos, 4); c.mesh.material.color.set(PX.mix(PX.RAINBOW[w.n % 6], '#FFFFFF', .35)); return true; },   // every tap: a new colour
       repeat: true,
     },
     Draakje: {  // tries to roar, and out comes a smoke ring. Then another. The third time, a little sneeze of sparks
@@ -227,7 +216,10 @@ export function createWays(ctx) {
       again(c) {
         const w = c.way; w.t = 0; w.n++; c.hop = 1; c.hopH = .2; c.squash = .5;
         if (w.n % 3) { sfx.whoosh(); drift(AW.rookring(), c.pos.x + c.face * .5, .75, c.pos.z + .1, { vx: c.face * .25, vy: .55, life: 2.8, s0: .8, s1: 2.4 }); }
-        else { sfx.burp(); bubble(c, 'Hatsjoe!'); for (let i = 0; i < 8; i++) bit(PX.sparkle(i % 2 ? '#FFD43B' : '#FF9E6B'), c.pos.x + c.face * .5, .7, c.pos.z + .1, { vx: c.face * rnd(1.2, 2.6), vy: rnd(.4, 1.8), g: 1, life: rnd(.6, 1) }); }
+        else {   // a real little flame! up it goes, and pops into fireworks
+          sfx.whoosh(); bubble(c, '!'); const x = c.pos.x + c.face * .4, z = c.pos.z + .1; bit(PX.sparkle('#FF9E6B'), x, .8, z, { vy: 5, g: 0, life: .7 });
+          setTimeout(() => { sfx.tada(); for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; bit(PX.sparkle(PX.RAINBOW[i % 6]), x, 4.2, z, { vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2, g: 1.5, life: rnd(1, 1.6) }); } c.hop = 1; c.hopH = .6; }, 700);
+        }
         return true;
       },
       repeat: true,
@@ -240,8 +232,15 @@ export function createWays(ctx) {
 
   function nuzzle(c) { c.way = { kind: 'hert', t: 0, walk: true }; sfx.pop(); }
 
+  /** the parrot on her shoulder says it again: the sound she just made, a moment later, with a little note */
+  function echo(play) {
+    const p = animals.find(a => a.name === 'Papegaai' && a.way && a.way.kind === 'schouder' && a.way.on); if (!p) return;
+    setTimeout(() => { if (!p.way || !p.way.on) return; play(); p.hop = .5; bit(ART.note(Math.floor(rnd(0, 3))), p.pos.x, 1.6, p.pos.z + .1, { vy: .6, g: 0, sway: 2, life: 1, scale: .7 }); }, 450);
+  }
+  let kidHop = 0;
   /** a tap on an animal (she is next to it): its own way. false = nothing special, so it is picked up */
   function tap(c) {
+    if (c.name !== 'Papegaai') echo(() => sound(c));
     const w = W[c.name]; if (!w || c.uniKind || c.friend) return false;
     if (c.way) { if (w.again) return w.again(c); return true; }                    // still busy with its thing
     if (!w.repeat && c.wayAt && now() - c.wayAt < 6000) return false;              // a second tap: picked up, as always
@@ -282,6 +281,12 @@ export function createWays(ctx) {
       }
       // smoke rings and wool: drift up, grow, fade
       for (let i = floaty.length - 1; i >= 0; i--) { const f = floaty[i]; f.t += dt; const k = f.t / f.life; f.m.position.x += (f.vx + (f.sway ? Math.sin(f.t * f.sway) * .3 : 0)) * dt; f.m.position.y += f.vy * dt; f.m.scale.setScalar((f.s0 + (f.s1 - f.s0) * k) * (k > .8 ? (1 - k) / .2 : 1)); if (k >= 1) { scene.remove(f.m); floaty.splice(i, 1); } }
+      // she jumps: a dancing crab jumps along, the parrot on her shoulder says boing too
+      if (kid.hop > .8 && kidHop <= .8) {
+        echo(() => sfx.boing());
+        for (const c of animals) if (c.name === 'Krab' && c.way && !c.way.dug && dist(c) < 4) { c.way.t = Math.min(c.way.t, .9); setTimeout(() => { c.hop = 1; c.hopH = .55; sfx.click(); }, 180); }
+      }
+      kidHop = kid.hop;
       // the deer: stand still near it for a while and it comes to say hello by itself (only the deer; only now and then)
       const deer = animals.find(a => a.name === 'Hertje');
       if (deer && active && !deer.way && !deer.held && !deer.fly && !deer.friend && deer.g.visible) {

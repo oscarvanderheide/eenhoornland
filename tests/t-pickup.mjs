@@ -18,9 +18,9 @@ export default async function (t) {
   await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: s.x + 90, y: s.y - 24, button: 'left', clickCount: 1 });
   h = await scr(); ok(h.fly || Math.abs(h.px - s.px) > .3, 'letting go throws it');
   // a plain tap: she walks over and carries it; a tap on her puts it down; a tap on it throws it
-  await t.ev(`__w.animals.forEach(a=>{a.fly=null;a.lift=0})`); await t.ev(`(a=>{a.pos.set(32.5,0,43.5);__w.placeAt(30.5,43.5)})(__w.animals[${info.i}])`); await t.sleep(2500);
+  await t.ev(`__w.animals.forEach(a=>{a.fly=null;a.lift=0})`); await t.ev(`(a=>{a.pos.set(32.5,0,43.5);a.path=[];a.wait=30;__w.placeAt(30.5,43.5)})(__w.animals[${info.i}])`); await t.sleep(2500);
   // the first tap shows the animal's own hello (world-ways.js); the tap after that picks it up
-  const hello = () => t.ev(`(a => { a.wayAt = performance.now(); })(__w.animals[${info.i}])`);
+  const hello = () => t.ev(`(a => { a.wayAt = performance.now(); a.path = []; a.wait = 30; })(__w.animals[${info.i}])`);
   await hello(); s = await scr(); await t.click(s.x, s.y); const got = async () => t.ev(`__w.life.carrying()===__w.animals[${info.i}]`);
   let up = false; for (let k = 0; k < 40 && !up; k++) { up = await got(); if (!up) await t.sleep(400); } ok(up, 'a tap on an animal: she walks over and lifts it'); await t.sleep(900); await t.shot('tmp-shots/p-3-carry.png');
   await t.ev(`__w.walkTo(34,45)`); await t.sleep(5000); h = await scr(); ok(await got() && Math.hypot(h.px - (await J('__w.info().pos'))[0]) < .3, 'it goes where she goes'); await t.shot('tmp-shots/p-4-walk.png');
@@ -39,7 +39,7 @@ export default async function (t) {
   await t.ev(`(a=>{__w.life.hold(a); a.pos.set(17.5,0,45.5); __w.life.toss(a,-5,0)})(__w.animals[0])`); ok(await until(`!!__w.animals[0].swim`, 20000), 'thrown into the sea it swims'); await t.sleep(700); await t.shot('tmp-shots/p-9-swim.png');
   ok(await until(`!__w.animals[0].swim && __w.walkable(Math.floor(__w.animals[0].pos.x), Math.floor(__w.animals[0].pos.z))`, 60000), 'and climbs out on the beach');
   const bw = `__w.M.ground[__w.M.I(Math.floor(__w.play.info().balls[0][0]), Math.floor(__w.play.info().balls[0][1]))]`;
-  await t.ev(`__w.placeAt(19.5, 42.5)`); for (let k = 0; k < 8 && await t.ev(`${bw} !== __w.MAP.SE`); k++) { await t.ev(`__w.play.kick(0, -1, 0)`); await t.sleep(700); } ok(await until(`${bw} === __w.MAP.SE`, 8000), 'the ball rolls into the sea'); await t.sleep(600); await t.shot('tmp-shots/p-10-ball-floats.png');
+  await t.ev(`__w.placeAt(19.5, 42.5); Object.assign(__w.play.balls[0], { x: 17.5, z: 42.5, vx: 0, vz: 0, float: 0, gust: null }); (d => { d.pos.set(44.5, 0, 46.5); d.path = []; d.wait = 30; })(__w.animals.find(a => a.name === 'Hondje')); 0`); let wet = false; for (let k = 0; k < 10 && !wet; k++) { await t.ev(`__w.play.kick(0, -1, 0)`); wet = await until(`${bw} === __w.MAP.SE`, 900); } ok(wet, 'the ball rolls into the sea ' + await t.ev(`JSON.stringify(__w.play.info().balls[0])`)); await t.sleep(600); await t.shot('tmp-shots/p-10-ball-floats.png');
   ok(await until(`${bw} !== __w.MAP.SE`, 30000), 'and a gust of wind blows it back'); await t.sleep(1500); await t.shot('tmp-shots/p-11-ball-back.png');
   const R = await J('__w.MAP.RAMPS[0]'); await t.ev(`__w.placeAt(${R[0]} + 1.6, ${R[1]} + 1.2)`); await t.sleep(2000); await t.shot('tmp-shots/p-12-ramp.png');
   const B = await J('__w.MAP.BIKE'); await t.ev(`__w.placeAt(${B[0]} - 1.5, ${B[1]} + 1)`); await t.sleep(2000); await t.shot('tmp-shots/p-13-bike.png');

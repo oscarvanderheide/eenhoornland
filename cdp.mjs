@@ -1,7 +1,8 @@
-// Tiny Chrome DevTools driver for interaction tests: node cdp.mjs <script.mjs>
+// Tiny Chrome DevTools driver for interaction tests: node cdp.mjs <script.mjs> (or use t.mjs). Renders on the GPU (Metal):
+// ten times faster than the software renderer; GL=soft falls back to SwiftShader.
 import { spawn } from 'node:child_process';
-const port = 9333;
-const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', `--remote-debugging-port=${port}`, '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1200,750', '--force-device-scale-factor=1', '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--user-data-dir=/tmp/eh-cdp-profile', 'about:blank'], { stdio: 'ignore' });
+const port = +process.env.PORT || 9333;   // t.mjs gives every test its own port and profile so they can run side by side
+const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', `--remote-debugging-port=${port}`, ...(process.env.GL === 'soft' ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']), '--window-size=1200,750', '--force-device-scale-factor=1', '--autoplay-policy=no-user-gesture-required', '--mute-audio', `--user-data-dir=/tmp/eh-cdp-profile-${port}`, 'about:blank'], { stdio: 'ignore' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let targets; for (let i = 0; i < 50; i++) { try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); if (targets.find(t => t.type === 'page')) break; } catch { } await sleep(200); }
 const ws = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);

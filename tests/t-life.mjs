@@ -30,8 +30,8 @@ export default async function (t) {
   // a frog in a bush, a twirl, a burp
   const bu = await t.ev(`__w.M.trees.findIndex(t => ['bush', 'hedge', 'rose', 'fern'].includes(t.kind))`);
   await t.ev(`(t => __w.placeAt(t.x + 2.5, t.z + 1.5))(__w.M.trees[${bu}])`); await t.sleep(800);
-  const b0 = await t.ev('__w.life.info().bits'); await t.ev(`(() => { const R = Math.random; Math.random = () => .05; try { __w.life.tapProp(__w.M.trees[${bu}]); } finally { Math.random = R; } })()`); await t.sleep(550);
-  ok(await t.ev('__w.life.info().bits') > b0, 'a frog jumps out of the bush'); await t.shot('tmp-shots/l-7-frog.png');
+  await until('__w.life.info().bits === 0', 6000); const b0 = await t.ev('__w.life.info().bits'); await t.ev(`(() => { const R = Math.random; Math.random = () => .05; try { __w.life.tapProp(__w.M.trees[${bu}]); } finally { Math.random = R; } })()`);
+  ok(await until(`__w.life.info().bits > ${b0}`, 3000), 'a frog jumps out of the bush'); await t.shot('tmp-shots/l-7-frog.png');
   ok(!(await t.ev('__w.life.tapKid()')) && !(await t.ev('__w.life.tapKid()')) && await t.ev('__w.life.tapKid()'), 'three quick taps on her: she twirls'); await t.sleep(300); await t.shot('tmp-shots/l-8-twirl.png');
   await t.ev(`__w.Q._reset({ stage: 'baby' }); 0`); await t.sleep(800); await t.ev('__w.life.burp(__w.uni)'); await t.sleep(700); await t.shot('tmp-shots/l-9-burp.png');
   ok(await t.ev('__w.life.friends().length') === 0, 'after a new day (reset) the friends have gone home');
@@ -45,7 +45,7 @@ export default async function (t) {
   await t.sleep(800); await t.shot('tmp-shots/l-10-dog-ball.png');
   ok(await until(`!__w.life.fetching()`, 60000), 'and kicks it back');
   // the dog brings back a pebble she throws
-  const st = [32, 46]; await t.ev(`__w.life.stones[0].pos.set(32.5, 0, 46.5); 0`); await t.ev(`(() => { const d = ${A(dg)}; __w.placeAt(${st[0]} + 1.4, ${st[1]} + .6); d.pos.set(${st[0]} + 2.5, 0, ${st[1]} + 1.5); d.path = []; })(); 0`); await t.sleep(1500);
+  const st = [32, 46]; await t.ev(`__w.life.stones[0].pos.set(32.5, 0, 46.5); 0`); await t.ev(`(() => { const d = ${A(dg)}; __w.placeAt(${st[0]} + 1.4, ${st[1]} + .6); d.pos.set(${st[0]} + 2.5, 0, ${st[1]} + 1.5); d.path = []; d.wait = 12; })(); 0`); await t.sleep(1500);
   await t.ev('__w.grabKey()'); await t.sleep(600); await t.ev('__w.grabKey()');
   ok(await until(`__w.life.fetching() === 'stone'`, 15000), 'the dog runs to the pebble she threw');
   ok(await until(`__w.life.stones[0].dog === true`, 60000), 'and picks it up'); await t.sleep(400); await t.shot('tmp-shots/l-11-dog-stone.png');

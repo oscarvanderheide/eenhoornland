@@ -46,10 +46,10 @@ export function createWeather(ctx) {
   man.m.userData.tap = () => {
     if (Math.hypot(man.x - kid.pos.x, man.z - kid.pos.z) > 2.2) { ctx.approach(Math.floor(man.x), Math.floor(man.z), () => man.m.userData.tap()); return; }
     man.taps++; man.hatT = .35; man.wob = 1; setMan(); sfx.boing();
-    if (man.nose && man.taps % 3 === 0) {                                        // the carrot nose falls off, and the rabbit comes running for it
+    if (man.nose && man.taps % 3 === 0) {                                        // the carrot nose falls off, and the dog comes running for it
       man.nose = false; setMan(); ctx.life.bit(PX.carrot(), man.x + .25, 1.1, man.z + .1, { vx: .8, vy: 2, g: 9, bounce: 1, life: 2.6 }); sfx.pop();
-      const r = animals.filter(a => a.name === 'Konijn' && !a.held && !a.fly && !a.friend && !a.cart).sort((a, b) => Math.hypot(a.pos.x - man.x, a.pos.z - man.z) - Math.hypot(b.pos.x - man.x, b.pos.z - man.z))[0];
-      if (r) { r.wait = 6; r.path = [new THREE.Vector3(man.x + .8, 0, man.z + .2)]; r.speed = 2.6; setTimeout(() => { bubble(r, 'Wortel!'); sfx.munch(); r.hop = 1; r.speed = .9; }, 2200); }
+      const r = animals.filter(a => a.name === 'Hondje' && !a.held && !a.fly && !a.friend && !a.cart).sort((a, b) => Math.hypot(a.pos.x - man.x, a.pos.z - man.z) - Math.hypot(b.pos.x - man.x, b.pos.z - man.z))[0];
+      if (r) { r.wait = 6; r.path = [new THREE.Vector3(man.x + .8, 0, man.z + .2)]; r.speed = 2.6; setTimeout(() => { bubble(r, '', PX.carrot()); sfx.munch(); r.hop = 1; r.speed = .9; }, 2200); }
       setTimeout(() => { man.nose = true; setMan(); }, 15000);                   // and a new one grows back (magic)
     }
   };

@@ -212,7 +212,7 @@ export function createLife(ctx) {
   const dog = animals.find(a => a.name === 'Hondje'); let fetch = null, dogCool = 0;
   const dogFree = () => dog && dog.g.visible && !dog.held && !dog.fly && !dog.swim && !dog.cart && !(dog.nap > 0) && !dog.friend;
   function startFetch(kind, o) { if (fetch || !dogFree() || now() < dogCool) return; fetch = { kind, o, t: 0, re: 0, back: false }; dog.speed = 3.2; dog.hop = 1; bubble(dog, 'Woef!'); (sfx[dog.sound] || sfx.pop)(); }
-  function fetchStone(c) { if (c.held || c.dog || !dog || Math.hypot(dog.pos.x - c.pos.x, dog.pos.z - c.pos.z) > 8) return; startFetch('stone', c); }
+  function fetchStone(c) { if (c.held || c.dog || !dog || Math.hypot(dog.pos.x - c.pos.x, dog.pos.z - c.pos.z) > 13) return; startFetch('stone', c); }
   function endFetch(happy) {
     if (!fetch) return; const f = fetch; fetch = null; dogCool = now() + 2500; if (!dog) return; dog.speed = .9; dog.path = []; dog.wait = 2;
     if (f.kind === 'stone' && f.o.dog) { f.o.dog = false; f.o.held = false; f.o.lift = 0; f.o.pos.set(dog.pos.x + dog.face * .4, 0, dog.pos.z + .1); }
@@ -327,7 +327,7 @@ export function createLife(ctx) {
     if (e >= 1) { kid.pos.copy(d.from); kid.lift = 0; dipping = null; ctx.setBusy(false); kid.hop = .5; dripT = 3; sfx.boing(); setTimeout(() => bubble(kid, 'Hihi! Nat!'), 200); }
   }
   return {
-    dispose() { offQ(); }, nearWater, dip, dipping: () => !!dipping, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
+    dispose() { offQ(); }, nearWater, dip, dipping: () => !!dipping, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, plantBloom, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length, friends: friends.map(c => c.name), napping: animals.filter(a => a.nap > 0).map(a => a.name), pending: pending.length, power, blooms: blooms.length }),
     update(dt, time, active) {
       if (dipping) stepDip(dt);
