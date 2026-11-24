@@ -608,10 +608,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function showMarker(x, z) { marker.position.set(x, .03, z); marker.visible = true; markerT = 1; }
   const labelsEl = document.getElementById('labels');
   const bubbles = [];
+  /** a little picture above someone's head (what is missing, what she found). Words alone are not shown: nobody here
+   *  reads yet, and the text stays in the calls for a later voice. */
   function bubble(c, text, icon = null) {
+    if (!icon) return;
     for (const b of bubbles) if (b.c === c) { b.el.remove(); b.dead = true; }
-    const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; labelsEl.appendChild(el);
-    if (icon) { const cvs = PX.domSprite(icon, 3); cvs.style.verticalAlign = 'middle'; el.prepend(cvs); }
+    const el = document.createElement('div'); el.className = 'bubble'; labelsEl.appendChild(el);
+    const cvs = PX.domSprite(icon, 2); cvs.style.verticalAlign = 'middle'; el.append(cvs);
     bubbles.push({ c, el, until: performance.now() + 1800 });
   }
   const sparks = []; const sparkArt = [PX.sparkle('#FFF6D0'), PX.sparkle('#FFB3CC'), PX.heart()];
@@ -683,17 +686,20 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (inb(tx, tz) && (ground[I(tx, tz)] === MAP.SE || ground[I(tx, tz)] === WA)) life.splash(p.x, p.z);
     const t = walkable(tx, tz) ? [tx, tz] : nearestWalkable(p.x, p.z);
     if (t) { sfx.click(); target = null; walkTo(t[0], t[1], null, walkable(tx, tz) ? p : null); }
+    steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { }   // keep the finger down and she keeps walking towards it
   }, listen);
-  let grab = null;
+  let grab = null, steer = null;
   const groundAt = e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); return ray.ray.intersectPlane(plane, p) ? p : null; };
   cv.addEventListener('pointermove', e => {
+    if (steer && e.pointerId === steer.id) { steer.x = e.clientX; steer.y = e.clientY; return; }
     if (!grab) return;
     if (!grab.drag && Math.hypot(e.clientX - grab.x, e.clientY - grab.y) > 10) { grab.drag = true; life.hold(grab.c); }
     if (!grab.drag) return; const p = groundAt(e); if (!p) return;
     p.x = THREE.MathUtils.clamp(p.x, 2, W - 2); p.z = THREE.MathUtils.clamp(p.z, 2, H - 2);
     grab.c.pos.set(p.x, 0, p.z); grab.pts.push({ x: p.x, z: p.z, t: performance.now() }); if (grab.pts.length > 6) grab.pts.shift();
   }, listen);
-  const letGo = () => {
+  const letGo = e => {
+    if (steer && (!e || e.pointerId === steer.id)) { if (steer.on && !midJump()) { kid.path = []; after = null; } steer = null; }
     if (!grab) return; const g = grab; grab = null;
     if (!g.drag) { if (g.c.stone || (!toys.tapAnimal(g.c) && !play.tapAnimal(g.c))) life.tapAnimal(g.c); return; }
     const a = g.pts[0], b = g.pts[g.pts.length - 1], dt = a && b ? Math.max(.03, (b.t - a.t) / 1000) : 1;
@@ -847,18 +853,25 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     // keyboard
     const speed = mount === 'uni' ? 5.4 : mount === 'fiets' ? 4.8 : 3.4;
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
+    // a finger held down: after a moment she walks towards wherever it is, like a stick, until it lets go
+    if (steer && (busy || paused || !interactive)) steer = null;
+    if (steer && now - steer.t > 220 && !kx && !kz) {
+      const p = groundAt({ clientX: steer.x, clientY: steer.y });
+      if (p) { if (!steer.on && !midJump()) { steer.on = true; kid.path = []; target = null; after = null; } const dx = p.x - kid.pos.x, dz = p.z - kid.pos.z, d = Math.hypot(dx, dz); if (steer.on && d > .3) { kx = dx / d; kz = dz / d; } }
+    }
     const prev = kid.pos.clone();
     if (busy) { if (play.aboard()) play.drive(kx, kz, dt); }
     else if ((kx || kz) && !midJump()) {
-      if (kx) kid.face = kx;                                                      // with the keys too she (and whoever carries her) looks where she goes
+      if (Math.abs(kx) > .2) kid.face = Math.sign(kx);                            // with the keys too she (and whoever carries her) looks where she goes
       const l = Math.hypot(kx, kz), sp = speed * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
       const stuck = !freeAt(kid.pos.x, kid.pos.z); // if somehow overlapping, let her walk out
       if (stuck || freeAt(nx, kid.pos.z)) kid.pos.x = nx; if (stuck || freeAt(kid.pos.x, nz)) kid.pos.z = nz;
       kid.moving = kid.pos.distanceTo(prev) > .001;
       // walking straight into a log or puddle hops over it; into brambles or a boulder uses the tool
-      if (!kid.moving && !stuck && !(kx && kz)) {
-        const ax = Math.floor(kid.pos.x) + kx, az = Math.floor(kid.pos.z) + kz;
-        if (lowAt(ax, az) && walkable(ax + kx, az + kz)) { const land = new THREE.Vector3(ax + kx + .5, 0, az + kz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
+      const ix = Math.abs(kx) > .38 ? Math.sign(kx) : 0, iz = Math.abs(kz) > .38 ? Math.sign(kz) : 0;   // the held finger points any way; a bump counts along the main direction
+      if (!kid.moving && !stuck && !(ix && iz) && (ix || iz)) {
+        const ax = Math.floor(kid.pos.x) + ix, az = Math.floor(kid.pos.z) + iz;
+        if (lowAt(ax, az) && walkable(ax + ix, az + iz)) { const land = new THREE.Vector3(ax + ix + .5, 0, az + iz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
         else if (time > bumpT && inb(ax, az) && (ground[I(ax, az)] === WA || Math.hypot(ax + .5 - FOUNT.cx, az + .5 - FOUNT.cz) < 1.3) && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater()); }   // walking into the pond or the fountain: in she jumps
       }

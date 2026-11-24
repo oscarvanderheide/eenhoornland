@@ -4,6 +4,7 @@
 // found or broken is remembered by quest.js. world.js hands over the same toolbox (ctx) as for world-extras.js.
 import * as ART from './art.js';
 import * as Q from './quest.js';
+import * as PX from './pixel.js';
 import { sfx, speak } from './audio.js';
 
 const FREE = { zwaard: 'Zwiep zwiep! De brug naar de bloemenwei is vrij!', hamer: 'Boem boem! De brug naar het strand is vrij!' };
@@ -53,20 +54,34 @@ export function createTools(ctx) {
   let wobble = null;
 
   /* ---------------- the tools: nothing just lies around ---------------- */
-  // The sword stands in a stone in the village: walk up to it and she tugs, tugs harder, and on the third tug it pops
-  // out and she tumbles over. The hammer belongs to a gnome who sleeps on it in the forest: walk up to him and he wakes
-  // with a start, yawns, and hands it over. Both can be done any time; afterwards the empty stone and the awake gnome stay.
+  // The sword turns up in a stone in the village once the egg is found: walk up to it and she tugs, tugs harder, and
+  // on the third tug it pops out and she tumbles over. The hammer turns up next to a gnome asleep in the forest once
+  // the unicorn has hatched: walk up to him and he wakes with a start, yawns, and hands it over. Before that the stone
+  // is empty and the gnome sleeps with nothing beside him; while a tool waits it glows, because it is the goal.
   const holders = {}, flyers = [], swings = [];
+  const waiting = id => Q.toolReady(id) && !Q.hasTool(id);
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,250,215,1)'); r.addColorStop(.35, 'rgba(255,226,122,.55)'); r.addColorStop(1, 'rgba(255,200,90,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const sparkle = PX.sparkle('#FFF6D0');
   function makeHolder(id) {
-    const [x, z] = M.toolSpots[id], art = id === 'zwaard' ? ART.zwaardSteen(!Q.hasTool(id)) : ART.kabouter(Q.hasTool(id));
-    const mesh = makeSprite(art, { lean: .3, scale: id === 'zwaard' ? 1.1 : 1 }); mesh.position.set(x + .5, 0, z + .55); mesh.userData.alpha = art; scene.add(mesh);
-    const h = holders[id] = { id, mesh, x: x + .5, z: z + .5, step: Q.hasTool(id) ? 9 : 0, t: 0, near: false, zz: 0 };
-    mesh.userData.tap = () => { sfx.pop(); if (Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z) < 1.3) start(h); else ctx.approach(x, z, () => start(h)); };
-    pick.push(mesh);
+    const [x, z] = M.toolSpots[id], art = id === 'zwaard' ? ART.zwaardSteen(waiting(id)) : ART.kabouter(Q.hasTool(id));
+    const mesh = makeSprite(art, { lean: .3, scale: id === 'zwaard' ? 1.25 : 1.15 }); mesh.position.set(x + .5, 0, z + .55); mesh.userData.alpha = art; scene.add(mesh);
+    const h = holders[id] = { id, mesh, x: x + .5, z: z + .5, step: Q.hasTool(id) ? 9 : 0, t: 0, near: false, zz: 0, spark: 0 };
+    const tap = () => { sfx.pop(); if (!waiting(id) && h.step === 0) { h.wob = .3; return; } if (Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z) < 1.3) start(h); else ctx.approach(x, z, () => start(h)); };
+    mesh.userData.tap = tap; pick.push(mesh);
+    if (id === 'hamer') { const ha = ART.hamerGroot(); h.tool = makeSprite(ha, { lean: .3, scale: 1.1 }); h.tool.position.set(x + 1.45, 0, z + .5); h.tool.userData.alpha = ha; h.tool.userData.tap = tap; scene.add(h.tool); pick.push(h.tool); }
+    h.glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    h.glow.position.set(id === 'zwaard' ? x + .5 : x + 1.45, id === 'zwaard' ? 1.05 : .75, z + .45); scene.add(h.glow);
+    show(h);
+  }
+  /** the tool is there (and glows) only while it waits for her */
+  function show(h) {
+    const w = waiting(h.id); h.glow.visible = w; if (h.tool) h.tool.visible = w && h.step < 4;
+    if (h.id === 'zwaard' && h.step === 0) setArt(h, ART.zwaardSteen(w));
   }
   const setArt = (h, art) => { const t = ctx.tex(art); h.mesh.material.map = t; h.mesh.material.emissiveMap = t; h.mesh.material.needsUpdate = true; h.mesh.userData.alpha = art; if (h.mesh.customDepthMaterial) h.mesh.customDepthMaterial.map = t; };
   /** begin the little scene (or, once it is done, a wave / a wobble) */
   function start(h) {
+    if (h.step === 0 && !waiting(h.id)) { h.wob = .3; return; }
     if (h.step === 9) { if (h.id === 'hamer') { h.wave = .6; sfx.pop(); bubble(kid, 'Hoi!'); } else { h.wob = .4; sfx.tug(); } return; }
     if (h.step === 0) { h.step = 1; h.t = 0; kid.path = []; kid.face = h.x >= kid.pos.x ? 1 : -1; }
   }
@@ -77,8 +92,12 @@ export function createTools(ctx) {
   }
   function stepHolder(h, dt, active) {
     const d = Math.hypot(h.x - kid.pos.x, h.z - kid.pos.z);
-    if (active && h.step === 0 && d < 1.05) start(h);
-    if (h.wob > 0) { h.wob -= dt; h.mesh.rotation.z = Math.sin(h.wob * 50) * .05; } else if (h.step < 2 && h.id === 'zwaard') h.mesh.rotation.z = 0;
+    if (active && h.step === 0 && d < 1.05 && waiting(h.id)) start(h);
+    if (h.glow.visible) {                                                          // the goal of the moment: a soft pulsing light and a sparkle now and then
+      const k = Math.sin(performance.now() / 1000 * 3); h.glow.material.opacity = .55 + .25 * k; h.glow.scale.setScalar((h.id === 'zwaard' ? 2.2 : 2) * (1 + .08 * k));
+      if ((h.spark -= dt) < 0) { h.spark = .45; ctx.life.bit(sparkle, h.glow.position.x + (Math.random() - .5) * .7, h.glow.position.y - .3 + Math.random() * .6, h.z + .15, { vx: 0, vy: .6, g: 0, life: 1.1 }); }
+    }
+    if (h.wob > 0) { h.wob -= dt; h.mesh.rotation.z = Math.sin(h.wob * 50) * .05; } else if (h.step < 2) h.mesh.rotation.z = 0;
     if (h.wave > 0) { h.wave -= dt; h.mesh.position.y = Math.abs(Math.sin(h.wave * 10)) * .15; }
     if (h.id === 'hamer' && h.step === 0 && d < 6 && (h.zz -= dt) < 0) { h.zz = 1.4; sfx.snore && d < 3 && sfx.snore(); ctx.life.bit(ART.zzz(), h.x + .2, .6, h.z + .1, { vx: .35, vy: .5, g: 0, life: 1.6 }); }   // only snores when she is close: the world waits for her
     if (h.step === 0 || h.step === 9) return;
@@ -86,7 +105,7 @@ export function createTools(ctx) {
     if (h.id === 'zwaard') {
       // tug ... tug harder ... pop!
       const beats = [[.1, () => { sfx.tug(); kid.hop = .3; h.wob = .35; bubble(kid, 'Hmpf!'); }], [1.0, () => { sfx.tug(); kid.hop = .45; h.wob = .5; bubble(kid, 'Hmmmpf!!'); if (uni.g.visible) uni.hop = 1; }],
-        [2.0, () => { sfx.swish(); sfx.boing(); setArt(h, ART.zwaardSteen(false)); kid.hop = 1; kid.hopH = .7; burst(new THREE.Vector3(h.x, .6, h.z), 10); give('zwaard', new THREE.Vector3(h.x, 1, h.z)); }],
+        [2.0, () => { sfx.swish(); sfx.boing(); setArt(h, ART.zwaardSteen(false)); h.glow.visible = false; kid.hop = 1; kid.hopH = .7; burst(new THREE.Vector3(h.x, .6, h.z), 10); give('zwaard', new THREE.Vector3(h.x, 1, h.z)); }],
         [2.6, () => { sfx.pop(); bubble(kid, 'Hihihi!'); }]];
       for (let k = h.step - 1; k < beats.length && h.t >= beats[k][0]; k++) { beats[k][1](); h.step = k + 2; }
       if (h.t > 2.0 && h.t < 2.9) kid.mesh.rotation.z = -kid.face * Math.sin(Math.min(1, (h.t - 2) / .45) * Math.PI) * .9; else kid.mesh.rotation.z = 0;   // she tumbles over backwards
@@ -94,21 +113,21 @@ export function createTools(ctx) {
     } else {
       // he wakes with a start, yawns, stands up and hands over the hammer
       const beats = [[.1, () => { sfx.boing(); setArt(h, ART.kabouter(true)); h.jump = 1; bubble(kid, '!'); }], [.9, () => { sfx.purr(); bubble(kid, 'Goedemorgen!'); }],
-        [1.8, () => { sfx.sparkle(); give('hamer', new THREE.Vector3(h.x, .8, h.z)); }], [2.6, () => { h.wave = .6; }]];
+        [1.8, () => { sfx.sparkle(); h.tool.visible = false; h.glow.visible = false; give('hamer', new THREE.Vector3(h.x + .95, .8, h.z)); }], [2.6, () => { h.wave = .6; }]];
       for (let k = h.step - 1; k < beats.length && h.t >= beats[k][0]; k++) { beats[k][1](); h.step = k + 2; }
       if (h.jump > 0) { h.jump = Math.max(0, h.jump - dt * 2.2); h.mesh.position.y = Math.sin((1 - h.jump) * Math.PI) * .6; }
       if (h.step > beats.length) h.step = 9;
     }
   }
   makeHolder('zwaard'); makeHolder('hamer');
-  const off = Q.on((type, d) => { if (type === 'stage' && d === 'feest') mend(); });
+  const off = Q.on((type, d) => { if (type === 'stage') { if (d === 'feest') mend(); for (const id in holders) show(holders[id]); } });
 
   return {
     use, dispose: off,
     /** the thing to cut or smash on this tile, if any */
     useAt(x, z) { const i = indexAt(x, z); if (i >= 0) use(i); },
     /** where the tool still waits for her (null once she has it) */
-    spot: id => holders[id] && !Q.hasTool(id) ? [holders[id].x, holders[id].z] : null,
+    spot: id => holders[id] && waiting(id) ? [holders[id].x, holders[id].z] : null,
     /** the gates that still stand (one entry per gate), for the map */
     gates: () => { const seen = new Set(), out = []; M.obstacles.forEach((o, i) => { if (!o.gate || !meshes.has(i) || !M.block[M.I(o.x, o.z)] || seen.has(o.g)) return; seen.add(o.g); out.push({ kind: o.kind, x: o.x + 1, z: o.z + .5 }); }); return out; },
     info: () => ({ standing: meshes.size, waiting: Object.keys(holders).filter(id => !Q.hasTool(id)) }),

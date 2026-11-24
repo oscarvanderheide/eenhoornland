@@ -61,6 +61,8 @@ export function neededTool() { return q.stage === 'ei' && !q.tools.zwaard ? 'zwa
 /** does this tool lie somewhere in the world right now? */
 // (the sword in its stone and the gnome with his hammer are always there: whoever finds them early simply has them early)
 export const toolOut = id => !q.tools[id];
+/** the sword turns up in its stone once the egg is found, the gnome's hammer once the unicorn has hatched */
+export const toolReady = id => STAGES.indexOf(q.stage) >= (id === 'zwaard' ? 1 : 2);
 export function giveTool(id) { if (!TOOLS[id] || q.tools[id]) return false; q.tools[id] = true; commit(['tool', id]); return true; }
 /** obstacle `i` of this cycle's world was cut or smashed; loose ones hide a coin */
 export function smash(list, coin) { for (const i of list) if (!q.broken.includes(i)) q.broken.push(i); const ev = [['smash']]; if (coin) { q.coins++; ev.push(['coins', q.coins]); } commit(...ev); }

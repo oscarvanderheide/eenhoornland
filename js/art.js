@@ -150,24 +150,33 @@ const plas = () => cached('plas', () => gridSprite(18, 12, (x, y) => { const dd 
 export const toolIcon = id => id === 'hamer'
   ? cached('hamer', () => sprite(['..ssssssss..', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '..ssssssss..', '.....hh.....', '.....hh.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hh.....'], { s: '#9FA5BC', S: '#D8DCE8', h: '#B5823F', H: '#8A5A3B' }))
   : cached('zwaard', () => sprite(['......Ws', '.....WSs', '....WSs.', '...WSs..', 'g.WSs...', 'ggSs....', '.yg.....', 'y.gg....', '...g....'], { W: '#FFFFFF', S: '#D8DCE8', s: '#9FA5BC', g: '#F7C548', y: '#FF5E9C' }));
-/** the sword standing in its stone in the village (pulled out, only the stone is left) */
-export const zwaardSteen = (withSword = true) => cached('zwsteen' + withSword, () => gridSprite(20, 26, (x, y) => {
-  const sx = 9.5;
+/** the sword standing in its stone in the village (before it is there, and once it is pulled out, only the stone with its slot) */
+export const zwaardSteen = (withSword = true) => cached('zwsteen2' + withSword, () => gridSprite(22, 34, (x, y) => {
+  const cx = x + .5 - 11;
   if (withSword) {
-    if (y >= 1 && y <= 2 && Math.abs(x + .5 - sx) < 3.5) return x === 6 || x === 12 ? '#FF5E9C' : '#F7C548';          // cross guard
-    if (y === 0 && Math.abs(x + .5 - sx) < 1) return '#FF5E9C';                                                          // pommel
-    if (y >= 3 && y <= 14 && Math.abs(x + .5 - sx) < 1.2) return x < sx ? '#FFFFFF' : '#C9CEDC';                        // blade
+    if (y <= 2 && Math.hypot(cx, y + .5 - 1.5) <= 1.8) return x === 10 && y === 1 ? '#FFD6E7' : '#FF5E9C';                 // the pink gem
+    if (y >= 3 && y <= 6 && Math.abs(cx) < 1.1) return y % 2 ? '#8A5A3B' : '#C08A4A';                                      // the grip
+    if (y === 6 && Math.abs(cx) > 4 && Math.abs(cx) < 6) return '#F7C548';                                                  // the guard's tips curl up
+    if (y >= 7 && y <= 8 && Math.abs(cx) < 6) return y === 7 ? '#FFE27A' : '#D99A2B';                                      // the golden guard
+    if (y >= 9 && y <= 24 && Math.abs(cx) < 2.1) return cx < -1 ? '#FFFFFF' : cx < 0 ? '#E8ECF4' : cx < 1 ? '#C9CEDC' : '#9FA5BC';   // the blade
   }
-  const dd = ((x + .5 - 10) / 9.5) ** 2 + ((y + .5 - 20) / 6) ** 2; if (dd > 1 || y < 14) return null;
-  if (withSword && y < 16 && Math.abs(x + .5 - sx) < 1.5) return '#5E6378';
-  const v = (x - 3) * .4 + (y - 14) * .9; return (x * 7 + y * 3) % 13 === 0 ? '#6FB86A' : v < 2.5 ? '#E2E5EE' : v < 6 ? '#BFC4D4' : v < 9 ? '#9FA5BC' : '#848AA2';
+  const dd = (cx / 10.5) ** 2 + ((y + .5 - 27.5) / 6.5) ** 2; if (dd > 1 || y < 21) return null;
+  if (Math.abs(cx) < 2.6 && y >= (withSword ? 25 : 23) && y <= (withSword ? 25 : 24)) return '#4A4E62';                    // the slot
+  if (y < 25 && (x * 5 + y * 3) % 4 === 0) return '#6FB86A';                                                               // moss on top
+  const v = (x - 3) * .35 + (y - 21) * .9; return (x * 7 + y * 3) % 13 === 0 ? '#6FB86A' : v < 3 ? '#E2E5EE' : v < 7 ? '#BFC4D4' : v < 10 ? '#9FA5BC' : '#848AA2';
 }));
-/** the forest gnome who sleeps on his hammer; awake, he stands and waves */
-export const kabouter = (awake = false) => cached('kabouter' + awake, () => sprite(awake ? [
+/** the forest gnome; asleep he snores against a tree stump, awake he stands and waves (his hammer is its own sprite) */
+export const kabouter = (awake = false) => cached('kabouter2' + awake, () => sprite(awake ? [
   '....r.....', '...rrr....', '...rRr....', '..rrrrr...', '..rrrrrr..', '.ssssss...', '.skssks...', '.ssmsss...', 'wwwwwww...', 'wwwwwww.s.', 'bbbbbbbbs.', 'bBBBBbb...', '.bbbbb....', '.gg.gg....', 'kk..kk....',
 ] : [
-  '...........r', '........rrr.', '......rrrRr.', '.....rrrrrr.', '....ssssss..', '....s-ss-s..', '....ssmsss..', '...wwwwwww..', '.hh.wwwwww..', 'hHHhbbbbbbb.', '.hh.bBBBBbb.', '....gggggg..', '...kk...kk..',
-], { r: '#E8484A', R: '#FF9A9A', s: '#FFD7B5', k: '#5E3A24', '-': '#5E3A24', m: '#E8616B', w: '#FFFFFF', b: '#4DABF7', B: '#8FD3FF', g: '#6B8E3A', h: '#9FA5BC', H: '#D8DCE8' }));
+  '...........r', '........rrr.', '......rrrRr.', '.....rrrrrr.', '....ssssss..', '....s-ss-s..', '....ssmsss..', '...wwwwwww..', '....wwwwww..', '...sbbbbbbb.', '....bBBBBbb.', '....gggggg..', '...kk...kk..',
+], { r: '#E8484A', R: '#FF9A9A', s: '#FFD7B5', k: '#5E3A24', '-': '#5E3A24', m: '#E8616B', w: '#FFFFFF', b: '#4DABF7', B: '#8FD3FF', g: '#6B8E3A' }));
+/** the gnome's big hammer, standing up next to him */
+export const hamerGroot = () => cached('hamerGroot2', () => gridSprite(14, 22, (x, y) => {
+  if (y <= 6 && !((y === 0 || y === 6) && (x === 0 || x === 13))) return y === 0 ? '#F2F4F8' : x < 2 ? '#E2E5EE' : x > 11 ? '#848AA2' : y > 4 ? '#9FA5BC' : (x === 3 && y === 2) ? '#FFFFFF' : '#C9CEDC';   // the head
+  if (x >= 6 && x <= 7) return y === 21 ? '#6E4630' : x === 6 ? '#C08A4A' : '#8A5A3B';                                     // the handle
+  return null;
+}));
 export const belIcon = () => cached('beli', () => sprite(['....kk....', '...yyyy...', '..yYyyyy..', '..yYyyyy..', '.yyYyyyyy.', '.yyyyyyyy.', 'yyyyyyyyyy', '....oo....'], { y: '#FFD43B', Y: '#FFF3A8', k: '#8A5A3B', o: '#E0A020' }));
 /** a little picture for "press here to jump" */
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));

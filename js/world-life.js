@@ -136,7 +136,7 @@ export function createLife(ctx) {
   function toss(c, vx, vz) {
     if (c.nap > 0) { c.nap = 0; c.morning = false; c.mesh.rotation.z = 0; }
     const sp = Math.hypot(vx, vz), max = 9, f = sp > max ? max / sp : 1;
-    c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, spin: (vx >= 0 ? -1 : 1) * (4 + sp), bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
+    c.held = false; c.fly = { vx: vx * f, vz: vz * f, vy: 5.5, h: c.lift || .9, bounces: 0 }; if (Math.abs(vx) > .2) c.face = vx > 0 ? 1 : -1;
     sfx.whoosh(); if (!c.stone) bubble(c, WHEE[Math.floor(Math.random() * WHEE.length)]);
   }
   const dustArt = PX.gridSprite(3, 2, (x, y) => y === 0 && x !== 1 ? null : '#E9DCC4', { outline: false, key: 'dust' });
@@ -144,7 +144,7 @@ export function createLife(ctx) {
   function stepFlight(c, dt) {
     const f = c.fly; f.vy -= 12 * dt; f.h += f.vy * dt;
     c.pos.x = THREE.MathUtils.clamp(c.pos.x + f.vx * dt, 2, M.W - 2); c.pos.z = THREE.MathUtils.clamp(c.pos.z + f.vz * dt, 2, M.H - 2);
-    c.lift = Math.max(0, f.h); c.mesh.rotation.z += f.spin * dt;
+    c.lift = Math.max(0, f.h); c.mesh.rotation.z = THREE.MathUtils.clamp(f.vy * .05, -.3, .3) * (c.face || 1);   // no somersaults: it leans a little, nose up on the way up and down on the way down
     if (f.h > 0) return;
     const tx = Math.floor(c.pos.x), tz = Math.floor(c.pos.z);
     if (!ctx.walkable(tx, tz)) {                                                   // in the water: it swims back. On a roof, in a tree: bounce on to the nearest free spot
@@ -167,7 +167,7 @@ export function createLife(ctx) {
       const t = ctx.nearestWalkable(c.pos.x, c.pos.z) || ctx.randomTile(c), T = .65;
       f.vx = (t[0] + .5 - c.pos.x) / T; f.vz = (t[1] + .5 - c.pos.z) / T; f.vy = 12 * T / 2; f.h = .01; return;
     }
-    if (f.bounces < 2 && Math.abs(f.vy) > 2) { f.bounces++; f.vy = -f.vy * .45; f.vx *= .5; f.vz *= .5; f.h = .01; f.spin *= .35; c.squash = .6; dust(c.pos.x, c.pos.z, 3); sfx.boing(); return; }   // each bounce lower, and the spin runs out
+    if (f.bounces < 2 && Math.abs(f.vy) > 2) { f.bounces++; f.vy = -f.vy * .45; f.vx *= .5; f.vz *= .5; f.h = .01; c.squash = .6; dust(c.pos.x, c.pos.z, 3); sfx.boing(); return; }   // each bounce lower
     if (c.stone) { c.fly = null; c.lift = 0; c.mesh.rotation.z = 0; sfx.pop(); for (const a of animals) if (!a.held && !a.fly && !a.cart && !a.swim && Math.hypot(a.pos.x - c.pos.x, a.pos.z - c.pos.z) < 1.6) a.hop = 1; fetchStone(c); return; }   // thud: whoever stands there jumps (and the dog runs to get it)
     const st = Q.sandAt(tx, tz); if (st >= 0) { Q.stompSand(tx, tz); burst(c.pos, 6); }   // landed on a sand tower: flat
     const col = ctx.toys && ctx.toys.paintAt(c.pos.x, c.pos.z); if (col) paint(c, col);

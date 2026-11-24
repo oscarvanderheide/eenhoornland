@@ -24,7 +24,7 @@ export default async function (t) {
   ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 2, 'the goal is the egg'); await settle(1500); await shot('08-outside');
   await t.ev(`document.querySelector('#quest .qchip').click()`); await settle(700); ok(await t.ev(`!!document.querySelector('.kaart-goal') && document.querySelectorAll('.kaart-gate').length === 3`), 'the chip opens the map with the goal and the three closed bridges'); await shot('09-map');
   await t.ev(`document.querySelector('#modal [data-close]').click()`);
-  ok(await t.ev(`!!__w.tools.spot('zwaard') && !!__w.tools.spot('hamer')`), 'the sword waits in its stone and the gnome sleeps on his hammer'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
+  ok(await t.ev(`!__w.tools.spot('zwaard') && !__w.tools.spot('hamer')`), 'no sword in the stone and no hammer by the gnome yet'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
   ok(await t.ev(`document.querySelector('#b-ride').hidden`), 'no ride button yet');
   // the world is closed: the meadow cannot be walked to
   await place(45.5, 45.5); ok(await t.ev(`__w.walkTo(64,45)`) === true, 'walking to the meadow walks up to the brambles'); await settle(5000); s = await q(); ok(s.pos[0] < 49, 'and stops there (x=' + s.pos[0] + ')'); await shot('10-brambles');
