@@ -155,7 +155,9 @@ export function createToys(ctx) {
 
   /* ================= bos: who is hiding in the bushes? ================= */
   const hides = MAP.HIDES.map(([x, z], k) => {
-    const t = ctx.walkable(x, z) ? [x, z] : ctx.nearestWalkable(x + .5, z + .5); if (!t || zoneOf(t[0], t[1]) !== 'bos') return null;
+    let t = ctx.walkable(x, z) ? [x, z] : ctx.nearestWalkable(x + .5, z + .5); if (!t || zoneOf(t[0], t[1]) !== 'bos') return null;
+    // a bush is solid: she walks round it. Where that would close a way, it stands a tile further (the world is reshuffled every cycle)
+    const spot = [[0, 0], [0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]].map(([dx, dz]) => [t[0] + dx, t[1] + dz]).find(([a, b]) => ctx.walkable(a, b) && zoneOf(a, b) === 'bos' && ctx.solid(a, b)); if (spot) t = spot;
     const h = { x: t[0] + .5, z: t[1] + .62, m: sprite(PX.bush(2 + k % 3), t[0] + .5, t[1] + .62, { lean: .25, scale: 1.2 }), who: null };
     tappable(h.m, () => rustle(h, true)); return h;
   }).filter(Boolean);
@@ -310,7 +312,7 @@ export function createToys(ctx) {
           const close = active && near(hide.x, hide.z, 5.5); h.peek = Math.max(0, h.peek - dt * 1.6);
           if (close && h.t > 3.2) { h.t = rnd(0, 1.2); h.peek = 1; pop(hide, .12); if (near(hide.x, hide.z, 3.5)) sfx.brush(); }
           h.m.position.set(hide.x, .2 + Math.sin(Math.min(1, h.peek) * Math.PI) * .22, hide.z - .1); h.m.scale.set(.5 * h.dir, .5, 1); h.m.rotation.z = 0;
-          if (active && near(hide.x, hide.z, .75)) rustle(hide, false);
+          if (active && near(hide.x, hide.z, .95)) rustle(hide, false);   // bumping into the bush (it is solid) finds who hides in it
         } else if (h.state === 'out') {
           const k = Math.min(1, h.t / .45); h.pos.lerpVectors(h.from, h.to, k); h.m.position.set(h.pos.x, h.pos.y + Math.sin(k * Math.PI) * 1.1, h.pos.z); h.m.scale.set(.5 * h.dir, .5, 1); h.m.rotation.z = -h.dir * k * Math.PI * 2;
           if (k >= 1) { h.state = 'laugh'; h.t = 0; h.m.rotation.z = 0; bubble({ pos: h.pos, isUni: false }, '', PX.heart()); }

@@ -30,6 +30,7 @@ export default async function (t) {
     await place(33.5, 37.4); await t.sleep(300); await t.key('ArrowUp', 900); ok(await until(`__w.toys.info().pots[3] >= 1`, 3000), 'walking up to a thirsty pot waters it');
     await t.sleep(1500); const w0 = (await toys()).water; await t.ev('__w.grabKey()'); await t.sleep(700); s = await toys(); ok(s.carry === 'gieter' && s.water < w0, 'the pick-up key next to a pot pours, it does not drop the can');
     ok(await t.ev(`!__w.walkable(Math.floor(__w.MAP.POTS[0][0]), Math.floor(__w.MAP.POTS[0][1])) && !__w.walkable(...__w.M.toolSpots.zwaard)`), 'pots and the sword stone are solid');
+    ok(await t.ev(`(() => { const B = id => __w.BUILDINGS.find(b => b.id === id); const a = B('atelier'), st = B('stal'); return (!a || !__w.walkable(a.x - 1, a.z + a.d)) && (!st || !__w.walkable(st.x + st.w, st.z + st.d - 1)) && __w.toys.info().hides.every(([x, z]) => !__w.walkable(Math.floor(x), Math.floor(z))); })()`), 'the easel, the hay bales and the hiding bushes are solid');
     await t.ev(`__w.toys.take('gieter')`); await place(31.5, 36.6); await t.sleep(300);
     await t.ev(`__w.toys.putDown()`); await t.sleep(300);
     await t.ev(`__w.toys.usePot(1)`); await t.sleep(1000); await shot('04b-sneeze'); s = await toys(); ok(s.pots[1] === 0, 'picking the flower: a sneeze, and the pot starts again');

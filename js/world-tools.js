@@ -77,6 +77,7 @@ export function createTools(ctx) {
   /** the tool is there (and glows) only while it waits for her */
   function show(h) {
     const w = waiting(h.id); h.glow.visible = w; if (h.tool) h.tool.visible = w && h.step < 4;
+    if (h.tool) ctx.solid(Math.floor(h.tool.position.x), Math.floor(h.tool.position.z), h.tool.visible);   // the big hammer stands there like a post while it waits
     if (h.id === 'zwaard' && h.step === 0) setArt(h, ART.zwaardSteen(w));
   }
   const setArt = (h, art) => { const t = ctx.tex(art); h.mesh.material.map = t; h.mesh.material.emissiveMap = t; h.mesh.material.needsUpdate = true; h.mesh.userData.alpha = art; if (h.mesh.customDepthMaterial) h.mesh.customDepthMaterial.map = t; };
@@ -114,7 +115,7 @@ export function createTools(ctx) {
     } else {
       // he wakes with a start, yawns, stands up and hands over the hammer
       const beats = [[.1, () => { sfx.boing(); setArt(h, ART.kabouter(true)); h.jump = 1; bubble(kid, '!'); }], [.9, () => { sfx.purr(); bubble(kid, 'Goedemorgen!'); }],
-        [1.8, () => { sfx.sparkle(); h.tool.visible = false; h.glow.visible = false; give('hamer', new THREE.Vector3(h.x + .95, .8, h.z)); }], [2.6, () => { h.wave = .6; }]];
+        [1.8, () => { sfx.sparkle(); h.tool.visible = false; ctx.solid(Math.floor(h.tool.position.x), Math.floor(h.tool.position.z), false); h.glow.visible = false; give('hamer', new THREE.Vector3(h.x + .95, .8, h.z)); }], [2.6, () => { h.wave = .6; }]];
       for (let k = h.step - 1; k < beats.length && h.t >= beats[k][0]; k++) { beats[k][1](); h.step = k + 2; }
       if (h.jump > 0) { h.jump = Math.max(0, h.jump - dt * 2.2); h.mesh.position.y = Math.sin((1 - h.jump) * Math.PI) * .6; }
       if (h.step > beats.length) h.step = 9;

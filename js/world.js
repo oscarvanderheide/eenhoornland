@@ -65,7 +65,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const rng = rngf(20251122);
   const solids = new Set();   // tiles a standing thing fills at runtime (the sword stone, the gnome, the flower pots): she walks round them, never through
   const walkable = (x, z) => inb(x, z) && !block[I(x, z)] && !solids.has(I(x, z));
-  const solid = (x, z, on = true) => { if (on) solids.add(I(x, z)); else solids.delete(I(x, z)); };
+  /** make (x, z) solid (or free again). Refused, returning false, where it would cut a way in two: the free tiles around it
+   *  must stay one connected ring, so walking round it is always possible (reachability in map.js still holds) */
+  function solid(x, z, on = true) {
+    const i = I(x, z); if (!on) { solids.delete(i); return true; } if (!inb(x, z) || block[i]) return false;
+    const ring = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]].map(([dx, dz]) => walkable(x + dx, z + dz));
+    for (let k = 1; k < 8; k += 2) if (ring[k] && !ring[k - 1] && !ring[(k + 1) % 8]) ring[k] = false;   // a corner only counts when a side next to it is open
+    let runs = 0; for (let k = 0; k < 8; k++) if (ring[k] && !ring[(k + 7) % 8]) runs++;
+    if (runs > 1) return false;
+    solids.add(i); return true;
+  }
   let mount = null, busy = false;   // riding the unicorn ('uni') or the bike ('fiets'); busy: something else moves her (the boat)
   // the hole in the bridge is a jump for a ridden unicorn and a closed gate for everybody else
   const lowAt = (x, z) => inb(x, z) && (block[I(x, z)] === MAP.LOW || (block[I(x, z)] === MAP.GAP && mount === 'uni'));
@@ -332,10 +341,12 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (b.id === 'stal') {
       const hay = new THREE.Mesh(new THREE.BoxGeometry(.9, .5, .6), new THREE.MeshLambertMaterial({ color: '#E9C46A' })); hay.position.set(b.w / 2 + .6, .25, b.d / 2 - .3); hay.castShadow = true; g.add(hay);
       const hay2 = hay.clone(); hay2.position.set(b.w / 2 + .5, .75, b.d / 2 - .3); hay2.scale.set(.8, 1, .9); g.add(hay2);
+      solid(b.x + b.w, b.z + b.d - 1);                                             // the bales are bales: round them
     }
     if (b.id === 'atelier') {
       const easel = makeSprite(PX.gridSprite(12, 18, (x, y) => { if (y < 11 && x > 0 && x < 11) return (x + y) % 5 === 0 ? PX.RAINBOW[(x + y) % 6] : (y < 2 || x < 2 || x > 9 || y > 9 ? '#A0704E' : ['#FFFFFF', '#FFE6F2', '#E8F6FF'][(x * y) % 3]); if (y >= 11 && (x === 2 || x === 9 || x === 6)) return '#7A5236'; return null; }), { lean: .25 });
       easel.position.set(-b.w / 2 - .5, 0, b.d / 2 + .3); g.add(easel);
+      solid(b.x - 1, b.z + b.d);                                                   // she walks round the easel, not through it
     }
     g.traverse(o => { if (o.isMesh && !windowGlows.includes(o)) { o.userData.building = b; pick.push(o); } });
     scene.add(g);
