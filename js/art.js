@@ -184,6 +184,27 @@ export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yy
 /** a little picture for "say hello": a speech bubble with a heart in it */
 export const talkIcon = () => cached('talki', () => sprite(['.wwwwwwwww.', 'wwwwwwwwwww', 'wwrrwwrrwww', 'wrrrrrrrrww', 'wrrrrrrrrww', 'wwrrrrrrwww', 'wwwrrrrwwww', 'wwwwrrwwwww', '.wwwwwwwww.', '..ww.......', '.w.........'], { w: '#FFFFFF', r: '#FF5E9C' }));
 
+/* the cave's puzzle: a wooden crate to push, the stone button it goes on, the crystal bars that sink when it is pressed */
+export const kist = () => cached('kist', () => gridSprite(16, 15, (x, y) => {
+  if (y < 3) return y === 0 || x === 0 || x === 15 ? '#8A5A3B' : (x + y) % 5 === 0 ? '#E9C99A' : '#D9A86A';   // the lid, seen from above
+  if (x === 0 || x === 15 || y === 14 || y === 3) return '#6E4630';
+  if (x === 1 || x === 14 || y === 4 || y === 13) return '#8A5A3B';
+  if (Math.abs((x - 1) - (y - 4) * 13 / 9) < 1.1 || Math.abs((14 - x) - (y - 4) * 13 / 9) < 1.1) return '#8A5A3B';            // the cross brace
+  return (y % 3 === 0) ? '#B57E4B' : '#C9925A';
+}));
+export const knop = (down = false) => cached('knop' + down, () => gridSprite(16, 12, (x, y) => {
+  const d = ((x + .5 - 8) / 8) ** 2 + ((y + .5 - 6) / 6) ** 2; if (d > 1) return null;
+  if (d > .62) return d > .85 ? '#7E6E96' : '#A898BC';                                                       // the stone ring
+  const p = ((x + .5 - 8) / 4.6) ** 2 + ((y + .5 - (down ? 6.4 : 5.4)) / 3.4) ** 2; if (p > 1) return '#6C5D84';
+  return down ? (p < .3 ? '#9BE8A8' : '#5DC88A') : (p < .3 ? '#FFD6E7' : '#FF5E9C');
+}, { outline: '#4E4266' }));
+export const kristalhek = () => cached('khek', () => gridSprite(16, 26, (x, y) => {
+  if (y > 23) return x % 5 === 4 ? null : '#7E6E96';
+  const bar = x % 5; if (bar === 4) return y === 6 || y === 16 ? '#C7B8F0' : null;
+  const top = 3 - (x % 10 < 5 ? 0 : 2); if (y < top) return null;
+  return bar === 0 ? '#F4EEFF' : bar === 1 ? '#D9C8FF' : bar === 2 ? '#B9A0F0' : '#9A80D8';
+}, { outline: '#5B4A86' }));
+
 /* the rainbow tree on the island, the hole in the bridge to the castle, and the rainbow that mends it */
 const rainbowtree = () => cached('rbtree', () => {
   const blobs = [[15, 11, 10], [8, 15, 7], [22, 15, 7], [15, 17, 9]], blossom = [[9, 12], [19, 8], [14, 19], [23, 16], [5, 16], [13, 5]];

@@ -35,7 +35,8 @@ export const CASTLE = { x: 80, z: 5, w: 9, d: 6, door: [84, 11] };
  *  `door` the tile in the world that leads in. The cave is in the forest (the first egg lies there); the hall is inside
  *  the castle, with the coins, and its back door (`garden`) leads to the castle garden (act-kasteel.js). */
 export const ROOMS = {
-  grot: { x0: 20, z0: 97, x1: 34, z1: 107, in: [27, 106], exit: [27, 108], door: [36, 6], out: [36.5, 7.6], egg: [27, 99] },
+  grot: { x0: 20, z0: 97, x1: 46, z1: 107, in: [27, 106], exit: [27, 108], door: [36, 6], out: [36.5, 7.6], egg: [42, 100],
+    wall: 35, gate: [[35, 101], [35, 102]], box: [25, 102], plate: [30, 99] },   // two rooms: the crate goes on the button, the crystal gate in the wall between them sinks
   hal: { x0: 58, z0: 96, x1: 82, z1: 107, in: [70, 106], exit: [70, 108], door: [84, 11], out: [84.5, 12.6], garden: [70, 95] },
 };
 export const CAVE = { x0: 32, z0: 4, x1: 40, z1: 6 };                                   // the rock the cave mouth is in (ROOMS.grot.door)
@@ -128,6 +129,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const [k, r] of Object.entries(ROOMS)) {
     for (let z = r.z0; z <= r.z1; z++) for (let x = r.x0; x <= r.x1; x++) { ground[I(x, z)] = k === 'grot' ? CV : HF; block[I(x, z)] = 0; }
     ground[I(...r.exit)] = k === 'grot' ? CV : HF; block[I(...r.exit)] = 0;
+    if (r.wall) for (let z = r.z0; z <= r.z1; z++) if (!r.gate.some(([gx, gz]) => gx === r.wall && gz === z)) block[I(r.wall, z)] = 1;   // the wall between the two rooms (its gate is closed at runtime, world-rooms.js)
   }
   const sea = (x, z) => !inb(x, z) || ground[I(x, z)] === SE;
   const rim = new Uint8Array(W * H);                              // a strip of beach around every island
@@ -193,8 +195,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
 
   /* ---- the furniture of the rooms (blocks, like trees; drawn by art.js propArt) ---- */
   { const g = ROOMS.grot, h = ROOMS.hal;
-    for (const [x, z] of [[21, 98], [22, 104], [33, 98], [33, 105], [24, 101], [31, 102], [20, 106], [34, 101]]) prop('druipsteen', x, z, x + z);
-    for (const [x, z] of [[20, 101], [29, 98], [34, 103], [25, 98]]) prop('kristal', x, z, x * 3 + z);
+    for (const [x, z] of [[21, 98], [22, 105], [33, 106], [20, 102], [38, 98], [45, 105], [44, 97], [37, 106]]) prop('druipsteen', x, z, x + z);
+    for (const [x, z] of [[20, 99], [34, 97], [46, 99], [39, 104], [46, 102]]) prop('kristal', x, z, x * 3 + z);
     for (const [x, z] of [[61, 96], [66, 96], [74, 96], [79, 96]]) prop('harnas', x, z, x);
     for (const [x, z] of [[64, 100], [76, 100], [64, 104], [76, 104]]) prop('zuil', x, z);
     for (const [x, z] of [[58, 98], [82, 98], [58, 106], [82, 106], [59, 97]]) prop('muntberg', x, z, x + z);

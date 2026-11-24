@@ -8,6 +8,7 @@ import * as MAP from './map.js';
 import * as PX from './pixel.js';
 import * as Q from './quest.js';
 import { sfx } from './audio.js';
+import { state, save } from './state.js';
 
 export function createRooms(ctx) {
   const { THREE, scene, M, tex, canvas, makeSprite, pick, burst, kid } = ctx;
@@ -45,7 +46,8 @@ export function createRooms(ctx) {
     wall(k, r.x0 - 2, r.z0 - 2, r.x0 - 1, r.z1 + 1, H2); wall(k, r.x1 + 1, r.z0 - 2, r.x1 + 2, r.z1 + 1, H2);   // the side walls
     wall(k, r.x0 - 1, r.z1 + 1, r.exit[0] - 1, r.z1 + 1, .45); wall(k, r.exit[0] + 1, r.z1 + 1, r.x1 + 1, r.z1 + 1, .45);   // a low front wall, so nothing hides her
     { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
-    const n = k === 'grot' ? 3 : 5; for (let i = 0; i < n; i++) torch(r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
+    if (r.wall) { const gz = r.gate.map(g => g[1]); wall(k, r.wall, r.z0, r.wall, Math.min(...gz) - 1, 1.7); wall(k, r.wall, Math.max(...gz) + 1, r.wall, r.z1, 1.7); }   // the wall between the cave's two rooms
+    const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
   }
 
   /* ---------------- the cave mouth in the forest ---------------- */
@@ -62,6 +64,61 @@ export function createRooms(ctx) {
   const g = R.grot, beam = makeSprite(ART.lichtbundel(), { lean: .45, shadow: false, scale: 1.2 });
   beam.material = beam.material.clone(); beam.material.transparent = true; beam.material.opacity = .45; beam.material.depthWrite = false; beam.material.blending = THREE.AdditiveBlending; beam.material.emissiveIntensity = 1;
   beam.position.set(g.egg[0] + .5, 0, g.egg[1] + .3); scene.add(beam);
+
+  /* ---------------- the cave's puzzle: push the crate onto the button and the crystal gate to the back room sinks ----------------
+     Walking into the crate pushes it one tile; a tap on it pushes it the right way (she walks round to the right side
+     first). A crate pushed where it can never reach the button any more puffs back to where it started: no getting stuck.
+     She can also jump on top of it (ctx.tops). Once open the gate stays open (state.extra.grotOpen). */
+  const pz = { box: g.box.slice(), slide: null, poof: 0, sink: 0 };
+  let open = !!state.extra.grotOpen;
+  const I = M.I, room1 = (x, z) => x >= g.x0 && x < g.wall && z >= g.z0 && z <= g.z1;
+  const isGate = (x, z) => g.gate.some(([a, b]) => a === x && b === z);
+  const freeFor = (x, z) => room1(x, z) && !M.block[I(x, z)] && !isGate(x, z);
+  const boxMesh = makeSprite(ART.kist(), { lean: .3, scale: 1.05 }); scene.add(boxMesh); boxMesh.userData.alpha = ART.kist();
+  const plate = makeSprite(ART.knop(open), { lean: Math.PI / 2, shadow: false }); plate.position.set(g.plate[0] + .5, .02, g.plate[1] + .9); scene.add(plate);
+  const setPlate = down => { const t = tex(ART.knop(down)); plate.material.map = t; plate.material.emissiveMap = t; plate.material.needsUpdate = true; };
+  const plateGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: (() => { const [c, x] = canvas(32, 32), r = x.createRadialGradient(16, 16, 0, 16, 16, 16); r.addColorStop(0, 'rgba(255,190,225,1)'); r.addColorStop(1, 'rgba(255,150,200,0)'); x.fillStyle = r; x.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  plateGlow.position.set(g.plate[0] + .5, .3, g.plate[1] + .5); scene.add(plateGlow);
+  const bars = g.gate.map(([x, z]) => { const m = makeSprite(ART.kristalhek(), { lean: 0, scale: 1.05 }); m.position.set(x + .5, 0, z + .5); scene.add(m); return m; });
+  function placeBox(x, z) {
+    const [ox, oz] = pz.box; M.block[I(ox, oz)] = 0; ctx.tops.delete(I(ox, oz));
+    pz.box = [x, z]; M.block[I(x, z)] = 1; ctx.tops.set(I(x, z), .5);
+  }
+  if (open) { pz.box = g.plate.slice(); for (const m of bars) m.visible = false; }
+  else for (const [x, z] of g.gate) M.block[I(x, z)] = 1;
+  placeBox(...pz.box); boxMesh.position.set(pz.box[0] + .5, 0, pz.box[1] + .55);
+  /** it can never reach the button again: against a wall it can only slide along that wall */
+  function stuck() {
+    const [x, z] = pz.box, [px, pzz] = g.plate, wallX = !freeFor(x - 1, z) || !freeFor(x + 1, z), wallZ = !freeFor(x, z - 1) || !freeFor(x, z + 1);
+    return (wallX && x !== px) || (wallZ && z !== pzz) || (wallX && wallZ && !(x === px && z === pzz));
+  }
+  /** push the crate one tile (dx, dz); true if it moved */
+  function push(dx, dz) {
+    if (open || pz.slide || pz.poof) return false;
+    const [x, z] = pz.box, nx = x + dx, nz = z + dz; M.block[I(x, z)] = 0; const ok = freeFor(nx, nz); M.block[I(x, z)] = 1;
+    if (!ok) { pz.wob = .3; sfx.pop(); return false; }
+    placeBox(nx, nz); pz.slide = { x0: x + .5, z0: z + .55, x1: nx + .5, z1: nz + .55, t: 0 }; sfx.brush ? sfx.brush() : sfx.pop(); kid.hop = .25;
+    if (nx === g.plate[0] && nz === g.plate[1]) { open = true; state.extra.grotOpen = true; save(); }   // saved first, the gate sinks after
+    return true;
+  }
+  /** the way to push it next, found by trying every way the crate could go (the room is small) */
+  function nextPush() {
+    const [bx, bz] = pz.box, key = (x, z) => x + ',' + z, came = new Map([[key(bx, bz), null]]), q = [[bx, bz]];
+    M.block[I(bx, bz)] = 0;
+    try {
+      while (q.length) { const [x, z] = q.shift(); if (x === g.plate[0] && z === g.plate[1]) { let k = key(x, z), step = null; while (came.get(k)) { step = came.get(k); k = step.from; } return step && step.d; }
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, nz = z + dz; if (came.has(key(nx, nz)) || !freeFor(nx, nz) || !freeFor(x - dx, z - dz)) continue; came.set(key(nx, nz), { from: key(x, z), d: [dx, dz] }); q.push([nx, nz]); } }
+      return null;
+    } finally { M.block[I(bx, bz)] = 1; }
+  }
+  function tapBox() {
+    sfx.pop(); if (open) return; const d = nextPush(); if (!d) { pz.poof = 1; return; }
+    const [bx, bz] = pz.box, fx = bx - d[0], fz = bz - d[1];
+    const there = () => Math.abs(kid.pos.x - (fx + .5)) < .6 && Math.abs(kid.pos.z - (fz + .5)) < .6;
+    if (there()) { kid.face = d[0] ? d[0] : kid.face; push(...d); return; }
+    ctx.walkThen(fx, fz, () => { if (there()) { kid.face = d[0] ? d[0] : kid.face; push(...d); } });
+  }
+  boxMesh.userData.tap = tapBox; pick.push(boxMesh);
 
   /* ---------------- the hall: coins on the floor, a chest, and the golden door to the garden ---------------- */
   const h = R.hal, coins = [];
@@ -89,7 +146,14 @@ export function createRooms(ctx) {
   syncCoins();
 
   return {
-    dispose: off, lights, openChest,
+    dispose: off, lights, openChest, push, tapBox, nextPush,
+    /** dev / tests: the crate back where it starts */
+    reset() { if (!open) { placeBox(...g.box); boxMesh.position.set(g.box[0] + .5, 0, g.box[1] + .55); } },
+    /** she wants into the back room while the gate is shut: off to the crate instead (true if that is what happens) */
+    towardGate(x, z) { if (open || x <= g.wall || MAP.roomAt(x, z) !== 'grot' || !room1(Math.floor(kid.pos.x), Math.floor(kid.pos.z))) return false; tapBox(); return true; },
+    /** walking into (x, z) pushes the crate when it stands there */
+    pushAt(x, z, dx, dz) { return x === pz.box[0] && z === pz.box[1] && push(dx, dz); },
+    puzzle: () => ({ box: pz.box.slice(), open, plate: g.plate }),
     /** which room she is in (or null) */
     where: () => MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)),
     info: () => ({ coins: coins.length, chest: chest.open > 0 }),
@@ -100,6 +164,13 @@ export function createRooms(ctx) {
       for (const c of coins) { const near = Math.abs(c.x - kid.pos.x) < 3.5 && Math.abs(c.z - kid.pos.z) < 3.5; c.m.scale.x = near ? Math.max(.15, Math.abs(Math.cos(time * 2 + c.ph))) : 1; }
       if (chest.open > 0 && (chest.open -= dt) <= 0) setChest(false);
       for (let i = rising.length - 1; i >= 0; i--) { const f = rising[i]; f.t += dt * 1.3; f.m.position.y = .6 + f.t * 1.6; f.m.scale.x = Math.cos(f.t * 10) * 1.2; if (f.t >= 1) { scene.remove(f.m); rising.splice(i, 1); } }
+      // the crate slides, puffs back home when it got stuck, and the gate sinks once the button is down
+      if (pz.slide) { const sl = pz.slide; sl.t = Math.min(1, sl.t + dt * 4.5); boxMesh.position.set(sl.x0 + (sl.x1 - sl.x0) * sl.t, 0, sl.z0 + (sl.z1 - sl.z0) * sl.t);
+        if (sl.t >= 1) { pz.slide = null; if (open) { setPlate(true); sfx.click(); setTimeout(() => { sfx.tada(); burst(v3(g.gate[0][0] + .5, .5, g.gate[0][1] + 1), 14, true); pz.sink = .001; }, 450); } else if (stuck()) pz.poof = 1.2; } }
+      if (pz.poof > 0 && (pz.poof -= dt) <= 0) { pz.poof = 0; if (!open) { const at = Math.floor(kid.pos.x) === g.box[0] && Math.floor(kid.pos.z) === g.box[1]; if (!at) { burst(v3(boxMesh.position.x, .3, boxMesh.position.z), 8); placeBox(...g.box); boxMesh.position.set(g.box[0] + .5, 0, g.box[1] + .55); sfx.sparkle(); burst(v3(g.box[0] + .5, .3, g.box[1] + .5), 8); } else pz.poof = .5; } }
+      if (pz.wob > 0) { pz.wob -= dt; boxMesh.rotation.z = Math.sin(pz.wob * 50) * .05; } else boxMesh.rotation.z = 0;
+      if (pz.sink > 0) { pz.sink = Math.min(1, pz.sink + dt * .9); for (const m of bars) { m.position.y = -1.4 * pz.sink; m.rotation.z = Math.sin(time * 40) * .03 * (1 - pz.sink); } if (pz.sink >= 1) { pz.sink = 0; for (const m of bars) m.visible = false; for (const [x, z] of g.gate) M.block[I(x, z)] = 0; } }
+      plateGlow.visible = !open; if (!open) { const k = Math.sin(time * 3); plateGlow.material.opacity = .45 + .25 * k; plateGlow.scale.setScalar(1.3 * (1 + .08 * k)); }
       if (!active) return;
       for (let i = coins.length - 1; i >= 0; i--) { const c = coins[i]; if (Math.abs(c.x - kid.pos.x) < .7 && Math.abs(c.z - kid.pos.z) < .7) { coins.splice(i, 1); rising.push({ m: c.m, t: 0 }); Q.collect('munt', 3000 + c.k); sfx.chime(5 + (i % 3)); } }
       if (chest.open <= 0 && Math.hypot(chest.x - kid.pos.x, chest.z - kid.pos.z) < .9) openChest();
