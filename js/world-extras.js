@@ -218,7 +218,7 @@ export function createExtras(ctx) {
       herd.push(c);
     });
   }
-  let greeted = false;                                                           // they know her: when she comes to the fence they all come hopping
+  let greeted = false;                                                           // they know her: when she comes to the fence the nearest one looks up
 
   /* ---------------- the race arch next to the meadow: ride a unicorn against the others (act-race.js) ---------------- */
   // Nobody has to know a race exists: once there is a unicorn to ride, two others wait at the start line under the arch,
@@ -274,7 +274,7 @@ export function createExtras(ctx) {
         const gs = 2 + Math.sin(time * 3) * .3; o.glow.scale.set(gs, gs, 1); o.glow.material.opacity = .5 + Math.sin(time * 3) * .25; o.glow.position.set(o.mesh.position.x, o.mesh.position.y + .5, o.pos.z + .1);
       }
       for (const sh of shrooms) { if (sh.t < 1) { sh.t = Math.min(1, sh.t + dt * 2.6); const q = Math.sin(sh.t * Math.PI * 3) * .3 * (1 - sh.t); sh.m.scale.set(1 + q, 1 - q, 1); } const near = active && Math.hypot(sh.x - kid.pos.x, sh.z - kid.pos.z) < .75; if (near && !sh.near) sh.play(); sh.near = near; }
-      { const near = Math.abs(kid.pos.x - penMid.x) < 7 && Math.abs(kid.pos.z - penMid.z) < 5; if (near && !greeted && herd.length) { sfx.sparkle(); herd.forEach((c, i) => setTimeout(() => { c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1; if (i < 2) bubble(c, '', PX.heart()); }, i * 130)); } greeted = near; }
+      { const near = Math.abs(kid.pos.x - penMid.x) < 7 && Math.abs(kid.pos.z - penMid.z) < 5; if (near && !greeted && herd.length) { const c = herd.filter(c => !c.friend).reduce((a, b) => !a || b.pos.distanceTo(kid.pos) < a.pos.distanceTo(kid.pos) ? b : a, null); if (c) { c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1; bubble(c, '', PX.heart()); } } greeted = near; }   // the nearest one looks up and says hello; the others go on grazing
       { const can = Q.raceMounts().length > 0; for (const s of race.waiting) { s.visible = can; s.position.y = can && race.hop && race.hop.s === s ? Math.sin(Math.min(1, race.hop.t) * Math.PI) * .3 : 0; } if (race.hop && (race.hop.t += dt * 2.5) > 1) race.hop = null;
         const under = Math.floor(kid.pos.x) === Math.floor(race.x) && Math.floor(kid.pos.z) === Math.floor(race.z);
         if (!under) race.armed = true; else if (active && race.armed && can) { race.armed = false; kid.path = []; race.go(); } }

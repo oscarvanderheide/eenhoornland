@@ -53,6 +53,9 @@ export const sfx = {
   door() { tone(330, 0, .15, 'triangle', .1); tone(494, .1, .25, 'triangle', .1); },
   wrong() { tone(300, 0, .2, 'triangle', .1, 200); },
   bell() { [1568, 2093, 1568, 2093].forEach((f, i) => tone(f, i * .09, .22, 'triangle', .1)); },
+  hoot() { tone(392, 0, .3, 'sine', .12, 370); tone(330, .38, .5, 'sine', .12, 300); },
+  horn() { tone(110, 0, 1.1, 'sawtooth', .04); tone(165, 0, 1.1, 'triangle', .08); },
+  squeak() { [0, .12, .24].forEach((t, i) => tone(1600 + i * 300, t, .09, 'sine', .07, 2400)); },
   lullaby() { [659, 587, 523, 587, 659, 659, 659].forEach((f, i) => tone(f, i * .42, .7, 'sine', .09)); },
 };
 

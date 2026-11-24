@@ -121,9 +121,13 @@ export function createLife(ctx) {
   function tapAnimal(c) {
     if (c.fly || c.cart || c.swim) return; if (carried === c) return void throwIt();
     if (c.uniKind) return tapHerd(c);                                                                  // an old unicorn from the meadow: she comes along
+    const ways = ctx.ways; if (c.way && ways && ways.tap(c)) return;                                   // busy with its own thing (world-ways.js)
+    // with what it likes in her bag she gives it that first (once a day); otherwise it shows its own way of saying
+    // hello, and a second tap lifts it, as always
+    const food = Q.FAVOURITE[c.name], give = food && !c.friend && c.fedDay !== Q.quest.day && Q.have(food) > 0;
+    if (!give && ways && ways.far(c) && dist(c) < 9 && ways.tap(c)) return;                             // the deer, the gull and the parrot come to her
     c.path = []; c.wait = 8; c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1;                       // it waits for her
-    // with what it likes in her bag she gives it that first (once a day); after that a tap lifts it, as always
-    const food = Q.FAVOURITE[c.name], give = food && !c.friend && c.fedDay !== Q.quest.day && Q.have(food) > 0, act = give ? () => feed(c, food) : () => lift(c);
+    const act = give ? () => feed(c, food) : () => { if (!(ways && ways.tap(c))) lift(c); };
     if (dist(c) < 1.8) return act();
     const then = () => { if (dist(c) < 3.6) act(); };
     if (ctx.approach(Math.floor(c.pos.x), Math.floor(c.pos.z), then, true)) return;
@@ -315,7 +319,7 @@ export function createLife(ctx) {
       for (let i = 0; i < 4; i++) bit(ART.dizzy(), kid.pos.x + Math.cos(i * 1.6) * .35, 1.25, kid.pos.z + .1, { vx: -Math.sin(i * 1.6) * .9, vy: .5, g: .5, life: 1.1 });
     }, 420);
   }
-  let kidTaps = [], twirl = 0;
+  let kidTaps = [], twirl = 0, askAll = 0;
   /** tap her three times quickly and she twirls round */
   function tapKid() { kidTaps = kidTaps.filter(t => now() - t < 1800); kidTaps.push(now()); if (kidTaps.length < 3) return false; kidTaps = []; twirl = .9; sfx.sparkle(); burst(kid.pos, 10, true); return true; }
   /** the little unicorn lets out a big rainbow burp */
@@ -367,10 +371,11 @@ export function createLife(ctx) {
         if (p && ctx.walkable(Math.floor(p.x), Math.floor(p.z))) { const dx = p.x - c.pos.x, dz = p.z - c.pos.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 5.5); if (d > .02) { c.pos.x += dx / d * v; c.pos.z += dz / d * v; } }
         const mv = c.pos.distanceTo(before), ddx = c.pos.x - before.x; c.moving = mv > .003; if (Math.abs(ddx) > .01 && Math.abs(ddx) > mv * .35) c.face = ddx > 0 ? 1 : -1;
       });
-      // an animal that wants something she has: it looks at her and shows what, once in a while when she comes close
-      if (active) for (const a of animals) {
-        const food = Q.FAVOURITE[a.name]; if (!food || a.friend || a.held || a.fly || a.swim || a.cart || a.fedDay === Q.quest.day || !a.g.visible) continue;
-        if (dist(a) < 2.3 && (a.askT || 0) < now()) { a.askT = now() + 30000; a.face = kid.pos.x >= a.pos.x ? 1 : -1; a.hop = 1; bubble(a, '', ART.itemIcon(food)); }
+      // an animal whose favourite she has with her looks at her and thinks of it: one animal at a time, now and then,
+      // only when she stands still next to it (no calling out as she walks past)
+      if (active && !kid.moving && now() > askAll) for (const a of animals) {
+        const food = Q.FAVOURITE[a.name]; if (!food || a.friend || a.held || a.fly || a.swim || a.cart || a.way || a.fedDay === Q.quest.day || !a.g.visible || Q.have(food) <= 0) continue;
+        if (dist(a) < 2 && (a.askT || 0) < now()) { a.askT = now() + 120000; askAll = now() + 45000; a.face = kid.pos.x >= a.pos.x ? 1 : -1; bubble(a, '', ART.itemIcon(food)); break; }
       }
       for (const a of animals) if (a.morning && a.nap > 0 && dist(a) < 2.4) { a.morning = false; wake(a); bubble(a, a.say[0]); }   // still asleep this morning: she wakes it as she walks by
       for (const a of animals) if (a.nap > 0) {                                  // napping: on its side, little z's

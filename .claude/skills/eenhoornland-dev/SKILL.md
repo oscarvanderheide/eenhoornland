@@ -45,7 +45,8 @@ Start screen (pick Anna or Fenna) → dream (`dream.js`) → a quiet morning at 
 | `js/act-kasteel.js` | Inside the castle: the garden with the six flowers and the rainbow (the end of the adventure, afterwards a toy) and the treasure room (coin heap, a chest with three real coins a day). |
 | `js/act-race.js` | The unicorn race, started at the arch in the village (`MAP.RACE`): tap to jump, nobody loses, the place and the stars become coins. Rides `Q.raceMounts()`. |
 | `js/world-rooms.js` | Walk-in rooms (`MAP.ROOMS`, carved into rock rows below `MAP.OUT_H`): the cave (egg, bats, crystals) and the castle hall (coins on the floor, chest, golden door to the garden). Door tiles are handled by `goThrough` in `world.js`; indoors the light dims (`stepIndoor`). |
-| `js/world-sea.js` | The open sea east of the beach: islets (`MAP.ISLETS`: lighthouse, seals, palm islet chest), dolphins, a swimmer, a fishing boat, a turtle, and the rainbow arrow to the island while the fruit is the goal. |
+| `js/world-sea.js` | The open sea east of the beach, all of it answering a tap (also from the boat: `world.js` hands taps on meshes with `userData.sea` to them instead of steering): the lighthouse (beam turns), the seals play ball (tap a seal, the ball flies to it), five jellyfish that each sing a note and glow, dolphins (tap one mid-leap: a flip, and the pod keeps playing), the fishing boat's bear throws her a fish (`Q.giftOnce('beervis')`), the turtle swims beside the boat for a while, the palm islet chest, and the rainbow arrow while the fruit is the goal. Nothing at sea calls out by itself. |
+| `js/world-ways.js` | Every animal's own way of saying hello (first tap; the next tap within 6 s lifts it, unless the way is `repeat`): konijn down a hole and up another, poes on her side purring, hondje rolls over, kip lays an egg (once a day) that hatches a chick that follows her, eendje dives, eekhoorn up a tree (a nut drops), hertje comes to nuzzle her (also by itself when she stands still near it), egel rolls into a ball (taps roll it), uil asleep by day, schaap fluffs up per tap until poof, krab dances and digs in, meeuw fetches her a fish, papegaai rides on her shoulder, pauw fans its tail (folded at rest), draakje blows smoke rings. `far` ways (hertje, meeuw, papegaai) start without her walking over. Art in `js/art-ways.js`. `c.way` makes `world.js` skip the animal's wandering; `c.sq` scales its sprite. |
 | `js/world-fish.js` | Fishing at the end of the old pier (`MAP.FISH`): cast, the float bobs, a tap or the jump key reels in a fish (bag `vis`, the cat's favourite), a boot, seaweed, a duck, a shell, a bottle with a coin once a day. |
 | `js/art-isles.js` | The plants, rocks and animals that make each island its own. |
 | `js/act-*.js` | One activity per building: `export const meta`, `export function open(root, api)` returning a cleanup fn. |
@@ -77,6 +78,7 @@ node cdp.mjs t-doors.mjs           # tapping/walking into every building
 node cdp.mjs tests/t-life.mjs      # feeding/friends, naps, jokes, dog fetch, fountain, paint (tmp-shots/l-*.png)
 node cdp.mjs tests/t-powers.mjs    # old unicorns come along and use their power, under the sea, the clouds (tmp-shots/u-*.png)
 node cdp.mjs tests/t-weather.mjs   # rain/frogs, leaf piles, snow + snowman (tmp-shots/w-*.png)
+node cdp.mjs tests/t-ways.mjs      # every animal's own way, and the sea from the boat (ONLY=dorp,bos,wei,strand,eiland,kasteel,zee; tmp-shots/w-*.png)
 ./shot.sh "?go" out.png 390 700    # any viewport, e.g. phone
 ```
 Always look at the screenshots; passing asserts do not show a sprite drawn in the wrong place.
@@ -104,7 +106,8 @@ Always look at the screenshots; passing asserts do not show a sprite drawn in th
 - A trailing `// comment` added by a scripted edit on a one-line `{ ... });` swallows the closing braces: check every module with `node --input-type=module --check < file`.
 - While she is in the boat `busy` is true (no walking, no keys) but taps still arrive: `world.js` hands them to `play.steer`.
 - Toys are plain sprites that do not block: never change `M.block` at runtime for them (reachability is checked once, in `map.js`).
-- An animal is picked up with a plain tap (she carries it above her head; tap it again or the jump button throws it, tap her puts it down); dragging still works. Things must not need discovering.
+- The first tap on an animal shows its own way (`world-ways.js`), the second lifts it (she carries it above her head; tap it again or the jump button throws it, tap her puts it down); dragging and Enter lift at once. Things must not need discovering. Tests that want a lift set `a.wayAt = performance.now()` first.
+- Calm: animals only ask for their favourite when she has it with her and stands still next to one (one animal per 45 s); otherwise an animal thinks of it once a day after its first hello. Of the old unicorns in the meadow only the nearest looks up when she comes by. Animals wander every 3-8 s, old unicorns every 7-15 s.
 - Headless Chrome can be slow: the opening dream took ~60 s there on 2026-11-23 (tests wait 90 s). Random animal spots make tests flaky; put animals on a fixed open tile (e.g. 32.5, 46.5).
 - An old unicorn from the meadow is not lifted by a tap (it comes along); other animals are. `life.update` drops friends that `syncHerd` removed.
 - Rain puddles (`M.puddles`) block nothing: walking through splashes, jumping in splashes a lot. Only logs are jumped over.
