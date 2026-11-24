@@ -181,6 +181,9 @@ export const belIcon = () => cached('beli', () => sprite(['....kk....', '...yyyy
 /** a little picture for "press here to jump" */
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));
 
+/** a little picture for "say hello": a speech bubble with a heart in it */
+export const talkIcon = () => cached('talki', () => sprite(['.wwwwwwwww.', 'wwwwwwwwwww', 'wwrrwwrrwww', 'wrrrrrrrrww', 'wrrrrrrrrww', 'wwrrrrrrwww', 'wwwrrrrwwww', 'wwwwrrwwwww', '.wwwwwwwww.', '..ww.......', '.w.........'], { w: '#FFFFFF', r: '#FF5E9C' }));
+
 /* the rainbow tree on the island, the hole in the bridge to the castle, and the rainbow that mends it */
 const rainbowtree = () => cached('rbtree', () => {
   const blobs = [[15, 11, 10], [8, 15, 7], [22, 15, 7], [15, 17, 9]], blossom = [[9, 12], [19, 8], [14, 19], [23, 16], [5, 16], [13, 5]];

@@ -82,6 +82,8 @@ export function createWeather(ctx) {
     info: () => ({ wx, piles: piles.filter(p => p.m).length, frogs: frogs.filter(f => f.g.visible).length, snowman: man.m.visible, nose: man.nose, taps: man.taps }),
     piles: () => piles.map(p => [p.x, p.z, !!p.m]), tapSnowman: () => man.m.userData.tap(), sync,
     /** she jumped: a pile under her feet goes flying */
+    /** a leaf pile or snow heap right under her (the action button jumps on it) */
+    stompable: () => piles.some(p => p.m && Math.hypot(p.x - kid.pos.x, p.z - kid.pos.z) < .9),
     stomp() { for (const p of piles) if (p.m && Math.hypot(p.x - kid.pos.x, p.z - kid.pos.z) < .9) kick(p, true); },
     update(dt, time, active) {
       const cx = kid.pos.x, cz = kid.pos.z, inside = cz >= MAP.ROCK_Z;   // indoors it does not rain

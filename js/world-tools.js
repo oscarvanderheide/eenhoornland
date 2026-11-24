@@ -130,6 +130,18 @@ export function createTools(ctx) {
     spot: id => holders[id] && waiting(id) ? [holders[id].x, holders[id].z] : null,
     /** the gates that still stand (one entry per gate), for the map */
     gates: () => { const seen = new Set(), out = []; M.obstacles.forEach((o, i) => { if (!o.gate || !meshes.has(i) || !M.block[M.I(o.x, o.z)] || seen.has(o.g)) return; seen.add(o.g); out.push({ kind: o.kind, x: o.x + 1, z: o.z + .5 }); }); return out; },
+    /** for the action button: a tool to use on the bramble or boulder in reach, the tool waiting for her, or the gnome to say hello to */
+    nearAction() {
+      const d = (x, z) => Math.hypot(x - kid.pos.x, z - kid.pos.z);
+      for (const h of Object.values(holders)) {
+        if (h.step === 0 && waiting(h.id) && d(h.x, h.z) < 1.8) return { key: 'tool' + h.id, icon: ART.toolIcon(h.id), run: () => start(h) };
+        if (h.id === 'hamer' && h.step === 9 && d(h.x, h.z) < 1.5) return { key: 'gnome', icon: ART.talkIcon(), run: () => start(h) };
+      }
+      let best = -1, bd = 1.7;
+      M.obstacles.forEach((o, i) => { if (o.type !== 'break' || !meshes.has(i) || !Q.hasTool(o.tool)) return; const k = d(o.x + .5, o.z + .5); if (k < bd) { bd = k; best = i; } });
+      if (best >= 0) { const o = M.obstacles[best]; return { key: 'use' + o.tool, icon: ART.toolIcon(o.tool), run: () => use(best) }; }
+      return null;
+    },
     info: () => ({ standing: meshes.size, waiting: Object.keys(holders).filter(id => !Q.hasTool(id)) }),
     update(dt, time, active) {
       for (let i = fading.length - 1; i >= 0; i--) { const f = fading[i]; f.t += dt * 3; if (f.t < 0) { f.m.rotation.z = Math.sin(f.t * 40) * .04; continue; } f.m.scale.setScalar(Math.max(.01, 1.1 * (1 - f.t))); f.m.rotation.z = f.t * .8; if (f.t >= 1) { scene.remove(f.m); fading.splice(i, 1); } }

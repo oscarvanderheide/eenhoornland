@@ -33,7 +33,10 @@ const CSS = `
 .kaart-me{position:absolute;transform:translate(-50%,-85%);pointer-events:none;animation:bob 1s ease-in-out infinite;z-index:2}
 .kaart-egg{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;font-family:var(--f-pixel);font-weight:700;font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink)}
 #b-jump{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0}
-#b-jump canvas{width:44px}
+#b-jump canvas{width:auto;max-width:52px;max-height:52px}
+#b-jump.ctx{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
+#b-jump.bump{animation:qbump .35s cubic-bezier(.22,1,.36,1)}
+#b-jump{touch-action:none}
 #b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 84px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0;background:#FFE3F1}
 #b-ride.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #FF7EB6,0 3px 0 var(--ink)}
 #b-ride.on{background:var(--sun);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
@@ -45,7 +48,7 @@ const CSS = `
 #tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
 .kaart-goal{position:absolute;transform:translate(-50%,-50%);cursor:pointer;animation:qpulse 1s ease-in-out infinite;z-index:3;padding:5px;background:#FFF3C4;border:3px solid var(--ink);border-radius:50%;line-height:0;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink);display:flex;align-items:center;font-family:var(--f-pixel);font-weight:700;font-size:1.2rem}
 .kaart-gate{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:1;line-height:0}
-@media (max-width:640px){#b-jump{width:60px;height:60px}#b-ride{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 70px)}#b-ride canvas{width:44px}#who{bottom:calc(84px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+@media (max-width:640px){#b-jump{width:68px;height:68px}#b-jump canvas{max-width:46px;max-height:46px}#b-ride{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 78px)}#b-ride canvas{width:44px}#who{bottom:calc(92px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -61,14 +64,25 @@ export function createHud(getWorld) {
 
   // jumping (bottom right) and the tools the girls own (bottom left)
   const jumpBtn = document.createElement('button'); jumpBtn.className = 'hbtn'; jumpBtn.id = 'b-jump'; jumpBtn.setAttribute('aria-label', 'Springen'); jumpBtn.appendChild(PX.domSprite(ART.jumpIcon(), 4));
-  jumpBtn.onclick = () => { const w = getWorld(); w && w.jump(); }; game.appendChild(jumpBtn);
+  // it is the action button: it shows what it will do right here (the animal it picks up, the sword, a hello, the bell, a jump)
+  // and does it. pointerdown, not click: on a phone it answers at once, and a finger that slides off still counts
+  jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const w = getWorld(); if (!w) return; w.jump(); syncAct(true); });
+  jumpBtn.addEventListener('click', e => { if (e.detail === 0) { const w = getWorld(); w && w.jump(); } });   // the keyboard (Enter on a focused button)
+  game.appendChild(jumpBtn);
+  let actKey = '';
+  function syncAct(force) {
+    const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey; if (key === actKey && !force) return;
+    if (a && key !== actKey) { actKey = key; jumpBtn.innerHTML = ''; const c = a.icon, s = Math.min(4, 46 / Math.max(c.width, c.height)); jumpBtn.appendChild(PX.domSprite(c, s));
+      jumpBtn.classList.toggle('ctx', key !== 'jump'); jumpBtn.classList.remove('bump'); void jumpBtn.offsetWidth; jumpBtn.classList.add('bump'); }
+  }
+  setInterval(() => syncAct(false), 120);
   // riding: once the unicorn has eaten the rainbow fruit this button puts the girl on her back (and takes her off again; also off the bike)
   const rideBtn = document.createElement('button'); rideBtn.className = 'hbtn'; rideBtn.id = 'b-ride'; rideBtn.setAttribute('aria-label', 'Rijden'); rideBtn.hidden = true;
   rideBtn.onclick = () => { const w = getWorld(); if (w) { w.ride(); render(); } }; game.appendChild(rideBtn);
   let rideSig = '';
   function syncRide() {
     const w = getWorld(), m = w ? w.mount() : null, sig = (Q.canRide() || m ? 1 : 0) + ':' + m + ':' + state.uni.body + state.uni.mane; rideBtn.hidden = !(Q.canRide() || m); rideBtn.classList.toggle('on', !!m); rideBtn.classList.toggle('call', Q.canRide() && !m);   // not riding although she could: the button asks for it
-    if (sig !== rideSig) { jumpBtn.innerHTML = ''; jumpBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.belIcon() : ART.jumpIcon(), 4));   // on the bike the jump button is the bell
+    if (sig !== rideSig) {
       rideSig = sig; rideBtn.innerHTML = ''; rideBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.bike() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true }), 3)); }
   }
   // who is playing: the sisters tap their own face when they swap seats

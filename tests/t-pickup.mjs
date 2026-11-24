@@ -30,9 +30,27 @@ export default async function (t) {
   // no rain puddles: she jumps into the duck pond and the fountain
   ok(await t.ev('__w.M.puddles.length') === 0, 'no rain puddles lie around');
   const P = await J('__w.MAP.POND'); await t.ev(`__w.placeAt(${P.cx + P.rx + .9}, ${P.cz + .2})`); await t.sleep(1200); await t.ev('__w.jump()');
-  ok(await until(`__w.life.dipping()`, 3000), 'a jump next to the duck pond: in she goes'); await t.sleep(1800); await t.shot('tmp-shots/p-7-pond.png');
-  ok(await until(`!__w.life.dipping() && !__w.busy()`, 20000), 'and out she climbs again'); await t.sleep(500); await t.shot('tmp-shots/p-7b-wet.png');
-  const F = await J('__w.MAP.FOUNT'); await t.ev(`__w.placeAt(${F.cx + .5}, ${F.cz + 2.3})`); await t.sleep(1000); await t.ev('__w.jump()'); ok(await until(`__w.life.dipping()`, 3000), 'and into the fountain'); await t.sleep(1800); await t.shot('tmp-shots/p-7c-fountain.png'); await until(`!__w.life.dipping()`, 20000);
+  ok(await until(`__w.life.dipping()`, 1500), 'a jump next to the duck pond: in she goes, at once'); await t.sleep(1800); await t.shot('tmp-shots/p-7-pond.png');
+  await t.sleep(3000); ok(await t.ev(`__w.life.dipping() && !__w.busy() && __w.action().key === 'splash'`), 'and stays in, free to play (the button splashes)');
+  const before = await J('__w.info().pos'), wp = await J(`__w.screen(${P.cx - .8},0,${P.cz})`); await t.click(wp[0], wp[1]); await t.sleep(1500);
+  const after = await J('__w.info().pos'); ok(after[0] < before[0] - .5 && await t.ev('__w.life.dipping()'), 'a tap in the water: she swims there ' + before + ' -> ' + after); await t.shot('tmp-shots/p-7a-swim.png');
+  await t.key('ArrowDown', 1600); ok(await until(`!__w.life.dipping()`, 2000), 'walking against the edge hops her out'); await t.sleep(500); await t.shot('tmp-shots/p-7b-wet.png');
+  await t.ev(`__w.placeAt(${P.cx}, ${P.cz + P.rz + .9}); __w.animals.filter(a => a.water).forEach(a => { a.pos.set(${P.cx - 1.2}, 0, ${P.cz - .6}); a.path = []; a.wait = 30; })`); await t.sleep(800); const pp = await J(`__w.screen(${P.cx + .3},0,${P.cz - .2})`); await t.click(pp[0], pp[1]); ok(await until(`__w.life.dipping()`, 2500), 'a tap on the pond: in she hops');
+  const land = await J(`__w.screen(${P.cx},0,${P.cz + P.rz + 2.5})`); await t.click(land[0], land[1]); ok(await until(`!__w.life.dipping()`, 2500), 'a tap on land: out she hops'); ok(await until(`Math.abs(__w.info().pos[1] - ${P.cz + P.rz + 2.5}) < .8`, 4000), 'and walks on to where the tap was');
+  const F = await J('__w.MAP.FOUNT'); await t.ev(`__w.placeAt(${F.cx + .5}, ${F.cz + 2.3})`); await t.sleep(1000); await t.ev('__w.jump()'); ok(await until(`__w.life.dipping()`, 1500), 'and into the fountain'); await t.sleep(1800); await t.shot('tmp-shots/p-7c-fountain.png');
+  await t.key('ArrowDown', 1200); ok(await until(`!__w.life.dipping()`, 2000), 'and out of the fountain');
+  // the jump button is the action button: it shows and does what fits right here
+  await t.ev(`__w.placeAt(40.5, 47.5)`); await t.sleep(800); ok(await t.ev(`__w.action().key`) === 'jump', 'with nothing around the button jumps: ' + await t.ev(`__w.action().key`));
+  await t.ev(`(a=>{a.fly=null;a.swim=null;a.pos.set(41.3,0,47.5);a.path=[];a.wait=30})(__w.animals[${info.i}])`); await t.sleep(300);
+  ok((await t.ev(`__w.action().key`)).startsWith('lift'), 'next to an animal it picks it up: ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7d-act-lift.png');
+  const jb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-jump').getBoundingClientRect())`); await t.click(jb[0], jb[1]); await t.sleep(400);
+  ok(await t.ev(`__w.life.carrying()===__w.animals[${info.i}]`), 'pressing it lifts the animal'); ok((await t.ev(`__w.action().key`)).startsWith('throw'), 'and then it throws');
+  await t.click(jb[0], jb[1]); await t.sleep(300); ok(!(await t.ev(`__w.life.carrying()`)), 'pressed again: thrown');
+  // next to brambles with the sword: the button shows the sword and cuts
+  await t.ev(`__w.Q._reset({ stage: 'ei' }); __w.Q.giveTool('zwaard'); 0`); await t.sleep(300);
+  const br = await J(`(o => { const i = __w.M.obstacles.findIndex(o => o.type === 'break' && o.tool === 'zwaard'); const b = __w.M.obstacles[i]; for (const [dx, dz] of [[-1,0],[1,0],[0,1],[0,-1]]) if (__w.walkable(b.x + dx, b.z + dz)) return { i, x: b.x + dx + .5, z: b.z + dz + .5 }; })()`);
+  await t.ev(`__w.placeAt(${br.x}, ${br.z})`); await t.sleep(500); ok(await t.ev(`__w.action().key`) === 'usezwaard', 'next to brambles with the sword: it cuts ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7e-act-sword.png');
+  await t.click(jb[0], jb[1]); await t.sleep(1500); ok(await t.ev(`__w.Q.quest.broken.includes(${br.i})`), 'pressed: the brambles are gone');
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.setMount('uni'); 0`); await t.sleep(500); await t.key('ArrowLeft', 900); ok(await t.ev('__w.uni.face') === -1, 'riding left with the keys, the unicorn looks left'); await t.shot('tmp-shots/p-8-ride-left.png');
   // into the water: an animal swims back, a ball is blown back by the wind; behind a tree an animal still shows
   await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(20.5, 45.5); 0`); await t.sleep(1500);

@@ -33,7 +33,7 @@ export function createToys(ctx) {
   /* ================= things she can carry: watering can, bucket, kite ================= */
   const things = {}; let carry = null;
   function thing(id, art, [x, z], scale = 1.1) {
-    const t = things[id] = { id, m: sprite(art, x, z, { scale }), x, z, scale, tilt: 0 };
+    const t = things[id] = { id, art, m: sprite(art, x, z, { scale }), x, z, scale, tilt: 0 };
     tappable(t.m, () => { if (carry === t) return putDown(); sfx.pop(); pop(t); near(t.x, t.z, 1.5) ? take(t) : ctx.approach(Math.floor(t.x), Math.floor(t.z), () => take(t)); });
     return t;
   }
@@ -135,6 +135,8 @@ export function createToys(ctx) {
     for (let i = 0; i < (big ? 16 : 5); i++) bit(ART.drop(), p.x + rnd(-.35, .35), .12, p.z + .12, { vx: rnd(-1, 1) * (big ? 3.2 : 1.4), vy: rnd(1.5, big ? 5.5 : 2.6), g: 10, life: big ? 1 : .6 });
     if (big) for (const a of animals) if (!a.held && !a.fly && !a.cart && Math.hypot(a.pos.x - p.x, a.pos.z - p.z) < 3.5) { a.hop = 1; a.face = a.pos.x >= p.x ? 1 : -1; }   // whoever stands close gets wet and jumps
   }
+  /** a puddle or sand tower to jump on right here (the action button jumps then) */
+  const stompable = () => pools.some(p => near(p.x, p.z, .75)) || [...towers.values()].some(t => near(t.x + .5, t.z + .5, 1.15));
   function stomp() {
     for (const p of pools) if (near(p.x, p.z, .75)) { setTimeout(() => splash(p, true), 330); return true; }
     for (const t of towers.values()) if (near(t.x + .5, t.z + .5, 1.15)) {
@@ -249,10 +251,12 @@ export function createToys(ctx) {
   syncSand();
 
   return {
-    dispose: off, peek, stomp, tapGround, putDown, fountain: fill,
+    dispose: off, peek, stomp, stompable, tapGround, putDown, fountain: fill,
     /** the colour of the paint puddle at (x, z), or null (world-life.js: animals that land or walk in it) */
     paintAt: (x, z) => { const p = puddles.find(p => Math.abs(p.x - x) < .8 && Math.abs(p.z - z) < .55); return p ? ART.PAINTS[p.k] : null; },
     carrying: () => carry && carry.id,
+    /** for the action button: the picture of what she carries, or of the thing she could pick up here (or null) */
+    carryArt: () => carry && carry.art, nearArt() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) return t.art; return null; },
     /** dev / tests */
     take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
     info: () => ({ ahead: sandAhead(), carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),

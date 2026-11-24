@@ -531,7 +531,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   let target = null; // building to enter on arrival
   let after = null;  // what to do on arrival (cut the bramble she walked up to)
   /** deep: do not fall back to "walk up to whatever is in the way" */
+  let swimOf = () => null, resume = null;
+  /** from the water: the nearest spot on land towards (x, z) she can hop to (a jump point), or null */
+  function landToward(x, z) {
+    const dx = x - kid.pos.x, dz = z - kid.pos.z, l = Math.hypot(dx, dz) || 1;
+    for (const a of [0, .4, -.4, .8, -.8, 1.3, -1.3, Math.PI]) { const c = Math.cos(a), s = Math.sin(a), ux = (dx * c - dz * s) / l, uz = (dx * s + dz * c) / l;
+      for (let t = .3; t < 2.8; t += .1) { const px = kid.pos.x + ux * t, pz = kid.pos.z + uz * t; if (freeAt(px, pz)) { const v = new THREE.Vector3(px + ux * .15, 0, pz + uz * .15); if (!freeAt(v.x, v.z)) v.set(px, 0, pz); v.jump = true; return v; } } }
+    return null;
+  }
   function walkTo(tx, tz, building = null, exact = null, deep = false) {
+    if (swimOf() && !mount) { const out = landToward(tx + .5, tz + .5); if (!out) return false; after = null; target = null; kid.path = [out]; resume = () => walkTo(tx, tz, building, exact, deep); return true; }   // in the water: hop out first
     after = null; if (!deep && play) play.wants(null);
     const s = [Math.floor(kid.pos.x), Math.floor(kid.pos.z)];
     const ok = (x, z) => walkable(x, z) || (x === s[0] && z === s[1]);
@@ -588,15 +597,35 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     play && play.mounted(m, was); onMount && onMount(m); return true;
   }
   /** a hop on the spot, just for fun (jumping over things happens by itself while walking) */
-  function jump() {
-    if (!interactive || paused || kid.hop > 0) return;
-    if (fishing.tap()) return;
-    if (!mount && !life.carrying() && life.nearWater() && life.dip(life.nearWater())) return;   // next to the duck pond or the fountain: in she jumps
-    if (mount === 'fiets') { kid.hop = .45; play.bell(); return; }               // on the bike the button is the bell
-    if (life.throwIt()) return;                                                  // with an animal above her head the button throws it
-    sfx.boing(); kid.hop = 1; toys.stomp(); life.jumped(); weather.stomp();
+  function hop() {
+    if (kid.hop > 0) return; sfx.boing(); kid.hop = 1; toys.stomp(); life.jumped(); weather.stomp();
     if (mount !== 'uni') setTimeout(() => { if (uni.g.visible && uni.hop <= 0) uni.hop = 1; }, 200);
   }
+  /** what the action button does right here, with the picture it shows: reel in, ring the bell, throw or put down what she
+   *  holds, use the sword or hammer, splash, jump into the water, say hello, pick up the animal, pebble or toy next to her,
+   *  get on the bike, or (with nothing around) jump */
+  const A = (key, icon, run) => ({ key, icon, run });
+  const near = (c, r) => c.g.visible && Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) < r;
+  function action() {
+    if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
+    if (mount === 'fiets') return A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
+    const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
+    const toy = toys.carryArt(); if (toy) return A('put' + toys.carrying(), toy, () => toys.putDown());
+    const t = tools.nearAction(); if (t) return t;
+    if (life.swimming()) return A('splash', ART.jumpIcon(), () => life.splashJump());
+    if (toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
+    if (!mount) {
+      const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w));
+      if (Q.quest.stage !== 'zoek' && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));
+      const c = life.nearMover(); if (c) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : A('lift' + c.name, c.frames.idle, () => life.lift(c));
+      const ta = toys.nearArt(); if (ta) return A('take', ta, () => toys.takeNear());
+      if (play.bikeNear()) return A('bike', ART.bike(), () => play.tapBike());
+    }
+    return A('jump', ART.jumpIcon(), hop);
+  }
+  const actionNow = () => interactive && !paused && !busy ? action() : null;
+  /** the action button (and Space) */
+  function jump() { if (!interactive || paused || busy) return; action().run(); }
   let lastTile = -1;
 
   /* ---------------- marker, bubbles, labels ---------------- */
@@ -639,7 +668,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   extras = ctx.extras = createExtras(ctx);
   const tools = createTools(ctx);
   play = ctx.play = createPlay(ctx);
-  const life = ctx.life = createLife(ctx);
+  const life = ctx.life = createLife(ctx); swimOf = () => life.swimming();
   toys = ctx.toys = createToys(ctx);
   const weather = ctx.weather = createWeather(ctx);
   const rooms = ctx.rooms = createRooms(ctx);
@@ -652,7 +681,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /* ---------------- input ---------------- */
   let interactive = false;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  cv.addEventListener('pointerdown', e => {
+  function onDown(e) {
     if (!interactive || paused) return;
     const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
@@ -663,6 +692,17 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (busy) return;
     if (fishing.tap()) return;                                                   // fishing: a tap reels in
     const hits = ray.intersectObjects(pick, false); let shook = false;
+    const sw = !mount && life.swimming();
+    if (sw) {                                                                    // in the water: a tap in the water swims her there, a tap on land hops her out and on
+      const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane, p)) return;
+      const animal = hits.find(h => { const c = h.object.userData.char; return c && c.g.visible && animals.includes(c) && (!h.uv || opaqueAt(c, null, h.uv)); });
+      if (!animal || animal.object.userData.char.water) {
+        if (life.waterAt(p.x, p.z) === sw) { sfx.click(); after = null; target = null; resume = null; kid.path = [life.inside(sw, p.x, p.z)]; showMarker(kid.path[0].x, kid.path[0].z); }
+        else { const out = landToward(p.x, p.z); if (out) { after = null; target = null; kid.path = [out]; const ev = { clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId, replay: true }; resume = () => onDown(ev); } }
+        if (!e.replay) { steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } }
+        return;
+      }
+    }
     for (const h of hits) {
       const d = h.object.userData;
       if (d.char && !d.char.g.visible) continue;
@@ -670,7 +710,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (d.trees) { if (!shook) { shook = true; life.tapProp(d.trees[h.instanceId]); } continue; }   // it shakes, and she still walks there
       if (d.tap) { d.tap(h); return; }
       // an animal can be picked up: a tap makes it talk, a drag lifts it, letting go throws it (it thinks that is great fun)
-      if (d.char && (animals.includes(d.char) || d.char.stone)) { if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
+      if (d.char && (animals.includes(d.char) || d.char.stone)) { if (e.replay) { if (!d.char.fly) life.tapAnimal(d.char); return; } if (!d.char.fly) { grab = { c: d.char, x: e.clientX, y: e.clientY, drag: false, pts: [] }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }
       if (d.char) { tapChar(d.char); return; }
       if (d.building) { const b = d.building; sfx.pop(); walkTo(b.door[0], b.door[1], b); return; }
       if (d.fountain) { if (toys.fountain()) return; sfx.pop(); if (life.nearWater() === 'fontein') life.dip('fontein'); else approach(Math.floor(FOUNT.cx), Math.floor(FOUNT.cz), () => life.dip('fontein')); return; }   // a tap on the fountain: walk to it and jump in (with the can: fill it)
@@ -679,12 +719,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
     const fb = footprint.get(I(tx, tz)); if (fb) { sfx.pop(); walkTo(fb.door[0], fb.door[1], fb); return; }
     if (toys.tapGround(tx, tz)) return;                                         // with the bucket: build a sand tower there
-    if (inb(tx, tz) && ground[I(tx, tz)] === WA && !toys.carrying()) { sfx.pop(); if (life.nearWater() === 'vijver') life.dip('vijver'); else { const e = nearestWalkable(p.x, p.z); if (e && walkTo(e[0], e[1])) after = () => life.dip('vijver'); } return; }   // a tap on the duck pond: in she jumps
+    if (inb(tx, tz) && ground[I(tx, tz)] === WA && !toys.carrying()) { sfx.pop(); if (life.nearWater() === 'vijver') life.dip('vijver', p.x, p.z); else { const e = nearestWalkable(p.x, p.z); if (e && walkTo(e[0], e[1])) after = () => life.dip('vijver', p.x, p.z); } return; }   // a tap on the duck pond: in she jumps
     if (inb(tx, tz) && (ground[I(tx, tz)] === MAP.SE || ground[I(tx, tz)] === WA)) life.splash(p.x, p.z);
     const t = walkable(tx, tz) ? [tx, tz] : nearestWalkable(p.x, p.z);
     if (t) { sfx.click(); target = null; walkTo(t[0], t[1], null, walkable(tx, tz) ? p : null); }
-    steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { }   // keep the finger down and she keeps walking towards it
-  }, listen);
+    if (!e.replay) { steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } }   // keep the finger down and she keeps walking towards it
+  }
+  cv.addEventListener('pointerdown', onDown, listen);
   let grab = null, steer = null;
   const groundAt = e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); return ray.ray.intersectPlane(plane, p) ? p : null; };
   cv.addEventListener('pointermove', e => {
@@ -858,6 +899,12 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     }
     const prev = kid.pos.clone();
     if (busy) { if (play.aboard()) play.drive(kx, kz, dt); }
+    else if ((kx || kz) && !midJump() && !mount && life.swimming()) {           // paddling: free inside the water, against the edge she hops out
+      const sw = life.swimming(); if (Math.abs(kx) > .2) kid.face = Math.sign(kx);
+      const l = Math.hypot(kx, kz), sp = 2.4 * dt, nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
+      if (life.waterAt(nx, nz) === sw) { kid.pos.x = nx; kid.pos.z = nz; kid.moving = true; }
+      else { kid.moving = false; const out = landToward(kid.pos.x + kx / l * 2, kid.pos.z + kz / l * 2); if (out && (out.x - kid.pos.x) * kx + (out.z - kid.pos.z) * kz > 0) { kid.path = [out]; target = null; after = null; } }
+    }
     else if ((kx || kz) && !midJump()) {
       if (Math.abs(kx) > .2) kid.face = Math.sign(kx);                            // with the keys too she (and whoever carries her) looks where she goes
       const l = Math.hypot(kx, kz), sp = speed * dt; const nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
@@ -870,13 +917,14 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
         const ax = Math.floor(kid.pos.x) + ix, az = Math.floor(kid.pos.z) + iz;
         if (lowAt(ax, az) && walkable(ax + ix, az + iz)) { const land = new THREE.Vector3(ax + ix + .5, 0, az + iz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
-        else if (time > bumpT && inb(ax, az) && (ground[I(ax, az)] === WA || Math.hypot(ax + .5 - FOUNT.cx, az + .5 - FOUNT.cz) < 1.3) && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater()); }   // walking into the pond or the fountain: in she jumps
+        else if (time > bumpT && inb(ax, az) && (ground[I(ax, az)] === WA || Math.hypot(ax + .5 - FOUNT.cx, az + .5 - FOUNT.cz) < 1.3) && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater(), kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into the pond or the fountain: in she jumps
       }
     } else {
       const land = midJump() ? kid.path[0] : null;
       if (land && jumpTo !== land) { jumpTo = land; kid.hop = 1; kid.hopH = mount === 'uni' ? .95 : .6; sfx.boing(); jumpSpeed = Math.max(4.5, Math.hypot(land.x - kid.pos.x, land.z - kid.pos.z) / .38); }
       stepAlong(kid, dt, land ? jumpSpeed : speed);
     }
+    if (!kid.path.length && resume) { const r = resume, a = after; resume = null; after = null; r(); if (a && !after) after = a; }   // hopped out of the water: on to where she was going
     if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
     const ti = I(Math.floor(kid.pos.x), Math.floor(kid.pos.z));
@@ -889,6 +937,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (mount === 'uni') { uni.pos.copy(kid.pos); uni.face = kid.face; uni.moving = kid.moving; uni.hop = kid.hop; uni.hopH = kid.hopH; }   // she carries the girl
     else if (!busy) for (const [c, dist] of [[uni, uni.follow || 2]]) {
       let p = trailAt(dist); const before = c.pos.clone();
+      if (life.waterAt(p.x, p.y)) { c.moving = false; continue; }                  // she is in the water: it waits on the shore
+      if (Math.hypot(p.x - c.pos.x, p.y - c.pos.z) > 1.5 && c.hop <= 0) { c.hop = 1; c.hopH = .55; }
       // nobody stands on a log: wait in front of it, then hop over when the trail moves on
       if (lowAt(Math.floor(p.x), Math.floor(p.y))) { let back = dist; for (let k = 0; k < 8 && lowAt(Math.floor(p.x), Math.floor(p.y)); k++) p = trailAt(back += .25); p = trailAt(back + .45); }
       else if (c.hop <= 0 && (lowAt(Math.floor((c.pos.x + p.x) / 2), Math.floor((c.pos.z + p.y) / 2)) || lowAt(Math.floor(c.pos.x), Math.floor(c.pos.z))) && Math.hypot(p.x - c.pos.x, p.y - c.pos.z) > .05) { c.hop = 1; c.hopH = .55; } c.pos.x += (p.x - c.pos.x) * Math.min(1, dt * 12); c.pos.z += (p.y - c.pos.z) * Math.min(1, dt * 12);
@@ -940,7 +990,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -948,6 +998,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   return {
     pause(p) { paused = p; labelsEl.style.visibility = p ? 'hidden' : ''; renderer.setAnimationLoop(p ? null : frame); if (!p) { last = performance.now(); perf.t = 0; perf.n = 0; } },
     setInteractive(v) { interactive = v; },
+    /** what the action button would do right now ({ key, icon, run }), or null while she cannot act */
+    action: () => actionNow(),
     setNight(n, instant) { nightTarget = n ? 1 : 0; if (instant) { nightT = nightTarget; applyNight(nightT); } },
     wakeUp,
     exitBuilding(id) { if (id === 'kasteel') { const g = MAP.ROOMS.hal.garden; placeAt(g[0] + .5, g[1] + 2.5); return; } const b = BUILDINGS.find(b => b.id === id); if (b) placeAt(b.door[0] + .5, b.door[1] + 1.5); },

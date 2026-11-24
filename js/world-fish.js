@@ -46,7 +46,7 @@ export function createFishing(ctx) {
   return {
     /** a tap while she is fishing: reel in if something bites (returns true if it took the tap) */
     tap: () => st === 'bite' ? reel() : st === 'reel',
-    fishing: () => st !== 'off',
+    fishing: () => st !== 'off', biting: () => st === 'bite',
     info: () => ({ st, n }),
     bite: () => { if (st === 'wait') t = 99; },
     update(dt, time, active) {
