@@ -1,7 +1,7 @@
 // Every island has a toy of its own. None of it is needed for the adventure, none of it can go wrong, and nothing here
 // moves until a child does something:
-//   dorp     a watering can (filled at the pond or the fountain) and flower pots that grow, a stall where found things
-//            are traded for things to wear
+//   dorp     a watering can (filled at the pond or the fountain) and flower pots that grow, a stall where coins buy
+//            things to wear
 //   bos      somebody is hiding in the bushes
 //   wei      a kite that flies when you run, dandelions to blow
 //   strand   a bucket for sand towers (jump on them to flatten them)
@@ -39,7 +39,9 @@ export function createToys(ctx) {
   }
   function take(t) { if (carry === t) return; if (carry) putDown(true); carry = t; t.m.castShadow = false; kid.hop = .5; sfx.pop(); if (t === kite) { sfx.whoosh(); kiteP.set(kid.pos.x, .4, kid.pos.z); } }
   function putDown(quiet = false) {
-    const t = carry; if (!t) return; carry = null;
+    const t = carry; if (!t) return;
+    if (!quiet && t === bucket) { const a = sandAhead(); if (a) { build(a[0], a[1]); return; } }   // on the sand, "put it down" is: flip it over, a tower
+    carry = null;
     let x = kid.pos.x + kid.face * .55, z = kid.pos.z + .12; if (!ctx.walkable(Math.floor(x), Math.floor(z))) { x = kid.pos.x; z = kid.pos.z + .05; }
     t.x = x; t.z = z; t.m.position.set(x, 0, z); t.m.rotation.set(-.3, 0, 0); t.m.scale.set(t.scale, t.scale, 1); t.m.castShadow = true; t.tilt = 0; pop(t); if (!quiet) sfx.pop();
     if (t === kite) { line.visible = false; for (const b of tail) b.m.visible = false; }
@@ -69,16 +71,23 @@ export function createToys(ctx) {
   });
   function usePot(p) {
     const st = Q.plant(p.i), here = v3(p.x, .5, p.z);
-    if (carry === can) {
+    if (carry === can && !can.water && st < Q.PLANT_MAX) {                             // no water in it: off to the fountain first, then back to this pot
+      sfx.pop(); bubble(kid, '', ART.drop()); fetching = p;
+      ctx.approach(Math.floor(F.cx), Math.floor(F.cz) + 1, () => {}); return;
+    }
+    if (carry === can && st < Q.PLANT_MAX) {
       if (!pour(p.x, p.z)) return;
       setTimeout(() => {
         if (Q.water(p.i)) { setArt(p.m, ART.pot(Q.plant(p.i), p.i)); pop(p, .45); sfx.chime(Q.plant(p.i) * 2); if (Q.plant(p.i) >= Q.PLANT_MAX) { sfx.sparkle(); burst(here, 8, true); } }
         else { pop(p, .3); sfx.chime(7); burst(here, 4, true); }                    // already in bloom: it simply likes the water
       }, 450);
-    } else if (st >= Q.PLANT_MAX) {                                                   // picked: into the bag, for a flower crown at the stall
-      kid.face = p.x >= kid.pos.x ? 1 : -1; Q.pluck(p.i); setArt(p.m, ART.pot(0, p.i)); pop(p, .4); sfx.chime(4); kid.hop = .6;
-      bit(ART.itemArt('bloem', [1, 0, 2, 4][p.i % 4]), p.x, .9, p.z + .1, { vy: 2.4, g: 2.5, life: .9 });
-    } else { sfx.pop(); bubble(kid, '', ART.gieter(true)); if (carry !== can) pop(can, .5); }   // it is thirsty: the can wiggles
+    } else if (st >= Q.PLANT_MAX) {                                                   // picked: she smells it... and sneezes, and the petals fly everywhere
+      kid.face = p.x >= kid.pos.x ? 1 : -1; Q.pluck(p.i); setArt(p.m, ART.pot(0, p.i)); pop(p, .4); sfx.chime(4);
+      const fl = ART.itemArt('bloem', [1, 0, 2, 4][p.i % 4]), f = bit(fl, kid.pos.x + kid.face * .3, .75, kid.pos.z + .15, { g: 0, life: 1.4 });
+      setTimeout(() => { sfx.boing(); kid.hop = 1; kid.hopH = .5; f.life = 0; bubble(kid, '!');
+        for (let i = 0; i < 12; i++) bit(PX.gridSprite(2, 2, () => ['#FF8FB1', '#FFD43B', '#FFFFFF'][i % 3], { outline: false, key: 'petal' + (i % 3) }), kid.pos.x + kid.face * .3, .8, kid.pos.z + .15, { vx: kid.face * rnd(.5, 3), vy: rnd(.5, 2.5), g: .8, sway: rnd(2, 4), life: rnd(1.2, 2) });
+      }, 900);
+    } else { sfx.pop(); bubble(kid, '', ART.gieter(true)); pop(can, .5); }              // it is thirsty: the can wiggles (and glows)
   }
   const syncPots = () => { for (const p of pots) setArt(p.m, ART.pot(Q.plant(p.i), p.i)); };
 
@@ -104,6 +113,13 @@ export function createToys(ctx) {
   function tapTower(t) {
     if (carry === bucket) { ctx.approach(t.x, t.z, () => build(t.x, t.z)); return; }
     pop(t, .25); sfx.pop(); if (t.l < Q.SAND_MAX) { bubble(kid, '', ART.emmer()); pop(bucket, .5); }
+  }
+  /** with the bucket: the sand tile in front of her where a (taller) tower can go, or null */
+  function sandAhead() {
+    if (carry !== bucket) return null;
+    for (const t of towers.values()) if (t.l < Q.SAND_MAX && near(t.x + .5, t.z + .5, 1.2)) return [t.x, t.z];
+    const x = Math.floor(kid.pos.x + kid.face * 1.05), z = Math.floor(kid.pos.z), t = towers.get(x + ',' + z);
+    return sandOK(x, z) && (!t || t.l < Q.SAND_MAX) ? [x, z] : null;
   }
   /** a tap on the ground: with the bucket in her hands, a tap on the sand builds a tower there */
   function tapGround(x, z) {
@@ -207,6 +223,28 @@ export function createToys(ctx) {
   const balloon = { m: sprite(PX.balloon('#FF6B6B'), 0, 0, { lean: .15, shadow: false, scale: 1.1 }), p: v3(kid.pos.x, 1.6, kid.pos.z), up: 0 };
   tappable(balloon.m, () => { balloon.up = 1; sfx.boing(); });
 
+  /* ================= what to do next shows itself ================= */
+  // While she is near the watering can or the bucket, the next step of that toy glows softly: the can; with an empty
+  // can, the fountain; with water in it, a thirsty pot; the bucket; with the bucket, a see-through tower on the sand
+  // in front of her. Nothing has to be worked out, and only the toy she is next to shows anything.
+  let fetching = null;
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,250,215,1)'); r.addColorStop(.35, 'rgba(255,226,122,.5)'); r.addColorStop(1, 'rgba(255,200,90,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const beckon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true })); beckon.visible = false; beckon.renderOrder = 5; scene.add(beckon);
+  /** the tower that would stand there, as a dotted white outline: clearly "not there yet" */
+  const ghostArt = l => PX.gridSprite(ART.zandtoren(l).width, ART.zandtoren(l).height, (() => { const c = ART.zandtoren(l), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, a = (x, y) => x >= 0 && y >= 0 && x < c.width && y < c.height && d[(y * c.width + x) * 4 + 3] > 0;
+    return (x, y) => !a(x, y) ? null : (!a(x - 1, y) || !a(x + 1, y) || !a(x, y - 1) || !a(x, y + 1)) ? '#FFFFFF' : (x + y) % 2 === 0 ? '#FFF1CF' : null; })(), { outline: false, key: 'ghost' + l });
+  const ghost = makeSprite(ghostArt(1), { lean: .3, shadow: false, scale: 1.15 }); ghost.visible = false; scene.add(ghost);
+  function nextStep() {
+    if (carry === can) {
+      if (!can.water) return near(P.cx, P.cz, 4) ? null : [F.cx, 1.1, F.cz + .3, 2.4];
+      const thirsty = pots.filter(p => Q.plant(p.i) < Q.PLANT_MAX).sort((a, b) => Math.hypot(a.x - kid.pos.x, a.z - kid.pos.z) - Math.hypot(b.x - kid.pos.x, b.z - kid.pos.z))[0];
+      return thirsty ? [thirsty.x, .55, thirsty.z - .05, 1.3] : null;
+    }
+    if (!carry && near(can.x, can.z, 6) && pots.some(p => Q.plant(p.i) < Q.PLANT_MAX)) return [can.x, .4, can.z - .05, 1.3];
+    if (!carry && near(bucket.x, bucket.z, 6)) return [bucket.x, .4, bucket.z - .05, 1.3];
+    return null;
+  }
+
   const off = Q.on(type => { if (type === 'garden' || type === 'day') syncPots(); if (type === 'sand' || type === 'day' || type === 'stage') syncSand(); });
   syncSand();
 
@@ -217,7 +255,7 @@ export function createToys(ctx) {
     carrying: () => carry && carry.id,
     /** dev / tests */
     take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
-    info: () => ({ carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),
+    info: () => ({ ahead: sandAhead(), carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),
     /** with a full can in her hands, a tap on an animal waters it. Returns true if it handled the tap. */
     tapAnimal(c) {
       if (carry !== can) return false; if (!near(c.pos.x, c.pos.z, 2.2)) { ctx.approach(Math.floor(c.pos.x), Math.floor(c.pos.z), () => this.tapAnimal(c)); return true; }
@@ -239,6 +277,10 @@ export function createToys(ctx) {
         t.m.position.set(kid.pos.x + kid.face * .4, kid.mesh.position.y + .26, kid.pos.z + (kid.zBias || 0) + .03); t.m.scale.set(-kid.face * t.scale * .85, t.scale * .85, 1); t.m.rotation.z = kid.face * -Math.min(1, t.tilt * 3) * .9;
         if (active && t === can && can.water < 3 && (Math.hypot((kid.pos.x - P.cx) / (P.rx + 1.1), (kid.pos.z - P.cz) / (P.rz + 1.1)) < 1 || Math.hypot(kid.pos.x - F.cx, kid.pos.z - F.cz - .6) < 2.3)) fill();
       }
+      if (fetching && carry === can && can.water) { const p = fetching; fetching = null; setTimeout(() => near(p.x, p.z + .5, 1.4) ? usePot(p) : ctx.approach(Math.floor(p.x), Math.floor(p.z), () => usePot(p)), 350); }
+      if (carry !== can) fetching = null;
+      { const n = active ? nextStep() : null; beckon.visible = !!n; if (n) { const k = Math.sin(time * 3); beckon.position.set(n[0], n[1], n[2]); beckon.scale.setScalar(n[3] * (1 + .08 * k)); beckon.material.opacity = .5 + .22 * k; } }
+      { const a = active && !kid.moving ? sandAhead() : null; ghost.visible = !!a; if (a) { const t = towers.get(a[0] + ',' + a[1]), l = t ? t.l + 1 : 1; if (ghost.userData.l !== l) { setArt(ghost, ghostArt(l)); ghost.userData.l = l; } ghost.position.set(a[0] + .5, 0, a[1] + .62 + (t ? .02 : 0)); ghost.position.y = Math.abs(Math.sin(time * 3)) * .05; } }
       /* the kite: up when she runs, down when she stands */
       if (carry === kite) {
         const fast = ctx.mount() ? 1.35 : 1, h = kid.moving ? 2.5 * fast : 1.25, k = Math.min(1, dt * 2.2);

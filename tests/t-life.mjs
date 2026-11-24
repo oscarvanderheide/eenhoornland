@@ -10,24 +10,7 @@ export default async function (t) {
   const idx = async name => t.ev(`__w.animals.findIndex(a => a.name === '${name}')`);
   const A = i => `__w.animals[${i}]`;
 
-  // a rabbit wants a carrot: with one in the bag a tap gives it, and it walks along behind her
-  const r = await idx('Konijn'); await t.ev(`__w.Q.quest.bag.wortel = 2; (a => { a.pos.set(28.5, 0, 46.5); a.path = []; __w.placeAt(30.5, 46.5); })(${A(r)}); 0`); await t.sleep(1500);
-  const s = await J(`__w.screen(${A(r)}.pos.x, .35, ${A(r)}.pos.z)`); await t.click(s[0], s[1]);
-  ok(await until(`${A(r)}.friend`, 12000), 'a tap with a carrot in the bag feeds the rabbit and it becomes her friend');
-  ok(await t.ev('__w.Q.have("wortel")') === 1, 'the carrot is gone from the bag'); ok(!(await t.ev('!!__w.life.carrying()')), 'feeding does not lift it'); await t.sleep(300); await t.shot('tmp-shots/l-1-fed.png');
-  await t.ev('__w.walkTo(36, 45)'); await t.sleep(6000);
-  ok(await t.ev(`Math.hypot(${A(r)}.pos.x - __w.kid.pos.x, ${A(r)}.pos.z - __w.kid.pos.z) < 4.5`), 'the rabbit follows her'); await t.shot('tmp-shots/l-2-follows.png');
-  await t.click(...(await J(`__w.screen(${A(r)}.pos.x, .35, ${A(r)}.pos.z)`)));
-  ok(await until(`__w.life.carrying() === ${A(r)}`, 12000), 'a second tap lifts the friend as usual'); await t.ev('__w.life.setDown()');
-
-  // the hedgehog gets an apple on its spikes, the crab a shell for a hat
-  for (const [name, food] of [['Egel', 'appel'], ['Krab', 'schelp'], ['Draakje', 'diamant']]) {
-    const i = await idx(name); await t.ev(`__w.Q.quest.bag.${food} = 1; (a => { __w.placeAt(a.pos.x + 1.2, a.pos.z + .4); a.path = []; a.wait = 9; })(${A(i)}); 0`); await t.sleep(1200);
-    await t.ev(`__w.life.tapAnimal(${A(i)})`); ok(await until(`${A(i)}.friend`, 8000), name + ' takes ' + food); await t.sleep(700); await t.shot(`tmp-shots/l-3-${name}.png`);
-  }
-  ok(await t.ev('__w.life.friends().length') === 2, 'at most two friends: the first goes home');
-  ok(await t.ev(`JSON.stringify(__w.life.friends().map(c => c.name).sort()) === JSON.stringify(['Draakje', 'Krab'].sort())`), 'the two newest stay');
-  await t.ev('__w.jump()'); await t.sleep(500); await t.shot('tmp-shots/l-4-follow-the-leader.png');
+  // (feeding animals from a bag is gone: nothing is collected besides coins)
 
   // thrown three times: a nap
   const d = await idx('Hondje'); await t.ev(`(a => { __w.placeAt(31.5, 46.5); a.pos.set(32.5, 0, 46.5); a.path = []; })(${A(d)}); 0`); await t.sleep(800);

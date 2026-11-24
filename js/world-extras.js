@@ -138,9 +138,9 @@ export function createExtras(ctx) {
   function pickUp(it) {
     scene.remove(it.mesh); items.splice(items.indexOf(it), 1);
     const m = itemMesh(ART.itemArt(it.type, it.idx)); m.position.set(it.x, .3, it.z); scene.add(m); flying.push({ m, t: 0 });
-    const res = Q.collect(it.type, it.idx);
+    Q.collect(it.type, it.idx);
     if (it.type === 'munt') { sfx.chime(5); return; }
-    sfx.chime(res.total); if (uni.g.visible && ctx.mount() !== 'uni') uni.hop = .6;       // nothing depends on it: picking things up is simply nice
+    sfx.munch(); kid.hop = .5; burst(kid.pos, 5, true); if (uni.g.visible && ctx.mount() !== 'uni') uni.hop = .6;   // an apple from a tree: crunch, eaten on the spot
   }
 
   /* ---------------- the hidden egg ---------------- */

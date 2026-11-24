@@ -29,9 +29,8 @@ function syncNight(instant) { const n = Q.bedtime(); if (state.night !== n) { st
 let wishInActivity = false;
 Q.on(type => { if (type === 'bedtime' || type === 'day' || type === 'stage') syncNight(); if (type === 'wish' && ui.activityOpen()) wishInActivity = true; });
 
-$('#book-ico').appendChild(PX.domSprite(PX.star(), 3));
 const setNightIcon = () => { const i = $('#night-ico'); i.innerHTML = ''; i.appendChild(PX.domSprite(state.night ? PX.moon() : PX.sparkle('#FFD43B'), 3)); };
-setNightIcon(); ui.updateBookCount();
+setNightIcon();
 
 /** a new cycle brings a new island: the village stays, everything around it is laid out afresh (the girls wake up to it) */
 let makeWorld = null;
@@ -66,7 +65,6 @@ async function enter(id) {
   }
 }
 $('#act-close').onclick = () => { sfx.pop(); ui.closeActivity(); };
-$('#b-book').onclick = () => ui.openBook();
 $('#b-night').onclick = () => { state.night = !state.night; save(); setNightIcon(); world && world.setNight(state.night); setMood(state.night ? 'night' : 'day'); sfx.sparkle(); speak(state.night ? 'Welterusten! Het is nacht.' : 'Goedemorgen! Het is dag.'); };
 // whoever switches the music off wants it to stay off, also tomorrow
 $('#b-music').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setMusic(on); state.extra.music = on; save(); };

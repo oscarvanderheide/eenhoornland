@@ -17,26 +17,29 @@ export default async function (t) {
     await place(31.5, 37.2); await t.sleep(2500); await shot('01-pots');
     await t.ev(`__w.toys.usePot(0)`); await t.sleep(600); let s = await toys(); ok(s.pots[0] === 0, 'without the can a pot does not grow');
     await t.ev(`__w.toys.take('gieter')`); await t.sleep(400); s = await toys(); ok(s.carry === 'gieter' && s.water === 0, 'she carries the can, it is empty');
-    await t.ev(`__w.toys.usePot(0)`); await t.sleep(900); s = await toys(); ok(s.pots[0] === 0, 'an empty can does not water');
+    await t.sleep(1200); await shot('01b-fountain-glows');
+    await t.ev(`__w.toys.usePot(0)`); ok(await until(`__w.toys.info().pots[0] === 1`, 40000), 'an empty can: she fetches water at the fountain, comes back and waters');
     await place(M.POND.cx + 2.6, M.POND.cz); await t.sleep(1500); s = await toys(); ok(s.water === 3, 'at the pond the can fills up by itself'); await shot('02-can-full');
     await place(31.5, 36.6); await t.sleep(500);
+    await t.sleep(800); await shot('02b-thirsty-pot-glows');
     for (let k = 0; k < 3; k++) { await t.ev(`__w.toys.usePot(1)`); await t.sleep(1100); if (k === 0) await shot('03-watering'); }
     s = await toys(); ok(s.pots[1] === 3 && s.water === 0, 'three pours and the flower is in bloom (' + s.pots + ')'); await t.sleep(600); await shot('04-bloom');
     ok(await t.ev(`__w.Q.quest.garden[1]`) === 3, 'and that is saved');
-    await t.ev(`__w.kid.pos.x += 0; __w.toys.putDown()`); await t.sleep(300); const b0 = await t.ev(`__w.Q.have('bloem')`);
-    await t.ev(`__w.toys.usePot(1)`); await t.sleep(500); s = await toys(); ok(s.pots[1] === 0 && await t.ev(`__w.Q.have('bloem')`) === b0 + 1, 'picking the flower puts it in the bag');
+    await t.ev(`__w.toys.putDown()`); await t.sleep(300);
+    await t.ev(`__w.toys.usePot(1)`); await t.sleep(1000); await shot('04b-sneeze'); s = await toys(); ok(s.pots[1] === 0, 'picking the flower: a sneeze, and the pot starts again');
     // watering an animal
     await t.ev(`__w.toys.take('gieter')`); await place(M.POND.cx + 2.6, M.POND.cz); await t.sleep(1200);
     ok(await t.ev(`(()=>{const d=__w.animals.find(a=>a.water); return __w.toys.tapAnimal(d)})()`) === true, 'with the can a tap on a duck waters it'); await t.sleep(900); await shot('05-duck');
     await t.ev(`__w.toys.putDown()`);
     // the stall
     await place(M.STALL.x + .5, M.STALL.z + 3.5); await t.sleep(2500); await shot('06-stall');
-    await t.ev(`for (let k = 0; k < 4; k++) { __w.Q.collect('bloem', 900 + k); __w.Q.collect('schelp', 900 + k); } for (let k = 0; k < 6; k++) __w.Q.collect('munt', 900 + k); 0`);
+    await t.ev(`__w.Q.quest.coins = 0; for (let k = 0; k < 3; k++) __w.Q.collect('munt', 900 + k); 0`);
     await t.ev(`__w.toys.openStall()`); await t.sleep(700); ok(await t.ev(`document.querySelectorAll('.winkel .wk').length`) === await t.ev(`__w.Q.SHOP.length`), 'the stall shows every thing'); await shot('07-shop');
-    ok(await t.ev(`document.querySelector('.wk[data-id="krans"]').classList.contains('kan') && !document.querySelector('.wk[data-id="kroon"]').classList.contains('kan')`), 'what she can trade for is lit');
-    await t.ev(`document.querySelector('.wk[data-id="kroon"]').click()`); await t.sleep(300); ok(!(await t.ev(`__w.Q.owns('kroon')`)), 'no diamonds, no crown');
+    ok(await t.ev(`document.querySelector('.wk[data-id="krans"]').classList.contains('kan') && !document.querySelector('.wk[data-id="kroon"]').classList.contains('kan')`), 'what she has the coins for is lit');
+    await t.ev(`for (let k = 3; k < 12; k++) __w.Q.collect('munt', 900 + k); 0`);
     for (const id of ['krans', 'ketting', 'jurkgeel', 'ballon']) { await t.ev(`document.querySelector('.wk[data-id="${id}"]').click()`); await t.sleep(400); }
-    ok(await t.ev(`['krans','ketting','jurkgeel','ballon'].every(__w.Q.owns)`), 'four trades'); ok(await t.ev(`__w.Q.have('bloem') + ':' + __w.Q.quest.coins`) === (b0 + 1) + ':0', 'paid with flowers, shells and coins'); await shot('08-shop-bought');
+    ok(await t.ev(`['krans','ketting','jurkgeel','ballon'].every(__w.Q.owns)`), 'four things bought'); ok(await t.ev(`__w.Q.quest.coins`) === 0, 'paid with coins'); await shot('08-shop-bought');
+    await t.ev(`document.querySelector('.wk[data-id="kroon"]').click()`); await t.sleep(300); ok(!(await t.ev(`__w.Q.owns('kroon')`)), 'no coins left, no crown');
     await t.ev(`document.querySelector('#modal [data-close]').click()`); await t.sleep(900); await place(M.STALL.x + .5, M.STALL.z + 2.5); await t.sleep(1500); await shot('09-dressed');
     const w = await J(`__w.Q.wearing(__w.who())`); ok(w.head === 'krans' && w.neck === 'ketting' && w.dress === 'jurkgeel' && w.hand === 'ballon', 'she has it all on');
     const other = await t.ev(`__w.who() === 'anna' ? 'fenna' : 'anna'`); await t.ev(`__w.setWho('${other}')`); await t.sleep(700); ok(!(await J(`__w.Q.wearing('${other}')`)).head, 'her sister dresses herself'); await shot('10-sister');
@@ -67,9 +70,11 @@ export default async function (t) {
   if (run('strand')) {   // sand towers
     await place(M.BUCKET[0] + 1.5, M.BUCKET[1] + 1.5); await t.sleep(2500); await shot('21-bucket');
     ok(await t.ev(`__w.toys.tapGround(60, 72)`) === false, 'without the bucket a tap on the sand just walks');
-    await t.ev(`__w.toys.take('emmer')`); await t.sleep(300); ok(await t.ev(`__w.toys.tapGround(59, 72)`) === true, 'with the bucket it builds'); ok(await until(`__w.toys.info().towers.length === 1`, 20000), 'a sand tower stands');
+    await t.ev(`__w.toys.take('emmer')`); await t.sleep(1200); await shot('21b-ghost'); ok(await t.ev(`__w.toys.info().ahead !== null`), 'with the bucket a see-through tower shows where it goes');
+    await t.ev(`__w.toys.putDown()`); await t.sleep(400); ok(await t.ev(`__w.toys.info().towers.length === 1 && __w.toys.carrying() === 'emmer'`), 'putting it down on the sand flips it into a tower'); await t.ev(`(([x, z]) => __w.Q.stompSand(x, z))(__w.toys.info().towers[0]); 0`); await t.sleep(300);
+    ok(await t.ev(`__w.toys.tapGround(59, 72)`) === true, 'with the bucket a tap on the sand builds'); ok(await until(`__w.toys.info().towers.length === 1`, 20000), 'a sand tower stands');
     await t.ev(`__w.toys.build(59,72); __w.toys.build(59,72); __w.toys.build(61,72); __w.toys.build(56,72)`); await t.sleep(900); let s = await toys(); ok(s.towers.length === 3 && s.towers.some(x => x[2] === 3), 'towers grow three high'); await place(58.5, 73.6); await t.sleep(1500); await shot('22-towers');
-    ok(await t.ev(`__w.Q.quest.sand.length`) === 3, 'saved'); await place(59.9, 72.6); await t.sleep(300); await t.ev(`__w.toys.putDown(); __w.jump()`); await t.sleep(1200); s = await toys(); ok(s.towers.length === 2, 'jumping on a tower flattens it'); await shot('23-stomped');
+    ok(await t.ev(`__w.Q.quest.sand.length`) === 3, 'saved'); await place(59.9, 72.6); await t.sleep(300); await t.ev(`__w.toys.putDown(true); __w.jump()`); await t.sleep(1200); s = await toys(); ok(s.towers.length === 2, 'jumping on a tower flattens it'); await shot('23-stomped');
   }
   if (run('boot')) {   // sailing
     await place(91.5, 70.5); await t.sleep(600); await place(95.5, 70.5); ok(await until(`__w.play.info().sailing`, 10000), 'stepping on the pier: into the boat'); ok(await until(`!__w.play.info().moving`, 30000), 'it pushes off and waits'); let s = await play(); ok(Math.hypot(s.boat[0] - 96.6, s.boat[1] - 71) > 2, 'a little way out (' + s.boat + ')'); await t.sleep(800); await shot('24-pushed-off');

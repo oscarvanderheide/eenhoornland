@@ -43,7 +43,6 @@ export default async function (t) {
     await meet('Egel'); await tap('Egel'); await t.sleep(400); ok(await doing('Egel', 'bal'), 'the hedgehog rolls up'); await shot('9-hedgehog-ball');
     const x0 = await t.ev(`${A('Egel')}.pos.x`); await tap('Egel'); await t.sleep(1300); ok(Math.abs(await t.ev(`${A('Egel')}.pos.x`) - x0) > .5, 'a tap rolls the ball'); await shot('10-rolled');
     ok(await until(`!${A('Egel')}.way`, 12000), 'it uncurls after a while');
-    await t.ev('__w.Q.quest.bag.appel = 0; 0');
     ok((await J('__w.ways.info()')).owl === 'asleep', 'the owl sleeps in the daytime'); await meet('Uil'); await shot('11-owl-asleep'); await tap('Uil'); await t.sleep(600); ok(await doing('Uil', 'uil'), 'a tap: it opens its eyes'); await shot('12-owl-awake'); ok(await until(`!${A('Uil')}.way`, 6000) && (await J('__w.ways.info()')).owl === 'asleep', 'and dozes off again');
   }
   if (run('wei')) {
@@ -54,8 +53,8 @@ export default async function (t) {
   if (run('strand')) {
     await meet('Krab'); await tap('Krab'); await t.sleep(900); ok(await doing('Krab', 'krab'), 'the crab dances'); await shot('15-crab-dance'); await t.sleep(1500); await shot('16-crab-sand');
     await until(`!!${A('Krab')}.own`, 8000); await tap('Krab'); ok(await until(`!${A('Krab')}.way`, 3000), 'a tap gets it out of the sand');
-    await meet('Meeuw'); const v0 = await t.ev(`__w.Q.have('vis')`); await tap('Meeuw'); ok(await doing('Meeuw', 'vis'), 'the gull flies off to fish'); await t.sleep(1300); await shot('17-gull-dives');
-    ok(await until(`!${A('Meeuw')}.way`, 9000), 'and comes back'); const v1 = await t.ev(`__w.Q.have('vis')`); ok(v1 === v0 + 1, 'with a fish for her bag (' + v0 + ' → ' + v1 + ')'); await shot('18-gull-back');
+    await meet('Meeuw'); await tap('Meeuw'); ok(await doing('Meeuw', 'vis'), 'the gull flies off to fish'); await t.sleep(1300); await shot('17-gull-dives');
+    ok(await until(`!${A('Meeuw')}.way`, 9000), 'and comes back'); ok(await t.ev(`__w.Q.gotToday('meeuwvis')`), 'with a fish for her'); await shot('18-gull-back');
   }
   if (run('eiland')) {
     await meet('Papegaai'); await tap('Papegaai'); ok(await until(`(${A('Papegaai')}.way || {}).on`, 5000), 'the parrot lands on her shoulder'); await t.ev(`__w.walkTo(Math.floor(__w.kid.pos.x) - 2, Math.floor(__w.kid.pos.z))`); await t.sleep(2500); await shot('19-parrot');
@@ -64,7 +63,7 @@ export default async function (t) {
   }
   if (run('kasteel')) {
     await meet('Pauw'); await shot('20-peacock-tail-down'); await tap('Pauw'); await t.sleep(700); ok(await doing('Pauw', 'staart'), 'the peacock fans out its tail'); await shot('21-peacock-fan'); ok(await until(`!${A('Pauw')}.way`, 8000), 'and folds it again');
-    await meet('Draakje'); await t.ev(`__w.Q.quest.bag.diamant = 0`); await tap('Draakje'); await t.sleep(900); ok(await doing('Draakje', 'rook'), 'the dragon blows a smoke ring'); await shot('22-smoke-ring');
+    await meet('Draakje'); await tap('Draakje'); await t.sleep(900); ok(await doing('Draakje', 'rook'), 'the dragon blows a smoke ring'); await shot('22-smoke-ring');
   }
   ok(await t.ev(`!__w.animals.some(a => a.g.visible === false && !a.way && !a.cart && a.name !== 'Kikker')`), 'every animal is visible again ' + await t.ev(`__w.animals.filter(a => a.g.visible === false && !a.way && !a.cart && a.name !== 'Kikker').map(a => a.name).join()`));
   if (run('zee')) {   // from the boat
@@ -80,7 +79,7 @@ export default async function (t) {
     await t.ev(`__w.sea.tapLamp()`); await t.sleep(900); await shot('26-lighthouse'); await t.sleep(900); await shot('26b-lighthouse');
     await t.ev(`__w.play.steer(121, 70)`); await until(`!__w.play.info().moving`, 60000); await t.ev(`__w.sea.tapTurtle()`); ok((await J('__w.sea.info()')).turtleWith, 'the turtle comes to swim along');
     await t.ev(`__w.play.steer(112, 67)`); await t.sleep(5000); ok(await t.ev(`(() => { const b = __w.play.info().boat; return Math.hypot(b[0] - __w.sea.info().turtle[0], b[1] - __w.sea.info().turtle[1]) < 4; })()`), 'and stays by the boat'); await shot('27-turtle');
-    const v0 = await t.ev(`__w.Q.have('vis')`); await t.ev(`__w.sea.tapBoat()`); await t.sleep(2500); ok(await t.ev(`__w.Q.have('vis')`) >= v0, 'the bear throws a fish');
+    await t.ev(`__w.sea.tapBoat()`); await t.sleep(300); ok((await J('__w.sea.info()')).tossed > 0, 'the bear throws a fish'); await t.sleep(2200);
   }
   ok(!t.logs.some(l => /EXC|Error/.test(l)), 'no page errors ' + t.logs.filter(l => /EXC|Error/.test(l)).join('|'));
   console.log(fail ? 'FAILED ' + fail : 'WAYS OK');

@@ -1,5 +1,5 @@
 // Shared UI: activity overlay, pixel canvas stage, tool buttons, reward popup, sticker book.
-import { state, save, pickSticker, STICKERS, stickerCount } from './state.js';
+import { state, save } from './state.js';
 import { sfx, speak, stopSpeech } from './audio.js';
 import * as PX from './pixel.js';
 import * as ART from './art.js';
@@ -69,40 +69,19 @@ export function modal(contentEl, { onClose, dismissable = true } = {}) {
 }
 
 /* ---------- reward ---------- */
-/** gives the child a sticker with a celebratory popup; returns a promise that resolves on dismiss */
+/** a game in a house was played well: a shiny coin pops up (coins buy things to wear at the stall). Nothing is
+ *  collected or counted besides coins. Returns a promise that resolves on dismiss. */
 export function reward(msg) {
-  const { sticker, isNew } = pickSticker();
-  sfx.tada();
+  Q.earn(1); sfx.tada();
   const el = document.createElement('div'); el.className = 'reward';
-  el.innerHTML = `<div class="rays"></div><h3>${isNew ? 'Nieuwe sticker!' : 'Nog een sticker!'}</h3>`;
-  const art = PX.domSprite(PX.stickerSprite(sticker.id, state.uni), 1); art.classList.add('big'); el.appendChild(art);
-  const nm = document.createElement('p'); nm.className = 'nm'; nm.textContent = sticker.name; el.appendChild(nm);
-  const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Jippie!'; b.dataset.close = '1'; el.appendChild(b);
+  el.innerHTML = `<div class="rays"></div>`;
+  const art = PX.domSprite(ART.coin(), 1); art.classList.add('big'); el.appendChild(art);
+  const b = document.createElement('button'); b.className = 'btn'; b.textContent = '♥'; b.dataset.close = '1'; el.appendChild(b);
   sizeBig(art, 130);
-  speak((msg ? msg + ' ' : '') + (isNew ? 'Je krijgt een nieuwe sticker: ' : 'Je krijgt een sticker: ') + sticker.name + '!');
-  updateBookCount();
+  speak((msg ? msg + ' ' : '') + 'Je krijgt een muntje!');
   return new Promise(res => modal(el, { onClose: res }));
 }
 function sizeBig(cv, px) { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); cv.style.width = cv.width * s + 'px'; cv.style.height = cv.height * s + 'px'; }
-
-/* ---------- sticker book ---------- */
-export function updateBookCount() { const c = $('#book-count'); if (c) c.textContent = stickerCount() + '/' + STICKERS.length; }
-export function openBook() {
-  sfx.pop();
-  const el = document.createElement('div'); el.className = 'book';
-  el.innerHTML = `<div class="book-head"><h3>Stickerboek</h3><span>${stickerCount()} van de ${STICKERS.length}</span><button class="x" data-close aria-label="Sluiten">✕</button></div><div class="book-grid"></div>`;
-  const grid = el.querySelector('.book-grid');
-  for (const s of STICKERS) {
-    const has = state.stickers[s.id];
-    const cell = document.createElement('button'); cell.className = 'slot' + (has ? ' has' : '');
-    const art = PX.domSprite(PX.stickerSprite(s.id, state.uni), 1); sizeBig(art, 48); if (!has) art.classList.add('ghost');
-    cell.appendChild(art); const l = document.createElement('span'); l.textContent = has ? s.name : '?'; cell.appendChild(l);
-    cell.onclick = () => { if (has) { sfx.sparkle(); speak(s.name + '!'); cell.classList.remove('wig'); void cell.offsetWidth; cell.classList.add('wig'); } else { sfx.wrong(); speak('Deze sticker heb je nog niet. Speel in de huisjes om stickers te verdienen!'); } };
-    grid.appendChild(cell);
-  }
-  modal(el);
-  speak(stickerCount() ? `Je hebt al ${stickerCount()} stickers!` : 'Je stickerboek is nog leeg. Speel in de huisjes om stickers te verdienen!');
-}
 
 /* ---------- activity overlay ---------- */
 let current = null;

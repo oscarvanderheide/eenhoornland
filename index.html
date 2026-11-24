@@ -67,6 +67,7 @@ body{background:#1C2150;color:var(--ink);font-family:var(--f-pixel);overflow:hid
 .blabel::after{content:"";position:absolute;left:50%;bottom:-9px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--ink)}
 @keyframes bob{50%{margin-top:-5px}}
 .bubble{position:absolute;transform:translate(-50%,-100%);background:#fff;border:2px solid var(--ink);border-radius:7px;padding:3px;line-height:0;white-space:nowrap;animation:pop .3s cubic-bezier(.3,1.6,.5,1)}
+.bubble:not(:has(canvas)){line-height:1;padding:2px 7px;font-weight:800;font-size:.95rem}
 @keyframes pop{from{transform:translate(-50%,-100%) scale(.4);opacity:0}}
 
 /* start screen */
@@ -136,7 +137,6 @@ body{background:#1C2150;color:var(--ink);font-family:var(--f-pixel);overflow:hid
   <div id="labels"></div>
   <div class="hud tl"><div class="logo">Eenhoornland</div></div>
   <div class="hud tr">
-    <button class="hbtn" id="b-book" aria-label="Stickerboek"><span id="book-ico"></span><span id="book-count">0/24</span></button>
     <button class="hbtn" id="b-night" aria-label="Dag of nacht"><span id="night-ico"></span></button>
     <button class="hbtn" id="b-music" aria-label="Muziek aan of uit" aria-pressed="true">♪</button>
     <button class="hbtn" id="b-voice" aria-label="Voorlezen aan of uit" aria-pressed="true">

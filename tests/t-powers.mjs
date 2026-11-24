@@ -31,12 +31,12 @@ export default async function (t) {
   const shore = await J(`(() => { const M = __w.M, k = __w.kid.pos; let best = null, bd = 1e9; for (let z = 3; z < M.H - 3; z++) for (let x = 3; x < M.W - 3; x++) { if (!__w.walkable(x, z) || !__w.walkable(x + 1, z)) continue; let wet = false; for (let d = -2; d <= 2 && !wet; d++) for (let e = -2; e <= 2; e++) if (M.ground[M.I(x + d, z + e)] === __w.MAP.SE && !M.deck[M.I(x + d, z + e)]) wet = true; const dd = Math.hypot(x - k.x, z - k.z); if (wet && dd < bd) { bd = dd; best = [x, z]; } } return best; })()`);
   await t.ev(`(() => { const a = __w.animals[${i}]; __w.placeAt(${shore[0]} + .5, ${shore[1]} + .5); a.pos.set(${shore[0]} + 1.5, 0, ${shore[1]} + .5); })(); 0`); await t.sleep(800);
   await t.ev(`__w.life.tapAnimal(__w.animals[${i}])`); ok(await until('!!window.__zee', 30000), 'near the sea: down she dives'); await t.sleep(1500); await t.shot('tmp-shots/u-6-zee.png');
-  const coins0 = await t.ev('__w.Q.quest.coins'), dia0 = await t.ev('__w.Q.have("diamant")');
+  const coins0 = await t.ev('__w.Q.quest.coins');
   await t.ev(`__zee.tap(__zee.octo.x, __zee.octo.y - 6)`); await t.ev(`__zee.tap(__zee.puffer.x, __zee.puffer.y)`); await t.ev(`__zee.tap(__zee.chest.x, __zee.chest.y - 4)`); await t.ev(`__zee.tap(__zee.clam.x, __zee.clam.y - 2)`); await t.sleep(700);
   ok(await t.ev('__zee.octo.hide > 0 && __zee.puffer.puff > 0'), 'the octopus hides in its ink, the pufferfish puffs up'); await t.shot('tmp-shots/u-7-zee-tapped.png');
   await t.ev(`__zee.tap(__zee.clam.x, __zee.clam.y - 2)`); await t.sleep(300);
-  ok(await t.ev('__w.Q.quest.coins') === coins0 + 1 && await t.ev('__w.Q.have("diamant")') === dia0 + 1, 'a coin from the chest and a pearl from the clam');
-  await t.ev(`__zee.chest.open = 0; __zee.tap(__zee.chest.x, __zee.chest.y - 4)`); await t.sleep(200); ok(await t.ev('__w.Q.quest.coins') === coins0 + 1, 'but only once a day');
+  ok(await t.ev('__w.Q.quest.coins') === coins0 + 2, 'a coin from the chest and one from the clam');
+  await t.ev(`__zee.chest.open = 0; __zee.tap(__zee.chest.x, __zee.chest.y - 4)`); await t.sleep(200); ok(await t.ev('__w.Q.quest.coins') === coins0 + 2, 'but only once a day');
   await t.ev(`__zee.tap(120, 4)`); ok(await until('!window.__zee', 10000), 'a tap on the surface: back up'); await t.sleep(1000);
   // the star unicorn: up into the clouds
   i = await come('ster'); await until(`__w.animals[${i}].friend`, 15000);

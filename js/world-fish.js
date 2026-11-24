@@ -1,6 +1,6 @@
 // Fishing at the end of the old pier on the beach (MAP.FISH). Walk to the end of the pier and she takes the rod and
 // casts. After a little while the float bobs and splashes: a tap (anywhere, or the jump / pick-up key) and she reels in.
-// What comes up is a surprise: mostly a fish (into the bag: the cat in the village loves fish), sometimes an old boot
+// What comes up is a surprise: mostly a fish (she shows it, it wriggles and flips back into the sea), sometimes an old boot
 // ("bah!"), seaweed that lands on her head, a rubber duck, a shell, or once a day a bottle with a coin in it.
 // Nothing can go wrong: the float waits for her as long as it takes. Walk off the pier and the rod goes back.
 import * as ART from './art.js';
@@ -34,8 +34,8 @@ export function createFishing(ctx) {
   }
   function land(c) {
     const p = kid.pos.clone(); p.y = .8;
-    if (c.what === 'vis') { Q.collect('vis', 5000 + n); sfx.chime(3); bubble(kid, '!', ART.fish(0)); burst(p, 6); }
-    else if (c.what === 'schelp') { Q.collect('schelp', 5000 + n); sfx.chime(4); bubble(kid, '!', ART.shell(0)); }
+    if (c.what === 'vis') { sfx.chime(3); burst(p, 6); const f = ART.fish(n); setTimeout(() => { sfx.boing(); ctx.life.bit(f, kid.pos.x - .3, 1, kid.pos.z, { vx: -3, vy: 3.5, g: 9, life: 1.1, spin: 6 }); setTimeout(() => ctx.life.splash(kid.pos.x - 2.2, kid.pos.z), 700); }, 500); }   // a moment to look at it, then it wriggles free and flips back into the sea
+    else if (c.what === 'schelp') { sfx.chime(4); bubble(kid, '!', ART.shell(0)); }
     else if (c.what === 'fles') { Q.giftOnce('fles', 'munt'); sfx.tada(); bubble(kid, '!', ART.coin()); burst(p, 10, true); }
     else if (c.what === 'laars') { sfx.boing(); bubble(kid, 'Bah!', ART.laars()); ctx.life.bit(ART.laars(), kid.pos.x - .3, 1, kid.pos.z, { vx: -3.5, vy: 3, g: 9, life: 1.2 }); setTimeout(() => ctx.life.splash(kid.pos.x - 3.8, kid.pos.z + .6), 1000); }
     else if (c.what === 'zeewier') { sfx.splash(); bubble(kid, 'Hihi!'); hat = { m: makeSprite(ART.zeewier(), { lean: .2, shadow: false, scale: 1.3 }), t: 3.5 }; scene.add(hat.m); }

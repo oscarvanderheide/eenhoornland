@@ -122,12 +122,10 @@ export function createLife(ctx) {
     if (c.fly || c.cart || c.swim) return; if (carried === c) return void throwIt();
     if (c.uniKind) return tapHerd(c);                                                                  // an old unicorn from the meadow: she comes along
     const ways = ctx.ways; if (c.way && ways && ways.tap(c)) return;                                   // busy with its own thing (world-ways.js)
-    // with what it likes in her bag she gives it that first (once a day); otherwise it shows its own way of saying
-    // hello, and a second tap lifts it, as always
-    const food = Q.FAVOURITE[c.name], give = food && !c.friend && c.fedDay !== Q.quest.day && Q.have(food) > 0;
-    if (!give && ways && ways.far(c) && dist(c) < 9 && ways.tap(c)) return;                             // the deer, the gull and the parrot come to her
+    // it shows its own way of saying hello, and a second tap lifts it
+    if (ways && ways.far(c) && dist(c) < 9 && ways.tap(c)) return;                                     // the deer, the gull and the parrot come to her
     c.path = []; c.wait = 8; c.hop = 1; c.face = kid.pos.x >= c.pos.x ? 1 : -1;                       // it waits for her
-    const act = give ? () => feed(c, food) : () => { if (!(ways && ways.tap(c))) lift(c); };
+    const act = () => { if (!(ways && ways.tap(c))) lift(c); };
     if (dist(c) < 1.8) return act();
     const then = () => { if (dist(c) < 3.6) act(); };
     if (ctx.approach(Math.floor(c.pos.x), Math.floor(c.pos.z), then, true)) return;
@@ -179,31 +177,9 @@ export function createLife(ctx) {
   }
   function wake(c) { c.nap = 0; c.mesh.rotation.z = 0; c.hop = 1; c.wait = 1; (sfx[c.sound] || sfx.pop)(); }
 
-  /* ---------------- friends: given what it likes, an animal walks along behind her for the rest of the day ---------------- */
+  /* ---------------- friends: an old unicorn from the meadow walks along behind her for the rest of the day ---------------- */
   // the trail of her own footsteps, newest first: friends walk in it, one behind the other, behind the unicorn
-  const friends = [], steps = [], gifts = [];
-  function feed(c, food) {
-    if (!Q.giveFood(food)) return lift(c);
-    c.fedDay = Q.quest.day; c.wait = 99; c.path = []; kid.hop = .5; kid.face = c.pos.x >= kid.pos.x ? 1 : -1;
-    const m = makeSprite(ART.itemIcon(food), { lean: .3, shadow: false, scale: .8 }); m.position.set(kid.pos.x, .9, kid.pos.z + .1); scene.add(m);
-    gifts.push({ m, c, t: 0, x: kid.pos.x, z: kid.pos.z, food }); sfx.whoosh();
-  }
-  /** something to wear for the rest of the day, drawn on top of its own sprite (the hedgehog carries the apple on its spikes) */
-  function wearOn(c, art, fx, fy) {
-    const base = c.frames.idle, it = ART.hd(art), ix = Math.round(base.width * fx - it.width / 2), iy = Math.round(base.height * fy - it.height), up = Math.max(0, -iy);
-    const cv = document.createElement('canvas'); cv.width = base.width; cv.height = base.height + up; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
-    x.drawImage(base, 0, up); x.drawImage(it, ix, iy + up); cv.isHD = true;
-    for (const k in c.texs) c.texs[k].dispose(); c.texs = {}; c.frames = { idle: cv, w1: cv, w2: cv };
-    for (const k of ['idle', 'w1', 'w2']) { c.texs[k] = ctx.tex(cv); if (c.flippable) c.texs[k + 'F'] = ctx.tex(PX.flipX(cv)); }
-    c.mesh.geometry = ctx.spriteGeom(cv.width / 2, cv.height / 2); if (c.ghost) c.ghost.geometry = c.mesh.geometry; c.mesh.material.map = null; c.setFrame('idle');
-  }
-  const DRESS = { Egel: [() => ART.appeltje(), .5, .42], Krab: [() => ART.shell(1), .5, .3] };
-  function befriend(c, food) {
-    sfx.munch(); c.hop = 1; burst(c.pos, 8, true); bubble(c, '', PX.heart());
-    if (DRESS[c.name] && !c.dressed) { c.dressed = true; const [a, fx, fy] = DRESS[c.name]; wearOn(c, a(), fx, fy); }
-    if (c.name === 'Draakje') setTimeout(() => puff(c), 600);
-    if (c.friend) return; c.friend = true; c.wait = 0; c.joined = now(); friends.push(c); makeRoom();
-  }
+  const friends = [], steps = [];
   // her own unicorn always comes along, so two friends at most (an old unicorn counts as one): more is too busy to see her
   const MAX_FRIENDS = 2;
   /** a new friend joined: the one who has been with her longest goes home */
@@ -319,7 +295,7 @@ export function createLife(ctx) {
       for (let i = 0; i < 4; i++) bit(ART.dizzy(), kid.pos.x + Math.cos(i * 1.6) * .35, 1.25, kid.pos.z + .1, { vx: -Math.sin(i * 1.6) * .9, vy: .5, g: .5, life: 1.1 });
     }, 420);
   }
-  let kidTaps = [], twirl = 0, askAll = 0;
+  let kidTaps = [], twirl = 0;
   /** tap her three times quickly and she twirls round */
   function tapKid() { kidTaps = kidTaps.filter(t => now() - t < 1800); kidTaps.push(now()); if (kidTaps.length < 3) return false; kidTaps = []; twirl = .9; sfx.sparkle(); burst(kid.pos, 10, true); return true; }
   /** the little unicorn lets out a big rainbow burp */
@@ -351,17 +327,13 @@ export function createLife(ctx) {
     if (e >= 1) { kid.pos.copy(d.from); kid.lift = 0; dipping = null; ctx.setBusy(false); kid.hop = .5; dripT = 3; sfx.boing(); setTimeout(() => bubble(kid, 'Hihi! Nat!'), 200); }
   }
   return {
-    dispose() { offQ(); }, nearWater, dip, dipping: () => !!dipping, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, feed, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
+    dispose() { offQ(); }, nearWater, dip, dipping: () => !!dipping, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length, friends: friends.map(c => c.name), napping: animals.filter(a => a.nap > 0).map(a => a.name), pending: pending.length, power, blooms: blooms.length }),
     update(dt, time, active) {
       if (dipping) stepDip(dt);
       if (dripT > 0) { dripT -= dt; if (Math.random() < dt * 9) bit(ART.drop(), kid.pos.x + rnd(-.25, .25), rnd(.4, 1), kid.pos.z + .1, { vx: 0, vy: 0, g: 6, life: .5 }); }   // dripping wet
       // her footsteps, for the friends to walk in
       if (!steps.length || Math.hypot(kid.pos.x - steps[0].x, kid.pos.z - steps[0].z) > .12) { steps.unshift({ x: kid.pos.x, z: kid.pos.z }); if (steps.length > 120) steps.pop(); }
-      for (let i = gifts.length - 1; i >= 0; i--) {                              // the food flies from her hands to its mouth
-        const g = gifts[i]; g.t += dt * 2.2; const k = Math.min(1, g.t); g.m.position.set(g.x + (g.c.pos.x - g.x) * k, .9 + Math.sin(k * Math.PI) * .9 - k * .4, g.z + (g.c.pos.z - g.z) * k + .1);
-        if (g.t >= 1) { scene.remove(g.m); gifts.splice(i, 1); befriend(g.c, g.food); }
-      }
       const lead = (ctx.uni.g.visible && ctx.mount() !== 'uni' ? 2.9 : 1.6);
       friends.forEach((c, i) => {
         if (c.held || c.fly || c.swim || c.cart || c.nap > 0) return;
@@ -371,12 +343,6 @@ export function createLife(ctx) {
         if (p && ctx.walkable(Math.floor(p.x), Math.floor(p.z))) { const dx = p.x - c.pos.x, dz = p.z - c.pos.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 5.5); if (d > .02) { c.pos.x += dx / d * v; c.pos.z += dz / d * v; } }
         const mv = c.pos.distanceTo(before), ddx = c.pos.x - before.x; c.moving = mv > .003; if (Math.abs(ddx) > .01 && Math.abs(ddx) > mv * .35) c.face = ddx > 0 ? 1 : -1;
       });
-      // an animal whose favourite she has with her looks at her and thinks of it: one animal at a time, now and then,
-      // only when she stands still next to it (no calling out as she walks past)
-      if (active && !kid.moving && now() > askAll) for (const a of animals) {
-        const food = Q.FAVOURITE[a.name]; if (!food || a.friend || a.held || a.fly || a.swim || a.cart || a.way || a.fedDay === Q.quest.day || !a.g.visible || Q.have(food) <= 0) continue;
-        if (dist(a) < 2 && (a.askT || 0) < now()) { a.askT = now() + 120000; askAll = now() + 45000; a.face = kid.pos.x >= a.pos.x ? 1 : -1; bubble(a, '', ART.itemIcon(food)); break; }
-      }
       for (const a of animals) if (a.morning && a.nap > 0 && dist(a) < 2.4) { a.morning = false; wake(a); bubble(a, a.say[0]); }   // still asleep this morning: she wakes it as she walks by
       for (const a of animals) if (a.nap > 0) {                                  // napping: on its side, little z's
         a.path = []; a.moving = false; a.mesh.rotation.z = a.face * 1.3; a.wait = Math.max(a.wait, 1);

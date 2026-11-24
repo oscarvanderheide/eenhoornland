@@ -52,7 +52,7 @@ export function openShop(getWho) {
       b.className = 'wk' + (own ? ' own' : Q.canBuy(it.id) ? ' kan' : '') + (on ? ' on' : ''); b.dataset.id = it.id; b.setAttribute('aria-label', it.id); b.setAttribute('aria-pressed', on);
       b.appendChild(fit(ART.wearIcon(it.id), 46));
       const cost = document.createElement('div'); cost.className = 'cost';
-      if (!own) for (const [t, n] of Object.entries(it.cost)) for (let k = 0; k < n; k++) { const c = fit(t === 'munt' ? ART.coin() : ART.itemIcon(t), 18); if (k < Q.have(t)) c.className = 'has'; cost.appendChild(c); }
+      if (!own) for (const [t, n] of Object.entries(it.cost)) for (let k = 0; k < n; k++) { const c = fit(ART.coin(), 18); if (k < Q.have(t)) c.className = 'has'; cost.appendChild(c); }
       b.appendChild(cost);
       b.onclick = () => {
         if (Q.owns(it.id)) { Q.wear(it.id, who); sfx.pop(); drawCards(); drawMe(true); }

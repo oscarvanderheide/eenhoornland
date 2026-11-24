@@ -250,9 +250,6 @@ export function createWays(ctx) {
   function end(c) {
     const w = W[c.name]; if (w && w.end) w.end(c); c.way = null; c.wayAt = now(); c.wait = 2; c.sq = null; c.g.visible = true;
     if (!ctx.walkable(Math.floor(c.pos.x), Math.floor(c.pos.z)) && !c.water) { const t = ctx.nearestWalkable(c.pos.x, c.pos.z); if (t) { c.pos.set(t[0] + .5, 0, t[1] + .5); c.hop = 1; } }   // off a tree trunk, out of the sea: onto the nearest free spot
-    // what it likes: thought of once a day, after its first hello, when she does not have it with her
-    const food = Q.FAVOURITE[c.name];
-    if (food && !c.friend && c.wishDay !== Q.quest.day && Q.have(food) <= 0 && c.g.visible) { c.wishDay = Q.quest.day; setTimeout(() => { if (!c.way && !c.held) bubble(c, '', ART.itemIcon(food)); }, 500); }
   }
   /** something else needs it (picked up, thrown, it went home): stop at once and put its own picture back */
   function stop(c) { if (!c.way) return; const w = c.way; if (w.peek) scene.remove(w.peek); if (w.fish) scene.remove(w.fish); c.way = null; c.sq = null; c.g.visible = true; c.wayAt = now(); wear(c, rest(c)); }

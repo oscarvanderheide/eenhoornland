@@ -611,10 +611,10 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** a little picture above someone's head (what is missing, what she found). Words alone are not shown: nobody here
    *  reads yet, and the text stays in the calls for a later voice. */
   function bubble(c, text, icon = null) {
-    if (!icon) return;
+    if (!icon && !/^[!?]+$/.test(text)) return;
     for (const b of bubbles) if (b.c === c) { b.el.remove(); b.dead = true; }
     const el = document.createElement('div'); el.className = 'bubble'; labelsEl.appendChild(el);
-    const cvs = PX.domSprite(icon, 2); cvs.style.verticalAlign = 'middle'; el.append(cvs);
+    if (icon) { const cvs = PX.domSprite(icon, 2); cvs.style.verticalAlign = 'middle'; el.append(cvs); } else el.textContent = text;
     bubbles.push({ c, el, until: performance.now() + 1800 });
   }
   const sparks = []; const sparkArt = [PX.sparkle('#FFF6D0'), PX.sparkle('#FFB3CC'), PX.heart()];

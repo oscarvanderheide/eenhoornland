@@ -1,6 +1,6 @@
 // Under the sea — only the sea unicorn can take her here (tap her when she walks along, near the water). She swims where
 // she is tapped. Everything down here answers a touch, always the same way: the fish turn and follow her, the octopus
-// squirts ink and hides, the pufferfish puffs up, the clam opens (its pearl goes into her bag once a day), the chest
+// squirts ink and hides, the pufferfish puffs up, the clam opens (once a day its pearl is worth a coin), the chest
 // pops open (a coin once a day), the turtle waves. A tap on the surface brings her back up. Nothing can go wrong.
 import * as ART from './art.js';
 import * as Q from './quest.js';
@@ -29,7 +29,7 @@ export function open(root, api) {
     if (near(octo, p.x, p.y, 13) && octo.hide <= 0) { octo.ink = 1; octo.hide = 2.6; sfx.whoosh(); for (let k = 0; k < 9; k++) inks.push({ x: octo.x + rnd(-6, 6), y: octo.y - 4 + rnd(-6, 4), r: rnd(3, 6), life: rnd(1.4, 2.2) }); return; }
     if (near(puffer, p.x, p.y, 10)) { if (puffer.puff < .5) sfx.boing(); puffer.puff = 1; return; }
     if (near(clam, p.x, p.y, 10)) {
-      if (clam.open > .5 && clam.pearl) { clam.pearl = false; if (Q.giftOnce('parel', 'diamant')) { sfx.tada(); pop(clam.x, clam.y - 6, 10, '#FFFFFF'); } return; }
+      if (clam.open > .5 && clam.pearl) { clam.pearl = false; if (Q.giftOnce('parel', 'munt')) { sfx.tada(); pop(clam.x, clam.y - 6, 10, '#FFFFFF'); } return; }
       clam.open = 1; clam.pearl = !Q.gotToday('parel'); sfx.pop(); if (!clam.pearl) for (let k = 0; k < 5; k++) bubbles.push({ x: clam.x + rnd(-3, 3), y: clam.y - 4, r: rnd(1, 2.5) });
       return;
     }

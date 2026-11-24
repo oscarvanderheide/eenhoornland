@@ -93,8 +93,8 @@ export function createSea(ctx) {
   const fb = { m: makeSprite(ART.vissersboot(), { lean: .2, shadow: false, scale: 1.4 }), i: 0, x: ROUTE[0][0], z: ROUTE[0][1], dir: 1, cool: 0, stop: 0 };
   fb.m.position.set(fb.x, 0, fb.z); scene.add(fb.m);
   const tossed = [];
-  tappable(fb.m, ART.vissersboot(), () => {         // the bear stops, toots, and throws her a fish: one for her bag a day, after that a fish that jumps back into the sea
-    sfx.toot(); fb.stop = 2.5; const h = herAt(), gift = Math.hypot(h.x - fb.x, h.z - fb.z) < 9 && Q.giftOnce('beervis', 'vis');
+  tappable(fb.m, ART.vissersboot(), () => {         // the bear stops, toots, and throws a fish: to her when she is close, otherwise it jumps back into the sea
+    sfx.toot(); fb.stop = 2.5; const h = herAt(), gift = Math.hypot(h.x - fb.x, h.z - fb.z) < 9;
     const m = makeSprite(ART.fish(0), { lean: .2, shadow: false, scale: .7 }); scene.add(m);
     tossed.push({ m, a: v3(fb.x, .9, fb.z), b: gift ? v3(h.x, .9, h.z + .1) : v3(fb.x + fb.dir * 2.2, -.2, fb.z + .8), t: 0, gift });
   });
@@ -107,7 +107,7 @@ export function createSea(ctx) {
   const goal = MAP.BOAT.eiland.moor;
 
   return {
-    info: () => ({ dolphins: pod.filter(d => d.t >= 0 && d.t < 1.3).length, arrow: arrow.visible, seals: seals.filter(s => s.clap > 0).length, ball: ball.at, ballFlying: !!ball.fly, fishingBoat: [+fb.x.toFixed(1), +fb.z.toFixed(1)], chest: chest && chest.open > 0, jellies: jellies.map(j => +j.lit.toFixed(2)), turtleWith: turtle.with > 0, turtle: [+turtle.x.toFixed(1), +turtle.z.toFixed(1)], lamp: lampT > 0, playful: playful > 0 }),
+    info: () => ({ tossed: tossed.length, dolphins: pod.filter(d => d.t >= 0 && d.t < 1.3).length, arrow: arrow.visible, seals: seals.filter(s => s.clap > 0).length, ball: ball.at, ballFlying: !!ball.fly, fishingBoat: [+fb.x.toFixed(1), +fb.z.toFixed(1)], chest: chest && chest.open > 0, jellies: jellies.map(j => +j.lit.toFixed(2)), turtleWith: turtle.with > 0, turtle: [+turtle.x.toFixed(1), +turtle.z.toFixed(1)], lamp: lampT > 0, playful: playful > 0 }),
     leap, throwTo, tapJelly: i => jellies[i] && jellies[i].m.userData.tap(), tapTurtle: () => turtle.m.userData.tap(), tapBoat: () => fb.m.userData.tap(), tapLamp: () => lamp && beam && (lampT = 6), flipAny: () => { const d = pod.find(d => d.t >= 0 && d.t < 1.2); if (d) flip(d); return !!d; },
     update(dt, time, active) {
       const b = boat(), on = aboard(), moving = on && ctx.play.info().moving || on && ctx.play.driving();
