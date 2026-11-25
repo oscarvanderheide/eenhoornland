@@ -13,11 +13,11 @@ const ISLANDS = {
   bos: [['t-toys', 'bos'], ['t-ways', 'bos'], ['t-boomhut'], ['t-areas', 'bos']],
   wei: [['t-toys', 'wei'], ['t-ways', 'wei'], ['t-castle', 'wei'], ['t-waterval'], ['t-areas', 'wei']],
   strand: [['t-toys', 'strand,vissen'], ['t-ways', 'strand'], ['t-areas', 'strand']],
-  eiland: [['t-toys', 'eiland'], ['t-ways', 'eiland'], ['t-areas', 'eiland']],
+  eiland: [['t-toys', 'eiland'], ['t-ways', 'eiland'], ['t-eiland'], ['t-areas', 'eiland']],
   kasteel: [['t-toys', 'kasteel'], ['t-ways', 'kasteel'], ['t-castle', 'kasteel,race'], ['t-areas', 'kasteel']],
   zee: [['t-toys', 'boot'], ['t-ways', 'zee']],
 };
-const WHOLE = { adventure: 't-adventure', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump', fly: 't-fly', boomhut: 't-boomhut', waterval: 't-waterval' };
+const WHOLE = { adventure: 't-adventure', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump', fly: 't-fly', boomhut: 't-boomhut', waterval: 't-waterval', eiland: 't-eiland' };
 const PARALLEL = 3;
 
 const args = process.argv.slice(2); if (!args.length) { console.log('usage: node t.mjs <island|look|adventure|all ...>   islands: ' + Object.keys(ISLANDS).join(' ')); process.exit(1); }

@@ -213,3 +213,16 @@ export const zingkristal = (col, lit = false) => cached('zing' + col + lit, () =
   const lt = mix(col, '#ffffff', lit ? .75 : .45), dk = mix(col, '#2B1E3A', .15);
   return x < 3 ? lt : x > 5 ? dk : (lit && y < 9 ? '#FFFFFF' : col);
 }));
+
+/* ---------------- eiland: giant bouncy mushrooms ---------------- */
+/** a giant mushroom with a springy cap in one of three candy colours */
+export const paddo = (k = 0) => cached('paddo' + k, () => {
+  const cap = ['#FF6B9E', '#9B72E8', '#4DABF7'][k % 3], dk = mix(cap, '#2B1E3A', .25), lt = mix(cap, '#ffffff', .35);
+  return gridSprite(26, 24, (x, y) => {
+    const cx = x + .5 - 13;
+    if (y < 13) { const d = (cx / 12.6) ** 2 + ((y + .5 - 13) / 12) ** 2; if (d > 1) return null; if (y > 10) return dk;
+      const dots = [[-6, 5], [3, 3], [7, 8], [-2, 9], [-9, 9]].some(([a, b]) => Math.hypot(cx - a, y - b) < 1.8); return dots ? '#FFFFFF' : y < 4 && cx < 0 ? lt : cap; }
+    if (Math.abs(cx) < 4.2 - (y > 21 ? -1 : 0)) return Math.abs(cx) > 3.4 ? '#E8D8C0' : (y === 13 ? '#D9C6A8' : '#FFF6E3');   // the stem
+    return null;
+  });
+});

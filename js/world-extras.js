@@ -107,6 +107,7 @@ export function createExtras(ctx) {
   animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bèè bèè!'], sound: 'boing', blobW: .7, flippable: true }, [60, 36, 66, 44]);
   animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
   animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [122, 60, 134, 68]);
+  for (let k = 0; k < 3; k++) animal({ idle: WILD.flamingo(0), w1: WILD.flamingo(0), w2: WILD.flamingo(0) }, { name: 'Flamingo', say: ['Pink!'], sound: 'pop', blobW: .45, flippable: true }, [125, 75, 136, 81]);   // by the lagoon
   animal(one(ART.ISLE.papegaai()), { name: 'Papegaai', say: ['Hallo hallo!', 'Kraaa! Mooi!'], sound: 'pop', blobW: .45, flippable: true }, [126, 63, 138, 69]);
   animal(one(ART.ISLE.pauw()), { name: 'Pauw', say: ['Kijk mijn staart!', 'Mi-auw!'], sound: 'sparkle', blobW: .7, flippable: true }, [86, 15, 96, 18]);
   animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [62, 69, 74, 74]);

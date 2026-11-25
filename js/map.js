@@ -11,7 +11,7 @@ export const ISLES = {
   bos: { cx: 33, cz: 14, rx: 21, rz: 10, more: [{ cx: 56, cz: 14.5, rx: 6.8, rz: 7.5 }] },   // the east lobe: the treehouse glade
   wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
   strand: { cx: 66, cz: 71, rx: 24, rz: 7 },
-  eiland: { cx: 132, cz: 66, rx: 9, rz: 6 },                    // far out in the open sea to the east: a voyage to get there
+  eiland: { cx: 132, cz: 66, rx: 9, rz: 6, more: [{ cx: 131, cz: 77.5, rx: 10, rz: 6 }, { cx: 134.5, cz: 54, rx: 8, rz: 6.2 }] },   // far out in the open sea to the east: a voyage to get there. South: the flamingo lagoon, north: the bouncy mushrooms
   kasteel: { cx: 84, cz: 14, rx: 17, rz: 10 },
 };
 const ZONES = Object.keys(ISLES);
@@ -64,7 +64,7 @@ export const ISLETS = [
   { kind: 'vuurtoren', cx: 109, cz: 41, rx: 2.2, rz: 1.6 },   // a lighthouse
   { kind: 'zeehonden', cx: 104, cz: 61, rx: 3, rz: 1.3 },     // a sandbank with seals
   { kind: 'palmeiland', cx: 139, cz: 40, rx: 2.4, rz: 1.7 },  // one palm and a treasure chest
-  { kind: 'rots', cx: 121, cz: 50, rx: 1.4, rz: 1 }, { kind: 'rots', cx: 98, cz: 78, rx: 1.2, rz: .9 }, { kind: 'rots', cx: 126, cz: 79, rx: 1.5, rz: 1 }, { kind: 'rots', cx: 117, cz: 31, rx: 1.3, rz: .9 },
+  { kind: 'rots', cx: 121, cz: 50, rx: 1.4, rz: 1 }, { kind: 'rots', cx: 98, cz: 78, rx: 1.2, rz: .9 }, { kind: 'rots', cx: 110, cz: 84, rx: 1.5, rz: 1 }, { kind: 'rots', cx: 117, cz: 31, rx: 1.3, rz: .9 },
 ];
 export const isletAt = (x, z) => ISLETS.find(i => ((x + .5 - i.cx) / i.rx) ** 2 + ((z + .5 - i.cz) / i.rz) ** 2 <= 1) || null;
 export const BIKE = [42.5, 43.5];                                                     // not at the front door: the morning starts quiet
@@ -79,8 +79,11 @@ export const KITE = [62.5, 44.4];                                               
 export const BUCKET = [57.5, 70.5];                                                   // strand: a bucket for sand towers
 export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];                      // eiland: red, yellow and blue puddles
 /** the part of the sea the boat sails on: marked with buoys, so nobody sails off the map */
-export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 81 };
+export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
 export const WHALE = [113.5, 73.5];
+/** eiland: the lagoon where the flamingos stand, and the giant bouncy mushrooms (stand on one and she bounces) */
+export const FLAMINGO = { cx: 130.5, cz: 79, rx: 3.8, rz: 2.1 };
+export const MUSHROOMS = [[131, 52], [134, 50], [137, 52], [133, 55], [137, 56]];
 /** the old pier at the west end of the beach: where you fish (world-toys.js) */
 export const FISH = { pier: [39, 70], spot: [36.5, 71] };
 /** the houses you can go into: one on every island that has people */
@@ -178,6 +181,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   rect(70, 64, 71, 66, BW); rect(46, 66, 86, 67, BW); rect(44, 68, 45, 71, BW); rect(46, 68, 47, 69, BW); rect(79, 68, 80, 68, BW); rect(83, 68, 84, 73, BW); rect(80, 73, 82, 73, BW);
   /* ---- eiland ---- */
   trail([[123.5, 66], [128, 66.5], [134, 67]], .7);
+  trail([[134, 66], [134.5, 61], [134.5, 57.5]], .7); trail([[131, 69], [130.5, 74.5]], .7);   // up to the mushrooms, down to the flamingos
+  for (let z = 0; z < OUT_H; z++) for (let x = 110; x < W; x++) if (((x + .5 - FLAMINGO.cx) / FLAMINGO.rx) ** 2 + ((z + .5 - FLAMINGO.cz) / FLAMINGO.rz) ** 2 <= 1 && ground[I(x, z)] !== SE) { ground[I(x, z)] = SE; block[I(x, z)] = 1; inland[I(x, z)] = 1; }
   /* ---- kasteel ---- */
   rect(76, 13, 77, 23, PA); rect(78, 11, 91, 14, CO); rect(89, 15, 96, 16, CO); rect(83, 15, 86, 21, CO);
 
@@ -196,6 +201,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   solid(CAVE.x0, CAVE.z0, CAVE.x1, CAVE.z1); block[I(...ROOMS.grot.door)] = 0;                   // the rock, with the dark mouth of the cave in it
+  for (const [x, z] of MUSHROOMS) block[I(x, z)] = 1;                                           // the mushrooms stand (world-eiland.js draws them)
   solid(TREEHOUSE.x0, TREEHOUSE.z0, TREEHOUSE.x1, TREEHOUSE.z1); block[I(...ROOMS.val.door)] = 0; block[I(...ZIP.pole)] = 1;        // the oak's trunk, the zipline's pole
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) { if (ground[I(x, z)] === SA) ground[I(x, z)] = GR; if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1; }
   const structural = block.slice();                               // everything that is not vegetation

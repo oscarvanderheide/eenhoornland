@@ -14,6 +14,7 @@
 //   strand   krab: a sideways dance, then into the sand; while it dances it copies her jumps
 //            meeuw: dives into the sea and brings her a fish
 //   eiland   konijn: down its hole, up out of another one; tap it while it peeks out and it pops up laughing
+//            flamingo: up on one leg, wobbling; a tap while it stands like that: all the flamingos dance, one after the other
 //            papegaai: flies onto her shoulder and rides along, and repeats every sound she makes
 //   kasteel  pauw: fans out its tail; every tap changes its colour
 //            draakje: tries to roar: a smoke ring, another one, and the third time a little flame: fireworks
@@ -71,6 +72,16 @@ export function createWays(ctx) {
   }
   const POOL = MAP.FALLS.pool;
   const W = {
+    Flamingo: {   // up on one leg, wobble wobble; a tap while it stands like that and the whole flock dances in turn
+      start(c) { c.way = { kind: 'been', t: 0 }; wear(c, WILD.flamingo(1)); sfx.pop(); c.hop = .4; c.hopH = .15; },
+      step(c, dt) { const w = c.way; w.t += dt; c.mesh.rotation.z = Math.sin(w.t * 7) * .06 * (w.dance ? 2.5 : 1); if (w.dance && Math.floor(w.t * 2.5) !== w.beat && w.t < 3) { w.beat = Math.floor(w.t * 2.5); c.hop = 1; c.hopH = .35; c.face = -c.face; } if (w.t < (w.dance ? 3.4 : 2.6)) return false; c.mesh.rotation.z = 0; wear(c, null); return true; },
+      again(c) {
+        if (c.way.dance) return true; const flock = animals.filter(a => a.name === 'Flamingo' && a.g.visible && !a.held && !a.fly);
+        flock.forEach((a, i) => setTimeout(() => { if (!a.way) W.Flamingo.start(a); a.way.dance = true; a.way.t = 0; sfx.chime([0, 2, 4, 7][i % 4]); if (i === flock.length - 1) setTimeout(() => { sfx.tada(); for (const b of flock) burst(b.pos, 4, true); }, 900); }, i * 260));
+        return true;
+      },
+      repeat: true,
+    },
     Otter: {    // splash into the pool, float round on its back with a shell on its tummy, and back onto the bank
       start(c) { const side = c.pos.x < POOL.cx ? -1 : 1; c.way = { kind: 'otter', t: 0, home: [c.pos.x, c.pos.z] }; wear(c, WILD.otter(2)); sfx.squeak(); leapTo(c, POOL.cx + side * 1.6, POOL.cz - .1, .55, .9); },
       step(c, dt) {
