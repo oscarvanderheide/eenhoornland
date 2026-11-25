@@ -84,7 +84,7 @@ export function createBoomhut(ctx) {
 
   // one rule for every input: right next to the telescope, the hammock or the acorns the action button uses them
   ctx.addUse(() => {
-    if (MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) !== 'hut' || nap || ride) return null;
+    if (MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) !== 'hut' || nap || ride) return null; if (ctx.toys.carrying()) return null;
     if (near(SX, SZ + .8, 1.2)) return { key: 'kijker', art: WILD.telescoop(), run: look };
     if (near(HX, HZ + .9, 1.5)) return { key: 'hangmat', art: WILD.hangmat(), run: swing };
     if (near(PX0, PZ0, 1.4)) return { key: 'eikels', art: WILD.eikel(), run: spill };

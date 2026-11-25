@@ -104,6 +104,7 @@ export function createExtras(ctx) {
   animal(one(ART.ISLE.uil()), { name: 'Uil', say: ['Oehoe!', 'Oehoe oehoe!'], sound: 'pop', blobW: .45 }, [19, 14, 25, 17]);
   animal({ idle: WILD.eekhoorn(0), w1: WILD.eekhoorn(1), w2: WILD.eekhoorn(0) }, { name: 'Eekhoorn', say: ['Kwiek kwiek!'], sound: 'squeak', blobW: .45, flippable: true }, [53, 15, 59, 18]);   // lives in the treehouse oak
   animal({ idle: WILD.otter(0), w1: WILD.otter(0), w2: WILD.otter(0) }, { name: 'Otter', say: ['Pieuw!'], sound: 'squeak', blobW: .5, flippable: true }, [90, 40, 99, 42]);   // lives by the waterfall pool
+  animal({ idle: WILD.varken(0), w1: WILD.varken(0), w2: WILD.varken(0) }, { name: 'Varken', say: ['Knor knor!'], sound: 'boing', blobW: .7, flippable: true }, [22, 56, 33, 60]).baseScale = 1.2;   // the pig by the mud in the village's south
   animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bèè bèè!'], sound: 'boing', blobW: .7, flippable: true }, [60, 36, 66, 44]);
   animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
   animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [122, 60, 134, 68]);

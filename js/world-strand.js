@@ -27,7 +27,7 @@ export function createStrand(ctx) {
   }
   nest.userData.tap = () => { if (Math.hypot(NX + .5 - kid.pos.x, NZ + .5 - kid.pos.z) < 1.8) hatch(); else ctx.approach(NX, NZ - 1, hatch); }; pick.push(nest);
   nest.userData.alpha = WILD.nest(true);
-  ctx.addUse(() => Math.hypot(NX + .5 - kid.pos.x, NZ + .5 - kid.pos.z) < 1.4 && eggs ? { key: 'nest', art: WILD.nest(true), run: hatch } : null);
+  ctx.addUse(() => !ctx.toys.carrying() && Math.hypot(NX + .5 - kid.pos.x, NZ + .5 - kid.pos.z) < 1.4 && eggs ? { key: 'nest', art: WILD.nest(true), run: hatch } : null);
   const ft = [tex(WILD.babySchildpad(0)), tex(WILD.babySchildpad(1))];
   return {
     eggs: () => eggs, hatch, lay() { if (eggs) return false; setNest(true); sfx.pop(); burst(v3(NX + .5, .2, NZ + .5), 5); return true; },

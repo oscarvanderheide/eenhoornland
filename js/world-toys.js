@@ -277,6 +277,7 @@ export function createToys(ctx) {
       setTimeout(() => {
         (sfx[c.sound] || sfx.pop)(); c.hop = 1;
         if (c.water) { c.hopH = .6; burst(c.pos, 6, true); }                           // ducks love it
+        else if (c.name === 'Varken' && c.dirty && ctx.farm) ctx.farm.wash(c);       // the muddy pig: clean and pink again
         else if (c.name === 'Poes') { c.hopH = 1.1; bubble(c, '!'); const t = ctx.randomTile(c); c.path = [v3(t[0] + .5, 0, t[1] + .5)]; c.wait = 3; }   // cats do not
         else { c.shake = .7; for (let i = 0; i < 6; i++) bit(ART.drop(), c.pos.x, .5, c.pos.z + .1, { vx: rnd(-2, 2), vy: rnd(1, 2.5), g: 8, life: .6 }); }
       }, 450); return true;

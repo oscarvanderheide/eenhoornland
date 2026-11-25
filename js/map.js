@@ -7,7 +7,7 @@ export const OUT_H = 96, ROCK_Z = 100;
 export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12, WF = 13; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock, wet stone (behind the waterfall)
 /** every island: centre and half-sizes of a rounded rectangle with a wobbly edge */
 export const ISLES = {
-  dorp: { cx: 31, cz: 42, rx: 16, rz: 13 },
+  dorp: { cx: 31, cz: 42, rx: 16, rz: 13, more: [{ cx: 29, cz: 58, rx: 10, rz: 4.6 }] },   // the south: the pig in the mud
   bos: { cx: 33, cz: 14, rx: 21, rz: 10, more: [{ cx: 56, cz: 14.5, rx: 6.8, rz: 7.5 }] },   // the east lobe: the treehouse glade
   wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
   strand: { cx: 66, cz: 71, rx: 24, rz: 7, more: [{ cx: 58, cz: 80.5, rx: 12, rz: 5.5 }, { cx: 79, cz: 79.5, rx: 9, rz: 4.5 }] },   // the south: dunes and the turtles' nest
@@ -82,6 +82,8 @@ export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];             
 export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
 export const WHALE = [113.5, 73.5];
 /** eiland: the lagoon where the flamingos stand, and the giant bouncy mushrooms (stand on one and she bounces) */
+/** dorp: the mud pool where the pig rolls */
+export const MUD = { cx: 27.5, cz: 59.2 };
 /** strand: the sea turtle's nest in the dunes of the south beach */
 export const NEST = [58, 83];
 export const FLAMINGO = { cx: 130.5, cz: 79, rx: 3.8, rz: 2.1 };
@@ -132,7 +134,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -161,6 +163,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   rect(20, 36, 43, 37, PA); rect(31, 35, 32, 50, PA); rect(20, 45, 46, 46, PA); rect(29, 39, 34, 43, PL); rect(40, 31, 41, 35, PA); rect(28, 49, 30, 50, PA);
   for (let z = 30; z < 54; z++) for (let x = 16; x < 46; x++) if (((x + .5 - POND.cx) / POND.rx) ** 2 + ((z + .5 - POND.cz) / POND.rz) ** 2 <= 1) { ground[I(x, z)] = WA; block[I(x, z)] = 1; }
   rect(GARDEN.x0, GARDEN.z0, GARDEN.x1, GARDEN.z1, SO);
+  trail([[29, 50.5], [29, 55.5], [27.5, 57.5]], .75);                                           // down to the pig's mud
   /* ---- bos ---- */
   disc(CLEARING, GR); disc(ORCHARD, GR); disc(NOOK, GR);
   trail([[41, 23.5], [41, 19.5], [37.5, 16], [34, 13.5]]);

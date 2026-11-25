@@ -96,7 +96,7 @@ export function createWaterval(ctx) {
 
   // one rule for every input: next to a crystal (or the pool) the action button rings it (or splashes)
   ctx.addUse(() => {
-    if (MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) !== 'val') return null;
+    if (MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) !== 'val') return null; if (ctx.toys.carrying()) return null;
     let best = null, bd = 1.5; for (const c of crystals) { const d = Math.hypot(c.x - kid.pos.x, c.z + .7 - kid.pos.z); if (d < bd) { bd = d; best = c; } }
     return best ? { key: 'kristal' + best.i, art: WILD.zingkristal(best.col), run: () => ring(best) } : null;
   });

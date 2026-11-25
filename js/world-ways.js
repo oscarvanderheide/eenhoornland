@@ -4,6 +4,7 @@
 // somebody taps it, and whatever it does it does the same way every time.
 //   dorp     hondje: rolls over and wags; every third hello it digs, and once a day a coin comes up (else an old boot)
 //            kip: flutters up and leaves an egg; a chick comes out and follows her       (eendjes dive in the pond)
+//            varken: trots off to roll in the mud and comes back all brown; a muddy pig gets a wash with the can (world-boerderij.js)
 //   bos      egel: rolls up into a ball; a tap bowls it, and what it bumps into shakes
 //            uil: asleep in the daytime; a tap: one eye, oehoe; a tap while awake: stars twinkle round its head
 //            eekhoorn: up the treehouse oak like a flash, waves from the platform and tosses her an acorn; a tap while it is
@@ -74,6 +75,23 @@ export function createWays(ctx) {
   }
   const POOL = MAP.FALLS.pool;
   const W = {
+    Varken: {   // clean: off to the mud, a roll on its back with mud flying, and back all brown. Muddy already: a happy wiggle
+      start(c) {
+        const M0 = MAP.MUD; c.way = { kind: c.dirty ? 'blij' : 'rollen', t: 0 };
+        if (c.dirty) { c.hop = 1; c.hopH = .4; sfx.squeak(); bubble(c, '', PX.heart()); return; }
+        sfx.squeak(); leapTo(c, M0.cx + rnd(-.4, .4), M0.cz + .1, .6, .4);
+      },
+      step(c, dt) {
+        const w = c.way; w.t += dt;
+        if (w.kind === 'blij') { c.mesh.rotation.z = Math.sin(w.t * 18) * .08 * Math.max(0, 1 - w.t); if (w.t > 1.1) { c.mesh.rotation.z = 0; return true; } return false; }
+        if (w.t < .65) { stepLeap(c, dt); return false; }
+        if (!w.roll) { w.roll = true; wear(c, WILD.varken(1, true)); c.dirty = true; sfx.splash(); }
+        if (w.t < 2.4) { c.mesh.rotation.z = Math.sin(w.t * 14) * .25; if (Math.floor(w.t * 6) !== w.s) { w.s = Math.floor(w.t * 6); bit(WILD.modderSpat(), c.pos.x + rnd(-.3, .3), .25, c.pos.z + .1, { vx: rnd(-2, 2), vy: rnd(2, 3.5), g: 9, life: .7 }); if (w.s % 2) sfx.pop(); } return false; }
+        c.mesh.rotation.z = 0; wear(c, WILD.varken(0, true)); if (!w.oink) { w.oink = true; c.hop = 1; c.hopH = .5; sfx.squeak(); } return w.t > 2.9;
+      },
+      again(c) { return true; },
+      repeat: true,
+    },
     Schildpad: {   // slowly to the nest to lay new eggs; if there are eggs already, shy: head in, and out again
       start(c) {
         const st = ctx.strand, [nx, nz] = st ? st.nest : [c.pos.x, c.pos.z];
@@ -324,13 +342,13 @@ export function createWays(ctx) {
   /** something else needs it (picked up, thrown, it went home): stop at once and put its own picture back */
   function stop(c) { if (!c.way) return; const w = c.way; if (w.peek) scene.remove(w.peek); if (w.fish) scene.remove(w.fish); c.way = null; c.sq = null; c.g.visible = true; c.wayAt = now(); wear(c, rest(c)); }
   /** the picture it has when it is doing nothing: the peacock's tail down, the owl asleep in the daytime */
-  const rest = c => c.name === 'Pauw' ? AW.pauwDicht() : c === owl && !owlAwake ? AW.uilSlaap() : null;
+  const rest = c => c.name === 'Varken' && c.dirty ? WILD.varken(0, true) : c.name === 'Pauw' ? AW.pauwDicht() : c === owl && !owlAwake ? AW.uilSlaap() : null;
 
   const offQ = Q.on(type => { if (type === 'day') { for (const h of chicks) { scene.remove(h.m); if (h.chick) scene.remove(h.chick); } chicks.length = 0; for (const c of animals) if (c.name === 'Schaap') { c.fluff = 0; c.wool = 1; } } });
   let still = 0, deerCool = 0;
 
   return {
-    tap, stop, busy: c => !!c.way, far: c => !!(W[c.name] && W[c.name].far && !c.friend && !c.uniKind),
+    tap, stop, look: c => wear(c, rest(c)), busy: c => !!c.way, far: c => !!(W[c.name] && W[c.name].far && !c.friend && !c.uniKind),
     dispose() { offQ(); for (const h of holes) scene.remove(h.m); for (const f of floaty) scene.remove(f.m); for (const h of chicks) { scene.remove(h.m); if (h.chick) scene.remove(h.chick); } },
     info: () => ({ ways: animals.filter(a => a.way).map(a => a.name + ':' + a.way.kind), chicks: chicks.filter(h => h.chick).length, eggs: chicks.filter(h => !h.chick).length, holes: holes.length, wool: animals.filter(a => a.name === 'Schaap').map(a => +(a.wool || 1).toFixed(2)), owl: owl ? (owlAwake ? 'awake' : 'asleep') : null }),
     update(dt, time, active) {
