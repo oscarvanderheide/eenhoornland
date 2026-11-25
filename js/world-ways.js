@@ -13,6 +13,8 @@
 //            otter: a dive into the waterfall pool, then it floats on its back with a shell; a tap then: it cracks it open
 //   strand   krab: a sideways dance, then into the sand; while it dances it copies her jumps
 //            meeuw: dives into the sea and brings her a fish
+//            schildpad: an empty nest: she trundles over and lays new eggs in it (a tap on the nest hatches them, world-strand.js);
+//            eggs in it already: she pulls in her head, then peeks out again
 //   eiland   konijn: down its hole, up out of another one; tap it while it peeks out and it pops up laughing
 //            flamingo: up on one leg, wobbling; a tap while it stands like that: all the flamingos dance, one after the other
 //            papegaai: flies onto her shoulder and rides along, and repeats every sound she makes
@@ -72,6 +74,25 @@ export function createWays(ctx) {
   }
   const POOL = MAP.FALLS.pool;
   const W = {
+    Schildpad: {   // slowly to the nest to lay new eggs; if there are eggs already, shy: head in, and out again
+      start(c) {
+        const st = ctx.strand, [nx, nz] = st ? st.nest : [c.pos.x, c.pos.z];
+        c.way = { kind: st && !st.eggs() ? 'leggen' : 'verlegen', t: 0, home: [c.pos.x, c.pos.z], to: [nx + .9, nz + .1] };
+        if (c.way.kind === 'verlegen') { c.hop = .3; c.hopH = .1; sfx.pop(); c.sq = [1, .7]; }
+      },
+      step(c, dt) {
+        const w = c.way; w.t += dt;
+        if (w.kind === 'verlegen') { c.sq = w.t < 1.4 ? [1.05, .72] : null; if (w.t > 1.4 && !w.peek) { w.peek = true; c.hop = 1; c.hopH = .2; sfx.boing(); bubble(c, '', PX.heart()); } return w.t > 1.8; }
+        const [tx, tz] = w.to, dx = tx - c.pos.x, dz = tz - c.pos.z, d = Math.hypot(dx, dz);
+        if (!w.dug && d > .1) { const s = Math.min(d, dt * 1.1); c.pos.x += dx / d * s; c.pos.z += dz / d * s; c.moving = true; if (Math.abs(dx) > .05) c.face = dx > 0 ? 1 : -1; return w.t > 12 ? (w.dug = true, false) : false; }
+        c.moving = false; if (!w.dug) { w.dug = w.t; sfx.brush ? sfx.brush() : sfx.pop(); }
+        const k = w.t - w.dug; if (k < 1.4) { if (Math.floor(k * 6) !== w.s) { w.s = Math.floor(k * 6); bit(PX.gridSprite(2, 2, () => '#EFCF92', { outline: false, key: 'zand2' }), c.pos.x - .3, .1, c.pos.z + .1, { vx: rnd(-1.5, .5), vy: rnd(1.5, 2.5), g: 9, life: .6 }); } return false; }
+        if (!w.laid) { w.laid = true; ctx.strand && ctx.strand.lay(); bubble(c, '', WILD.nest(true)); }
+        return k > 2.2;
+      },
+      again() { return true; },
+      repeat: true,
+    },
     Flamingo: {   // up on one leg, wobble wobble; a tap while it stands like that and the whole flock dances in turn
       start(c) { c.way = { kind: 'been', t: 0 }; wear(c, WILD.flamingo(1)); sfx.pop(); c.hop = .4; c.hopH = .15; },
       step(c, dt) { const w = c.way; w.t += dt; c.mesh.rotation.z = Math.sin(w.t * 7) * .06 * (w.dance ? 2.5 : 1); if (w.dance && Math.floor(w.t * 2.5) !== w.beat && w.t < 3) { w.beat = Math.floor(w.t * 2.5); c.hop = 1; c.hopH = .35; c.face = -c.face; } if (w.t < (w.dance ? 3.4 : 2.6)) return false; c.mesh.rotation.z = 0; wear(c, null); return true; },

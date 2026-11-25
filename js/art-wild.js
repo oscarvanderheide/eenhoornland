@@ -1,6 +1,6 @@
 // Art for the bigger world: the unicorn's wings and the sky she flies through (world-fly.js), and the new places and
 // animals of every island. Same conventions as pixel.js: a <canvas>, anchored bottom-centre, 1px soft outline.
-import { sprite, gridSprite, mix, OUT } from './pixel.js';
+import { sprite, gridSprite, mix, OUT, flipX } from './pixel.js';
 
 const EYE = '#2B1E3A';
 const memo = new Map();
@@ -85,11 +85,11 @@ export const ziplinePaal = () => cached('ziplinePaal', () => sprite([
 /** what she hangs on, sliding down the rope */
 export const katrol = () => cached('katrol', () => sprite(['.gg.', 'g..g', '.gg.', '.rr.', 'r..r', 'r..r', '.rr.'], { g: '#9AA5B8', r: '#FF7EB6' }));
 /** the squirrel: f 0 sitting with its tail up, 1 running, 2 eating a nut */
-export const eekhoorn = (f = 0) => cached('eekhoorn' + f, () => sprite(f === 1 ? [
+export const eekhoorn = (f = 0) => cached('eekhoorn' + f, () => flipX(sprite(f === 1 ? [
   '........TT.', '.......TttT', '..o.o..TttT', '.oooo...TtT', 'ooko.o.TtT.', 'ooooooooT..', '.cooooooo..', '..o..o.o...',
 ] : [
   '.o.o...TT..', '.oooo.TttT.', 'ookoo.TtttT', 'oooocTTtttT', '.coccoTtttT', '.cnccooTttT', '.occcoo.TT.', '.oo..oo....',
-], { o: '#D9733A', T: '#B8582A', t: '#F29A5C', c: '#FCE3C0', k: EYE, n: f === 2 ? '#8A5A33' : '#FCE3C0' }));
+], { o: '#D9733A', T: '#B8582A', t: '#F29A5C', c: '#FCE3C0', k: EYE, n: f === 2 ? '#8A5A33' : '#FCE3C0' })));
 /** an acorn */
 export const eikel = () => cached('eikel', () => sprite(['.bb.', 'bBBb', 'gggg', 'gGgg', '.gg.'], { b: '#8A5A33', B: '#A9784F', g: '#C99A4E', G: '#E0B46A' }));
 
@@ -157,10 +157,10 @@ export const nest = (eggs = true) => cached('nest' + eggs, () => gridSprite(16, 
 
 /* ---------------- eiland: the flamingos ---------------- */
 /** f 0 on two legs, 1 on one leg, 2 head under its wing (asleep) */
-export const flamingo = (f = 0) => cached('flamingo' + f, () => sprite([
+export const flamingo = (f = 0) => cached('flamingo' + f, () => flipX(sprite([
   f === 2 ? '.........' : '..pp.....', f === 2 ? '.........' : '.pkpb....', f === 2 ? '.........' : '...pbB...', f === 2 ? '.........' : '...p.....', f === 2 ? '.........' : '...p.....',
   f === 2 ? '..ppp....' : '...pp....', '..pppppp.', '.pppPPppp', '.ppPPPPpp', '..pppppp.', '....l....', '....l....', f === 1 ? '....ll...' : '...l.l...', f === 1 ? '....l.l..' : '...l.l...', f === 1 ? '....l....' : '...l.l...', f === 1 ? '...ll....' : '..ll.ll..',
-], { p: '#FF9EC7', P: '#FF7EB6', k: EYE, b: '#FFFFFF', B: '#2B1E3A', l: '#E8616B' }));
+], { p: '#FF9EC7', P: '#FF7EB6', k: EYE, b: '#FFFFFF', B: '#2B1E3A', l: '#E8616B' })));
 
 /* ---------------- inside the treehouse ---------------- */
 /** the opening at the back onto the zipline platform: blue sky, leaves, and the rope with its pink handle */
@@ -199,13 +199,13 @@ export const kleed = () => cached('kleed', () => gridSprite(30, 18, (x, y) => {
 
 /* ---------------- the waterfall: the otter, the singing crystals ---------------- */
 /** the otter: 0 standing on the bank, 1 floating on its back with a shell on its tummy, 2 diving (just the tail) */
-export const otter = (f = 0) => cached('otter' + f, () => sprite(f === 1 ? [
+export const otter = (f = 0) => cached('otter' + f, () => flipX(sprite(f === 1 ? [
   '....ss.......', '.bb.sSs...bb.', 'bkbbbbbbbbbbb', 'bbbcccccccbbb', '.bbbbbbbbbbb.', '..b.......b..',
 ] : f === 2 ? [
   '.....b', '....bb', '...bb.', '..bb..', '.bb...', 'bb....',
 ] : [
   '.bb.......', 'bkbb......', 'bbnbb.....', '.bcbbbb...', '..ccbbbbb.', '..cbbbbbbb', '..bb.bb..b', '..b..b...b',
-], { b: '#8A5A3B', c: '#D9B08A', k: EYE, n: '#3B2A22', s: '#FFE3EC', S: '#FF9EC7' }));
+], { b: '#8A5A3B', c: '#D9B08A', k: EYE, n: '#3B2A22', s: '#FFE3EC', S: '#FF9EC7' })));
 /** a singing crystal (xylophone), in one colour of the rainbow; lit glows white at the top */
 export const zingkristal = (col, lit = false) => cached('zing' + col + lit, () => gridSprite(9, 20, (x, y) => {
   const cx = Math.abs(x + .5 - 4.5), top = 3 + cx * 1.6; if (y < top) return null; if (cx > 4) return null;

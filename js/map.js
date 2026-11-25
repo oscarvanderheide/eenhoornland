@@ -10,7 +10,7 @@ export const ISLES = {
   dorp: { cx: 31, cz: 42, rx: 16, rz: 13 },
   bos: { cx: 33, cz: 14, rx: 21, rz: 10, more: [{ cx: 56, cz: 14.5, rx: 6.8, rz: 7.5 }] },   // the east lobe: the treehouse glade
   wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
-  strand: { cx: 66, cz: 71, rx: 24, rz: 7 },
+  strand: { cx: 66, cz: 71, rx: 24, rz: 7, more: [{ cx: 58, cz: 80.5, rx: 12, rz: 5.5 }, { cx: 79, cz: 79.5, rx: 9, rz: 4.5 }] },   // the south: dunes and the turtles' nest
   eiland: { cx: 132, cz: 66, rx: 9, rz: 6, more: [{ cx: 131, cz: 77.5, rx: 10, rz: 6 }, { cx: 134.5, cz: 54, rx: 8, rz: 6.2 }] },   // far out in the open sea to the east: a voyage to get there. South: the flamingo lagoon, north: the bouncy mushrooms
   kasteel: { cx: 84, cz: 14, rx: 17, rz: 10 },
 };
@@ -82,6 +82,8 @@ export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];             
 export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
 export const WHALE = [113.5, 73.5];
 /** eiland: the lagoon where the flamingos stand, and the giant bouncy mushrooms (stand on one and she bounces) */
+/** strand: the sea turtle's nest in the dunes of the south beach */
+export const NEST = [58, 83];
 export const FLAMINGO = { cx: 130.5, cz: 79, rx: 3.8, rz: 2.1 };
 export const MUSHROOMS = [[131, 52], [134, 50], [137, 52], [133, 55], [137, 56]];
 /** the old pier at the west end of the beach: where you fish (world-toys.js) */
@@ -130,7 +132,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {

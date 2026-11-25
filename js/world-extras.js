@@ -110,6 +110,7 @@ export function createExtras(ctx) {
   for (let k = 0; k < 3; k++) animal({ idle: WILD.flamingo(0), w1: WILD.flamingo(0), w2: WILD.flamingo(0) }, { name: 'Flamingo', say: ['Pink!'], sound: 'pop', blobW: .45, flippable: true }, [125, 75, 136, 81]);   // by the lagoon
   animal(one(ART.ISLE.papegaai()), { name: 'Papegaai', say: ['Hallo hallo!', 'Kraaa! Mooi!'], sound: 'pop', blobW: .45, flippable: true }, [126, 63, 138, 69]);
   animal(one(ART.ISLE.pauw()), { name: 'Pauw', say: ['Kijk mijn staart!', 'Mi-auw!'], sound: 'sparkle', blobW: .7, flippable: true }, [86, 15, 96, 18]);
+  animal({ idle: WILD.schildpad(0), w1: WILD.schildpad(1), w2: WILD.schildpad(0) }, { name: 'Schildpad', say: ['...'], sound: 'pop', blobW: .8, flippable: true }, [51, 79, 66, 84]);   // the sea turtle of the south beach
   animal(one(ART.gull()), { name: 'Meeuw', say: ['Kraa kraa!'], sound: 'pop', blobW: .45, flippable: true }, [62, 69, 74, 74]);
   animal(one(ART.dragon()), { name: 'Draakje', say: ['Rawr! Hihi!', 'Ik ben een lief draakje!', 'Ik pas op het kasteel!'], sound: 'boing', blobW: .7 }, [78, 11, 90, 14]);
 
