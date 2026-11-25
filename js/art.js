@@ -551,6 +551,16 @@ export function companionFrames(u, stage, kindDef) {
   return { idle: uniSprite(u, 'idle', false, o), w1: uniSprite(u, 'w1', false, o), w2: uniSprite(u, 'w2', false, o), blink: uniSprite(u, 'idle', true, o) };
 }
 export const bedIcon = () => cached('bed', () => sprite(['w...........', 'w...........', 'wpp.........', 'wppbbbbbbbbb', 'wwwbbbbbbbbb', 'wwwwwwwwwwww', 'w..........w'], { w: '#A97450', p: '#FFFFFF', b: '#FF7EB6' }));
+/** the three saves each have their own colour, so the girls know theirs without reading */
+export const SLOT_COLS = [['#FF9EC7', '#FFD7E8'], ['#B9A3F0', '#E4D9FF'], ['#7FD69B', '#CDF3D8']];
+/** the save button: three little cards in the saves' colours, the one being played stands up */
+export const slotsIcon = cur => cached('slots' + cur, () => gridSprite(14, 8, (x, y) => {
+  const k = Math.floor(x / 5), cx = x % 5; if (cx === 4 || k > 2) return null;
+  const top = k === cur - 1 ? 0 : 3; if (y < top) return null;
+  return y === top && cx < 2 ? SLOT_COLS[k][1] : SLOT_COLS[k][0];
+}));
+/** throw a save away (held down, see saves.js) */
+export const binIcon = () => cached('bin', () => sprite(['...dd...', '.dddddd.', 'dddddddd', '........', '.gGgGgg.', '.gGgGgg.', '.gGgGgg.', '.gGgGgg.', '..gggg..'], { d: '#7A6A8A', g: '#C3B5CF', G: '#8C7A9A' }));
 export const mapIcon = () => cached('mapi', () => sprite(['pppp.pppp.pp', 'pgpppgbbppgp', 'pggpppbbpggp', 'ppgprppbpppp', 'pppprrpppgpp', 'pp.pppp.pppp'], { p: '#F2DDB4', g: '#69DB7C', b: '#4DABF7', r: '#FF5E9C' }));
 
 /** a tiny picture of a house you can go into, in its own colours (wish chips, map) */

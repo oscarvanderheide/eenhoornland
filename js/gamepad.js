@@ -2,7 +2,7 @@
 // through the same doors as the fingers and the keyboard, so every input keeps one rule per thing:
 //   outside:  left stick = the on-screen joystick, d-pad = the arrow keys, ✕ = the action button (whatever it shows right
 //             here, also while she walks; in the sky: land), ○ = jump, △ = the wing button, □ = the ride button,
-//             L1 / R1 = the other sister, Options = the map
+//             L1 / R1 = the other sister, Options = the three saves
 //   anywhere else (start screen, houses, the map, the stall, cutscenes, a coin): a hand shows up; the left stick or d-pad
 //             moves it, ✕ taps where it points (hold ✕ and move to drag or paint), ○ closes the screen
 // Browsers only show a controller to the page after a button on it is pressed, so the first press just wakes it up.
@@ -84,6 +84,7 @@ export function initGamepad(getWorld) {
       }
       if (hit(B.X)) tapDown(); else if (!cur[B.X] && held) tapUp();
       if (hit(B.O)) back();
+      if (hit(B.OPT) && shown($('#start')) && $('#modal').hidden) press('#start-saves');   // the saves, also from the start screen
     } else {
       setMode('world');
       const w = getWorld();
@@ -95,7 +96,7 @@ export function initGamepad(getWorld) {
       if (hit(B.TRI)) press('#b-fly', 'down');
       if (hit(B.SQ)) press('#b-ride');
       if (hit(B.L1) || hit(B.R1)) { const other = document.querySelector('#who .who:not(.on)'); other && other.click(); }
-      if (hit(B.OPT)) press('#b-map');
+      if (hit(B.OPT)) press('#b-save');
     }
     prev = cur;
   }

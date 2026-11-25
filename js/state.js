@@ -9,7 +9,23 @@ export const STICKERS = [
   { id: 'vlinder', name: 'Vlinder' }, { id: 'diamant', name: 'Diamant' }, { id: 'maan', name: 'Maan' },
   { id: 'regenboog', name: 'Regenboog' }, { id: 'boom', name: 'Boom' }, { id: 'den', name: 'Dennenboom' },
 ];
-const KEY = 'eenhoornland-v1';
+// Three saves side by side (saves.js shows them). Slot 1 keeps the old key, so a game saved before there were slots
+// simply is the first save. Which slot is played is remembered; ?slot=2 picks one (tests).
+export const SLOTS = 3;
+const SLOT_KEY = 'eenhoornland-slot';
+export const slotKey = n => n === 1 ? 'eenhoornland-v1' : 'eenhoornland-v1-' + n;
+function pickSlot() {
+  try {
+    const p = +new URLSearchParams(location.search).get('slot'); if (p >= 1 && p <= SLOTS) { localStorage.setItem(SLOT_KEY, String(p)); return p; }
+    const s = +localStorage.getItem(SLOT_KEY); return s >= 1 && s <= SLOTS ? s : 1;
+  } catch (e) { return 1; }
+}
+export const slot = pickSlot();
+export const setSlot = n => { try { localStorage.setItem(SLOT_KEY, String(n)); } catch (e) { } };
+const KEY = slotKey(slot);
+let frozen = false;
+/** after switching or wiping a save nothing may be written any more until the page has reloaded */
+export const freezeSaves = () => { frozen = true; };
 function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } }
 const saved = load();
 export const state = {
@@ -20,6 +36,7 @@ export const state = {
   extra: saved.extra || {},            // free space for activities: state.extra[activityId] = {...}
 };
 export function save() {
+  if (frozen) return;
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { }
 }
 /** pick a sticker: a new one if any are missing, else a random duplicate */

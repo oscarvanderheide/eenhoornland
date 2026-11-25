@@ -54,10 +54,10 @@ export default async function (t) {
   await btn(0); await t.sleep(800); ok(await t.ev(`__w.life.carrying() !== __a`), '✕ again throws it');
   const who0 = await t.ev('__w.who()'); await btn(4); ok(await until(`__w.who() !== '${who0}'`), 'L1 switches to the other sister');
   await btn(5); ok(await until(`__w.who() === '${who0}'`), 'R1 switches back');
-  await btn(9); const mapOk = await until(`!document.getElementById('modal').hidden`); ok(mapOk, 'Options opens the map');
-  if (!mapOk) console.log('  state', await t.ev(`JSON.stringify({ hand: !document.getElementById('pad-hand').hidden, act: !document.getElementById('act').hidden, dream: !!document.getElementById('dream'), scene: !!document.getElementById('scene'), reward: !!document.querySelector('.reward'), map: !!document.getElementById('b-map').offsetParent, busy: __w.busy() })`)); await t.sleep(400);
-  ok(await t.ev(`!document.getElementById('pad-hand').hidden`), 'on the map the hand shows up'); await t.shot('tmp-shots/g-3-map.png');
-  await btn(1); ok(await until(`document.getElementById('modal').hidden`), '○ closes the map');
+  await btn(9); const mapOk = await until(`!document.getElementById('modal').hidden`); ok(mapOk, 'Options opens the three saves');
+  if (!mapOk) console.log('  state', await t.ev(`JSON.stringify({ hand: !document.getElementById('pad-hand').hidden, act: !document.getElementById('act').hidden, dream: !!document.getElementById('dream'), scene: !!document.getElementById('scene'), reward: !!document.querySelector('.reward'), save: !!document.getElementById('b-save').offsetParent, busy: __w.busy() })`)); await t.sleep(400);
+  ok(await t.ev(`!document.getElementById('pad-hand').hidden`), 'over the saves the hand shows up'); await t.shot('tmp-shots/g-3-map.png');
+  await btn(1); ok(await until(`document.getElementById('modal').hidden`), '○ closes the saves');
   ok(await until(`document.getElementById('pad-hand').hidden`), 'and the hand goes away again');
   // riding: □ gets on, △ is the wing button
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.placeAt(30.5, 46.5)`); await t.sleep(1200);

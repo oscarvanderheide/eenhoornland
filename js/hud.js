@@ -8,6 +8,7 @@ import * as Q from './quest.js';
 import { sfx, speak } from './audio.js';
 import * as ui from './ui.js';
 import { state } from './state.js';
+import { openSaves, slotIcon } from './saves.js';
 
 const CSS = `
 #quest{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));top:calc(50px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;gap:6px;max-width:min(70vw,420px);align-items:center}
@@ -68,8 +69,9 @@ export function createHud(getWorld) {
   const panel = document.createElement('div'); panel.id = 'quest'; game.appendChild(panel);
   const night = document.getElementById('b-night'); if (night) night.hidden = true;
   const voice = document.getElementById('b-voice'); if (voice) voice.hidden = true;                 // there is no voice (see audio.js)     // evening now comes by itself when the wishes are done
-  const mapBtn = document.createElement('button'); mapBtn.className = 'hbtn'; mapBtn.id = 'b-map'; mapBtn.setAttribute('aria-label', 'Kaart'); mapBtn.appendChild(PX.domSprite(ART.mapIcon(), 3));
-  const tr = document.querySelector('.hud.tr'); tr.insertBefore(mapBtn, tr.firstChild); mapBtn.onclick = openMap;
+  // top right: the three saves (the map has no button of its own: a goal chip opens it)
+  const saveBtn = document.createElement('button'); saveBtn.className = 'hbtn'; saveBtn.id = 'b-save'; saveBtn.setAttribute('aria-label', 'Ander spel'); saveBtn.appendChild(PX.domSprite(slotIcon(), 3));
+  const tr = document.querySelector('.hud.tr'); tr.insertBefore(saveBtn, tr.firstChild); saveBtn.onclick = () => { if (!ui.activityOpen()) openSaves(); };
 
   // jumping (bottom right) and the tools the girls own (bottom left)
   const jumpBtn = document.createElement('button'); jumpBtn.className = 'hbtn'; jumpBtn.id = 'b-jump'; jumpBtn.setAttribute('aria-label', 'Springen'); jumpBtn.appendChild(PX.domSprite(ART.jumpIcon(), 4));

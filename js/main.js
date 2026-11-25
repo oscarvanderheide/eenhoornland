@@ -8,6 +8,7 @@ import { playDream } from './dream.js';
 import { playHatch, playFeed } from './cutscene.js';
 import { openShop } from './shop.js';
 import { initGamepad } from './gamepad.js';
+import { startButton } from './saves.js';
 
 const $ = s => document.querySelector(s);
 const ACTS = {
@@ -76,6 +77,7 @@ $('#b-voice').onclick = e => { const on = e.currentTarget.getAttribute('aria-pre
 /** the first seconds of a morning: just her, her house and the morning light; the goal shows up after a little while */
 function quietHud() { const q = $('#quest'); if (!q) return; q.style.transition = 'opacity .8s'; q.style.opacity = 0; setTimeout(() => { q.style.opacity = 1; }, 6000); }
 /* ---------- start: who plays? Then the dream, then outside ---------- */
+startButton($('#start'));   // which of the three saves
 // The girl who is picked dreams of a mysterious egg and a unicorn, wakes up, and the adventure begins at her own front door.
 for (const b of document.querySelectorAll('#start .pick')) {
   const who = b.dataset.who, cv = PX.domSprite(PX[who](), 6); b.querySelector('.face').appendChild(cv);
