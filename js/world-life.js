@@ -131,7 +131,7 @@ export function createLife(ctx) {
     if (dist(c) < 1.8) return act();
     const then = () => { if (dist(c) < 3.6) act(); };
     if (ctx.approach(Math.floor(c.pos.x), Math.floor(c.pos.z), then, true)) return;
-    const t = ctx.nearestWalkable(c.pos.x, c.pos.z); if (!t || !ctx.walkThen(t[0], t[1], then)) (sfx[c.sound] || sfx.pop)();
+    const t = ctx.nearestWalkable(c.pos.x, c.pos.z); if (!t || !ctx.walkThen(t[0], t[1], then)) { if (!(ways && ways.tap(c))) (sfx[c.sound] || sfx.pop)(); }   // too far to reach: it says hello from where it is
   }
   function toss(c, vx, vz) {
     if (c.nap > 0) { c.nap = 0; c.morning = false; c.mesh.rotation.z = 0; }

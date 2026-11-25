@@ -38,7 +38,7 @@ export default async function (t) {
   // paddle along with the stick, then try for the open sea: she stays in the shallows
   await t.ev(`__w.stick(${dx}, ${dz})`); await t.sleep(2500); await t.ev('__w.stick(0, 0)'); await t.sleep(300);
   ok(await t.ev(`__w.life.swimming() === 'zee'`), 'swimming out: still in the water');
-  const p = await J('__w.info().pos'); ok(await t.ev(`__w.life.canSwimAt(${p[0]}, ${p[1]}) || __w.life.waterAt(${p[0]}, ${p[1]}) === 'zee'`), 'she stops where the deep water starts ' + p);
+  const p = await J('__w.info().pos'); ok(await t.ev(`[[0, 0], [-.05, 0], [.05, 0], [0, -.05], [0, .05]].some(([a, b]) => __w.life.canSwimAt(${p[0]} + a, ${p[1]} + b))`), 'she stops where the deep water starts ' + p);
   await t.shot('tmp-shots/s-2-edge.png');
   // the action button splashes
   ok((await J('__w.action().key')) === 'splash', 'in the water the button splashes');

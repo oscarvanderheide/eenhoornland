@@ -40,7 +40,7 @@ export default async function (t) {
   if (run('race')) {
     await t.ev(`__w.Q._reset({ stage: 'zoek' }); 0`); await place(R[0], R[1] - 1.2); await t.sleep(2000); await shot('12-arch');
     await t.ev(`__w.walkTo(30,45)`); await t.sleep(300);
-    await t.ev(`__w.Q._reset({ stage: 'ei', herd: ${herd} }); 0`); await place(R[0] - 3, R[1] - 1.5); await t.sleep(1500);
+    await t.ev(`__w.Q._reset({ stage: 'ei', herd: ${herd} }); 0`); await place(R[0] - 1.5, R[1] - 1); await t.sleep(1500);
     const a = await J(`__w.screen(${R[0]}, 1.5, ${R[1]} - .07)`); await t.click(a[0], a[1]);
     ok(await until(`!!document.querySelector('.act-race canvas')`, 12000), 'a tap on the arch starts the race'); await t.sleep(1200); await shot('13-pick');
     const c0 = await t.ev(`__w.Q.quest.coins`);

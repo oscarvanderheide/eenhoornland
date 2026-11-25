@@ -131,10 +131,15 @@ const umbrella = seed => cached('umb' + (seed % 2), () => { const a = seed % 2 ?
 const sandcastle = () => cached('sandcastle', () => sprite([
   '.....r..........r.....', '.....rr....f....rr....', '.....p.....ff...p.....', '...s.s.s...p..s.s.s...', '...sssss...p..sssss...', '...sSsss.s.s.sssSss...', '...sssss.sssssssss....', '...sSssssssSsssssss...', '...sssssssssssssSss...', '..ssssSssskkssssssss..', '..ssssssssKKsssSssss..', '.sssSsssssKKssssssSss.', 'ssssssssssKKssssssssss',
 ], { s: '#F0D898', S: '#D6BC86', r: '#FF5E9C', f: '#4DABF7', p: '#8A5A3B', k: '#8A6A4A', K: '#6E5238' }));
-const boat = () => cached('boat', () => sprite([
-  '.............m................', '.............mwww.............', '.............mwwwww...........', '.............mwwwwwww.........', '.............m................',
+const boatSail = () => {   // a big sail right of the mast (a pink stripe every few rows), a little one in front, a flag on top
+  const rows = ['.............mff', '.............mfff', '.............mf'];
+  for (let i = 0; i < 14; i++) { const w = 1 + i, j = i > 3 ? Math.floor((i - 3) * .7) : 0, c = i % 5 === 3 ? 'S' : 'w'; rows.push((' '.repeat(13 - j) + 'v'.repeat(j) + 'm' + c.repeat(w)).replace(/ /g, '.').padEnd(30, '.')); }
+  rows.push('.............m................'); return rows;
+};
+const boat = () => cached('boat2', () => sprite([
+  ...boatSail(),
   'rr...........m..............rr', 'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr', '.rWWWWWWWWWWWWWWWWWWWWWWWWWWr.', '.rrrrrrrrrrrrrrrrrrrrrrrrrrrr.', '..bbbbbbbbbbbbbbbbbbbbbbbbbb..', '...bbbbbbbbbbbbbbbbbbbbbbbb...', '....BBBBBBBBBBBBBBBBBBBBBB....',
-], { r: '#E8616B', W: '#FFFFFF', b: '#4DABF7', B: '#2F7FC0', m: '#8A5A3B', w: '#FFF6E3' }));
+], { r: '#E8616B', W: '#FFFFFF', b: '#4DABF7', B: '#2F7FC0', m: '#8A5A3B', w: '#FFF6E3', S: '#FF8FB8', v: '#FFE9C2', f: '#FF5E9C' }));
 const statue = () => cached('statue', () => sprite([
   '.........y........', '........yY........', '.....y.yY.........', '....yyyyyy........', '...yyyykyyy.......', '...yyyyyyyyY......', '..Yyyyyyy.........', '..YYyyyyy.........', '..YYyyyyyyy.......', '...Yyyyyyyyy......', '...yyyyyyyyy......', '...yy.yy.yy.......', '...yy.yy.yy.......',
   '.ssssssssssssss...', '.sSSSSSSSSSSSSs...', '..ssssssssssss....', '..sSssSssSssSs....', '..ssssssssssss....', '.ssssssssssssss...', '.SSSSSSSSSSSSSS...',

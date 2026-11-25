@@ -134,9 +134,9 @@ export function createRooms(ctx) {
     const [bx, bz] = pz.box, fx = bx - d[0], fz = bz - d[1];
     const there = () => Math.abs(kid.pos.x - (fx + .5)) < .6 && Math.abs(kid.pos.z - (fz + .5)) < .6;
     if (there()) { kid.face = d[0] ? d[0] : kid.face; push(...d); return; }
-    ctx.walkThen(fx, fz, () => { if (there()) { kid.face = d[0] ? d[0] : kid.face; push(...d); } });
+    ctx.freeWalk(() => ctx.walkThen(fx, fz, () => { if (there()) { kid.face = d[0] ? d[0] : kid.face; push(...d); } }));   // close by: round to the side it is pushed from
   }
-  boxMesh.userData.tap = tapBox; pick.push(boxMesh);
+  boxMesh.userData.tap = () => { if (Math.hypot(pz.box[0] + .5 - kid.pos.x, pz.box[1] + .5 - kid.pos.z) > 3.6) return void sfx.pop(); tapBox(); }; pick.push(boxMesh);   // tapped from afar: only the pop
 
   /* ---------------- the hall: coins on the floor, a chest, and the golden door to the garden ---------------- */
   const h = R.hal, coins = [];

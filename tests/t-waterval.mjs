@@ -12,15 +12,16 @@ export default async function (t) {
   const F = await J('__w.MAP.FALLS'), R = await J('__w.MAP.ROOMS.val');
   const room = () => t.ev(`__w.MAP.roomAt(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))`);
   const tapAt = async (x, y, z) => { const p = await J(`__w.screen(${x}, ${y}, ${z})`); await t.click(p[0], p[1]); };
+  const goNear = async (x, z) => { await t.ev(`(() => { let b = null, bd = 1e9; for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) { const X = Math.floor(${x}) + dx, Z = Math.floor(${z}) + dz; if (!__w.walkable(X, Z)) continue; const d = Math.hypot(X + .5 - ${x}, Z + .5 - ${z}) + (Z + .5 > ${z} + .3 ? 2 : 0); if (d > .9 && d < bd) { bd = d; b = [X, Z]; } } if (b) __w.placeAt(b[0] + .5, b[1] + .5); })()`); await t.sleep(400); };   // taps on things only reach what is near her
 
   await t.ev(`__w.placeAt(94.5, 43.5)`); await t.sleep(2000); await t.shot('tmp-shots/v-1-falls.png');
   // a tap on the falling water: across the stones and in behind it
-  await tapAt(94.5, 1.4, F.z1 + 1.05);
+  await t.ev(`__w.walkTo(${R.door[0]}, ${R.door[1]})`);   // walking to the falls (a tap on them only reaches them from close by)
   ok(await until(`__w.val.notes() >= 2`, 8000), 'the stepping stones sing as she crosses'); await t.sleep(200); await t.shot('tmp-shots/v-2-stones.png');
   ok(await until(`__w.MAP.roomAt(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z)) === 'val'`, 10000), 'through the waterfall into the grotto'); await t.sleep(1500); await t.shot('tmp-shots/v-3-grotto.png');
   // six crystals
   const c0 = await t.ev('__w.Q.quest.coins');
-  await tapAt(R.x0 + 1.4, .8, R.z0 + .35); ok(await until(`__w.val.sung().length === 1`, 6000), 'a tap on a crystal: it sings');
+  await goNear(R.x0 + 1.4, R.z0 + .35); await tapAt(R.x0 + 1.4, .8, R.z0 + .35); ok(await until(`__w.val.sung().length === 1`, 6000), 'a tap on a crystal: it sings');
   ok(await until(`__w.action() && __w.action().key.startsWith('kristal')`, 3000), 'next to a crystal the action button rings it');
   ok(await t.ev(`[0, 1, 2, 3, 4, 5].every(i => !__w.walkable(Math.floor(${R.x0} + 1.4 + i * 1.55), ${R.z0}))`), 'the crystals are solid');
   for (let i = 1; i < 6; i++) { await t.ev(`__w.val.ring(${i})`); await t.sleep(250); }

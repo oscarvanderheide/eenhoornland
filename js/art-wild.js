@@ -121,17 +121,27 @@ export const watervalMond = () => cached('watervalMond', () => gridSprite(30, 26
 
 /* ---------------- dorp: the pig in the mud ---------------- */
 /** the pig: clean pink, or (dirty) covered in mud. f 1: rolling on its back */
-export const varken = (f = 0, dirty = false) => cached('varken' + f + dirty, () => {
-  const rows = f === 1 ? [
-    '..p......p...', '.ppp....ppp..', '.ppppppppppp.', 'pppppppppppnn', 'ppppppppppnkn', '.ppppppppppp.', '..e.......e..',
-  ] : [
-    '.........ee..', '.t.......epe.', 'tt.pppppppppp', '.ppppppppppkp', '.pppppppppnnnn', '.pppppppppnkkn', '..pppppppppnn.', '..pp.pp..pp.p.', '..pp.pp..pp.pp',
-  ];
+export const varken = (f = 0, dirty = false) => cached('varken3' + f + dirty, () => {
+  // a round pink pig facing right, drawn from shapes: a round body, a round head with two ears, a big snout with
+  // nostrils, a dark eye, a rosy cheek, a curly tail, four short legs. f 1: rolling on its back, legs up, eyes shut happy
+  const back = f === 1, W = 23, H = 17, by = back ? 9 : 8, hy = back ? 9.5 : 7.5;
+  const ell = (x, y, cx, cy, rx, ry) => ((x + .5 - cx) / rx) ** 2 + ((y + .5 - cy) / ry) ** 2 <= 1;
   const mud = (x, y) => dirty && (Math.sin(x * 1.3 + y * .7) + Math.sin(y * 1.9 - x * .5) + Math.sin(x * .6 + 2) > .7);
-  return gridSprite(Math.max(...rows.map(r => r.length)), rows.length, (x, y) => {
-    const ch = rows[y][x]; if (!ch || ch === '.') return null;
-    if (ch === 'k') return EYE; if (ch === 'n') return '#F27BA0'; if (ch === 't') return '#F59AB8'; if (ch === 'e') return '#F27BA0';
-    return mud(x, y) ? ((x + y) % 2 ? '#8A5A33' : '#6E4426') : (y < 3 ? '#FFC2D6' : '#FFADC8');
+  const skin = (x, y) => mud(x, y) ? ((x + y) % 2 ? '#8A5A33' : '#6E4426') : y < (back ? 7 : 6) ? '#FFD3E2' : '#FFB8CF';
+  return gridSprite(W, H, (x, y) => {
+    // the face first: it sits on top
+    if (back ? (y === 9 && (x === 15 || x === 17) || y === 8 && x === 16) : (x === 16 && (y === 6 || y === 7))) return EYE;
+    if (ell(x, y, 20.3, hy + .8, 1.7, 2)) return (x === 20 && (y === Math.floor(hy) || y === Math.floor(hy) + 2)) ? '#C2547A' : '#FF9EBE';   // the snout
+    if (!back && x >= 16 && x <= 17 && y === 9) return '#FF8FB0';                                                                    // a rosy cheek
+    const ears = back ? [] : [[14, 1], [14, 2], [15, 2], [17, 1], [17, 2], [18, 2]];
+    if (ears.some(([ex, ey]) => ex === x && ey === y)) return (y === 2 && (x === 15 || x === 18)) ? '#FFD1E0' : '#F27BA0';
+    if (ell(x, y, 16, hy, 4.3, 4.2)) return skin(x, y);                                                                       // the head
+    if (ell(x, y, 9.5, by, 7.6, back ? 4.6 : 5.2)) return skin(x, y);                                                         // the body
+    const legX = [5, 8, 11, 13], legs = back ? y >= 1 && y <= 4 : y >= 12 && y <= 15;
+    if (legs && legX.some(l => x === l || x === l + 1)) return (back ? y === 1 : y === 15) ? '#C98A9E' : skin(x, y);
+    const tail = back ? [[1, 8], [0, 9], [1, 10], [2, 9]] : [[1, 6], [0, 7], [1, 8], [2, 7], [1, 5]];
+    if (tail.some(([tx, ty]) => tx === x && ty === y)) return '#F27BA0';
+    return null;
   });
 });
 /** the mud pool (lies flat) */
