@@ -138,7 +138,7 @@ export function createFlight(ctx) {
   }
 
   return {
-    on: () => !!f, can: () => !f && !!carrier(), start, land,
+    on: () => !!f, can: () => !f && !!carrier(), start, land, reachable,
     /** a tap while flying: fly there (and with the button, land) */
     toward(x, z) { if (!f || f.phase === 'down') return; f.goal = [x, z]; f.autoLand = false; },
     get camK() { return camK; },

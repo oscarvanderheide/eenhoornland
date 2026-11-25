@@ -308,19 +308,76 @@ export function createLife(ctx) {
      hops her out, dripping. The ducks come to see when she lands with a splash. */
   const WATERS = { vijver: { cx: MAP.POND.cx, cz: MAP.POND.cz, r: Math.min(MAP.POND.rx, MAP.POND.rz), reach: 1.4, swim: Math.min(MAP.POND.rx, MAP.POND.rz) * .7, sink: .38 } };   // only the pond: the fountain is too small to stand in (she vanished behind its rim)
   let inWater = null, dripT = 0, paddleT = 0, wade = 0, sink = .38;
+  /* ---------------- the sea: close to the shore it is shallow, and she can swim there like in the pond ----------------
+     Shallow = a sea tile with land at most two tiles away (the light band of the sea shader). The open sea is for the boat.
+     She only ever swims where every shore within reach is one she could have walked to from where she went in (like a
+     landing when flying): a channel next to an island that is still closed is too deep, so the gates stay gates. */
+  const SI = M.I, SW = M.W, seaOk = new Uint8Array(M.block.length);
+  for (let z = 2; z < MAP.OUT_H - 2; z++) for (let x = 2; x < SW - 2; x++) {
+    const i = SI(x, z); if (M.ground[i] !== MAP.SE || M.block[i] !== 1 || M.deck[i]) continue;
+    let near = false; for (let dz = -2; dz <= 2 && !near; dz++) for (let dx = -2; dx <= 2; dx++) { if (dx * dx + dz * dz > 4) continue; const j = SI(x + dx, z + dz); if (M.ground[j] !== MAP.SE && !M.deck[j]) { near = true; break; } }
+    if (near) seaOk[i] = 1;
+  }
+  let seaR = null, seaRT = -1e9, seaAllow = null, swimSet = null;
+  /** the shallow tiles she may swim in from the land she stands on (or null) */
+  function seaAllowed() {
+    let kx = Math.floor(kid.pos.x), kz = Math.floor(kid.pos.z);
+    if (kz >= MAP.OUT_H || !ctx.fly) return null;
+    if (seaR && seaR[SI(kx, kz)] && now() - seaRT < 3000) return seaAllow;
+    if (!ctx.walkable(kx, kz)) { const w = ctx.nearestWalkable(kid.pos.x, kid.pos.z); if (!w) return null; [kx, kz] = w; }
+    seaR = ctx.fly.reachable(kx, kz, Q.canRide()); seaRT = now();
+    const bad = new Uint8Array(seaOk.length), R = 4;                             // around every shore she could not walk to
+    for (let z = 0; z < MAP.OUT_H; z++) for (let x = 0; x < SW; x++) if (!seaR[SI(x, z)] && ctx.walkable(x, z)) for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) { const X = x + dx, Z = z + dz; if (X >= 0 && Z >= 0 && X < SW && Z < MAP.OUT_H) bad[SI(X, Z)] = 1; }
+    seaAllow = new Uint8Array(seaOk.length); for (let i = 0; i < seaOk.length; i++) seaAllow[i] = seaOk[i] && !bad[i];
+    return seaAllow;
+  }
+  const canSwimAt = (x, z) => { const m = seaAllowed(); return !!m && !!m[SI(Math.floor(x), Math.floor(z))]; };
+  /** the swimmable tile nearest to (px, pz) in `set`, within r tiles */
+  function nearestIn(set, px, pz, r = 3) {
+    const cx = Math.floor(px), cz = Math.floor(pz); let best = null, bd = 1e9;
+    for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= SW || z >= MAP.OUT_H || !set[SI(x, z)]) continue; const d = Math.hypot(x + .5 - px, z + .5 - pz); if (d < bd) { bd = d; best = [x, z]; } }
+    return best;
+  }
+  /** standing on the shore right next to shallow water she may swim in */
+  function atShallows() { if (inWater || ctx.mount() || carried || (ctx.toys && ctx.toys.carrying())) return false; const m = seaAllowed(); if (!m) return false; const t = nearestIn(m, kid.pos.x, kid.pos.z, 1); return !!t && Math.hypot(t[0] + .5 - kid.pos.x, t[1] + .5 - kid.pos.z) < 1.25; }
+  /** the way through the water to (x, z): tile by tile, so she never cuts across a headland */
+  function route(kind, x, z) {
+    if (kind !== 'zee') return waterAt(x, z) === kind ? [inside(kind, x, z)] : null;
+    if (!swimSet) return null; const t = swimSet[SI(Math.floor(x), Math.floor(z))] ? [Math.floor(x), Math.floor(z)] : nearestIn(swimSet, x, z, 6); if (!t) return null;
+    const s = [Math.floor(kid.pos.x), Math.floor(kid.pos.z)], p = ctx.astar(s[0], s[1], t[0], t[1], (X, Z) => X >= 0 && Z >= 0 && X < SW && Z < MAP.OUT_H && (!!swimSet[SI(X, Z)] || (X === s[0] && Z === s[1]))); if (!p) return null;
+    const out = p.slice(1).map(([X, Z]) => new THREE.Vector3(X + .5, 0, Z + .5));
+    if (swimSet[SI(Math.floor(x), Math.floor(z))]) { if (out.length) out[out.length - 1].set(x, 0, z); else out.push(new THREE.Vector3(x, 0, z)); }
+    return out.length ? out : null;
+  }
   /** the pond or fountain she stands next to (or null) */
   function nearWater() { for (const [k, w] of Object.entries(WATERS)) if (Math.hypot(kid.pos.x - w.cx, kid.pos.z - w.cz) < w.r + w.reach + .4) return k; return null; }
   /** the water she can swim in at (x, z), or null */
-  function waterAt(x, z) { for (const [k, w] of Object.entries(WATERS)) if (Math.hypot(x - w.cx, z - w.cz) <= w.swim) return k; return null; }
+  function waterAt(x, z) { for (const [k, w] of Object.entries(WATERS)) if (Math.hypot(x - w.cx, z - w.cz) <= w.swim) return k; if (swimSet && x >= 0 && z >= 0 && swimSet[SI(Math.floor(x), Math.floor(z))]) return 'zee'; return null; }
   /** (x, z) pulled into the water she is in */
-  function inside(kind, x, z) { const w = WATERS[kind], dx = x - w.cx, dz = z - w.cz, l = Math.hypot(dx, dz), m = w.swim * .92; return l <= m ? new THREE.Vector3(x, 0, z) : new THREE.Vector3(w.cx + dx / l * m, 0, w.cz + dz / l * m); }
+  function inside(kind, x, z) { if (kind === 'zee') { const r = route(kind, x, z); return r ? r[r.length - 1] : kid.pos.clone(); } const w = WATERS[kind], dx = x - w.cx, dz = z - w.cz, l = Math.hypot(dx, dz), m = w.swim * .92; return l <= m ? new THREE.Vector3(x, 0, z) : new THREE.Vector3(w.cx + dx / l * m, 0, w.cz + dz / l * m); }
   /** hop into the water (towards (x, z) if given); she lands with a splash and can paddle about */
   function dip(kind, x, z) {
+    if (kind === 'zee') return dipSea(x, z);
     const w = WATERS[kind]; if (!w || inWater || ctx.mount() || ctx.busy()) return false;
     if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
     let to; if (x !== undefined && waterAt(x, z) === kind) to = inside(kind, x, z);
     else { const dx = kid.pos.x - w.cx, dz = kid.pos.z - w.cz, l = Math.hypot(dx, dz) || 1; to = new THREE.Vector3(w.cx + dx / l * w.swim * .35, 0, w.cz + dz / l * w.swim * .35); }
     to.jump = true; kid.path = [to]; kid.face = to.x >= kid.pos.x ? 1 : -1; return true;
+  }
+  /** into the sea: a hop to the shallow water nearest to her, then on through the water to (x, z) if given */
+  function dipSea(x, z) {
+    if (inWater || ctx.mount() || ctx.busy()) return false; const m = seaAllowed(); if (!m) return false;
+    const goal = x !== undefined && m[SI(Math.floor(x), Math.floor(z))];
+    const first = goal && Math.hypot(x - kid.pos.x, z - kid.pos.z) < 1.8 ? [Math.floor(x), Math.floor(z)] : nearestIn(m, kid.pos.x + (x !== undefined ? Math.sign(x - kid.pos.x) * .4 : 0), kid.pos.z + (z !== undefined ? Math.sign(z - kid.pos.z) * .4 : 0), 2);
+    if (!first || Math.hypot(first[0] + .5 - kid.pos.x, first[1] + .5 - kid.pos.z) > 2.6) return false;
+    if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
+    swimSet = new Uint8Array(m.length); const q = [SI(...first)]; swimSet[q[0]] = 1;   // the water joined to where she lands
+    for (let h = 0; h < q.length; h++) { const i = q[h], X = i % SW, Z = Math.floor(i / SW); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = SI(X + dx, Z + dz); if (m[j] && !swimSet[j]) { swimSet[j] = 1; q.push(j); } } }
+    const to = goal && first[0] === Math.floor(x) && first[1] === Math.floor(z) ? new THREE.Vector3(x, 0, z) : new THREE.Vector3(first[0] + .5, 0, first[1] + .5);
+    to.jump = true; kid.face = to.x >= kid.pos.x ? 1 : -1;
+    let rest = [];
+    if (goal && swimSet[SI(Math.floor(x), Math.floor(z))] && (first[0] !== Math.floor(x) || first[1] !== Math.floor(z))) { const s = kid.pos.clone(); kid.pos.copy(to); rest = route('zee', x, z) || []; kid.pos.copy(s); }
+    kid.path = [to, ...rest]; return true;
   }
   function bigSplash(x, z, n) { sfx.splash(); setTimeout(sfx.splash, 120); sfx.bubble(); burst(new THREE.Vector3(x, .2, z), 6); for (let i = 0; i < n; i++) bit(ART.drop(), x + rnd(-.3, .3), .2, z + .1, { vx: rnd(-2.6, 2.6), vy: rnd(3, 6.5), g: 10, life: 1.1 }); }
   function landed(kind) {
@@ -332,15 +389,16 @@ export function createLife(ctx) {
     const k = ctx.mount() || sliding ? null : waterAt(kid.pos.x, kid.pos.z), jumping = kid.path[0] && kid.path[0].jump;
     if (k && !inWater && !jumping) { inWater = k; landed(k); }                  // landed in it
     else if (!k && inWater) { inWater = null; dripT = 3; setTimeout(() => bubble(kid, 'Hihi! Nat!'), 200); }   // and out again, dripping
+    if (!inWater && !jumping && swimSet && !k) swimSet = null;                   // out of the sea: the next dip looks again where she may swim
     if (ctx.mount() || sliding) { wade = 0; return; }
     const was = wade; wade = inWater ? Math.min(1, wade + dt * 5) : Math.max(0, wade - dt * 5);
-    if (inWater) sink = WATERS[inWater].sink; if (wade > 0) kid.lift = -sink * wade + (inWater ? Math.sin(performance.now() / 260) * .04 : 0); else if (was > 0) kid.lift = 0;
+    if (inWater) sink = inWater === 'zee' ? .4 : WATERS[inWater].sink; if (wade > 0) kid.lift = -sink * wade + (inWater ? Math.sin(performance.now() / 260) * .04 : 0); else if (was > 0) kid.lift = 0;
     if (inWater && kid.moving && (paddleT -= dt) < 0) { paddleT = .28; sfx.bubble(); bit(ART.drop(), kid.pos.x - kid.face * .25, .1, kid.pos.z + .1, { vx: -kid.face * rnd(.5, 1.2), vy: rnd(2, 3), g: 10, life: .6 }); }
   }
   /** she jumps while in the water: a big splash */
   function splashJump() { if (!inWater) return false; kid.hop = .8; kid.hopH = .5; setTimeout(() => { if (inWater) bigSplash(kid.pos.x, kid.pos.z, 10); }, 330); return true; }
   return {
-    dispose() { offQ(); }, nearWater, dip, dipping: () => !!inWater, swimming: () => inWater, lift, waterAt, inside, splashJump, nearMover, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, plantBloom, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
+    dispose() { offQ(); }, nearWater, dip, dipping: () => !!inWater, swimming: () => inWater, lift, waterAt, inside, route, canSwimAt, nearSea: atShallows, seaInfo: () => { const m = seaAllowed(); let n = 0; if (m) for (const v of m) n += v; return { allowed: n, swim: swimSet ? swimSet.reduce((a, b) => a + b, 0) : 0 }; }, splashJump, nearMover, tapProp, splash, scare, hold, toss, bit, leaves, fishJump, tapAnimal, setDown, throwIt, grabNear, stones, carrying: () => carried, jumped, tapKid, burp, plantBloom, friends: () => friends.slice(), hitAt, paint, fetching: () => fetch && fetch.kind, sliding: () => !!sliding,
     info: () => ({ birds: birds.filter(b => b.state === 'sit').length, flying: birds.filter(b => b.state === 'flee').length, bits: bits.length, fish: jumps.length, friends: friends.map(c => c.name), napping: animals.filter(a => a.nap > 0).map(a => a.name), pending: pending.length, power, blooms: blooms.length }),
     update(dt, time, active) {
       stepWater(dt);
