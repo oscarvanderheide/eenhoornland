@@ -171,6 +171,16 @@ export const zwaardSteen = (withSword = true) => cached('zwsteen2' + withSword, 
   if (y < 25 && (x * 5 + y * 3) % 4 === 0) return '#6FB86A';                                                               // moss on top
   const v = (x - 3) * .35 + (y - 21) * .9; return (x * 7 + y * 3) % 13 === 0 ? '#6FB86A' : v < 3 ? '#E2E5EE' : v < 7 ? '#BFC4D4' : v < 10 ? '#9FA5BC' : '#848AA2';
 }));
+/** the sword on its own (as it sits in the stone, point down): for the scene where she pulls it out (cutscene.js) */
+export const zwaardLos = () => cached('zwaardLos', () => gridSprite(22, 25, (x, y) => {
+  const cx = x + .5 - 11;
+  if (y <= 2 && Math.hypot(cx, y + .5 - 1.5) <= 1.8) return x === 10 && y === 1 ? '#FFD6E7' : '#FF5E9C';
+  if (y >= 3 && y <= 6 && Math.abs(cx) < 1.1) return y % 2 ? '#8A5A3B' : '#C08A4A';
+  if (y === 6 && Math.abs(cx) > 4 && Math.abs(cx) < 6) return '#F7C548';
+  if (y >= 7 && y <= 8 && Math.abs(cx) < 6) return y === 7 ? '#FFE27A' : '#D99A2B';
+  if (y >= 9 && y <= 23 && Math.abs(cx) < 2.1 - (y === 23 ? 1 : 0)) return cx < -1 ? '#FFFFFF' : cx < 0 ? '#E8ECF4' : cx < 1 ? '#C9CEDC' : '#9FA5BC';
+  return null;
+}));
 /** the forest gnome; asleep he snores against a tree stump, awake he stands and waves (his hammer is its own sprite) */
 export const kabouter = (awake = false) => cached('kabouter2' + awake, () => sprite(awake ? [
   '....r.....', '...rrr....', '...rRr....', '..rrrrr...', '..rrrrrr..', '.ssssss...', '.skssks...', '.ssmsss...', 'wwwwwww...', 'wwwwwww.s.', 'bbbbbbbbs.', 'bBBBBbb...', '.bbbbb....', '.gg.gg....', 'kk..kk....',
@@ -185,6 +195,8 @@ export const hamerGroot = () => cached('hamerGroot2', () => gridSprite(14, 22, (
 }));
 export const belIcon = () => cached('beli', () => sprite(['....kk....', '...yyyy...', '..yYyyyy..', '..yYyyyy..', '.yyYyyyyy.', '.yyyyyyyy.', 'yyyyyyyyyy', '....oo....'], { y: '#FFD43B', Y: '#FFF3A8', k: '#8A5A3B', o: '#E0A020' }));
 /** a little picture for "press here to jump" */
+/** the ✕ button with nothing to do right here: an open hand */
+export const handIcon = () => cached('handi', () => sprite(['..s.s.s...', '.sSsSsSs..', '.sSsSsSs.s', '.sSsSsSssS', '.sSSSSSSSs', '.sSSSSSSs.', '..sSSSSs..', '...ssss...'], { s: '#C98A6B', S: '#FFD9C2' }));
 export const jumpIcon = () => cached('jumpi', () => sprite(['....yy....', '...yyyy...', '..yyyyyy..', '.yyyyyyyy.', '...yyyy...', '...yyyy...', '..........', '.gg.gg.gg.', 'gggggggggg'], { y: '#FFD43B', g: '#5DC88A' }));
 
 /** a little picture for "say hello": a speech bubble with a heart in it */
@@ -551,6 +563,12 @@ export function companionFrames(u, stage, kindDef) {
   return { idle: uniSprite(u, 'idle', false, o), w1: uniSprite(u, 'w1', false, o), w2: uniSprite(u, 'w2', false, o), blink: uniSprite(u, 'idle', true, o) };
 }
 export const bedIcon = () => cached('bed', () => sprite(['w...........', 'w...........', 'wpp.........', 'wppbbbbbbbbb', 'wwwbbbbbbbbb', 'wwwwwwwwwwww', 'w..........w'], { w: '#A97450', p: '#FFFFFF', b: '#FF7EB6' }));
+/** the sword's slash: a white crescent with a cool blue rim, pointing right (world-sword.js turns it where she slashes) */
+export const slashArc = () => cached('slash', () => gridSprite(26, 26, (x, y) => {
+  const dx = x + .5 - 13, dy = y + .5 - 13, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx); if (Math.abs(a) > 1.75) return null;
+  const k = Math.cos(a / 1.75 * Math.PI / 2), outer = 12.6, inner = outer - .8 - 4.2 * k; if (r > outer || r < inner) return null;
+  return r > outer - 1.1 ? '#BFE8FF' : r < inner + 1 ? '#DDF3FF' : '#FFFFFF';
+}, { outline: false }));
 /** the three saves each have their own colour, so the girls know theirs without reading */
 export const SLOT_COLS = [['#FF9EC7', '#FFD7E8'], ['#B9A3F0', '#E4D9FF'], ['#7FD69B', '#CDF3D8']];
 /** the save button: three little cards in the saves' colours, the one being played stands up */

@@ -5,7 +5,7 @@ import { sfx, speak, unlock, startMusic, setMusic, setMood, setVoice } from './a
 import * as Q from './quest.js';
 import { createHud } from './hud.js';
 import { playDream } from './dream.js';
-import { playHatch, playFeed } from './cutscene.js';
+import { playHatch, playFeed, playPull } from './cutscene.js';
 import { openShop } from './shop.js';
 import { initGamepad } from './gamepad.js';
 import { startButton } from './saves.js';
@@ -43,6 +43,7 @@ async function show(type, data) {
   try {
     if (type === 'hatch' && Q.hatch()) await playHatch($('#game'), w.who(), data.kindDef, state.uni);
     if (type === 'feed' && Q.feed()) await playFeed($('#game'), w.who(), state.uni);
+    if (type === 'pull') await playPull($('#game'), w.who(), Q.quest.stage === 'ei' ? Q.kind() : null);
   } catch (e) { console.error(e); }
   if (world === w) { w.refreshUnicorn(); w.pause(false); }
 }
@@ -104,6 +105,6 @@ if (params.get('act')) {
     if (params.has('night')) world.setNight(true, true);
     if (params.has('go')) { $('#start').hidden = true; Q.dreamShown(); world.setInteractive(true); }
     if (params.has('dream')) playDream($('#game'), world.who(), Q.kind());   // dev: watch the dream again
-    if (params.get('scene') === 'hatch') playHatch($('#game'), world.who(), Q.kind(), state.uni); if (params.get('scene') === 'feed') playFeed($('#game'), world.who(), state.uni);
+    if (params.get('scene') === 'hatch') playHatch($('#game'), world.who(), Q.kind(), state.uni); if (params.get('scene') === 'feed') playFeed($('#game'), world.who(), state.uni); if (params.get('scene') === 'pull') playPull($('#game'), world.who(), Q.kind());
   }).catch(e => { console.error(e && e.stack || e); $('#start p').textContent = 'Oeps, de wereld kon niet laden. Probeer het opnieuw.'; const d = document.createElement('p'); d.style.cssText = 'font-size:.8rem;opacity:.8;max-width:90vw'; d.textContent = String(e && e.message || e); $('#start').appendChild(d); });
 }

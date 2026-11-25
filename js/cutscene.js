@@ -22,8 +22,9 @@ let styled = false;
 const LW = 320, LH = 240, GY = 204, FW = 480, FH = 360, OX = 80, OY = 96, X0 = -OX, Y0 = -OY;
 const hd = ART.hd;
 
-/** runs a list of scenes: durations[i] seconds each; draw(k) is called every frame with k = {scene, t, dt, time, first, ctx, spark, D, px} */
-function run(host, durations, draw) {
+/** runs a list of scenes: durations[i] seconds each; draw(k) is called every frame with k = {scene, t, dt, time, first, ctx, spark, D, px}.
+ *  opts.tap(k): a tap (or Space, Enter, a controller's ✕ through its hand) during a scene; return true when the scene used it */
+function run(host, durations, draw, opts = {}) {
   if (!styled) { styled = true; const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st); }
   return new Promise(resolve => {
     const el = document.createElement('div'); el.id = 'scene'; host.appendChild(el);
@@ -39,8 +40,12 @@ function run(host, durations, draw) {
       spark(X, Y, n = 8, hearts = false, spread = 40) { for (let i = 0; i < n; i++) parts.push({ x: X + (Math.random() - .5) * spread, y: Y + (Math.random() - .5) * spread * .6, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 55, life: 1, art: hd(hearts && i % 2 ? PX.heart() : PX.sparkle(i % 2 ? '#FFF6D0' : '#FFB3CC')) }); },
     };
     const next = () => { if (done) return; scene++; t = 0; if (scene >= durations.length) finish(); };
-    function finish() { if (done) return; done = true; el.classList.remove('in'); setTimeout(() => { st.destroy(); el.remove(); resolve(); }, 330); }
-    el.addEventListener('pointerdown', e => { if (e.target === skip) return; if (t > .4) { sfx.pop(); next(); } });
+    function finish() { if (done) return; done = true; removeEventListener('keydown', onKey, true); el.classList.remove('in'); setTimeout(() => { st.destroy(); el.remove(); resolve(); }, 330); }
+    const tap = () => { if (opts.tap && opts.tap(k)) return; if (t > .4) { sfx.pop(); next(); } };
+    el.addEventListener('pointerdown', e => { if (e.target === skip) return; tap(); });
+    const onKey = e => { if (done || !opts.tap || !(e.key === ' ' || e.key === 'Enter')) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat) tap(); };
+    addEventListener('keydown', onKey, true);
+    k.next = next;
     skip.onclick = () => { sfx.pop(); finish(); };
     st.loop((dt, time) => {
       if (done) return; t += dt; Object.assign(k, { scene, t, dt, time, first: shown !== scene }); shown = scene;
@@ -173,5 +178,62 @@ export function playFeed(host, who, look) {
     D(uni(uf, scene === 2 && t > .9 && Math.floor(t * 7) % 2 === 0), ux, uy, us, false);
     D(girl(gf), gx, gy, 3, false);
     if (showFruit) D(fruit, fx, fy, fs);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/** The sword in the stone, from the side: she grabs the grip, and every tap (✕, Space) pulls it a little further out.
+ *  It slides back down a little when nobody pulls, never below half of the way it has come, so it can only get better:
+ *  a few seconds of happy mashing. Then it shoots out, she tumbles onto her bottom, and it lands in her hands. */
+export function playPull(host, who, kindDef) {
+  const girl = f => PX.kidSprite(who, f, false, Qw(who)), sword = ART.zwaardLos(), stone = ART.zwaardSteen(false), egg = kindDef ? ART.egg(kindDef) : null;
+  // sizes in scene pixels: the stone sprite is 36 rows (with its outline), the stone itself is the bottom 14, the slot 12.5 rows up
+  const SX = 172, S = 2, R = 2 * S, slotY = GY + 2 - 12.5 * R, sink = 8 * R;
+  let prog = 0, best = 0, shake = 0, lean = 0, taps = 0;
+  const DONE = 1;
+  return run(host, [1.2, 1e9, 3.2], k => {
+    const { ctx, scene, t, time, px, D, spark, dt } = k;
+    meadow(k);
+    if (scene === 1) {
+      if (prog >= DONE) { k.next(); sfx.swish(); sfx.boing(); sfx.tada(); spark(SX, slotY - 40, 16); }
+      else prog = Math.max(best * .5, prog - dt * .07);                                 // it slides back a little, never all the way
+      shake = Math.max(0, shake - dt * 4); lean = Math.max(0, lean - dt * 3);
+    }
+    const out = scene === 2, ft = out ? t : 0;
+    // the stone with a slot in it
+    D(stone, SX, GY + 2, S, false);
+    // the sword: in the stone, coming up with every pull, then flying up and landing in her hands
+    let sx = SX + (shake ? Math.sin(time * 70) * 2 * shake : 0), sy = slotY + sink - prog * (sink + 6), rot = 0;
+    if (out) { const u = Math.min(1, ft / 1.1); sx = SX + (98 - SX) * u; sy = sy - 120 * Math.sin(u * Math.PI) - (u * 30); rot = -u * Math.PI * 2.5; if (ft > 1.1) { sx = 98; sy = GY - 52; rot = -Math.PI * .25; } }
+    // she stands on top of the stone, both hands round the grip, and leans back with every pull
+    if (!out) D(girl(scene === 1 && lean > .3 ? 'jump' : 'idle'), SX - 13 - lean * 4, slotY + 3 - prog * 4, 2, false, -lean * .22);
+    if (!out) { ctx.save(); ctx.beginPath(); ctx.rect(X0, Y0, FW, slotY + R - Y0); ctx.clip(); }
+    D(sword, sx, sy, S, false, rot);
+    if (!out) ctx.restore();
+    if (!out && shake > .4 && Math.random() < .5) { px('#BFC4D4', SX - 14 + Math.random() * 28, slotY - 2 + Math.random() * 8, 2, 2); }
+    // the egg (or nothing) cheers from the side
+    if (egg) D(egg, 236, GY + 2 - Math.abs(Math.sin(time * (scene === 1 ? 9 : 4))) * (scene === 1 ? 6 : 3), 2, false, Math.sin(time * 9) * .12);
+    // the girl: holding the grip and leaning back with every pull; then on her bottom with the sword
+    if (out) {
+      const u = Math.min(1, ft / .45);
+      D(girl(ft < 1.1 ? 'jump' : 'idle'), 118 - u * 20, GY + 2 - Math.sin(u * Math.PI) * 22, 2, false, -Math.sin(Math.min(1, ft / .7) * Math.PI) * 1.1 * (ft < .7 ? 1 : 0));
+      if (ft > 1.1 && every(k, .5)) spark(110, GY - 60, 5, true);
+    }
+    // what to do: a big ✕ button and a finger, tapping (only while she pulls)
+    if (scene === 1) {
+      const bx = 92, by = 70, press = (Math.floor(time * 4) % 2) ? 2 : 0;
+      ctx.fillStyle = '#3A2A3D'; ctx.beginPath(); ctx.arc(bx, by + 3, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(bx, by + press, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#4C7EE8'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - 7, by + press - 7); ctx.lineTo(bx + 7, by + press + 7); ctx.moveTo(bx + 7, by + press - 7); ctx.lineTo(bx - 7, by + press + 7); ctx.stroke();
+      // how far: the sword's own glow grows
+      if (prog > .05) glow(ctx, SX, slotY - 20, 20 + prog * 50, '255,240,170', .25 + prog * .4);
+    }
+  }, {
+    tap(k) {
+      if (k.scene !== 1) return k.scene === 0;                                          // the first moment: just look
+      taps++; prog = Math.min(DONE, prog + .085); best = Math.max(best, prog); shake = 1; lean = 1;
+      sfx.tug(); if (taps % 3 === 0) k.spark(SX, slotY - 4, 3, false, 24);
+      return true;
+    },
   });
 }

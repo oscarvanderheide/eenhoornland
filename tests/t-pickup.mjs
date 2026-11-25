@@ -40,16 +40,20 @@ export default async function (t) {
   const F = await J('__w.MAP.FOUNT'); await t.ev(`__w.placeAt(${F.cx + .5}, ${F.cz + 2.3})`); await t.sleep(1000); ok(await t.ev(`__w.action().key`) !== 'dip', 'by the fountain the button does not jump her in'); await t.key('ArrowUp', 900); await t.sleep(600); ok(!(await t.ev('__w.life.dipping()')), 'and walking into it does not either'); await t.shot('tmp-shots/p-7c-fountain.png');
   // the jump button is the action button: it shows and does what fits right here
   await t.ev(`__w.placeAt(40.5, 47.5)`); await t.sleep(800); ok(await t.ev(`__w.action().key`) === 'jump', 'with nothing around the button jumps: ' + await t.ev(`__w.action().key`));
-  await t.ev(`(a=>{a.fly=null;a.swim=null;a.pos.set(41.3,0,47.5);a.path=[];a.wait=30})(__w.animals[${info.i}])`); await t.sleep(300);
-  ok((await t.ev(`__w.action().key`)).startsWith('lift'), 'next to an animal it picks it up: ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7d-act-lift.png');
+  await t.ev(`(a=>{a.fly=null;a.swim=null;a.pos.set(41.3,0,47.5);a.path=[];a.wait=30;a.wayAt=performance.now()})(__w.animals[${info.i}])`); await t.sleep(300);
+  ok((await t.ev(`__w.action().key`)).startsWith('pet'), 'next to an animal it is a tap on it (hello, then up): ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7d-act-lift.png');
   const jb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-jump').getBoundingClientRect())`); await t.click(jb[0], jb[1]); await t.sleep(400);
   ok(await t.ev(`__w.life.carrying()===__w.animals[${info.i}]`), 'pressing it lifts the animal'); ok((await t.ev(`__w.action().key`)).startsWith('throw'), 'and then it throws');
   await t.click(jb[0], jb[1]); await t.sleep(300); ok(!(await t.ev(`__w.life.carrying()`)), 'pressed again: thrown');
-  // next to brambles with the sword: the button shows the sword and cuts
+  // next to brambles with the sword: ✕ is not the sword, walking into them does not cut, □ (the sword button) does
   await t.ev(`__w.Q._reset({ stage: 'ei' }); __w.Q.giveTool('zwaard'); 0`); await t.sleep(300);
   const br = await J(`(o => { const i = __w.M.obstacles.findIndex(o => o.type === 'break' && o.tool === 'zwaard'); const b = __w.M.obstacles[i]; for (const [dx, dz] of [[-1,0],[1,0],[0,1],[0,-1]]) if (__w.walkable(b.x + dx, b.z + dz)) return { i, x: b.x + dx + .5, z: b.z + dz + .5 }; })()`);
-  await t.ev(`__w.placeAt(${br.x}, ${br.z})`); await t.sleep(500); ok(await t.ev(`__w.action().key`) === 'usezwaard', 'next to brambles with the sword: it cuts ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7e-act-sword.png');
-  await t.click(jb[0], jb[1]); await t.sleep(1500); ok(await t.ev(`__w.Q.quest.broken.includes(${br.i})`), 'pressed: the brambles are gone');
+  await t.ev(`__w.placeAt(${br.x}, ${br.z})`); await t.sleep(500); ok(await t.ev(`__w.action().key`) !== 'usezwaard', '✕ next to brambles is not the sword: ' + await t.ev(`__w.action().key`));
+  const bo = await J(`__w.M.obstacles[${br.i}]`); await t.ev(`__w.stick(${Math.sign(bo.x + .5 - br.x)}, ${Math.sign(bo.z + .5 - br.z)})`); await t.sleep(1200); await t.ev('__w.stick(0, 0)');
+  ok(!(await t.ev(`__w.Q.quest.broken.includes(${br.i})`)), 'walking into the brambles does not cut them');
+  await t.ev(`__w.placeAt(${br.x}, ${br.z}); __w.kid.face = ${bo.x + .5 > br.x ? 1 : -1}`); await t.sleep(400);
+  const sb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-sword').getBoundingClientRect())`); await t.click(sb[0], sb[1]); await t.sleep(90); await t.shot('tmp-shots/p-7e-slash.png');
+  await t.sleep(1400); ok(await t.ev(`__w.Q.quest.broken.includes(${br.i})`), 'the sword button: the brambles are gone');
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.setMount('uni'); 0`); await t.sleep(500); await t.key('ArrowLeft', 900); ok(await t.ev('__w.uni.face') === -1, 'riding left with the keys, the unicorn looks left'); await t.shot('tmp-shots/p-8-ride-left.png');
   // into the water: an animal swims back, a ball is blown back by the wind; behind a tree an animal still shows
   await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(12.5, 45.5); 0`); await t.sleep(1500);

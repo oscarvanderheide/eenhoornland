@@ -20,8 +20,8 @@ export default async function (t) {
   await t.sleep(400); const c = await pos(); ok(Math.abs(c[0] - b[0]) < .3, 'let go: she stops');
 
   // a leap forward while walking
-  await t.ev(`__w.placeAt(40.5, 44.5); __w.stick(1, 0)`); await t.sleep(300); a = await pos(); await t.ev(`__w.jump()`); await t.ev(`__w.stick(0, 0)`); await t.sleep(700); b = await pos();
-  ok(b[0] - a[0] > 1.2, 'jumping while she walks leaps forwards ' + a + ' -> ' + b);
+  await t.ev(`__w.placeAt(40.5, 44.5); __w.stick(1, 0)`); await t.sleep(300); a = await pos(); await t.ev(`__w.leapNow()`); await t.ev(`__w.stick(0, 0)`); await t.sleep(700); b = await pos();
+  ok(b[0] - a[0] > 1.2, '○ while she walks leaps forwards ' + a + ' -> ' + b);
 
   // up onto the stump in the forest, and down again
   await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(24.5, 10.5); 0`); await t.sleep(800);

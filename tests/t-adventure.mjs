@@ -8,6 +8,7 @@ export default async function (t) {
   const q = async () => JSON.parse(await t.ev('JSON.stringify({stage:__w.Q.quest.stage,w:__w.Q.wishes().map(w=>w.t+":"+w.id),bed:__w.Q.bedtime(),herd:__w.Q.quest.herd.length,uni:__w.uni.g.visible,pos:__w.info().pos,mount:__w.mount(),busy:__w.busy(),info:__w.extras.info(),play:__w.play.info(),chips:[...document.querySelectorAll("#quest .qchip")].length,cycle:__w.Q.quest.cycle,seed:__w.seed})'));
   const settle = (ms = 1500) => t.sleep(ms);
   const shot = n => t.shot(`tmp-shots/a-${n}.png`);
+  const J = async e => JSON.parse(await t.ev(`JSON.stringify(${e})`));
   const place = (x, z) => t.ev(`__w.placeAt(${x},${z})`);
   const until = async (expr, ms = 30000) => { for (let i = 0; i < ms / 500; i++) { if (await t.ev(expr)) return true; await t.sleep(500); } return false; };
   const URL = 'http://127.0.0.1:8765/dev.html?debug';
@@ -36,8 +37,11 @@ export default async function (t) {
   await place(s.info.egg[0], s.info.egg[1] + .6); await settle(); s = await q(); ok(s.stage === 'ei' && s.uni && s.w.join() === 'tool:zwaard,star:ster', 'egg found, it follows; now the shears'); await shot('12-egg-found');
   // shears → brambles → star → hatch
   let p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('zwaard'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'dorp', 'the sword stands in a stone in the village'); await place(p[0] - 2.5, p[1] + 1); await settle(1500); await shot('13-sword');
-  await place(p[0] - .9, p[1] + .1); await t.sleep(1400); await shot('13b-tug'); ok(await until(`__w.Q.hasTool('zwaard')`, 20000), 'she tugs it out of the stone'); await t.sleep(400); await shot('13c-pop'); await settle(2500);
-  await place(48.5, 45.5); await t.ev(`__w.tools.useAt(49,45)`); await settle(1200); ok(await t.ev(`__w.walkable(49,45) && __w.walkable(49,46)`), 'the brambles are cut'); await shot('14-bridge-open');
+  await place(p[0] - .9, p[1] + .1); await t.sleep(1400); await shot('13b-tug'); ok(await until(`__w.Q.hasTool('zwaard') && !!document.getElementById('scene')`, 20000), 'at the stone the pulling scene opens');
+  await t.sleep(1600); await shot('13c-pull');
+  { const c = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('scene').getBoundingClientRect())`); for (let i = 0; i < 30 && await t.ev(`!!document.getElementById('scene')`); i++) { await t.click(c[0], c[1]); await t.sleep(i === 6 ? 10 : 130); if (i === 6) await shot('13d-pulling'); } }
+  ok(await until(`!document.getElementById('scene')`, 8000), 'tapping pulls it out, and the scene ends'); await t.sleep(400); await shot('13e-got-it'); await settle(2500);
+  await place(48.5, 45.5); await t.ev(`__w.tools.useAt(49,45)`); await t.sleep(600); ok(!(await t.ev(`__w.walkable(49,45)`)), "walking into the brambles never cuts them"); await t.ev(`__w.slash()`); await settle(1200); ok(await t.ev(`__w.walkable(49,45) && __w.walkable(49,46)`), "a slash with the sword cuts the brambles"); await shot('14-bridge-open');
   s = await q(); ok(s.info.star && s.w.join() === 'star:ster', 'the star lies in the meadow'); await place(s.info.star[0] - 3, s.info.star[1] + 1.2); await settle(2000); await shot('15-star');
   for (let k = 0; k < 2; k++) { s = await q(); const st = s.info.star; await place(st[0] - 1.5, st[1] + .3); ok(await until(`__w.extras.info().starHops === ${k + 1}`, 15000), 'it giggles and hops away (' + (k + 1) + ')'); await t.sleep(400); await shot('15' + 'ab'[k] + '-hop'); await until(`!__w.extras.info().starMoving`, 15000); }
   s = await q(); await place(s.info.star[0] - .5, s.info.star[1]); ok(await until(`!!document.querySelector('#scene')`, 15000), 'touching the star starts the hatching scene'); ok(await t.ev(`__w.Q.quest.stage`) === 'baby', 'and it is saved right away');

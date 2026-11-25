@@ -1,13 +1,15 @@
 // A game controller (a PS5 DualSense, an Xbox pad, anything the browser maps to the "standard" layout) plays the game
 // through the same doors as the fingers and the keyboard, so every input keeps one rule per thing:
-//   outside:  left stick = the on-screen joystick, d-pad = the arrow keys, ✕ = the action button (whatever it shows right
-//             here, also while she walks; in the sky: land), ○ = jump, △ = the wing button, □ = the ride button,
-//             L1 / R1 = the other sister, Options = the three saves
+//   outside:  left stick = the on-screen joystick, d-pad = the arrow keys, and the four buttons are the four on the screen
+//             (hud.js draws them in the same diamond): ✕ = do what is right here (its picture shows what; an animal: hello,
+//             press again to pick it up), ○ = jump, □ = the sword, △ = the hookshot; R1 = pick up / put down at once,
+//             L1 = the other sister, L2 = get on or off her unicorn, R2 = the wings, Options = the three saves.
+//             In the sky ✕, ○ and R2 land
 //   anywhere else (start screen, houses, the map, the stall, cutscenes, a coin): a hand shows up; the left stick or d-pad
 //             moves it, ✕ taps where it points (hold ✕ and move to drag or paint), ○ closes the screen
 // Browsers only show a controller to the page after a button on it is pressed, so the first press just wakes it up.
 
-const B = { X: 0, O: 1, SQ: 2, TRI: 3, L1: 4, R1: 5, OPT: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+const B = { X: 0, O: 1, SQ: 2, TRI: 3, L1: 4, R1: 5, L2: 6, R2: 7, OPT: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 const DPAD = { [B.UP]: 'ArrowUp', [B.DOWN]: 'ArrowDown', [B.LEFT]: 'ArrowLeft', [B.RIGHT]: 'ArrowRight' };
 const DEAD = .2;
 
@@ -91,11 +93,18 @@ export function initGamepad(getWorld) {
       for (const i in DPAD) key(DPAD[i], cur[i]);         // the d-pad is the arrow keys (walk, steer the boat, fly)
       if (w && w.padMode) w.padMode(true);                // the action button now does what is here, also while she walks
       if (w && (ax || ay)) { w.stick(ax, ay); stickOn = true; } else if (stickOn) { w && w.stick(0, 0); stickOn = false; }
-      if (hit(B.X)) { press('#b-jump', 'down') || press('#b-fly', 'down'); }   // up in the sky the wing button is the one that lands
-      if (hit(B.O) && w && w.leapNow) w.leapNow();
-      if (hit(B.TRI)) press('#b-fly', 'down');
-      if (hit(B.SQ)) press('#b-ride');
-      if (hit(B.L1) || hit(B.R1)) { const other = document.querySelector('#who .who:not(.on)'); other && other.click(); }
+      const up = !!(w && w.flying && w.flying());
+      if (up) { if (hit(B.X) || hit(B.O) || hit(B.R2)) press('#b-fly', 'down'); }   // up in the sky: land
+      else {
+        if (hit(B.X)) press('#b-jump', 'down');
+        if (hit(B.O)) press('#b-hop', 'down');
+        if (hit(B.SQ) && w && w.slash) w.slash();
+        if (hit(B.TRI) && w && w.hook) w.hook();
+        if (hit(B.R1) && w && w.grab) w.grab();
+        if (hit(B.L2)) press('#b-ride');
+        if (hit(B.R2)) press('#b-fly', 'down');
+      }
+      if (hit(B.L1)) { const other = document.querySelector('#who .who:not(.on)'); other && other.click(); }
       if (hit(B.OPT)) press('#b-save');
     }
     prev = cur;

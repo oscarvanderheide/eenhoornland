@@ -24,7 +24,7 @@ export default async function (t) {
   const fb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-fly').getBoundingClientRect())`); await t.click(fb[0], fb[1]);
   ok(await until(`__w.fly.on()`, 1500), 'the wing button: up she goes'); await t.sleep(500); await t.shot('tmp-shots/f-1-takeoff.png');
   ok(await until(`__w.fly.info() && __w.fly.info().alt > 3`, 3000), 'high in the sky'); await t.sleep(400); await t.shot('tmp-shots/f-2-sky.png');
-  ok(await until(`document.getElementById('b-jump').hidden && !document.getElementById('b-fly').hidden`, 1000), 'up in the sky only the wing button shows: it lands');
+  ok(await until(`getComputedStyle(document.getElementById('pad')).visibility === 'hidden' && !document.getElementById('b-fly').hidden`, 1000), 'up in the sky only the wing button shows: it lands');
   // fly east over the sea with the joystick
   let a = await pos(); await t.ev(`__w.stick(1, 0)`); await t.sleep(1600); await t.ev(`__w.stick(0, 0)`); let b = await pos();
   ok(b[0] - a[0] > 8, 'flying fast with the joystick ' + a + ' -> ' + b); await t.shot('tmp-shots/f-3-over-wei.png');

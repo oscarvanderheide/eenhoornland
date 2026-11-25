@@ -25,6 +25,8 @@ import { createStrand } from './world-strand.js';
 import { createBoerderij } from './world-boerderij.js';
 import { createBank } from './world-bank.js';
 import { createSpeeltuin } from './world-speeltuin.js';
+import { createSword } from './world-sword.js';
+import { createKeien } from './world-keien.js';
 import { createDraaimolen } from './world-draaimolen.js';
 import * as WILD from './art-wild.js';
 import * as HD2 from './art-hd2.js';
@@ -247,15 +249,18 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       t.inst.setMatrixAt(t.i, wobD.matrix); t.inst.instanceMatrix.needsUpdate = true; if (w.k >= 1) wobbles.splice(i, 1);
     }
   }
-  // tufts and flowers (instanced)
+  // tufts and flowers (instanced); the sword cuts them (world-sword.js), so each one is listed under its tile
+  const cuttables = new Map();
   function scatterInstanced(art, n, pick) {
     const t = tex(art); const mat = spriteMat(t);
-    const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), mat, n); inst.receiveShadow = true;
+    const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), mat, n); inst.receiveShadow = true; inst.userData.alpha = art;
     const d = new THREE.Object3D(); let k = 0; let guard = 0;
     while (k < n && guard++ < n * 20) {
       const x = 4 + rng() * (W - 8), z = 4 + rng() * (H - 8); const tx = Math.floor(x), tz = Math.floor(z);
       if (!pick(tx, tz)) continue;
-      d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.updateMatrix(); inst.setMatrixAt(k++, d.matrix);
+      d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.updateMatrix();
+      const ti = I(tx, tz); if (!cuttables.has(ti)) cuttables.set(ti, []); cuttables.get(ti).push({ inst, i: k, x, z, m: d.matrix.clone() });
+      inst.setMatrixAt(k++, d.matrix);
     }
     inst.count = k; scene.add(inst);
   }
@@ -591,7 +596,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!p) {
       // the way is closed by brambles or boulders: walk up to the first one and use the tool on it (or hear which tool is missing)
       if (deep) return false;
-      const p2 = astar(s[0], s[1], tx, tz, (x, z) => ok(x, z) || breakAt(x, z), true), hit = p2 && p2.find(([x, z]) => breakAt(x, z));
+      const p2 = astar(s[0], s[1], tx, tz, (x, z) => ok(x, z) || breakAt(x, z), true), hit = p2 && p2.find(([x, z]) => breakAt(x, z));   // she walks up to it; the sword is never used by itself (tools.useAt only wiggles it)
       if (hit) return approach(hit[0], hit[1], () => tools.useAt(hit[0], hit[1]), true);
       if (roomsOf && roomsOf.towardGate(tx, tz)) return true;                        // the cave's back room is still shut: to the crate
       // over the water: walk to the boat instead (it sails by itself once she stands on the pier)
@@ -683,7 +688,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     return null;
   }
   function leap(dir) {
-    if (mount || midJump() || (kid.hop > 0 && !perch) || life.swimming()) return false;   // on a top (bouncing on a mushroom) a step still jumps her off
+    if (mount || midJump() || (kid.hop > 0 && !perch) || life.swimming() || keien.holding()) return false;   // (a big stone is too heavy to jump with)   // on a top (bouncing on a mushroom) a step still jumps her off
     const d = dir || leapDir(), f = d || (perch && benchTiles.has(perch.i) ? { x: 0, z: 1 } : { x: kid.face, z: 0 }), moving = !!d, go = v => { v.dir = f; kid.path = [v]; target = null; after = null; resume = null; life.jumped(); return true; };
     if (!perch) for (const a of animals) {                                       // an animal just ahead: she bounces off its back
       if (!a.g.visible || a.fly || a.held || a.water || a.swim || a.cart || a.nap > 0) continue;
@@ -720,6 +725,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
     if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
+    if (keien.holding()) { const k = keien.use(); return A(k.key, k.art, k.run); }   // a big stone over her head: put it down
     const use = toys.nearUse(); if (use) return A(use.key, use.art, use.run);    // the can next to a flower pot: water it (never drop it there)
     if (!mount) for (const f of uses) { const u = f(); if (u) return A(u.key, u.art, u.run); }   // each use checks for itself what she may hold
     const toy = toys.carryArt(); if (toy) return A('put' + toys.carrying(), toy, () => toys.putDown());
@@ -734,7 +740,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (!grab && Q.quest.stage !== 'zoek' && !Q.canRide() && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));   // once she can be ridden, getting on is the ride button's job (or a tap on her), never Space
       // the nearest thing wins, animal, pebble or toy alike: what lies right at her feet is what she picks up
       const c = life.nearMover(), ta = toys.nearest(), dc = c ? Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) : 1e9;
-      if (c && (!ta || dc <= ta.d)) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : A('lift' + c.name, c.frames.idle, () => life.lift(c));
+      { const st = keien.nearStone(), ds = st ? Math.hypot(st.x + .5 - kid.pos.x, st.z + .5 - kid.pos.z) : 1e9; if (st && ds < dc && (!ta || ds < ta.d)) return A('kei', st.art, () => keien.lift(st)); }   // a big stone right here: up it goes
+      // ✕ is a tap on it: its own hello first, a second press lifts it; the pick-up key (E, L1) lifts at once
+      if (c && (!ta || dc <= ta.d)) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : grab ? A('lift' + c.name, c.frames.idle, () => life.lift(c)) : A('pet' + c.name, c.frames.idle, () => life.tapAnimal(c));
       if (ta) return A('take', ta.art, () => toys.take(ta.id));
       if (play.bikeNear()) return A('bike', ART.bike(), () => play.tapBike());
       if (!grab && life.nearSea()) return A('dip', ART.jumpIcon(), () => life.dip('zee'));   // at the water's edge: in she hops
@@ -759,8 +767,10 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function jump() { if (!interactive || paused || busy) return; action().run(); }
   // with a game controller ✕ is the action button and ○ jumps (gamepad.js), so the action button does what is right here
   // even while she walks (the stick is nearly always held), and ○ is a jump: into the water, up a top, off the swing, or a leap
-  let padHere = false;
+  let padHere = true;                                                            // ○ is always on the screen now (hud.js), so ✕ never has to be the jump
   function leapNow() { if (!interactive || paused || busy) return; const a = action(); if (/^(jump|splash|dip|land|wait|bell)$/.test(a.key)) a.run(); else hop(); }
+  /** the sword (□, the sword button, F): a slash, never while she is busy with something else */
+  function slash() { if (!interactive || paused || busy || fly.on() || park.on() || life.carrying() || life.swimming()) return false; return sword.swing(); }
   let lastTile = -1;
 
   /* ---------------- marker, bubbles, labels ---------------- */
@@ -803,7 +813,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     setBusy(v) { busy = v; if (v) { kid.path = []; target = null; after = null; keys.clear(); } } };
   let play = null;
   extras = ctx.extras = createExtras(ctx);
-  const tools = createTools(ctx);
+  const tools = ctx.tools = createTools(ctx);
   play = ctx.play = createPlay(ctx);
   const life = ctx.life = createLife(ctx); swimOf = () => life.swimming();
   toys = ctx.toys = createToys(ctx);
@@ -833,6 +843,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   ctx.seated = () => seated() ? perch.i : -1;
   const bank = ctx.bank = createBank(ctx);
   const park = ctx.park = createSpeeltuin(ctx);
+  const sword = ctx.sword = createSword(ctx, { camera, cuttables, lastDir: () => lastIn });
+  ctx.lastDir = () => lastIn;
+  const keien = ctx.keien = createKeien(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -948,6 +961,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (busy) { if (arrow && play.aboard()) { keys.add(e.key.toLowerCase()); e.preventDefault(); } return; }   // in the boat the keys steer it
     if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
     if (e.key === 'Enter' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!e.repeat) grabKey(); return; }
+    if (e.key === 'f' || e.key === 'F') { e.preventDefault(); if (!e.repeat) slash(); return; }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
   }, listen);
   addEventListener('keyup', e => keys.delete(e.key.toLowerCase()), listen);
@@ -1063,7 +1077,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     // night transition
     if (Math.abs(nightT - nightTarget) > .001) { nightT += Math.sign(nightTarget - nightT) * Math.min(Math.abs(nightTarget - nightT), dt * .8); applyNight(nightT); }
     // keyboard
-    const speed = mount === 'uni' ? 5.4 : mount === 'fiets' ? 4.8 : 3.4;
+    const speed = mount === 'uni' ? 5.4 : mount === 'fiets' ? 4.8 : keien.holding() ? 2.3 : 3.4;   // a big stone is heavy
     let kx = 0, kz = 0; if (keys.has('arrowleft') || keys.has('a')) kx--; if (keys.has('arrowright') || keys.has('d')) kx++; if (keys.has('arrowup') || keys.has('w')) kz--; if (keys.has('arrowdown') || keys.has('s')) kz++;
     let kmag = 1;
     if (!kx && !kz && (stick.x || stick.z)) { kx = stick.x; kz = stick.z; kmag = Math.min(1, Math.hypot(kx, kz) * 1.25); }   // the joystick
@@ -1151,7 +1165,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     // fx
     for (const u of waterUniforms) u.t.value = time;
     const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time); isle.update(dt, time); beach.update(dt, time); farm.update(dt, time); bank.update(dt, time); park.update(dt, time); molen.update(dt, time);
-    spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
+    spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); sword.update(dt); keien.update(dt, time); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -1185,7 +1199,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, park, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, slash, sword, keien, leapNow, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, park, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -1205,7 +1219,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     walkToTile(x, z) { target = null; return walkTo(x, z); },
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     pos: () => [kid.pos.x, kid.pos.z],
-    groundCanvas, extras, tools, play, toys, jump, leapNow, padMode(v) { padHere = !!v; }, setWho, who: () => who, M,
+    groundCanvas, extras, tools, play, toys, jump, leapNow, slash, sword, grab: () => { if (interactive && !paused && !busy) grabKey(); }, padMode(v) { padHere = !!v; }, setWho, who: () => who, M,
     /** up into the sky on a grown unicorn, or back down (the wing button) */
     fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => mount === 'uni' && fly.can(),
     /** the map: far away and she can fly, so she flies there and lands; otherwise she walks */
@@ -1215,7 +1229,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); val.dispose(); beach.dispose(); molen.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); scopeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); keien.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); val.dispose(); beach.dispose(); molen.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); scopeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

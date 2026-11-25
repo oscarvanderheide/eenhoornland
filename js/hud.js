@@ -38,27 +38,37 @@ const CSS = `
 #stick .knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:inset -4px -4px 0 var(--paper2),0 3px 0 var(--ink);pointer-events:none;transition:transform .12s}
 #stick.on .knob{transition:none}
 #stick.on{background:rgba(255,248,230,.55)}
-#b-jump{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0}
-#b-jump canvas{width:auto;max-width:52px;max-height:52px}
+#pad{position:absolute;z-index:5;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));width:200px;height:200px;pointer-events:none;--b:66px}
+#pad .hbtn{position:absolute;width:var(--b);height:var(--b);border-radius:50%;padding:0;pointer-events:auto;touch-action:none}
+#pad .hbtn canvas{width:auto;max-width:calc(var(--b) - 20px);max-height:calc(var(--b) - 20px)}
+#pad .hbtn.off{visibility:hidden}
+#pad .ps{position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--ink);display:grid;place-items:center;pointer-events:none}
+#pad .ps svg{width:16px;height:16px;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+#b-jump{left:calc(50% - var(--b) / 2);bottom:0}#b-jump .ps{right:-6px;bottom:-4px}
+#b-hop{right:0;top:calc(50% - var(--b) / 2);background:#FFE9EC}#b-hop .ps{right:-6px;top:-6px}
+#b-sword{left:0;top:calc(50% - var(--b) / 2);background:#FFE6F6}#b-sword .ps{left:-6px;top:-6px}
+#b-hook{left:calc(50% - var(--b) / 2);top:0;background:#E3FAF3}#b-hook .ps{right:-6px;top:-6px}
+#b-jump.idle canvas{opacity:.35}
+#b-sword.bump,#b-hop.bump{animation:qbump .3s cubic-bezier(.22,1,.36,1)}
 #b-jump.ctx{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-jump.bump{animation:qbump .35s cubic-bezier(.22,1,.36,1)}
 #b-jump{touch-action:none}
-#b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 84px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0;background:#FFE3F1}
+#b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:64px;height:64px;border-radius:50%;padding:0;background:#FFE3F1}
 #b-ride.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #FF7EB6,0 3px 0 var(--ink)}
 #b-ride.on{background:var(--sun);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-ride canvas{width:52px}
-#b-fly{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 164px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0;background:#E3F1FF}
+#b-fly{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(88px + env(safe-area-inset-bottom,0px));width:64px;height:64px;border-radius:50%;padding:0;background:#E3F1FF}
 #b-fly.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #7EC3FF,0 3px 0 var(--ink)}
 #b-fly.on{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-fly canvas{width:50px}
-#who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(98px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:center}
+#who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(218px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:row;gap:8px;align-items:center}
 #who .who{width:56px;height:56px;border-radius:50%;padding:0;opacity:.55;transform:scale(.82);transition:transform .15s,opacity .15s}
 #who .who.on{opacity:1;transform:scale(1);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #who canvas{image-rendering:pixelated}
 #tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(166px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
 .kaart-goal{position:absolute;transform:translate(-50%,-50%);cursor:pointer;animation:qpulse 1s ease-in-out infinite;z-index:3;padding:5px;background:#FFF3C4;border:3px solid var(--ink);border-radius:50%;line-height:0;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink);display:flex;align-items:center;font-family:var(--f-pixel);font-weight:700;font-size:1.2rem}
 .kaart-gate{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:1;line-height:0}
-@media (max-width:640px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(148px + env(safe-area-inset-bottom,0px))}#b-jump{width:68px;height:68px}#b-jump canvas{max-width:46px;max-height:46px}#b-ride{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 78px)}#b-ride canvas{width:44px}#b-fly{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 144px)}#b-fly canvas{width:42px}#who{bottom:calc(92px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+@media (max-width:640px),(max-height:480px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(148px + env(safe-area-inset-bottom,0px))}#pad{width:162px;height:162px;--b:56px}#b-ride{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px)}#b-ride canvas{width:40px}#b-fly{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px);bottom:calc(76px + env(safe-area-inset-bottom,0px))}#b-fly canvas{width:40px}#who{bottom:calc(176px + env(safe-area-inset-bottom,0px))}#who .who{width:44px;height:44px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -73,20 +83,38 @@ export function createHud(getWorld) {
   const saveBtn = document.createElement('button'); saveBtn.className = 'hbtn'; saveBtn.id = 'b-save'; saveBtn.setAttribute('aria-label', 'Ander spel'); saveBtn.appendChild(PX.domSprite(slotIcon(), 3));
   const tr = document.querySelector('.hud.tr'); tr.insertBefore(saveBtn, tr.firstChild); saveBtn.onclick = () => { if (!ui.activityOpen()) openSaves(); };
 
-  // jumping (bottom right) and the tools the girls own (bottom left)
-  const jumpBtn = document.createElement('button'); jumpBtn.className = 'hbtn'; jumpBtn.id = 'b-jump'; jumpBtn.setAttribute('aria-label', 'Springen'); jumpBtn.appendChild(PX.domSprite(ART.jumpIcon(), 4));
-  // it is the action button: it shows what it will do right here (the animal it picks up, the sword, a hello, the bell, a jump)
-  // and does it. pointerdown, not click: on a phone it answers at once, and a finger that slides off still counts
-  jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const w = getWorld(); if (!w) return; w.jump(); syncAct(true); });
-  jumpBtn.addEventListener('click', e => { if (e.detail === 0) { const w = getWorld(); w && w.jump(); } });   // the keyboard (Enter on a focused button)
-  game.appendChild(jumpBtn);
+  // bottom right: four buttons laid out like the ones on a PlayStation controller, each with its own shape in the corner,
+  // so the same button does the same thing on the screen and in the hand:
+  //   ✕ (bottom) does what is right here (its picture shows what: say hello to an animal (twice: pick it up), take a toy,
+  //     the bell, a door...), ○ (right) jumps, □ (left) the sword, △ (top) the hookshot. Sword and hookshot only show
+  //     once she has them. pointerdown, not click: on a phone it answers at once, and a finger that slides off still counts
+  const PS = { x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="#4C7EE8"/>', o: '<circle cx="12" cy="12" r="6.5" stroke="#F0505F"/>', sq: '<rect x="6" y="6" width="12" height="12" rx="1" stroke="#E86CB8"/>', tri: '<path d="M12 5.2l7.2 12.6H4.8z" stroke="#21B48E"/>' };
+  const pad = document.createElement('div'); pad.id = 'pad'; game.appendChild(pad);
+  function padBtn(id, label, ps, icon, run) {
+    const b = document.createElement('button'); b.className = 'hbtn'; b.id = id; b.setAttribute('aria-label', label);
+    const art = document.createElement('span'); art.className = 'art'; if (icon) art.appendChild(PX.domSprite(icon, Math.min(4, 46 / Math.max(icon.width, icon.height)))); b.appendChild(art);
+    b.insertAdjacentHTML('beforeend', `<span class="ps"><svg viewBox="0 0 24 24">${PS[ps]}</svg></span>`);
+    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const w = getWorld(); if (w) run(w); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); });
+    b.addEventListener('click', e => { if (e.detail === 0) { const w = getWorld(); w && run(w); } });   // the keyboard (Enter on a focused button)
+    pad.appendChild(b); return b;
+  }
+  const setArt = (b, c) => { const a = b.querySelector('.art'); a.innerHTML = ''; a.appendChild(PX.domSprite(c, Math.min(4, 46 / Math.max(c.width, c.height)))); };
+  const jumpBtn = padBtn('b-jump', 'Doen', 'x', ART.handIcon(), w => { w.jump(); syncAct(true); });
+  const hopBtn = padBtn('b-hop', 'Springen', 'o', ART.jumpIcon(), w => w.leapNow());
+  const swordBtn = padBtn('b-sword', 'Zwaard', 'sq', ART.toolIcon('zwaard'), w => w.slash());
+  const hookBtn = padBtn('b-hook', 'Haak', 'tri', null, w => w.hook && w.hook());
   let actKey = '';
   function syncAct(force) {
-    const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey;
-    jumpBtn.hidden = !!(w && w.flying && w.flying());                            // up in the sky the wing button is the one that lands
+    const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey, up = !!(w && w.flying && w.flying());
+    pad.style.visibility = up ? 'hidden' : '';                                   // up in the sky the wing button is the one that lands
+    swordBtn.classList.toggle('off', !Q.hasTool('zwaard'));
+    hookBtn.classList.toggle('off', !(Q.TOOLS.haak && Q.hasTool('haak')));
     if (key === actKey && !force) return;
-    if (a && key !== actKey) { actKey = key; jumpBtn.innerHTML = ''; const c = a.icon, s = Math.min(4, 46 / Math.max(c.width, c.height)); jumpBtn.appendChild(PX.domSprite(c, s));
-      jumpBtn.classList.toggle('ctx', key !== 'jump'); jumpBtn.classList.remove('bump'); void jumpBtn.offsetWidth; jumpBtn.classList.add('bump'); }
+    if (a && key !== actKey) {
+      actKey = key; const idle = key === 'jump';                                  // nothing here: ✕ just hops, so it shows an empty hand
+      setArt(jumpBtn, idle ? ART.handIcon() : a.icon); jumpBtn.classList.toggle('idle', idle);
+      jumpBtn.classList.toggle('ctx', !idle); jumpBtn.classList.remove('bump'); void jumpBtn.offsetWidth; jumpBtn.classList.add('bump');
+    }
   }
   setInterval(() => syncAct(false), 120);
   // the joystick (bottom left): drag the knob and she walks that way, the further the faster; let go and she stops
@@ -150,7 +178,7 @@ export function createHud(getWorld) {
   const goalIcon = w => w.t === 'tool' ? ART.toolIcon(w.id) : w.t === 'egg' ? ART.egg(Q.kind()) : w.t === 'star' ? ART.warmItem(Q.quest.kind) : w.t === 'fruit' ? ART.foodItem(Q.quest.kind) : PX.rainbow();
   function render() {
     panel.innerHTML = ''; toolRow.innerHTML = '';
-    for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id)) chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);
+    for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id) && id !== 'zwaard' && id !== 'haak') chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);
     if (Q.bedtime()) chip('bed', ART.bedIcon(), 'Slapen', goToBed, 'bed'); else delete lastSig.bed;
     // what to do now, as pictures: the first chip is the goal of this moment, a second one shows what comes after it.
     // Nobody can read yet and there is no voice, so tapping a chip opens the map, where the goal is marked.

@@ -301,7 +301,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const [x, z] of pick(3, (x, z, g, zn) => g === PA && zn === 'bos' && open4(x, z), 7)) low(x, z, 'log');
   for (const [x, z] of pick(3, (x, z, g, zn) => g === FO && !rim[I(x, z)] && open4(x, z), 6)) low(x, z, 'log');
   const loose = (kind, n, pred) => { for (const [x, z] of pick(n, (x, z, g, zn) => plain(g) && pred(zn) && !inPen(x, z) && !nearBusy(x, z, 1), 5)) { obstacles.push({ kind, type: 'break', tool: TOOL_FOR[kind], x, z, gate: false, g: obstacles.length }); block[I(x, z)] = BREAK; } };
-  loose('bramble', 4, zn => zn === 'bos' || zn === 'wei'); loose('boulder', 4, zn => zn === 'strand' || zn === 'kasteel' || zn === 'eiland');
+  loose('bramble', 4, zn => zn === 'bos' || zn === 'wei');                       // (the loose boulders are big stones to carry now: bigStones below)
 
   /* ---- reachability: walking, jumping over LOW tiles, passing BREAK tiles you own the tool for, riding over the gap, the boat ---- */
   const toolAt = new Map(obstacles.filter(o => o.type !== 'low').map(o => [I(o.x, o.z), o.tool]));
@@ -343,6 +343,11 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   /* ---- pebbles to pick up and throw: on the sand of every island, three of them in the village ---- */
   const stones = pick(3, (x, z, g, zn) => g === SA && zn === 'dorp' && at(reach0, x, z) && clearView(x, z), 5).concat(pick(8, (x, z, g, zn) => g === SA && zn !== 'dorp' && at(reach, x, z) && clearView(x, z), 9));
 
+  /* ---- big stones to carry and stand on (world-keien.js): each island has a few of its own rocks lying loose ---- */
+  const bigStones = [];
+  for (const [zn, n] of [['dorp', 3], ['bos', 2], ['wei', 2], ['strand', 3], ['eiland', 2], ['kasteel', 2]])
+    for (const [x, z] of pick(n, (x, z, g, z2) => z2 === zn && plain(g) && open4(x, z) && !nearBusy(x, z, 1) && !inPen(x, z) && at(reach, x, z) && clearView(x, z), 4)) { bigStones.push([x, z, zn]); keepSet.add(I(x, z)); }
+
   /* ---- spawn spots for collectibles & egg hiding places ---- */
   const isTree = (x, z) => inb(x, z) && block[I(x, z)] && !structural[I(x, z)] && ground[I(x, z)] !== SE;
   const nextTo = (x, z, f) => f(x + 1, z) || f(x - 1, z) || f(x, z + 1) || f(x, z - 1);
@@ -360,7 +365,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const hidden = zn => pick(7, (x, z, g, zo) => plain(g) && zo === zn && at(need[zn], x, z) && farFromStart(x, z) && !nearBridge(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
   const eggSpots = { dorp: hidden('dorp'), bos: [ROOMS.grot.egg], wei: hidden('wei'), strand: hidden('strand'), eiland: hidden('eiland') };   // a forest egg always lies in the cave
 
-  return { W, H, seed, ground, block, deck, zone, inland, trees, obstacles, puddles, stones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
+  return { W, H, seed, ground, block, deck, zone, inland, trees, obstacles, puddles, stones, bigStones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
 }
 
 /** What is wrong with a generated world (empty = fine). Used to skip bad seeds and by tests/map.test.mjs. */

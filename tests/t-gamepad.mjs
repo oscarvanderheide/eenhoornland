@@ -48,25 +48,33 @@ export default async function (t) {
   // ✕ next to an animal while she walks (the stick held): the action button's pick-up, not a jump
   await t.ev(`(a => { a.pos.set(32.5, 0, 46.5); a.path = []; a.wait = 30; a.wayAt = performance.now(); __w.placeAt(31.7, 46.5); window.__a = a; })(__w.animals.find(a => a.g.visible && !a.water && !a.uniKind && !a.way))`);
   await t.sleep(700); await axes(.3, 0); await t.sleep(150);
-  const act = await t.ev('__w.action().key'); ok(/^lift/.test(act), 'while she walks the action button still shows the animal next to her (' + act + ')');
+  const act = await t.ev('__w.action().key'); ok(/^pet/.test(act), 'while she walks ✕ still shows the animal next to her (' + act + ')');
   await btn(0); await axes(0, 0);
-  ok(await until(`__w.life.carrying() === __a`), '✕ does what the action button shows: she lifts the animal, also while walking'); await t.sleep(500); await t.shot('tmp-shots/g-2-lift.png');
+  ok(await until(`__w.life.carrying() === __a`), '✕ after its hello: she lifts the animal, also while walking'); await t.sleep(500); await t.shot('tmp-shots/g-2-lift.png');
   await btn(0); await t.sleep(800); ok(await t.ev(`__w.life.carrying() !== __a`), '✕ again throws it');
+  // R1 picks up at once, without the hello first
+  await t.ev(`(a => { a.pos.set(32.5, 0, 46.5); a.path = []; a.wait = 30; a.wayAt = 0; a.swim = null; a.fly = null; a.lift = 0; __w.placeAt(31.7, 46.5); })(__a)`); await t.sleep(1500);
+  await btn(5); ok(await until(`__w.life.carrying() === __a`), 'R1 picks the animal up at once'); await t.sleep(400);
+  await btn(5); ok(await until(`__w.life.carrying() !== __a`), 'R1 again lets it go'); await t.sleep(800);
+  // □ is the sword (once she has it)
+  await btn(2); await t.sleep(200); ok(await t.ev('__w.sword.info().count') === 0, '□ without the sword does nothing');
+  await t.ev(`__w.Q.giveTool('zwaard'); 0`); await t.sleep(300); await btn(2); ok(await until(`__w.sword.info().count === 1`, 600), '□ slashes with the sword'); await t.sleep(80); await t.shot('tmp-shots/g-1b-slash.png');
   const who0 = await t.ev('__w.who()'); await btn(4); ok(await until(`__w.who() !== '${who0}'`), 'L1 switches to the other sister');
-  await btn(5); ok(await until(`__w.who() === '${who0}'`), 'R1 switches back');
+  await btn(4); ok(await until(`__w.who() === '${who0}'`), 'L1 again switches back');
   await btn(9); const mapOk = await until(`!document.getElementById('modal').hidden`); ok(mapOk, 'Options opens the three saves');
   if (!mapOk) console.log('  state', await t.ev(`JSON.stringify({ hand: !document.getElementById('pad-hand').hidden, act: !document.getElementById('act').hidden, dream: !!document.getElementById('dream'), scene: !!document.getElementById('scene'), reward: !!document.querySelector('.reward'), save: !!document.getElementById('b-save').offsetParent, busy: __w.busy() })`)); await t.sleep(400);
   ok(await t.ev(`!document.getElementById('pad-hand').hidden`), 'over the saves the hand shows up'); await t.shot('tmp-shots/g-3-map.png');
   await btn(1); ok(await until(`document.getElementById('modal').hidden`), '○ closes the saves');
   ok(await until(`document.getElementById('pad-hand').hidden`), 'and the hand goes away again');
-  // riding: □ gets on, △ is the wing button
+  // riding: L2 gets on, R2 is the wing button
+  const padUp = `getComputedStyle(document.getElementById('pad')).visibility !== 'hidden'`;
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.placeAt(30.5, 46.5)`); await t.sleep(1200);
-  await btn(2); ok(await until(`!!__w.mount()`), '□ gets her on her unicorn'); await t.sleep(600);
+  await btn(6); ok(await until(`!!__w.mount()`), 'L2 gets her on her unicorn'); await t.sleep(600);
   if (await t.ev(`!document.getElementById('b-fly').hidden`)) {
-    await btn(3); ok(await until(`!!__w.fly.info() && !document.getElementById('b-jump').offsetParent`, 4000), '△ takes off'); await t.sleep(1500); await t.shot('tmp-shots/g-4-fly.png');
-    await btn(0); ok(await until(`!!document.getElementById('b-jump').offsetParent`, 8000), 'up in the sky ✕ lands');
+    await btn(7); ok(await until(`!!__w.fly.info() && !(${padUp})`, 4000), 'R2 takes off'); await t.sleep(1500); await t.shot('tmp-shots/g-4-fly.png');
+    await btn(0); ok(await until(padUp, 8000), 'up in the sky ✕ lands');
   } else console.log('  (no wing button in this stage; flying not checked)');
-  await btn(2); ok(await until(`!__w.mount()`), '□ again gets her off');
+  await t.sleep(600); await btn(6); ok(await until(`!__w.mount()`), 'L2 again gets her off');
   await t.ev(`delete navigator.getGamepads; window.__pad.connected = false; dispatchEvent(new Event('gamepaddisconnected'))`);
   console.log(fail ? `GAMEPAD: ${fail} FAIL` : 'GAMEPAD ALL OK');
 }

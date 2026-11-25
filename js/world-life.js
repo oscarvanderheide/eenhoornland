@@ -339,7 +339,7 @@ export function createLife(ctx) {
     return best;
   }
   /** standing on the shore right next to shallow water she may swim in */
-  function atShallows() { if (inWater || ctx.mount() || carried || (ctx.toys && ctx.toys.carrying())) return false; const m = seaAllowed(); if (!m) return false; const t = nearestIn(m, kid.pos.x, kid.pos.z, 1); return !!t && Math.hypot(t[0] + .5 - kid.pos.x, t[1] + .5 - kid.pos.z) < 1.25; }
+  function atShallows() { if (inWater || ctx.mount() || carried || (ctx.toys && ctx.toys.carrying()) || (ctx.keien && ctx.keien.holding())) return false; const m = seaAllowed(); if (!m) return false; const t = nearestIn(m, kid.pos.x, kid.pos.z, 1); return !!t && Math.hypot(t[0] + .5 - kid.pos.x, t[1] + .5 - kid.pos.z) < 1.25; }
   /** the way through the water to (x, z): tile by tile, so she never cuts across a headland */
   function route(kind, x, z) {
     if (kind !== 'zee') return waterAt(x, z) === kind ? [inside(kind, x, z)] : null;
