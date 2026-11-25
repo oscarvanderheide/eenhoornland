@@ -241,12 +241,6 @@ export const bike = () => cached('bike', () => sprite([
   '................kkkk....', '......ssss........p.....', '.......ss.........p.yyyy', '........p.........p.yYYy', '.......pppppppppppppyyyy', '......p.p......PP.p.....', '.....pp.p.....PP..p.....',
   '..kkkp..p...PP...kpk....', '.k.gpk..p..PP...k.p.k...', 'k..gp.k.p.PP...k..p..k..', 'kggppppppp.....kggpggk..', 'k..g..k..k.....k..g..k..', '.k.g.k...kk.....k.g.k...', '..kkk............kkk....',
 ], { k: '#3D2B4F', p: '#FF5E9C', P: '#E0457F', g: '#C3C8D8', s: '#7A4A2A', y: '#F2C14E', Y: '#D99A2B' }));
-/** a little hump bridge on the path: on the bike it gives a happy hop */
-export const hobbel = () => cached('hobbel', () => gridSprite(26, 11, (x, y) => {
-  const h = 9.5 * Math.sin((x + .5) / 26 * Math.PI), top = 11 - h; if (y < top - .2) return null;
-  if (y < top + 2) return PX.RAINBOW[Math.min(5, Math.floor(x / 26 * 6))];
-  return x % 6 === 2 ? '#8A5A3B' : (y % 3 === 0 ? '#D6A674' : '#C18F5C');
-}));
 /** streamers on the handlebar of the bike, two frames of fluttering */
 export const linten = (f = 0) => cached('linten' + f % 2, () => sprite(f % 2 ? ['k.....', 'kppbb.', 'k..ppy', 'k.bb..', 'k...yy'] : ['k.....', 'kpp...', 'k.ppbb', 'kbb.yy', 'k..yy.'], { k: '#3D2B4F', p: '#FF5E9C', b: '#4DABF7', y: '#FFD43B' }, { outline: false }));
 export const ball = (beach = false) => cached('ball' + beach, () => { const n = beach ? 11 : 8, c = beach ? ['#FF5E9C', '#FFFFFF', '#4DABF7', '#FFFFFF', '#FFD43B', '#FFFFFF'] : ['#E8484A', '#FFFFFF', '#E8484A', '#FFFFFF']; return gridSprite(n, n, (x, y) => { const dx = x + .5 - n / 2, dy = y + .5 - n / 2; if (dx * dx + dy * dy > (n / 2) ** 2) return null; if (dx * dx + dy * dy < 1.2) return beach ? '#FFFFFF' : '#FFD43B'; const a = Math.atan2(dy, dx) + Math.PI; return c[Math.floor(a / (Math.PI * 2) * c.length) % c.length]; }); });

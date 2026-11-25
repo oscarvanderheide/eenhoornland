@@ -24,6 +24,7 @@ import { createEiland } from './world-eiland.js';
 import { createStrand } from './world-strand.js';
 import { createBoerderij } from './world-boerderij.js';
 import { createBank } from './world-bank.js';
+import { createSpeeltuin } from './world-speeltuin.js';
 import { createDraaimolen } from './world-draaimolen.js';
 import * as WILD from './art-wild.js';
 import * as HD2 from './art-hd2.js';
@@ -715,6 +716,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const near = (c, r) => c.g.visible && Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) < r;
   function action(grab = false) {                                               // grab: the pick-up key (E/Enter) asks; it never jumps
     if (fly.on()) return A('land', WILD.landIcon(), () => fly.land());             // up in the sky every button lands
+    if (park.on()) return A(park.mode() === 'swing' ? 'jump' : 'wait', ART.jumpIcon(), park.action());   // on the swing: jump off
     if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
     if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
@@ -830,6 +832,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   ctx.hopOnto = (x, z) => { if (mount || busy || midJump() || life.swimming() || fly.on()) return false; const v = topPoint(x, z); if (!v) return false; v.dir = { x: 0, z: -1 }; kid.path = [v]; target = null; after = null; resume = null; return true; };
   ctx.seated = () => seated() ? perch.i : -1;
   const bank = ctx.bank = createBank(ctx);
+  const park = ctx.park = createSpeeltuin(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -845,6 +848,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) play.steer(w.x, w.z); return;
     }
     if (busy) return;
+    if (park.on()) { const k = kid.pos.clone(); k.y = kid.lift || 0; k.project(camera); park.tap(ndc.x - k.x); return; }   // on the swing a tap pushes towards that side
     if (fly.on()) { const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) { fly.toward(w.x, w.z); showMarker(w.x, w.z); } if (!e.replay) { steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }   // flying: a tap is where to fly, a held finger steers
     if (fishing.tap()) return;                                                   // fishing: a tap reels in
     const hits = ray.intersectObjects(pick, false); let shook = false;
@@ -1037,7 +1041,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (c.upright) { c.upright.t = Math.min(1, c.upright.t + dt * 3.5); const e = 1 - (1 - c.upright.t) ** 3; c.mesh.rotation.z = c.upright.from * (1 - e); if (c.upright.t >= 1) { c.upright = null; c.mesh.rotation.z = 0; } }
     if (c.sq) { sx *= c.sq[0]; sy *= c.sq[1]; }                                    // an animal's own way of moving (world-ways.js)
     c.mesh.scale.set(breathe * sx, breathe * sy, 1);
-    if (c === kid && c.texs.sit && seated()) { const k = time - seatT; c.setFrame(k > 1.2 && Math.floor(k * 2.2) % 2 ? 'sit2' : 'sit'); }   // on a bench: she sits, and after a moment swings her legs
+    if (c === kid && c.texs.sit && park.pose()) c.setFrame(park.pose());
+    else if (c === kid && c.texs.sit && seated()) { const k = time - seatT; c.setFrame(k > 1.2 && Math.floor(k * 2.2) % 2 ? 'sit2' : 'sit'); }   // on a bench: she sits, and after a moment swings her legs
     else if (c.hop > 0 && c.texs.jump && !c.sit) c.setFrame('jump');
     else if (c.moving && !c.sit) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
     else { c.blinkT -= dt; if (c.blinkT < 0) { c.setFrame(c.frames.blink ? 'blink' : 'idle'); if (c.blinkT < -.12) c.blinkT = 2 + Math.random() * 3.5; } else c.setFrame('idle'); }
@@ -1072,6 +1077,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if ((kx || kz) && !busy) { const l = Math.hypot(kx, kz); lastIn = { x: kx / l, z: kz / l, t: time }; }
     if (busy) { if (play.aboard()) play.drive(kx, kz, dt); }
     else if (fly.on()) fly.drive(kx, kz, dt);                                    // in the sky: free over land and sea
+    else if (park.on()) park.drive(kx, kz, dt);                                  // on the swing or the slide: the playground moves her
     else if ((kx || kz) && !midJump() && !mount && life.swimming()) {           // paddling: free inside the water, against the edge she hops out
       const sw = life.swimming(); if (Math.abs(kx) > .2) kid.face = Math.sign(kx);
       const l = Math.hypot(kx, kz), sp = 2.4 * dt, nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
@@ -1095,7 +1101,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
         if (lowAt(ax, az) && walkable(ax + ix, az + iz)) { const land = new THREE.Vector3(ax + ix + .5, 0, az + iz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
         else if (time > bumpT && rooms.pushAt(ax, az, ix, iz)) bumpT = time + .45;
-        else if (time > bumpT && bank.bumpAt(ax, az, iz)) bumpT = time + .6;   // walking into a bench from the front: she sits down
+        else if (time > bumpT && bank.bumpAt(ax, az, iz)) bumpT = time + .6;
+        else if (time > bumpT && park.bumpAt(ax, az, ix, iz)) bumpT = time + .6;   // into the swing or the ladder of the slide: on she gets   // walking into a bench from the front: she sits down
         else if (time > bumpT && toys.bumpAt(ax, az)) bumpT = time + 1.2;   // walking into a flower pot with the can: she waters it   // the cave's crate slides one tile
         else if (time > bumpT && inb(ax, az) && ground[I(ax, az)] === MAP.SE && !toys.carrying() && !life.carrying() && life.canSwimAt(ax, az)) { bumpT = time + 1.5; life.dip('zee', kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into shallow sea: in she hops
         else if (time > bumpT && inb(ax, az) && ground[I(ax, az)] === WA && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater(), kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into the pond: in she jumps
@@ -1106,7 +1113,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       stepAlong(kid, dt, land ? jumpSpeed : speed);
       if (jumpTo && kid.path[0] !== jumpTo) { const v = jumpTo; jumpTo = null; if (!mount) landed(v); }
     }
-    if (!mount && !life.swimming()) {                                            // how high she stands: on a top, or on the way up or down
+    if (!mount && !life.swimming() && !park.on()) {                             // how high she stands: on a top, or on the way up or down
       const b = jumpTo ? jumpL0 + ((jumpTo.perch ? jumpTo.perch.h : 0) - jumpL0) * Math.min(1, 1 - Math.hypot(jumpTo.x - kid.pos.x, jumpTo.z - kid.pos.z) / jumpD) : perch ? perch.h : 0;
       if (b || liftOn) { kid.lift = b; liftOn = !!b; }
     }
@@ -1143,7 +1150,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time); isle.update(dt, time); beach.update(dt, time); farm.update(dt, time); bank.update(dt, time); molen.update(dt, time);
+    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time); isle.update(dt, time); beach.update(dt, time); farm.update(dt, time); bank.update(dt, time); park.update(dt, time); molen.update(dt, time);
     spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
@@ -1178,7 +1185,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, park, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },

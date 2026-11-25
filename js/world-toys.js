@@ -7,7 +7,7 @@
 //   strand   a bucket for sand towers (jump on them to flatten them)
 //   eiland   puddles of paint: coloured footprints, and two colours make a third
 //   kasteel  tap the castle and somebody looks out of a window
-// The bike's ramps and trailer and the boat live in world-play.js. What should stay the way the children left it (the
+// The bike's trailer and the boat live in world-play.js; the playground (swing, slide) is world-speeltuin.js. What should stay the way the children left it (the
 // plants, the sand towers, what they bought) is saved by quest.js first and drawn after.
 import * as PX from './pixel.js';
 import * as ART from './art.js';

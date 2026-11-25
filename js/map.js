@@ -70,12 +70,17 @@ export const ISLETS = [
 ];
 export const isletAt = (x, z) => ISLETS.find(i => ((x + .5 - i.cx) / i.rx) ** 2 + ((z + .5 - i.cz) / i.rz) ** 2 <= 1) || null;
 export const BIKE = [42.5, 43.5];                                                     // not at the front door: the morning starts quiet
-export const BALLS = [[22.5, 42.5], [58.5, 72.5]];
+export const BALLS = [[24.5, 41.5], [58.5, 72.5]];
 /* ---- every island has a toy of its own (world-toys.js, world-play.js); none of it is needed for the adventure ---- */
 export const STALL = { x: 36, z: 40, w: 2 };                                          // dorp: the stall where found things are traded for things to wear
 export const POTS = [[29.5, 35.45], [30.45, 35.45], [32.55, 35.45], [33.5, 35.45]];   // dorp: flower pots at the front door
 export const CAN = [28.4, 35.6];                                                      // dorp: the watering can (filled at the pond or the fountain)
-export const RAMPS = [[24.5, 37], [25.5, 46], [61.5, 46.2]];                          // dorp and wei: only a bike takes off from these
+/** dorp: the playground west of the fountain square (sand from x0..x1, z0..z1): a swing that swings left and right (frame on
+ *  tiles x-1..x+1 at z, she gets on from `on`, jumps off to `land`) and a slide (ladder at x, chute down to the east; she starts
+ *  at `on` and lands at `off`) */
+export const PLAY = { x0: 18, z0: 40, x1: 26, z1: 44 };
+export const SWING = { x: 20, z: 41, on: [20, 42], land: [[17, 41], [18, 41], [22, 41], [23, 41]] };
+export const SLIDE = { x: 23, z: 43, on: [22, 43], off: [26, 43] };
 export const HIDES = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]];   // bos: bushes somebody hides in
 export const KITE = [62.5, 44.4];                                                     // wei: a kite for the wind
 export const BUCKET = [57.5, 70.5];                                                   // strand: a bucket for sand towers
@@ -140,8 +145,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
-    [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], ...BENCHES.flatMap(b => [b.at, [b.x, b.z + 1], [b.x + 1, b.z + 1]]), [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
+    [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], ...Array.from({ length: (PLAY.x1 - PLAY.x0 + 1) * (PLAY.z1 - PLAY.z0 + 1) }, (_, k) => [PLAY.x0 + k % (PLAY.x1 - PLAY.x0 + 1), PLAY.z0 + Math.floor(k / (PLAY.x1 - PLAY.x0 + 1))]), ...BENCHES.flatMap(b => [b.at, [b.x, b.z + 1], [b.x + 1, b.z + 1]]), [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -171,6 +176,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   trail([[20.5, 36.5], [18, 38], [14, 38.4], [11, 39]], .7); trail([[20.5, 45.5], [17.5, 45.4]], .7);   // out west to the pond
   for (let z = 30; z < 54; z++) for (let x = 6; x < 46; x++) if (((x + .5 - POND.cx) / POND.rx) ** 2 + ((z + .5 - POND.cz) / POND.rz) ** 2 <= 1) { ground[I(x, z)] = WA; block[I(x, z)] = 1; }
   rect(GARDEN.x0, GARDEN.z0, GARDEN.x1, GARDEN.z1, SO);
+  rect(PLAY.x0, PLAY.z0, PLAY.x1, PLAY.z1, SA);                                                 // the playground's sand
   trail([[29, 50.5], [29, 55.5], [27.5, 57.5]], .75);                                           // down to the pig's mud
   /* ---- bos ---- */
   disc(CLEARING, GR); disc(ORCHARD, GR); disc(NOOK, GR);
@@ -214,6 +220,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   solid(31, 40, 32, 41);                                         // fountain
   solid(STALL.x, STALL.z, STALL.x + STALL.w - 1, STALL.z);       // the stall
   for (const b of BENCHES) solid(b.x, b.z, b.x + 1, b.z);        // the benches
+  solid(SWING.x - 1, SWING.z, SWING.x + 1, SWING.z); solid(SLIDE.x, SLIDE.z, SLIDE.x + 2, SLIDE.z);   // the swing's frame, the slide
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   solid(CAVE.x0, CAVE.z0, CAVE.x1, CAVE.z1); block[I(...ROOMS.grot.door)] = 0;                   // the rock, with the dark mouth of the cave in it
@@ -381,7 +388,7 @@ export function validate(m, keep = []) {
   const T = ([x, z]) => I(Math.floor(x), Math.floor(z));
   for (const p of [...POTS, CAN, [STALL.x, STALL.z + 1], ...BENCHES.map(b => b.at)]) ok(m.reach0[T(p)] && !m.block[T(p)], 'village toy unreachable ' + p);
   ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable');
-  for (const p of RAMPS) ok(m.reach[T(p)] && !m.block[T(p)], 'ramp unreachable ' + p);
+  for (const p of [SWING.on, ...SWING.land, SLIDE.on, SLIDE.off]) ok(m.reach0[T(p)] && !m.block[T(p)], 'playground spot unreachable ' + p);
   let sail = 0; for (let z = LAGOON.z0; z <= LAGOON.z1; z++) for (let x = LAGOON.x0; x <= LAGOON.x1; x++) if (m.ground[I(x, z)] === SE && !m.deck[I(x, z)]) sail++;
   ok(sail > 300, 'the lagoon is too small to sail on');
   for (let k = 0; k < BOAT_ROUTE.length; k++) { const [ax, az] = BOAT_ROUTE[k], [bx, bz] = BOAT_ROUTE[(k + 1) % BOAT_ROUTE.length], n = Math.ceil(Math.hypot(bx - ax, bz - az) * 4); for (let i = 0; i <= n; i++) { const x = Math.floor(ax + (bx - ax) * i / n), z = Math.floor(az + (bz - az) * i / n); if (m.ground[I(x, z)] !== SE || m.inland[I(x, z)] || isletAt(x, z)) { bad.push('the fishing boat sails over land at ' + x + ',' + z); k = 1e9; break; } } } ok(m.ground[T(WHALE)] === SE, 'the whale lies on land');

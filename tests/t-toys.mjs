@@ -11,7 +11,7 @@ export default async function (t) {
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL);
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
-  const M = await J('({POTS:__w.MAP.POTS,CAN:__w.MAP.CAN,STALL:__w.MAP.STALL,BUCKET:__w.MAP.BUCKET,KITE:__w.MAP.KITE,RAMPS:__w.MAP.RAMPS,WHALE:__w.MAP.WHALE,POND:__w.MAP.POND,C:__w.MAP.CASTLE})');
+  const M = await J('({POTS:__w.MAP.POTS,CAN:__w.MAP.CAN,STALL:__w.MAP.STALL,BUCKET:__w.MAP.BUCKET,KITE:__w.MAP.KITE,WHALE:__w.MAP.WHALE,POND:__w.MAP.POND,C:__w.MAP.CASTLE})');
 
   if (run('dorp')) {   // the watering can and the flower pots
     await place(31.5, 37.2); await t.sleep(2500); await shot('01-pots');
@@ -51,13 +51,12 @@ export default async function (t) {
     const w = await J(`__w.Q.wearing(__w.who())`); ok(w.head === 'krans' && w.neck === 'ketting' && w.dress === 'jurkgeel' && w.hand === 'ballon', 'she has it all on');
     const other = await t.ev(`__w.who() === 'anna' ? 'fenna' : 'anna'`); await t.ev(`__w.setWho('${other}')`); await t.sleep(700); ok(!(await J(`__w.Q.wearing('${other}')`)).head, 'her sister dresses herself'); await shot('10-sister');
   }
-  if (run('fiets')) {   // bell, trailer, ramp
+  if (run('fiets')) {   // bell, trailer
     const b = (await play()).bike; await place(b[0] - 1, b[1] + 1); await t.sleep(1200); await t.ev(`__w.play.tapBike()`); await t.sleep(1200); ok(await t.ev(`__w.mount()`) === 'fiets', 'on the bike');
     ok(await t.ev(`__w.play.tapAnimal(__w.animals[0]) && __w.play.tapAnimal(__w.animals[2])`) === true, 'on the bike a tap on an animal puts it in the trailer'); await t.sleep(1500); ok((await play()).riders === 2, 'two ride along'); await shot('11-trailer');
-    const r = M.RAMPS[1]; await place(r[0] - 4, r[1]); await t.sleep(600); await t.ev(`__w.walkTo(${Math.floor(r[0]) + 4},${Math.floor(r[1])})`); ok(await until(`__w.play.info().flip`, 15000), 'the hump bridge gives the bike a happy hop'); await shot('12-ramp');
+    await t.ev(`__w.walkTo(Math.floor(__w.kid.pos.x) + 3, Math.floor(__w.kid.pos.z))`); await t.sleep(1500); await shot('12-ride');
     await t.sleep(2500); const a0 = await J(`[__w.animals[0].pos.x, __w.kid.pos.x]`); ok(Math.abs(a0[0] - a0[1]) < 2.5, 'the animals came along'); await t.ev(`__w.jump()`); await t.sleep(300);
     await t.ev(`__w.play.tapBike()`); await t.sleep(900); ok((await play()).riders === 0 && await t.ev(`__w.animals[0].lift`) === 0, 'off the bike: everybody out'); await shot('13-out');
-    await place(r[0] - 3, r[1]); await t.sleep(400); await t.ev(`__w.walkTo(${Math.floor(r[0]) + 3},${Math.floor(r[1])})`); await until(`__w.info().pos[0] > ${r[0] + 1}`, 15000); ok(!(await play()).flip && await t.ev(`__w.info().pos[0]`) > r[0] + 1, 'on foot the hump is just a bump in the road');
   }
   if (run('bos')) {   // hide and seek
     let s = await toys(); ok(s.hides.length >= 5 && s.hiders.length === 3 && s.hides.filter(h => h[2]).length === 3, 'three are hiding in ' + s.hides.length + ' bushes');

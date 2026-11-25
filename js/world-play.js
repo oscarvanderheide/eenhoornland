@@ -1,5 +1,4 @@
-// Things to play with that are not needed for anything: a bike (with a bell, a trailer for animals, and ramps only a
-// bike can take), balls to kick, and the boat: it takes her to the rainbow island when that is where she wants to go,
+// Things to play with that are not needed for anything: a bike (with a bell and a trailer for animals), balls to kick, and the boat: it takes her to the rainbow island when that is where she wants to go,
 // and otherwise she sails it herself around the lagoon, inside the buoys. Where things are comes from map.js.
 // world.js hands over the same toolbox (ctx) as for world-extras.js.
 import * as ART from './art.js';
@@ -34,7 +33,6 @@ export function createPlay(ctx) {
     const t = ctx.nearestWalkable(cartP.x, cartP.z + .9) || [Math.floor(kid.pos.x), Math.floor(kid.pos.z)]; c.pos.set(t[0] + .5, 0, t[1] + .5); c.hop = 1; c.lost = true; c.wait = 1.5; (sfx[c.sound] || sfx.pop)();
   }
   /* hump bridges on the paths: on the bike she goes over with a happy little hop (on foot they are just a bump) */
-  const ramps = MAP.RAMPS.map(([x, z]) => { const m = makeSprite(ART.hobbel(), { lean: .45, scale: 1.1 }); m.position.set(x, 0, z + .25); scene.add(m); m.userData.alpha = ART.hobbel(); const r = { x, z, m, cool: 0, wig: 0 }; m.userData.tap = () => { r.wig = .5; sfx.pop(); if (ctx.mount() !== 'fiets') { bubble(kid, '', ART.bike()); hint = .6; } ctx.walkToTile(Math.floor(x), Math.floor(z)); }; pick.push(m); return r; });
   const streamer = makeSprite(ART.linten(0), { lean: .2, shadow: false }); streamer.visible = false; scene.add(streamer);
   let flip = 0, hint = 0;
 
@@ -181,15 +179,13 @@ export function createPlay(ctx) {
     info: () => ({ side, sailing: aboard, moving: route.length > 0, boat: [+bp.x.toFixed(2), +bp.z.toFixed(2)], bike: [bike.position.x, bike.position.z], balls: balls.map(b => [+b.x.toFixed(2), +b.z.toFixed(2)]), riders: riders.length, chests: chests.map(c => [c.x, c.z]), whale: whaleT >= 0, flip: flip > 0 }),
     kick(i, dx, dz) { kick(balls[i], dx, dz, 6); }, balls, kickBall: kick, wetAt, bikeNear: () => ctx.mount() !== 'fiets' && Math.hypot(bike.position.x - kid.pos.x, bike.position.z - kid.pos.z) < 1.6, tapBike: () => bike.userData.tap(), tapBoat: () => boat.userData.tap(),
     update(dt, time, active) {
-      // bike, trailer, ramps
+      // bike, trailer
       const riding = ctx.mount() === 'fiets';
       if (riding) {
         bikeFace = kid.face; bike.position.set(kid.pos.x, kid.mesh.position.y - (kid.lift || 0), kid.pos.z + .09); bike.scale.set(BS * bikeFace, BS, 1);
         if (flip > 0) { flip = Math.max(0, flip - dt * 2.5); bike.rotation.z = bikeFace * Math.sin((1 - flip) * Math.PI) * .28; if (flip <= 0) { bike.rotation.z = 0; sfx.pop(); } } else bike.rotation.z = kid.moving ? Math.sin(time * 14) * .02 : 0;   // a little wheelie over the hump
         streamer.visible = true; streamer.position.set(bike.position.x + bikeFace * .62, bike.position.y + .62, bike.position.z + .02); streamer.scale.x = -bikeFace; const sf = kid.moving ? Math.floor(time * 10) % 2 : 0; if (streamer.userData.f !== sf) { streamer.userData.f = sf; const t = ctx.tex(ART.linten(sf)); streamer.material.map = t; streamer.material.emissiveMap = t; }
-        for (const r of ramps) if (active && kid.moving && r.cool <= 0 && kid.hop <= 0 && Math.hypot(r.x - kid.pos.x, r.z - kid.pos.z) < .75) { r.cool = 1.6; r.wig = .4; kid.hop = 1; kid.hopH = .7; flip = 1; sfx.whoosh(); sfx.bell(); burst(kid.pos, 8, true); bubble(kid, 'Wiiii!'); riders.forEach((c, i) => setTimeout(() => { c.hop = 1; bubble(c, 'Wiii!'); }, 150 + i * 120)); }
       } else { streamer.visible = false; hint = Math.max(0, hint - dt); bike.rotation.z = hint > 0 ? Math.sin(hint * 40) * .1 : 0; }          // it only rattles when a hump asks for it
-      for (const r of ramps) { r.cool -= dt; r.wig = Math.max(0, r.wig - dt); r.m.scale.y = 1.1 * (1 - Math.sin(r.wig * 30) * .08 * r.wig * 2); }
       const cx = bike.position.x - bikeFace * 1.05, k = Math.min(1, dt * 14); cartP.x += (cx - cartP.x) * k; cartP.z += (bike.position.z + .1 - cartP.z) * k;
       cart.position.set(cartP.x, riding ? Math.max(0, bike.position.y) * .6 : 0, cartP.z); cart.scale.set(1.1 * bikeFace, 1.1, 1);
       riders.forEach((c, i) => {
