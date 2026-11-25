@@ -3,6 +3,7 @@
 // world.js hands over a small toolbox (ctx); this file never reaches into world.js internals beyond that.
 import * as PX from './pixel.js';
 import * as ART from './art.js';
+import * as WILD from './art-wild.js';
 import * as MAP from './map.js';
 import * as Q from './quest.js';
 import { state } from './state.js';
@@ -101,6 +102,7 @@ export function createExtras(ctx) {
   // every island has animals of its own: nobody lives on two islands
   animal(one(PX.hedgehog()), { name: 'Egel', say: ['Snuf snuf!'], sound: 'pop', blobW: .55, flippable: true }, [36, 12, 46, 16]);
   animal(one(ART.ISLE.uil()), { name: 'Uil', say: ['Oehoe!', 'Oehoe oehoe!'], sound: 'pop', blobW: .45 }, [19, 14, 25, 17]);
+  animal({ idle: WILD.eekhoorn(0), w1: WILD.eekhoorn(1), w2: WILD.eekhoorn(0) }, { name: 'Eekhoorn', say: ['Kwiek kwiek!'], sound: 'squeak', blobW: .45, flippable: true }, [53, 15, 59, 18]);   // lives in the treehouse oak
   animal(one(ART.ISLE.schaap()), { name: 'Schaap', say: ['Bèèè!', 'Bèè bèè!'], sound: 'boing', blobW: .7, flippable: true }, [60, 36, 66, 44]);
   animal(one(ART.crab()), { name: 'Krab', say: ['Klik klak!', 'Knip knip!'], sound: 'pop', blobW: .5 }, [48, 69, 58, 74]);
   animal(one(PX.bunny()), { name: 'Konijn', say: ['Hop hop!'], sound: 'boing', blobW: .5 }, [122, 60, 134, 68]);

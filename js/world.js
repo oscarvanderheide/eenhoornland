@@ -18,6 +18,7 @@ import { createSea } from './world-sea.js';
 import { createFishing } from './world-fish.js';
 import { createWays } from './world-ways.js';
 import { createFlight } from './world-fly.js';
+import { createBoomhut } from './world-boomhut.js';
 import * as WILD from './art-wild.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
@@ -600,6 +601,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       if (i === I(...r.door)) { to = [r.in[0] + .5, r.in[1] + .5]; dx = 1; dz = 0; if (k === 'grot') then = () => speak('Wat een mooie grot! Wat glinstert daar?'); }
       else if (i === I(...r.exit)) { to = r.out; dz = 1; }
       else if (r.garden && i === I(...r.garden)) { kid.path = []; target = null; after = null; setMount(null, true); onEnter && onEnter('kasteel'); return true; }
+      else if (r.zip && i === I(...r.zip)) { kid.path = []; target = null; after = null; hut.zip(); return true; }   // the treehouse's back door: down the zipline
     }
     if (!to) return false;
     moving = true; kid.path = []; target = null; after = null; keys.clear(); fadeEl.style.opacity = 1; sfx.door();
@@ -745,6 +747,11 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   ctx.clearWalk = () => { target = null; after = null; resume = null; };
   ctx.doorTiles = () => BUILDINGS.map(b => I(b.door[0], b.door[1]));
   const fly = ctx.fly = createFlight(ctx);
+  /** a black blink (like walking through a door), with `then` done while the screen is dark */
+  ctx.fade = then => { fadeEl.style.opacity = 1; setTimeout(() => { then && then(); fadeEl.style.opacity = 0; }, 240); };
+  /** the camera looks at (x, z) for a while (the treehouse telescope), then comes back to her */
+  ctx.peek = (x, z, secs) => { if (peek) return; peek = { x, z, t: secs + .24, on: false }; ctx.fade(() => { peek.on = true; camTarget.set(x, 0, z); }); };
+  const hut = ctx.hut = createBoomhut(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -917,9 +924,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   applyNight(nightT);
   /** inside a room the sun and the sky fade away and the torches light it (the cave darker than the castle hall) */
-  let inT = 0, inDark = .8;
+  let inT = 0, inDark = .8, peek = null;
   function stepIndoor(dt) {
-    const where = rooms.where(), want = where ? 1 : 0; if (where) inDark = where === 'grot' ? .3 : .55;
+    const where = rooms.where(), want = where && !peek ? 1 : 0; if (where) inDark = where === 'grot' ? .3 : where === 'hut' ? .25 : .55;
     if (!want && inT === 0) return;
     inT += Math.sign(want - inT) * Math.min(Math.abs(want - inT), dt * 4);
     applyNight(nightT); const k = 1 - inDark * inT;
@@ -1015,8 +1022,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
     const ti = I(Math.floor(kid.pos.x), Math.floor(kid.pos.z));
-    if (ti !== lastTile) { lastTile = ti; if (interactive && !paused && !fly.on()) goThrough([ti % W, Math.floor(ti / W)]); }
-    { const b = doors.get(ti); if (b && interactive && !paused && !fly.on() && kz < 0 && !kx) { keys.clear(); arrive(b); } }
+    if (ti !== lastTile) { lastTile = ti; if (interactive && !paused && !busy && !fly.on()) goThrough([ti % W, Math.floor(ti / W)]); }
+    { const b = doors.get(ti); if (b && interactive && !paused && !busy && !fly.on() && kz < 0 && !kx) { keys.clear(); arrive(b); } }
     if (!kid.path.length && target) { const b = target; target = null; if (I(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === I(b.door[0], b.door[1])) arrive(b); }
     if (kid.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
     // trail followers
@@ -1044,7 +1051,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time);
+    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time);
     spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
@@ -1052,7 +1059,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (markerT > 0) { markerT -= dt * 1.2; marker.material.opacity = Math.max(0, markerT); marker.scale.setScalar(1 + (1 - markerT) * .4); if (markerT <= 0) marker.visible = false; }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.life -= dt * 1.1; s.v.y -= dt * 1.5; s.m.position.addScaledVector(s.v, dt); s.m.scale.setScalar(Math.max(.01, s.life)); if (s.life <= 0) { scene.remove(s.m); sparks.splice(i, 1); } }
     // camera
-    camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3);
+    if (peek && (peek.t -= dt) <= 0 && !peek.back) { peek.back = true; ctx.fade(() => { peek = null; camTarget.set(kid.pos.x, 0, kid.pos.z); }); }   // the telescope: a blink there, a blink back
+    if (!peek || !peek.on) { camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3); }
     const halfW = viewW / 2; const cx = THREE.MathUtils.clamp(camTarget.x, Math.min(W / 2, halfW - 1), Math.max(W / 2, W - halfW + 1)); const cz = THREE.MathUtils.clamp(camTarget.z, 4, H - 3);
     if (wake) { wake.t += dt; const k = Math.min(1, wake.t / 6), e = k * k * (3 - 2 * k); zoom = .5 + .5 * e; wakeEl.style.opacity = String(.55 * (1 - Math.min(1, wake.t / 14))); if (wake.t > 1.4 && !wake.yawn) { wake.yawn = true; kid.hop = .4; bubble(kid, 'Mmmm!', PX.sparkle('#FFD43B')); sfx.purr(); } if (wake.t > 14) { wake = null; wakeEl.style.opacity = 0; zoom = 1; } }
     const camD = camDist * zoom * fly.camK;
@@ -1078,7 +1086,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, fly, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, fly, hut, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -1108,7 +1116,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

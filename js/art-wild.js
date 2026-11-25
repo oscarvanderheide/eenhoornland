@@ -161,3 +161,38 @@ export const flamingo = (f = 0) => cached('flamingo' + f, () => sprite([
   f === 2 ? '.........' : '..pp.....', f === 2 ? '.........' : '.pkpb....', f === 2 ? '.........' : '...pbB...', f === 2 ? '.........' : '...p.....', f === 2 ? '.........' : '...p.....',
   f === 2 ? '..ppp....' : '...pp....', '..pppppp.', '.pppPPppp', '.ppPPPPpp', '..pppppp.', '....l....', '....l....', f === 1 ? '....ll...' : '...l.l...', f === 1 ? '....l.l..' : '...l.l...', f === 1 ? '....l....' : '...l.l...', f === 1 ? '...ll....' : '..ll.ll..',
 ], { p: '#FF9EC7', P: '#FF7EB6', k: EYE, b: '#FFFFFF', B: '#2B1E3A', l: '#E8616B' }));
+
+/* ---------------- inside the treehouse ---------------- */
+/** the opening at the back onto the zipline platform: blue sky, leaves, and the rope with its pink handle */
+export const zipDeur = () => cached('zipDeur', () => gridSprite(22, 34, (x, y) => {
+  const cx = Math.abs(x + .5 - 11);
+  if (cx > 10 || y < 2) return null;
+  if (cx > 8.6 || y < 4) return '#6B4126';                                                    // the frame
+  if (y === 4 + Math.floor((x * 7) % 3) && false) return null;
+  const ry = 9 + Math.round((x - 3) * .35); if (Math.abs(y - ry) < 1 && x > 1) return '#5A3A22';   // the rope going out
+  if (x >= 13 && x <= 15 && y >= ry + 1 && y <= ry + 6) return (y === ry + 1) ? '#9AA5B8' : (x === 13 || x === 15 || y === ry + 6) ? '#FF7EB6' : null;
+  if (y > 27) return y === 28 ? '#8A5A33' : '#B8844F';                                          // the platform boards
+  const leaf = Math.sin(x * 1.3 + y * .7) + Math.sin(y * 1.1 - x * .4) > 1.1 && (y > 18 || cx > 5);
+  return leaf ? ((x + y) % 3 ? '#62BC62' : '#8FD06A') : y < 14 ? '#BFE8FF' : '#9FD8F5';
+}));
+/** a brass telescope on three legs, pointing out of the window */
+export const telescoop = () => cached('telescoop', () => sprite([
+  '..........bb', '........bbBb', '......bbBbb.', '....bbBbb...', '...gbBbb....', '..ggbb......', '...gg.......', '...g.g......', '..g...g.....', '..g...g.....', '.g.....g....', '.g.....g....',
+], { b: '#E0B046', B: '#FFE08A', g: '#6B4126' }));
+/** the squirrel's pile of acorns */
+export const eikels = () => cached('eikels', () => gridSprite(16, 9, (x, y) => {
+  const d = ((x + .5 - 8) / 7.8) ** 2 + ((y + .5 - 9) / 8.4) ** 2; if (d > 1) return null;
+  const cx = (x % 4), cy = (y + Math.floor(x / 4)) % 4; return cy === 0 ? (cx < 3 ? '#8A5A33' : '#6B4126') : cx === 3 ? '#B07A3A' : cy === 1 ? '#E0B46A' : '#C99A4E';
+}));
+/** a striped hammock between two hooks (seen from the front) */
+export const hangmat = () => cached('hangmat', () => gridSprite(30, 14, (x, y) => {
+  if ((x < 2 || x > 27) && y < 13) return x === 0 || x === 29 ? null : '#6B4126';                 // the posts
+  const sag = 4 + Math.sin((x - 2) / 25 * Math.PI) * 6; if (x < 2 || x > 27) return null;
+  if (y < sag - 2 || y > sag + 1) return (Math.abs(y - (2 + (sag - 4) * .3)) < .6 && (x < 6 || x > 23)) ? '#E8D5B0' : null;   // the ropes to the hooks
+  return Math.floor(x / 3) % 2 ? '#FF9EC7' : '#FFFFFF';
+}));
+/** a round rag rug (lies flat) */
+export const kleed = () => cached('kleed', () => gridSprite(30, 18, (x, y) => {
+  const d = ((x + .5 - 15) / 14.6) ** 2 + ((y + .5 - 9) / 8.6) ** 2; if (d > 1) return null;
+  const ring = Math.floor(Math.sqrt(d) * 5); return ['#FFD43B', '#FF9EC7', '#69DB7C', '#4DABF7', '#FF7EB6'][ring] || '#FF7EB6';
+}));

@@ -6,6 +6,8 @@
 //            kip: flutters up and leaves an egg; a chick comes out and follows her       (eendjes dive in the pond)
 //   bos      egel: rolls up into a ball; a tap bowls it, and what it bumps into shakes
 //            uil: asleep in the daytime; a tap: one eye, oehoe; a tap while awake: stars twinkle round its head
+//            eekhoorn: up the treehouse oak like a flash, waves from the platform and tosses her an acorn; a tap while it is
+//            up there: another one (with a coin in it, once a day)
 //   wei      schaap: every tap fluffs it up more, until poof, the wool floats away and it grows back
 //            hertje: shy; stand still and it comes to nuzzle her, and flowers come up around them
 //   strand   krab: a sideways dance, then into the sand; while it dances it copies her jumps
@@ -17,6 +19,7 @@
 import * as PX from './pixel.js';
 import * as ART from './art.js';
 import * as AW from './art-ways.js';
+import * as WILD from './art-wild.js';
 import * as MAP from './map.js';
 import * as Q from './quest.js';
 import { sfx } from './audio.js';
@@ -59,7 +62,28 @@ export function createWays(ctx) {
   const holes = [];
   function hole(x, z) { const m = makeSprite(AW.hol(), { lean: 1.45, shadow: false, scale: .8 }); m.position.set(x, .02, z + .05); scene.add(m); holes.push({ m, t: 0 }); while (holes.length > 2) scene.remove(holes.shift().m); }
   const chicks = [];
+  const OAK = [MAP.ZIP.from[0] + .35, MAP.ZIP.from[1] + .12], TOP = 2.75;
+  function acorn(c, gift) {                                                      // tossed down from the platform to her feet
+    const tx = kid.pos.x + rnd(-.3, .3), tz = kid.pos.z + .15, T = .8;
+    bit(WILD.eikel(), c.pos.x, TOP + .3, c.pos.z + .05, { vx: (tx - c.pos.x) / T, vz: (tz - c.pos.z) / T, vy: 2.2, g: 9, bounce: 1, life: 1.6, spin: 6 });
+    setTimeout(() => { sfx.pop(); kid.hop = .5; if (gift && Q.giftOnce('eekhoorn', 'munt')) { sfx.chime(5); bit(ART.coin(), tx, .4, tz, { vy: 2.4, g: 1.5, life: 1, spin: 9 }); } else bubble(kid, '', WILD.eikel()); }, T * 1000);
+  }
   const W = {
+    Eekhoorn: {   // dashes to the oak, scurries up the trunk, waves from the treehouse and tosses down an acorn; then back down
+      start(c) { c.way = { kind: 'eek', t: 0, home: [c.pos.x, c.pos.z] }; wear(c, WILD.eekhoorn(1)); sfx.squeak(); leapTo(c, OAK[0], OAK[1], .5, .5); },
+      step(c, dt) {
+        const w = c.way; w.t += dt;
+        if (w.t < .55) { stepLeap(c, dt); return false; }
+        if (w.t < 1.35) { c.lift = TOP * (w.t - .55) / .8; c.sq = [1, 1]; if (!w.up) { w.up = true; sfx.squeak(); } return false; }   // up the trunk
+        if (w.t < 3.4) { c.lift = TOP; if (!w.top) { w.top = true; wear(c, WILD.eekhoorn(0)); c.face = kid.pos.x > c.pos.x ? 1 : -1; c.hop = 1; c.hopH = .25; setTimeout(() => acorn(c, false), 300); } return false; }
+        if (w.t < 4.1) { if (!w.down) { w.down = true; wear(c, WILD.eekhoorn(1)); } c.lift = TOP * (1 - (w.t - 3.4) / .7); return false; }
+        if (!w.back) { w.back = true; c.lift = 0; const to = tileNear(OAK[0], OAK[1] + 1.5, 1, 2.5, c.home) || w.home; leapTo(c, to[0], to[1], .5, .5); }
+        if (!stepLeap(c, dt)) return false;
+        wear(c, null); c.lift = 0; return true;
+      },
+      again(c) { const w = c.way; if (!w.top || w.down || w.second) return true; w.second = true; w.t = Math.min(w.t, 2.2); c.hop = 1; sfx.squeak(); setTimeout(() => acorn(c, true), 250); return true; },
+      repeat: true,
+    },
     Konijn: {   // down its hole, up out of another one a little further
       start(c) { c.way = { kind: 'hol', t: 0 }; c.hop = 1; sfx.boing(); hole(c.pos.x, c.pos.z); c.way.to = tileNear(c.pos.x, c.pos.z, 2, 4, c.home); },
       step(c, dt) {
