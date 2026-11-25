@@ -93,7 +93,7 @@ const ANNA_BODY = [
 const ANNA_LEGS = {
   idle: ['........ttt..ttt..........', '........sst..sst..........', '........ooO..ooO..........', '.......Pppq..Pppq.........', '.......pqqq..pqqq.........'],
   w1: ['........ttt..ttt..........', '........ooO..sst..........', '.......Pppq..ooO..........', '.......pqqq..Pppq.........', '.............pqqq.........'],
-  w2: ['........ttt..ttt..........', '........sst..ooO..........', '........ooO.Pppq..........', '.......Pppq..pqqq.........', '.......pqqq...............'],
+  w2: ['........ttt..ttt..........', '........sst..ooO..........', '........ooO..Pppq.........', '.......Pppq..pqqq.........', '.......pqqq...............'],
   jump: ['.......ttt....ttt.........', '......ooO......ooO........', '.....Pppq......Pppq.......', '.....pqqq......pqqq.......', '..........................'],
 };
 const ANNA_PAL = Object.assign(
@@ -140,8 +140,8 @@ const FOAL_TOP = [
 ];
 const FOAL_LEGS = {
   idle: ['......vVVbbv......vVVbbv.......', '......vVVbbv......vVVbbv.......', '......vVVbbv......vVVbbv.......', '......FFFffF......FFFffF.......', '......FFFffF......FFFffF.......'],
-  w1: ['.......vVbbv........vVbbv......', '........vVbbv........vVbbv.....', '........vVbbv........vVbbv.....', '........FFfffF.......FFfffF....', '...........................'],
-  w2: ['.....vVv..bbv.....vVv..bbv.....', '....vVv....bbv...vVv....bbv....', '....vVv....bbv...vVv....bbv....', '....FFF....fff...FFF....fff....', '...............................'],
+  w1: ['.......vVbbv........vVbbv......', '........vVbbv........vVbbv.....', '........vVbbv........vVbbv.....', '........FFfffF.......FFfffF....', '........FFfffF.......FFfffF....'],
+  w2: ['.....vVv..bbv.....vVv..bbv.....', '....vVv....bbv...vVv....bbv....', '....vVv....bbv...vVv....bbv....', '....FFF....fff...FFF....fff....', '....FFF....fff...FFF....fff....'],
 };
 function foalPal(u) {
   const rb = u.mane === 'rainbow', m1 = rb ? null : u.mane, m2 = rb ? null : PX.mix(u.mane, '#ffffff', .35);
