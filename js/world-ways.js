@@ -10,6 +10,7 @@
 //            up there: another one (with a coin in it, once a day)
 //   wei      schaap: every tap fluffs it up more, until poof, the wool floats away and it grows back
 //            hertje: shy; stand still and it comes to nuzzle her, and flowers come up around them
+//            otter: a dive into the waterfall pool, then it floats on its back with a shell; a tap then: it cracks it open
 //   strand   krab: a sideways dance, then into the sand; while it dances it copies her jumps
 //            meeuw: dives into the sea and brings her a fish
 //   eiland   konijn: down its hole, up out of another one; tap it while it peeks out and it pops up laughing
@@ -68,7 +69,21 @@ export function createWays(ctx) {
     bit(WILD.eikel(), c.pos.x, TOP + .3, c.pos.z + .05, { vx: (tx - c.pos.x) / T, vz: (tz - c.pos.z) / T, vy: 2.2, g: 9, bounce: 1, life: 1.6, spin: 6 });
     setTimeout(() => { sfx.pop(); kid.hop = .5; if (gift && Q.giftOnce('eekhoorn', 'munt')) { sfx.chime(5); bit(ART.coin(), tx, .4, tz, { vy: 2.4, g: 1.5, life: 1, spin: 9 }); } else bubble(kid, '', WILD.eikel()); }, T * 1000);
   }
+  const POOL = MAP.FALLS.pool;
   const W = {
+    Otter: {    // splash into the pool, float round on its back with a shell on its tummy, and back onto the bank
+      start(c) { const side = c.pos.x < POOL.cx ? -1 : 1; c.way = { kind: 'otter', t: 0, home: [c.pos.x, c.pos.z] }; wear(c, WILD.otter(2)); sfx.squeak(); leapTo(c, POOL.cx + side * 1.6, POOL.cz - .1, .55, .9); },
+      step(c, dt) {
+        const w = c.way; w.t += dt;
+        if (w.t < .6) { stepLeap(c, dt); return false; }
+        if (!w.in) { w.in = true; sfx.splash(); for (let i = 0; i < 6; i++) bit(ART.drop(), c.pos.x + rnd(-.3, .3), .2, c.pos.z + .1, { vx: rnd(-1.4, 1.4), vy: rnd(2, 3.5), g: 9, life: .6 }); wear(c, WILD.otter(1)); c.lift = -.04; w.x0 = c.pos.x; }
+        if (w.t < 5) { c.pos.x = w.x0 + Math.sin((w.t - .6) * 1.1) * .45; c.face = Math.cos((w.t - .6) * 1.1) > 0 ? 1 : -1; c.lift = -.04 + Math.sin(w.t * 3) * .03; return false; }
+        if (!w.out) { w.out = true; wear(c, WILD.otter(0)); c.lift = 0; const to = tileNear(POOL.cx, POOL.cz + 2.6, 0, 1.5, c.home) || w.home; leapTo(c, to[0], to[1], .55, .8); sfx.splash(); }
+        return stepLeap(c, dt) ? (wear(c, null), true) : false;
+      },
+      again(c) { const w = c.way; if (!w.in || w.out || w.cracked) return true; w.cracked = true; w.t = Math.min(w.t, 3.4); c.hop = 1; c.hopH = .3; sfx.click(); setTimeout(() => { sfx.click(); burst(c.pos, 6, true); if (Q.giftOnce('otter', 'munt')) { sfx.chime(5); bit(ART.coin(), c.pos.x, .4, c.pos.z + .1, { vy: 2.6, g: 1.5, life: 1, spin: 9 }); } }, 300); return true; },
+      repeat: true,
+    },
     Eekhoorn: {   // dashes to the oak, scurries up the trunk, waves from the treehouse and tosses down an acorn; then back down
       start(c) { c.way = { kind: 'eek', t: 0, home: [c.pos.x, c.pos.z] }; wear(c, WILD.eekhoorn(1)); sfx.squeak(); leapTo(c, OAK[0], OAK[1], .5, .5); },
       step(c, dt) {

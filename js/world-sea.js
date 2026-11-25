@@ -89,7 +89,7 @@ export function createSea(ctx) {
   const swim = { m: makeSprite(ART.zwemmer(0), { lean: .2, shadow: false }), x: 99.5, z: 75.5, wave: 0, saw: false };
   swim.m.position.set(swim.x, -.15, swim.z); scene.add(swim.m);
   tappable(swim.m, ART.zwemmer(0), () => { swim.wave = 1.6; sfx.splash(); say(v3(swim.x, 0, swim.z), 'Hihi! Spetter!'); ctx.life.splash(swim.x + .6, swim.z); });
-  const ROUTE = [[101, 47], [118, 39], [133, 47], [128, 58], [112, 56]];
+  const ROUTE = [[105, 51], [118, 39], [133, 47], [128, 58], [112, 56]];
   const fb = { m: makeSprite(ART.vissersboot(), { lean: .2, shadow: false, scale: 1.4 }), i: 0, x: ROUTE[0][0], z: ROUTE[0][1], dir: 1, cool: 0, stop: 0 };
   fb.m.position.set(fb.x, 0, fb.z); scene.add(fb.m);
   const tossed = [];

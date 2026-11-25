@@ -101,7 +101,7 @@ export function createPlay(ctx) {
   /** which shore a point is on: the rainbow island, or everything else */
   const sideOf = (x, z) => M.zone[M.I(Math.max(0, Math.min(M.W - 1, Math.floor(x))), Math.max(0, Math.min(M.H - 1, Math.floor(z))))] === 'eiland' ? 'eiland' : 'strand';
   const onDock = s => { const [x, z] = tileOf(kid.pos), d = B[s].dock; return x === d[0] && (z === d[1] || z === d[1] + 1); };
-  const sailable = (x, z) => x >= L.x0 && x <= L.x1 && z >= L.z0 && z <= L.z1 && M.ground[M.I(x, z)] === MAP.SE && !M.deck[M.I(x, z)];
+  const sailable = (x, z) => x >= L.x0 && x <= L.x1 && z >= L.z0 && z <= L.z1 && M.ground[M.I(x, z)] === MAP.SE && !M.deck[M.I(x, z)] && !M.inland[M.I(x, z)];
   const clearSea = (ax, az, bx, bz) => { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / .25); for (let i = 0; i <= n; i++) { const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n; if (!sailable(Math.floor(x), Math.floor(z)) || !sailable(Math.floor(x + .3), Math.floor(z)) || !sailable(Math.floor(x - .3), Math.floor(z))) return false; } return true; };
   /** the sailable tile nearest to a point */
   function nearestSea(px, pz) { let best = null, bd = 1e9; const x0 = Math.floor(px), z0 = Math.floor(pz); for (let r = 0; r < 30 && !best; r++) for (let z = z0 - r; z <= z0 + r; z++) for (let x = x0 - r; x <= x0 + r; x++) { if (!sailable(x, z)) continue; const d = Math.hypot(x + .5 - px, z + .5 - pz); if (d < bd) { bd = d; best = [x, z]; } } return best; }

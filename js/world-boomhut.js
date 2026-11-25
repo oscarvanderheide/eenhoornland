@@ -83,6 +83,14 @@ export function createBoomhut(ctx) {
     if (n.t >= 4.5) { nap = null; ham.rotation.z = 0; kid.mesh.rotation.z = 0; kid.lift = 0; ctx.placeAt(HX + .5, HZ + 1.2, 0, 1); kid.hop = 1; sfx.boing(); ctx.setBusy(false); }
   }
 
+  // one rule for every input: right next to the telescope, the hammock or the acorns the action button uses them
+  ctx.addUse(() => {
+    if (MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) !== 'hut' || nap || ride) return null;
+    if (near(SX, SZ + .8, 1.2)) return { key: 'kijker', art: WILD.telescoop(), run: look };
+    if (near(HX, HZ + .9, 1.5)) return { key: 'hangmat', art: WILD.hangmat(), run: swing };
+    if (near(PX0, PZ0, 1.4)) return { key: 'eikels', art: WILD.eikel(), run: spill };
+    return null;
+  });
   return {
     zip, riding: () => !!ride, napping: () => !!nap, swing,
     info: () => ({ riding: !!ride, view, A: [A.x, A.y, A.z], B: [B.x, B.y, B.z] }),

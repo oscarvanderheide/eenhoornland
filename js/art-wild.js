@@ -196,3 +196,20 @@ export const kleed = () => cached('kleed', () => gridSprite(30, 18, (x, y) => {
   const d = ((x + .5 - 15) / 14.6) ** 2 + ((y + .5 - 9) / 8.6) ** 2; if (d > 1) return null;
   const ring = Math.floor(Math.sqrt(d) * 5); return ['#FFD43B', '#FF9EC7', '#69DB7C', '#4DABF7', '#FF7EB6'][ring] || '#FF7EB6';
 }));
+
+/* ---------------- the waterfall: the otter, the singing crystals ---------------- */
+/** the otter: 0 standing on the bank, 1 floating on its back with a shell on its tummy, 2 diving (just the tail) */
+export const otter = (f = 0) => cached('otter' + f, () => sprite(f === 1 ? [
+  '....ss.......', '.bb.sSs...bb.', 'bkbbbbbbbbbbb', 'bbbcccccccbbb', '.bbbbbbbbbbb.', '..b.......b..',
+] : f === 2 ? [
+  '.....b', '....bb', '...bb.', '..bb..', '.bb...', 'bb....',
+] : [
+  '.bb.......', 'bkbb......', 'bbnbb.....', '.bcbbbb...', '..ccbbbbb.', '..cbbbbbbb', '..bb.bb..b', '..b..b...b',
+], { b: '#8A5A3B', c: '#D9B08A', k: EYE, n: '#3B2A22', s: '#FFE3EC', S: '#FF9EC7' }));
+/** a singing crystal (xylophone), in one colour of the rainbow; lit glows white at the top */
+export const zingkristal = (col, lit = false) => cached('zing' + col + lit, () => gridSprite(9, 20, (x, y) => {
+  const cx = Math.abs(x + .5 - 4.5), top = 3 + cx * 1.6; if (y < top) return null; if (cx > 4) return null;
+  if (y > 17) return cx < 4 ? '#5E6E86' : null;                                                        // a little stone foot
+  const lt = mix(col, '#ffffff', lit ? .75 : .45), dk = mix(col, '#2B1E3A', .15);
+  return x < 3 ? lt : x > 5 ? dk : (lit && y < 9 ? '#FFFFFF' : col);
+}));

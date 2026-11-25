@@ -19,6 +19,7 @@ import { createFishing } from './world-fish.js';
 import { createWays } from './world-ways.js';
 import { createFlight } from './world-fly.js';
 import { createBoomhut } from './world-boomhut.js';
+import { createWaterval } from './world-waterval.js';
 import * as WILD from './art-wild.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
@@ -673,6 +674,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
     const use = toys.nearUse(); if (use) return A(use.key, use.art, use.run);    // the can next to a flower pot: water it (never drop it there)
+    if (!toys.carrying() && !mount) for (const f of uses) { const u = f(); if (u) return A(u.key, u.art, u.run); }
     const toy = toys.carryArt(); if (toy) return A('put' + toys.carrying(), toy, () => toys.putDown());
     const t = tools.nearAction(); if (t) return t;
     if (!grab) {
@@ -744,6 +746,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const seaLife = ctx.sea = createSea(ctx);
   const fishing = ctx.fishing = createFishing(ctx);
   const ways = ctx.ways = createWays(ctx);
+  /** places (the treehouse, the grotto) tell the action button what it does right next to their things: fn() -> {key, art, run} | null */
+  const uses = []; ctx.addUse = fn => uses.push(fn); ctx.waterMat = waterMat;
   ctx.clearWalk = () => { target = null; after = null; resume = null; };
   ctx.doorTiles = () => BUILDINGS.map(b => I(b.door[0], b.door[1]));
   const fly = ctx.fly = createFlight(ctx);
@@ -752,6 +756,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** the camera looks at (x, z) for a while (the treehouse telescope), then comes back to her */
   ctx.peek = (x, z, secs) => { if (peek) return; peek = { x, z, t: secs + .24, on: false }; ctx.fade(() => { peek.on = true; camTarget.set(x, 0, z); }); };
   const hut = ctx.hut = createBoomhut(ctx);
+  const val = ctx.val = createWaterval(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -1051,7 +1056,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time);
+    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time);
     spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
@@ -1086,7 +1091,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, fly, hut, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, fly, hut, val, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -1116,7 +1121,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); val.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

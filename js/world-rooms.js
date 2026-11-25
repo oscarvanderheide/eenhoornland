@@ -22,6 +22,10 @@ export function createRooms(ctx) {
       for (let y = 0; y < h; y++) for (let px = 0; px < w; px++) { const n = Math.sin(px * .31 + y * .07) + Math.sin(y * .23 - px * .11) + r() * .6; x.fillStyle = n > 1.2 ? '#CFC2DE' : n > .2 ? '#BBADCD' : n > -.8 ? '#A898BC' : '#9686AC'; x.fillRect(px, y, 1, 1); }
       for (let k = 0; k < w / 6; k++) { x.fillStyle = '#8CC98A'; x.fillRect(Math.floor(r() * w), Math.floor(r() * h), 2, 1); }   // moss
       for (let k = 0; k < w / 10; k++) { x.fillStyle = ['#FFB3D9', '#FFFFFF', '#FFE08A'][k % 3]; x.fillRect(Math.floor(r() * w), Math.floor(r() * h * .5 + h * .5), 1, 1); }   // tiny flowers
+    } else if (kind === 'val') {                                                  // behind the waterfall: blue stone, wet and glittering
+      for (let y = 0; y < h; y++) for (let px = 0; px < w; px++) { const n = Math.sin(px * .27 + y * .11) + Math.sin(y * .31 - px * .09) + r() * .5; x.fillStyle = n > 1.1 ? '#9CC4D8' : n > .1 ? '#86B0C8' : n > -.9 ? '#7299B4' : '#5E82A0'; x.fillRect(px, y, 1, 1); }
+      for (let k = 0; k < w / 5; k++) { const dx = Math.floor(r() * w), len = 3 + Math.floor(r() * 8), y0 = Math.floor(r() * h * .5); for (let j = 0; j < len; j++) { x.fillStyle = j === len - 1 ? '#FFFFFF' : '#B8E2F2'; x.fillRect(dx, y0 + j, 1, 1); } }   // trickles
+      for (let k = 0; k < w / 8; k++) { x.fillStyle = ['#8CE0C8', '#FFFFFF', '#BFA8FF'][k % 3]; x.fillRect(Math.floor(r() * w), Math.floor(r() * h), 1, 1); }
     } else if (kind === 'hut') {                                                  // the treehouse: planks, and round windows full of leaves
       for (let y = 0; y < h; y++) { const row = Math.floor(y / 5); for (let px = 0; px < w; px++) { const seam = y % 5 === 4 || (px + row * 7) % 23 === 0; x.fillStyle = seam ? '#8A5A33' : ['#C99A62', '#BF8F58', '#D2A66E'][(row + Math.floor((px + row * 5) / 23)) % 3]; x.fillRect(px, y, 1, 1); } }
       for (let wx = 18; wx < w - 12; wx += 40) { const cy = Math.round(h * .42); for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) { const d = Math.hypot(dx, dy); if (d > 8.5) continue; x.fillStyle = d > 7 ? '#6B4126' : (dx * 3 + dy * 5 + 99) % 7 < 2 ? '#8FD06A' : dy < -2 ? '#BFE8FF' : '#62BC62'; x.fillRect(wx + dx, cy + dy, 1, 1); } }
@@ -33,9 +37,9 @@ export function createRooms(ctx) {
     }
     return c;
   }
-  const wallMat = {}; for (const k of ['grot', 'hal', 'hut']) wallMat[k] = cv => new THREE.MeshLambertMaterial({ map: tex(cv) });
+  const wallMat = {}; for (const k of ['grot', 'hal', 'hut', 'val']) wallMat[k] = cv => new THREE.MeshLambertMaterial({ map: tex(cv) });
   function wall(kind, x0, z0, x1, z1, h) {   // a box over whole tiles x0..x1, z0..z1
-    const w = x1 - x0 + 1, d = z1 - z0 + 1, front = wallCanvas(w, h, kind), side = wallCanvas(d, h, kind), top = new THREE.MeshLambertMaterial({ color: kind === 'grot' ? '#8CC98A' : kind === 'hut' ? '#62BC62' : '#B9B0C9' });
+    const w = x1 - x0 + 1, d = z1 - z0 + 1, front = wallCanvas(w, h, kind), side = wallCanvas(d, h, kind), top = new THREE.MeshLambertMaterial({ color: kind === 'grot' ? '#8CC98A' : kind === 'hut' ? '#62BC62' : kind === 'val' ? '#5E82A0' : '#B9B0C9' });
     const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wallMat[kind](side), wallMat[kind](side), top, top, wallMat[kind](front), wallMat[kind](front)]));
     m.position.set(x0 + w / 2, h / 2, z0 + d / 2); scene.add(m); return m;
   }
@@ -44,12 +48,13 @@ export function createRooms(ctx) {
     const l = new THREE.PointLight(soft ? '#FFD6F0' : '#FFB45E', 0, 7, 1.4); l.userData.k = soft ? .35 : 1; l.position.set(x, y + .2, z + .35); scene.add(l); lights.push(l);
   }
   for (const [k, r] of Object.entries(R)) {
-    const H2 = k === 'grot' ? 2.4 : 2.9;
+    const H2 = k === 'grot' || k === 'val' ? 2.4 : 2.9;
     wall(k, r.x0 - 1, r.z0 - 2, r.x1 + 1, r.z0 - 1, H2);                                   // the back wall
     wall(k, r.x0 - 2, r.z0 - 2, r.x0 - 1, r.z1 + 1, H2); wall(k, r.x1 + 1, r.z0 - 2, r.x1 + 2, r.z1 + 1, H2);   // the side walls
     wall(k, r.x0 - 1, r.z1 + 1, r.exit[0] - 1, r.z1 + 1, .45); wall(k, r.exit[0] + 1, r.z1 + 1, r.x1 + 1, r.z1 + 1, .45);   // a low front wall, so nothing hides her
     { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
     if (r.wall) { const gz = r.gate.map(g => g[1]); wall(k, r.wall, r.z0, r.wall, Math.min(...gz) - 1, 1.7); wall(k, r.wall, Math.max(...gz) + 1, r.wall, r.z1, 1.7); }   // the wall between the cave's two rooms
+    if (k === 'val') { for (const fx of [.2, .5, .8]) { const l = new THREE.PointLight('#A8E8FF', 0, 9, 1.3); l.userData.k = .55; l.position.set(r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); scene.add(l); lights.push(l); } continue; }
     if (k === 'hut') { for (const fx of [.25, .75]) { const l = new THREE.PointLight('#FFD9A0', 0, 8, 1.3); l.userData.k = .5; l.position.set(r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); scene.add(l); lights.push(l); } continue; }   // warm daylight through the windows
     const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
   }

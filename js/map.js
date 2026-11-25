@@ -4,12 +4,12 @@
 export const W = 150, H = 124;
 /** the islands lie in rows 0..OUT_H-1; below that, under the sea, is solid rock with the places you walk into (ROOMS) */
 export const OUT_H = 96, ROCK_Z = 100;
-export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock
+export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12, WF = 13; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock, wet stone (behind the waterfall)
 /** every island: centre and half-sizes of a rounded rectangle with a wobbly edge */
 export const ISLES = {
   dorp: { cx: 31, cz: 42, rx: 16, rz: 13 },
   bos: { cx: 33, cz: 14, rx: 21, rz: 10, more: [{ cx: 56, cz: 14.5, rx: 6.8, rz: 7.5 }] },   // the east lobe: the treehouse glade
-  wei: { cx: 71, cz: 43, rx: 15, rz: 11 },
+  wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
   strand: { cx: 66, cz: 71, rx: 24, rz: 7 },
   eiland: { cx: 132, cz: 66, rx: 9, rz: 6 },                    // far out in the open sea to the east: a voyage to get there
   kasteel: { cx: 84, cz: 14, rx: 17, rz: 10 },
@@ -42,12 +42,16 @@ export const ROOMS = {
   grot: { x0: 20, z0: 109, x1: 46, z1: 119, in: [27, 118], exit: [27, 120], door: [36, 6], out: [36.5, 7.6], egg: [42, 112],
     wall: 35, gate: [[35, 113], [35, 114]], box: [25, 114], plate: [30, 111] },   // two rooms: the crate goes on the button, the crystal gate in the wall between them sinks
   hal: { x0: 58, z0: 108, x1: 82, z1: 119, in: [70, 118], exit: [70, 120], door: [84, 11], out: [84.5, 12.6], garden: [70, 107] },
+  val: { x0: 130, z0: 110, x1: 141, z1: 117, in: [135, 117], exit: [135, 118], door: [94, 35], out: [94.5, 36.6], pool: { cx: 137.5, cz: 113.5, rx: 2.3, rz: 1.6 } },   // the grotto behind the waterfall
   hut: { x0: 112, z0: 111, x1: 119, z1: 116, in: [115, 116], exit: [115, 117], door: [56, 14], out: [56.5, 15.6], zip: [118, 110] },   // the treehouse: up the ladder; the zipline leaves from the back
 };
 export const CAVE = { x0: 32, z0: 4, x1: 40, z1: 6 };
 /** bos: the giant oak with the treehouse in its crown (trunk on x0..x1, z0..z1; the ladder is ROOMS.hut.door), and the
  *  zipline from its platform down to a pole in the village (`to`: where she lands) */
 export const TREEHOUSE = { x0: 55, z0: 12, x1: 57, z1: 13 };
+/** wei: a cliff in the east lobe (x0..x1, z0..z1 is rock) with a waterfall (`fall`: its columns) pouring into a pool. Behind
+ *  the water is the way into the grotto (ROOMS.val.door); stepping stones (`steps`, each with a note) cross the pool to it */
+export const FALLS = { x0: 86, z0: 30, x1: 100, z1: 35, fall: [93, 95], h: 2.9, pool: { cx: 94.5, cz: 38.3, rx: 4.6, rz: 2.5 }, steps: [[94, 40, 0], [94, 39, 2], [94, 38, 4], [94, 37, 5], [94, 36, 7]] };
 export const ZIP = { from: [56.5, 13.95], h0: 2.75, pole: [44, 34], to: [43.5, 35.5], h1: 1.25 };                                   // the rock the cave mouth is in (ROOMS.grot.door)
 export const roomAt = (x, z) => Object.keys(ROOMS).find(k => { const r = ROOMS[k]; return x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 + 1; }) || null;
 export const PEN = { x0: 33, z0: 47, x1: 42, z1: 51, gate: [[37, 47], [38, 47]] };    // dorp: the meadow where the unicorns of earlier adventures live (fence on the perimeter tiles, the gate is always open)
@@ -111,7 +115,7 @@ export function buildMap(opts = {}) {
   m.skipped = skipped; return m;
 }
 export function _build({ solids = [], keep = [], seed = 0 } = {}) {
-  const ground = new Uint8Array(W * H), block = new Uint8Array(W * H), deck = new Uint8Array(W * H), zone = new Array(W * H);
+  const ground = new Uint8Array(W * H), block = new Uint8Array(W * H), deck = new Uint8Array(W * H), zone = new Array(W * H), inland = new Uint8Array(W * H);   // inland: water on an island (the waterfall pool), never sailed
   const I = (x, z) => z * W + x, inb = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
   const set = (x, z, t) => { if (inb(x, z) && ground[I(x, z)] !== SE) ground[I(x, z)] = t; };
   const rect = (x0, z0, x1, z1, t) => { for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) set(x, z, t); };
@@ -123,7 +127,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -136,10 +140,11 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   }
   /* ---- the rooms under the rock ---- */
   for (const [k, r] of Object.entries(ROOMS)) {
-    const floor = k === 'grot' ? CV : k === 'hut' ? BW : HF;
+    const floor = k === 'grot' ? CV : k === 'hut' ? BW : k === 'val' ? WF : HF;
     for (let z = r.z0; z <= r.z1; z++) for (let x = r.x0; x <= r.x1; x++) { ground[I(x, z)] = floor; block[I(x, z)] = 0; }
     ground[I(...r.exit)] = floor; block[I(...r.exit)] = 0;
     if (r.zip) { ground[I(...r.zip)] = floor; block[I(...r.zip)] = 0; }
+    if (r.pool) for (let z = r.z0; z <= r.z1; z++) for (let x = r.x0; x <= r.x1; x++) if (((x + .5 - r.pool.cx) / r.pool.rx) ** 2 + ((z + .5 - r.pool.cz) / r.pool.rz) ** 2 <= 1) block[I(x, z)] = 1;   // a pool inside the grotto
     if (r.wall) for (let z = r.z0; z <= r.z1; z++) if (!r.gate.some(([gx, gz]) => gx === r.wall && gz === z)) block[I(r.wall, z)] = 1;   // the wall between the two rooms (its gate is closed at runtime, world-rooms.js)
   }
   const sea = (x, z) => !inb(x, z) || ground[I(x, z)] === SE;
@@ -162,6 +167,13 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   disc({ cx: 56.2, cz: 15.8, rx: 3.8, rz: 2.7 }, GR); trail([[44.5, 14.2], [48.5, 15.6], [53, 16]], .75);   // the treehouse glade, and the path to it from the orchard
   /* ---- wei ---- */
   trail([[57, 46], [65, 46], [70.5, 43.5], [70.5, 41.5]]); trail([[71, 44], [71, 53.5]]); trail([[71, 43.5], [76, 39], [77, 33.5]]);
+  trail([[78, 44.5], [85, 43.5], [90, 42.5], [94, 41.6]], .8);                                     // across the meadow to the waterfall
+  { const F = FALLS, P = F.pool, inPool = (x, z) => ((x + .5 - P.cx) / P.rx) ** 2 + ((z + .5 - P.cz) / P.rz) ** 2 <= 1;
+    for (let z = F.z0; z <= F.z1; z++) for (let x = F.x0; x <= F.x1; x++) if (ground[I(x, z)] !== SE) { ground[I(x, z)] = RK; block[I(x, z)] = 1; }   // the cliff
+    for (let z = F.z1 + 1; z <= F.z1 + 6; z++) for (let x = F.x0; x <= F.x1; x++) if (inPool(x, z)) { ground[I(x, z)] = SE; block[I(x, z)] = 1; inland[I(x, z)] = 1; }
+    for (let z = F.z1 + 1; z <= F.z1 + 6; z++) for (let x = F.x0; x <= F.x1; x++) if (ground[I(x, z)] !== SE && ground[I(x, z)] !== PA && [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]].some(([dx, dz]) => inb(x + dx, z + dz) && ground[I(x + dx, z + dz)] === SE && inPool(x + dx, z + dz))) ground[I(x, z)] = SA;   // a pebble beach round the pool
+    for (const [x, z] of F.steps) { ground[I(x, z)] = SE; block[I(x, z)] = 0; }               // stepping stones: open water you can walk on
+    block[I(...ROOMS.val.door)] = 0; }
   /* ---- strand ---- */
   rect(70, 64, 71, 66, BW); rect(46, 66, 86, 67, BW); rect(44, 68, 45, 71, BW); rect(46, 68, 47, 69, BW); rect(79, 68, 80, 68, BW); rect(83, 68, 84, 73, BW); rect(80, 73, 82, 73, BW);
   /* ---- eiland ---- */
@@ -184,7 +196,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   solid(CAVE.x0, CAVE.z0, CAVE.x1, CAVE.z1); block[I(...ROOMS.grot.door)] = 0;                   // the rock, with the dark mouth of the cave in it
-  solid(TREEHOUSE.x0, TREEHOUSE.z0, TREEHOUSE.x1, TREEHOUSE.z1); block[I(...ZIP.pole)] = 1;        // the oak's trunk, the zipline's pole
+  solid(TREEHOUSE.x0, TREEHOUSE.z0, TREEHOUSE.x1, TREEHOUSE.z1); block[I(...ROOMS.val.door)] = 0; block[I(...ZIP.pole)] = 1;        // the oak's trunk, the zipline's pole
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) { if (ground[I(x, z)] === SA) ground[I(x, z)] = GR; if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1; }
   const structural = block.slice();                               // everything that is not vegetation
 
@@ -318,7 +330,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const hidden = zn => pick(7, (x, z, g, zo) => plain(g) && zo === zn && at(need[zn], x, z) && farFromStart(x, z) && !nearBridge(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
   const eggSpots = { dorp: hidden('dorp'), bos: [ROOMS.grot.egg], wei: hidden('wei'), strand: hidden('strand'), eiland: hidden('eiland') };   // a forest egg always lies in the cave
 
-  return { W, H, seed, ground, block, deck, zone, trees, obstacles, puddles, stones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
+  return { W, H, seed, ground, block, deck, zone, inland, trees, obstacles, puddles, stones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
 }
 
 /** What is wrong with a generated world (empty = fine). Used to skip bad seeds and by tests/map.test.mjs. */
@@ -338,6 +350,7 @@ export function validate(m, keep = []) {
   ok(m.starSpots.length >= 3, 'too few star spots'); for (const s of m.starSpots) ok(m.reach1[I(...s)] && !m.reach0[I(...s)], 'star spot must lie behind the brambles');
   ok(m.reach2[I(...BOAT.strand.dock)] && !m.reach1[I(...BOAT.strand.dock)], 'boat must lie behind the boulders'); ok(m.reach2[I(...BOAT.eiland.dock)], 'island pier unreachable');
   ok(m.reach2[I(RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1)], 'rainbow tree unreachable');
+  ok(m.reach1[I(...ROOMS.val.door)] && m.reach1[I(...ROOMS.val.in)] && !m.reach0[I(...ROOMS.val.in)], 'the waterfall grotto lies behind the brambles, and is open with the sword');
   ok(m.reach0[I(...ROOMS.hut.door)] && m.reach0[I(...ROOMS.hut.in)] && m.reach0[I(...ROOMS.hut.zip)], 'the treehouse must be open from the start'); ok(m.reach0[I(Math.floor(ZIP.to[0]), Math.floor(ZIP.to[1]))] && !m.block[I(Math.floor(ZIP.to[0]), Math.floor(ZIP.to[1]))], 'the zipline lands nowhere');
   ok(m.reach0[I(Math.floor(BIKE[0]), Math.floor(BIKE[1]))], 'bike unreachable'); for (const b of BALLS) ok(m.reach[I(Math.floor(b[0]), Math.floor(b[1]))], 'ball unreachable');
   // the toys: everything a child sees must be reachable, in the part of the world it belongs to
