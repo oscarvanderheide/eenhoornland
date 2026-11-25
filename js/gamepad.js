@@ -1,12 +1,13 @@
 // A game controller (a PS5 DualSense, an Xbox pad, anything the browser maps to the "standard" layout) plays the game
 // through the same doors as the fingers and the keyboard, so every input keeps one rule per thing:
 //   outside:  left stick = the on-screen joystick, d-pad = the arrow keys, ✕ = the action button (whatever it shows right
-//             here; in the sky: land), ○ = the wing button, □ = the ride button, △ = the other sister, Options = the map
+//             here, also while she walks; in the sky: land), ○ = jump, △ = the wing button, □ = the ride button,
+//             L1 / R1 = the other sister, Options = the map
 //   anywhere else (start screen, houses, the map, the stall, cutscenes, a coin): a hand shows up; the left stick or d-pad
 //             moves it, ✕ taps where it points (hold ✕ and move to drag or paint), ○ closes the screen
 // Browsers only show a controller to the page after a button on it is pressed, so the first press just wakes it up.
 
-const B = { X: 0, O: 1, SQ: 2, TRI: 3, OPT: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+const B = { X: 0, O: 1, SQ: 2, TRI: 3, L1: 4, R1: 5, OPT: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 const DPAD = { [B.UP]: 'ArrowUp', [B.DOWN]: 'ArrowDown', [B.LEFT]: 'ArrowLeft', [B.RIGHT]: 'ArrowRight' };
 const DEAD = .2;
 
@@ -87,11 +88,13 @@ export function initGamepad(getWorld) {
       setMode('world');
       const w = getWorld();
       for (const i in DPAD) key(DPAD[i], cur[i]);         // the d-pad is the arrow keys (walk, steer the boat, fly)
+      if (w && w.padMode) w.padMode(true);                // the action button now does what is here, also while she walks
       if (w && (ax || ay)) { w.stick(ax, ay); stickOn = true; } else if (stickOn) { w && w.stick(0, 0); stickOn = false; }
       if (hit(B.X)) { press('#b-jump', 'down') || press('#b-fly', 'down'); }   // up in the sky the wing button is the one that lands
-      if (hit(B.O)) press('#b-fly', 'down');
+      if (hit(B.O) && w && w.leapNow) w.leapNow();
+      if (hit(B.TRI)) press('#b-fly', 'down');
       if (hit(B.SQ)) press('#b-ride');
-      if (hit(B.TRI)) { const other = document.querySelector('#who .who:not(.on)'); other && other.click(); }
+      if (hit(B.L1) || hit(B.R1)) { const other = document.querySelector('#who .who:not(.on)'); other && other.click(); }
       if (hit(B.OPT)) press('#b-map');
     }
     prev = cur;
@@ -100,7 +103,7 @@ export function initGamepad(getWorld) {
   addEventListener('gamepadconnected', start);
   addEventListener('gamepaddisconnected', () => {
     if ([...(navigator.getGamepads ? navigator.getGamepads() : [])].some(p => p && p.connected)) return;
-    cancelAnimationFrame(raf); raf = 0; fresh = true; setMode(''); for (const k of [...keysDown]) key(k, false); prev = [];
+    cancelAnimationFrame(raf); raf = 0; fresh = true; setMode(''); const w = getWorld(); w && w.padMode && w.padMode(false); for (const k of [...keysDown]) key(k, false); prev = [];
   });
   if ([...(navigator.getGamepads ? navigator.getGamepads() : [])].some(p => p && p.connected)) start();
 }

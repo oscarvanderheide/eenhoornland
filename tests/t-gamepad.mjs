@@ -30,7 +30,7 @@ export default async function (t) {
   await btn(0);
   ok(await until(`document.querySelector('#start').classList.contains('busy')`), '✕ taps where the hand points: Anna is picked');
 
-  // outside: the stick and the d-pad walk, ✕ is the action button, △ the other sister, Options the map, ○ closes it
+  // outside: the stick and the d-pad walk, ✕ is the action button, ○ jumps, L1/R1 the other sister, Options the map, ○ closes it
   await t.go(PORT + '?go&debug'); await t.ev('localStorage.clear()'); await t.go(PORT + '?go&debug'); await t.sleep(1500);
   await t.ev(fake); await t.sleep(200); await btn(0);
   ok(await t.ev(`document.getElementById('pad-hand').hidden`), 'outside there is no hand');
@@ -42,23 +42,28 @@ export default async function (t) {
   await t.ev(`__w.placeAt(30.5, 44.5)`); await t.sleep(800);
   p0 = await J('__w.info().pos'); await t.ev('__pad.buttons[13].pressed = true'); await t.sleep(800); await t.ev('__pad.buttons[13].pressed = false'); await t.sleep(300);
   p1 = await J('__w.info().pos'); ok(p1[1] > p0[1] + .5, 'the d-pad walks her too: ' + p0 + ' -> ' + p1);
-  // ✕ next to an animal: the action button's pick-up
+  // ○ jumps, standing still or walking
+  await t.ev(`__w.placeAt(30.5, 46.5)`); await t.sleep(800); await btn(1, 150);
+  ok(await until(`__w.kid.hop > 0 || __w.kid.path.some(p => p.jump)`, 1500), '○ jumps'); await t.sleep(1200);
+  // ✕ next to an animal while she walks (the stick held): the action button's pick-up, not a jump
   await t.ev(`(a => { a.pos.set(32.5, 0, 46.5); a.path = []; a.wait = 30; a.wayAt = performance.now(); __w.placeAt(31.7, 46.5); window.__a = a; })(__w.animals.find(a => a.g.visible && !a.water && !a.uniKind && !a.way))`);
-  await t.sleep(700);
-  const act = await t.ev('__w.action().key'); await btn(0);
-  ok(await until(`__w.life.carrying() === __a`), '✕ does what the action button shows (' + act + '): she lifts the animal'); await t.sleep(500); await t.shot('tmp-shots/g-2-lift.png');
+  await t.sleep(700); await axes(.3, 0); await t.sleep(150);
+  const act = await t.ev('__w.action().key'); ok(/^lift/.test(act), 'while she walks the action button still shows the animal next to her (' + act + ')');
+  await btn(0); await axes(0, 0);
+  ok(await until(`__w.life.carrying() === __a`), '✕ does what the action button shows: she lifts the animal, also while walking'); await t.sleep(500); await t.shot('tmp-shots/g-2-lift.png');
   await btn(0); await t.sleep(800); ok(await t.ev(`__w.life.carrying() !== __a`), '✕ again throws it');
-  const who0 = await t.ev('__w.who()'); await btn(3); ok(await until(`__w.who() !== '${who0}'`), '△ switches to the other sister');
+  const who0 = await t.ev('__w.who()'); await btn(4); ok(await until(`__w.who() !== '${who0}'`), 'L1 switches to the other sister');
+  await btn(5); ok(await until(`__w.who() === '${who0}'`), 'R1 switches back');
   await btn(9); const mapOk = await until(`!document.getElementById('modal').hidden`); ok(mapOk, 'Options opens the map');
   if (!mapOk) console.log('  state', await t.ev(`JSON.stringify({ hand: !document.getElementById('pad-hand').hidden, act: !document.getElementById('act').hidden, dream: !!document.getElementById('dream'), scene: !!document.getElementById('scene'), reward: !!document.querySelector('.reward'), map: !!document.getElementById('b-map').offsetParent, busy: __w.busy() })`)); await t.sleep(400);
   ok(await t.ev(`!document.getElementById('pad-hand').hidden`), 'on the map the hand shows up'); await t.shot('tmp-shots/g-3-map.png');
   await btn(1); ok(await until(`document.getElementById('modal').hidden`), '○ closes the map');
   ok(await until(`document.getElementById('pad-hand').hidden`), 'and the hand goes away again');
-  // riding: □ gets on, ○ is the wing button
+  // riding: □ gets on, △ is the wing button
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.placeAt(30.5, 46.5)`); await t.sleep(1200);
   await btn(2); ok(await until(`!!__w.mount()`), '□ gets her on her unicorn'); await t.sleep(600);
   if (await t.ev(`!document.getElementById('b-fly').hidden`)) {
-    await btn(1); ok(await until(`!!__w.fly.info() && !document.getElementById('b-jump').offsetParent`, 4000), '○ takes off'); await t.sleep(1500); await t.shot('tmp-shots/g-4-fly.png');
+    await btn(3); ok(await until(`!!__w.fly.info() && !document.getElementById('b-jump').offsetParent`, 4000), '△ takes off'); await t.sleep(1500); await t.shot('tmp-shots/g-4-fly.png');
     await btn(0); ok(await until(`!!document.getElementById('b-jump').offsetParent`, 8000), 'up in the sky ✕ lands');
   } else console.log('  (no wing button in this stage; flying not checked)');
   await btn(2); ok(await until(`!__w.mount()`), '□ again gets her off');

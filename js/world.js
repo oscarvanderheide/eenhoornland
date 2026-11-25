@@ -725,7 +725,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!grab) {
       if (life.swimming()) return A('splash', ART.jumpIcon(), () => life.splashJump());
       { const fi = extras.info(); if (fi.fruitInTree && fi.fruit && Math.hypot(fi.fruit[0] - kid.pos.x, fi.fruit[1] - kid.pos.z) < 2.4) return A('jump', ART.jumpIcon(), hop); }   // under the rainbow tree with the fruit: a jump shakes it
-      if (perch || (!mount && leapDir()) || toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
+      if (perch || (!mount && !padHere && leapDir()) || toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
     }
     if (!mount) {
       if (!grab) { const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w)); }
@@ -755,6 +755,10 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const actionNow = () => interactive && !paused && !busy ? action() : null;
   /** the action button (and Space) */
   function jump() { if (!interactive || paused || busy) return; action().run(); }
+  // with a game controller ✕ is the action button and ○ jumps (gamepad.js), so the action button does what is right here
+  // even while she walks (the stick is nearly always held), and ○ is a jump: into the water, up a top, off the swing, or a leap
+  let padHere = false;
+  function leapNow() { if (!interactive || paused || busy) return; const a = action(); if (/^(jump|splash|dip|land|wait|bell)$/.test(a.key)) a.run(); else hop(); }
   let lastTile = -1;
 
   /* ---------------- marker, bubbles, labels ---------------- */
@@ -1194,7 +1198,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     walkToTile(x, z) { target = null; return walkTo(x, z); },
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     pos: () => [kid.pos.x, kid.pos.z],
-    groundCanvas, extras, tools, play, toys, jump, setWho, who: () => who, M,
+    groundCanvas, extras, tools, play, toys, jump, leapNow, padMode(v) { padHere = !!v; }, setWho, who: () => who, M,
     /** up into the sky on a grown unicorn, or back down (the wing button) */
     fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => mount === 'uni' && fly.can(),
     /** the map: far away and she can fly, so she flies there and lands; otherwise she walks */
