@@ -114,12 +114,12 @@ export function createLife(ctx) {
   function throwIt() { const c = carried; if (!c) return false; carried = null; c.pos.set(kid.pos.x, 0, kid.pos.z); c.lift = 1; toss(c, kid.face * (c.stone ? 6.5 : 4.5), rnd(-.6, .6)); kid.hop = .5; return true; }
   /** the pick-up key: throw what she holds, or lift the nearest animal or pebble within reach */
   function grabNear() {
-    if (carried) return throwIt(); let best = null, bd = 1.9;
+    if (carried) return throwIt(); let best = null, bd = 1.2;
     for (const c of movers()) { if (!c.g.visible || c.fly || c.cart || c.swim || c.isUni || c.dog) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } }
     if (!best) return false; lift(best); return true;
   }
   /** for the action button: the animal or pebble within reach she would lift (ducks stay in their pond; one busy with its own hello answers her jumps instead) */
-  function nearMover() { let best = null, bd = 1.5; for (const c of movers()) { if (!c.g.visible || c.fly || c.cart || c.swim || c.isUni || c.dog || c.water || c.held || c.way) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } } return best; }
+  function nearMover() { let best = null, bd = 1; for (const c of movers()) { if (!c.g.visible || c.fly || c.cart || c.swim || c.isUni || c.dog || c.water || c.held || c.way) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } } return best; }
   function tapAnimal(c) {
     if (c.fly || c.cart || c.swim) return; if (carried === c) return void throwIt();
     if (c.uniKind) return tapHerd(c);                                                                  // an old unicorn from the meadow: she comes along

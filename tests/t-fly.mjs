@@ -13,14 +13,18 @@ export default async function (t) {
 
   ok(!(await t.ev('__w.fly.can()')) && await t.ev(`document.getElementById('b-fly').hidden`), 'no grown unicorn yet: no wings, no button');
   await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.refreshUnicorn && 0`); await t.sleep(500);
-  await t.ev(`__w.placeAt(32.5, 46.5); __w.setMount('uni')`); await t.sleep(800);
+  await t.ev(`__w.placeAt(32.5, 46.5); __w.setMount(null)`); await t.sleep(800);
+  await t.ev(`__w.uni.pos.set(__w.kid.pos.x + .8, 0, __w.kid.pos.z); __w.uni.path = []`); await t.sleep(300);
+  ok(await until(`document.getElementById('b-fly').hidden`, 1000), 'walking beside her unicorn: no wing button yet');
+  await t.key(' ', 100); await t.sleep(700); ok(!(await t.ev('__w.mount()')), 'Space next to her unicorn does not put her on (' + await t.ev('__w.action().key') + ')');
+  await t.ev(`__w.setMount('uni')`); await t.sleep(800);
   ok(await t.ev('__w.fly.can()'), 'her unicorn can carry her: she can fly');
   ok(await until(`!document.getElementById('b-fly').hidden && document.getElementById('b-fly').classList.contains('call')`, 2000), 'the wing button shows and asks to be tapped');
   // take off with the button
   const fb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-fly').getBoundingClientRect())`); await t.click(fb[0], fb[1]);
   ok(await until(`__w.fly.on()`, 1500), 'the wing button: up she goes'); await t.sleep(500); await t.shot('tmp-shots/f-1-takeoff.png');
   ok(await until(`__w.fly.info() && __w.fly.info().alt > 3`, 3000), 'high in the sky'); await t.sleep(400); await t.shot('tmp-shots/f-2-sky.png');
-  ok(await t.ev(`__w.action().key`) === 'land', 'up in the sky the action button lands');
+  ok(await until(`document.getElementById('b-jump').hidden && !document.getElementById('b-fly').hidden`, 1000), 'up in the sky only the wing button shows: it lands');
   // fly east over the sea with the joystick
   let a = await pos(); await t.ev(`__w.stick(1, 0)`); await t.sleep(1600); await t.ev(`__w.stick(0, 0)`); let b = await pos();
   ok(b[0] - a[0] > 8, 'flying fast with the joystick ' + a + ' -> ' + b); await t.shot('tmp-shots/f-3-over-wei.png');

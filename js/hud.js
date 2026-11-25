@@ -80,7 +80,9 @@ export function createHud(getWorld) {
   game.appendChild(jumpBtn);
   let actKey = '';
   function syncAct(force) {
-    const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey; if (key === actKey && !force) return;
+    const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey;
+    jumpBtn.hidden = !!(w && w.flying && w.flying());                            // up in the sky the wing button is the one that lands
+    if (key === actKey && !force) return;
     if (a && key !== actKey) { actKey = key; jumpBtn.innerHTML = ''; const c = a.icon, s = Math.min(4, 46 / Math.max(c.width, c.height)); jumpBtn.appendChild(PX.domSprite(c, s));
       jumpBtn.classList.toggle('ctx', key !== 'jump'); jumpBtn.classList.remove('bump'); void jumpBtn.offsetWidth; jumpBtn.classList.add('bump'); }
   }

@@ -688,7 +688,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     }
     if (!mount) {
       if (!grab) { const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w)); }
-      if (!grab && Q.quest.stage !== 'zoek' && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));
+      if (!grab && Q.quest.stage !== 'zoek' && !Q.canRide() && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));   // once she can be ridden, getting on is the ride button's job (or a tap on her), never Space
       // the nearest thing wins, animal, pebble or toy alike: what lies right at her feet is what she picks up
       const c = life.nearMover(), ta = toys.nearest(), dc = c ? Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) : 1e9;
       if (c && (!ta || dc <= ta.d)) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : A('lift' + c.name, c.frames.idle, () => life.lift(c));
@@ -1131,7 +1131,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     pos: () => [kid.pos.x, kid.pos.z],
     groundCanvas, extras, tools, play, toys, jump, setWho, who: () => who, M,
     /** up into the sky on a grown unicorn, or back down (the wing button) */
-    fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => fly.can(),
+    fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => mount === 'uni' && fly.can(),
     /** the map: far away and she can fly, so she flies there and lands; otherwise she walks */
     travel(x, z, then) { if ((fly.on() || fly.can()) && Math.hypot(x - kid.pos.x, z - kid.pos.z) > 14) return fly.start([x + .5, z + .5], then); if (then) return then(); target = null; return walkTo(x, z); },   // `then`: what to do on arrival (walk on into a building)
     /** on or off the unicorn (the HUD button); getting off a bike works the same way */
