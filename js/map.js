@@ -12,7 +12,7 @@ export const ISLES = {
   wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
   strand: { cx: 66, cz: 71, rx: 24, rz: 7, more: [{ cx: 58, cz: 80.5, rx: 12, rz: 5.5 }, { cx: 79, cz: 79.5, rx: 9, rz: 4.5 }] },   // the south: dunes and the turtles' nest
   eiland: { cx: 132, cz: 66, rx: 9, rz: 6, more: [{ cx: 131, cz: 77.5, rx: 10, rz: 6 }, { cx: 134.5, cz: 54, rx: 8, rz: 6.2 }] },   // far out in the open sea to the east: a voyage to get there. South: the flamingo lagoon, north: the bouncy mushrooms
-  kasteel: { cx: 84, cz: 14, rx: 17, rz: 10 },
+  kasteel: { cx: 84, cz: 14, rx: 17, rz: 10, more: [{ cx: 109, cz: 14, rx: 9, rz: 7.5 }] },   // the east lobe: the carousel
 };
 const ZONES = Object.keys(ISLES);
 const metric1 = (s, x, z) => Math.abs((x - s.cx) / s.rx) ** 2.6 + Math.abs((z - s.cz) / s.rz) ** 2.6;
@@ -82,6 +82,8 @@ export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];             
 export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
 export const WHALE = [113.5, 73.5];
 /** eiland: the lagoon where the flamingos stand, and the giant bouncy mushrooms (stand on one and she bounces) */
+/** kasteel: a carousel of little unicorns (x0..x1, z0..z1 stands; she gets on at `on`) */
+export const CAROUSEL = { cx: 110, cz: 13, x0: 109, z0: 12, x1: 111, z1: 14, on: [110, 15] };
 /** dorp: the mud pool where the pig rolls */
 export const MUD = { cx: 27.5, cz: 59.2 };
 /** strand: the sea turtle's nest in the dunes of the south beach */
@@ -134,7 +136,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
+    [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -190,6 +193,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (let z = 0; z < OUT_H; z++) for (let x = 110; x < W; x++) if (((x + .5 - FLAMINGO.cx) / FLAMINGO.rx) ** 2 + ((z + .5 - FLAMINGO.cz) / FLAMINGO.rz) ** 2 <= 1 && ground[I(x, z)] !== SE) { ground[I(x, z)] = SE; block[I(x, z)] = 1; inland[I(x, z)] = 1; }
   /* ---- kasteel ---- */
   rect(76, 13, 77, 23, PA); rect(78, 11, 91, 14, CO); rect(89, 15, 96, 16, CO); rect(83, 15, 86, 21, CO);
+  trail([[96.5, 16], [102, 16], [107, 16], [110.5, 16]], .8);                                     // east to the carousel
+  for (let z = CAROUSEL.z0 - 1; z <= CAROUSEL.z1 + 1; z++) for (let x = CAROUSEL.x0 - 1; x <= CAROUSEL.x1 + 1; x++) set(x, z, CO);
 
   /* ---- bridges and piers lie on the water ---- */
   const plank = (x0, z0, x1, z1) => { for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { if (ground[I(x, z)] === SE) deck[I(x, z)] = 1; ground[I(x, z)] = BW; block[I(x, z)] = 0; } };   // deck: planks over open water
@@ -206,7 +211,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   solid(CAVE.x0, CAVE.z0, CAVE.x1, CAVE.z1); block[I(...ROOMS.grot.door)] = 0;                   // the rock, with the dark mouth of the cave in it
-  for (const [x, z] of MUSHROOMS) block[I(x, z)] = 1;                                           // the mushrooms stand (world-eiland.js draws them)
+  for (const [x, z] of MUSHROOMS) block[I(x, z)] = 1;
+  solid(CAROUSEL.x0, CAROUSEL.z0, CAROUSEL.x1, CAROUSEL.z1);                                           // the mushrooms stand (world-eiland.js draws them)
   solid(TREEHOUSE.x0, TREEHOUSE.z0, TREEHOUSE.x1, TREEHOUSE.z1); block[I(...ROOMS.val.door)] = 0; block[I(...ZIP.pole)] = 1;        // the oak's trunk, the zipline's pole
   for (let z = PEN.z0; z <= PEN.z1; z++) for (let x = PEN.x0; x <= PEN.x1; x++) { if (ground[I(x, z)] === SA) ground[I(x, z)] = GR; if ((x === PEN.x0 || x === PEN.x1 || z === PEN.z0 || z === PEN.z1) && !PEN.gate.some(g => g[0] === x && g[1] === z)) block[I(x, z)] = 1; }
   const structural = block.slice();                               // everything that is not vegetation
@@ -362,6 +368,7 @@ export function validate(m, keep = []) {
   ok(m.reach2[I(...BOAT.strand.dock)] && !m.reach1[I(...BOAT.strand.dock)], 'boat must lie behind the boulders'); ok(m.reach2[I(...BOAT.eiland.dock)], 'island pier unreachable');
   ok(m.reach2[I(RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1)], 'rainbow tree unreachable');
   ok(m.reach1[I(...ROOMS.val.door)] && m.reach1[I(...ROOMS.val.in)] && !m.reach0[I(...ROOMS.val.in)], 'the waterfall grotto lies behind the brambles, and is open with the sword');
+  ok(m.reach[I(...CAROUSEL.on)] && !m.reach2[I(...CAROUSEL.on)], 'the carousel stands on the castle island, open once she can ride');
   ok(m.reach0[I(...ROOMS.hut.door)] && m.reach0[I(...ROOMS.hut.in)] && m.reach0[I(...ROOMS.hut.zip)], 'the treehouse must be open from the start'); ok(m.reach0[I(Math.floor(ZIP.to[0]), Math.floor(ZIP.to[1]))] && !m.block[I(Math.floor(ZIP.to[0]), Math.floor(ZIP.to[1]))], 'the zipline lands nowhere');
   ok(m.reach0[I(Math.floor(BIKE[0]), Math.floor(BIKE[1]))], 'bike unreachable'); for (const b of BALLS) ok(m.reach[I(Math.floor(b[0]), Math.floor(b[1]))], 'ball unreachable');
   // the toys: everything a child sees must be reachable, in the part of the world it belongs to
