@@ -351,6 +351,7 @@ export function createLife(ctx) {
       friends.forEach((c, i) => {
         if (c.held || c.fly || c.swim || c.cart || c.nap > 0) return;
         const far = Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z);
+        if (ctx.fly && ctx.fly.on()) return;                                      // she is up in the sky: they wait, and catch up after she lands
         if (far > 9 && !ctx.busy()) { const t = ctx.nearestWalkable(kid.pos.x - kid.face * 1.2, kid.pos.z + .6); if (t) { burst(c.pos, 5); c.pos.set(t[0] + .5, 0, t[1] + .5); burst(c.pos, 6); sfx.sparkle(); } return; }   // left behind (the boat, a jump): a little magic and it is back
         const p = stepAt(lead + i * 1.05), before = c.pos.clone();
         if (p && ctx.walkable(Math.floor(p.x), Math.floor(p.z))) { const dx = p.x - c.pos.x, dz = p.z - c.pos.z, d = Math.hypot(dx, dz), v = Math.min(d, dt * 5.5); if (d > .02) { c.pos.x += dx / d * v; c.pos.z += dz / d * v; } }

@@ -75,6 +75,7 @@ export function createWaterval(ctx) {
   const crystals = PX.RAINBOW.map((col, i) => {
     const x = R.x0 + 1.4 + i * 1.55, z = R.z0 + .35, m = makeSprite(WILD.zingkristal(col), { lean: .2, scale: 1.2 }); m.position.set(x, 0, z); scene.add(m);
     const c = { x, z, i, col, m, lit: 0, tex: [tex(WILD.zingkristal(col)), tex(WILD.zingkristal(col, true))] };
+    ctx.solid(Math.floor(x), Math.floor(z));                                       // a crystal stands: she walks up to it, not through it
     m.userData.alpha = WILD.zingkristal(col); m.userData.tap = () => { if (near(x, z + 1, 1.5)) ring(c); else ctx.approach(Math.floor(x), Math.floor(z) + 1, () => ring(c)); }; pick.push(m); return c;
   });
   const sung = new Set();

@@ -8,6 +8,7 @@ export default async function (t) {
   const until = async (expr, ms = 30000) => { for (let i = 0; i < ms / 200; i++) { if (await t.ev(expr)) return true; await t.sleep(200); } return false; };
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(2000);
+  if (process.env.CYCLE) { await t.ev(`__w.Q._reset({ cycle: ${+process.env.CYCLE}, seed: 777 }); 0`); await t.go(URL); await t.sleep(2000); }
   const M = await J('{ MUD: __w.MAP.MUD, POND: __w.MAP.POND }');
   const pig = await t.ev(`__w.animals.findIndex(a => a.name === 'Varken')`); ok(pig >= 0, 'a pig lives in the village');
   const P = `__w.animals[${pig}]`;

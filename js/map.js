@@ -81,6 +81,8 @@ export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];             
 /** the part of the sea the boat sails on: marked with buoys, so nobody sails off the map */
 export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
 export const WHALE = [113.5, 73.5];
+/** the fishing boat's round in the open sea (world-sea.js); map.test checks every bit of it is open water */
+export const BOAT_ROUTE = [[107, 52], [116, 46], [125, 42], [124, 35], [114, 35], [113, 46]];
 /** eiland: the lagoon where the flamingos stand, and the giant bouncy mushrooms (stand on one and she bounces) */
 /** kasteel: a carousel of little unicorns (x0..x1, z0..z1 stands; she gets on at `on`) */
 export const CAROUSEL = { cx: 110, cz: 13, x0: 109, z0: 12, x1: 111, z1: 14, on: [110, 15] };
@@ -377,7 +379,8 @@ export function validate(m, keep = []) {
   ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable');
   for (const p of RAMPS) ok(m.reach[T(p)] && !m.block[T(p)], 'ramp unreachable ' + p);
   let sail = 0; for (let z = LAGOON.z0; z <= LAGOON.z1; z++) for (let x = LAGOON.x0; x <= LAGOON.x1; x++) if (m.ground[I(x, z)] === SE && !m.deck[I(x, z)]) sail++;
-  ok(sail > 300, 'the lagoon is too small to sail on'); ok(m.ground[T(WHALE)] === SE, 'the whale lies on land');
+  ok(sail > 300, 'the lagoon is too small to sail on');
+  for (let k = 0; k < BOAT_ROUTE.length; k++) { const [ax, az] = BOAT_ROUTE[k], [bx, bz] = BOAT_ROUTE[(k + 1) % BOAT_ROUTE.length], n = Math.ceil(Math.hypot(bx - ax, bz - az) * 4); for (let i = 0; i <= n; i++) { const x = Math.floor(ax + (bx - ax) * i / n), z = Math.floor(az + (bz - az) * i / n); if (m.ground[I(x, z)] !== SE || m.inland[I(x, z)] || isletAt(x, z)) { bad.push('the fishing boat sails over land at ' + x + ',' + z); k = 1e9; break; } } } ok(m.ground[T(WHALE)] === SE, 'the whale lies on land');
   let leak0 = 0, leak1 = 0, leak2 = 0, un = 0, home = 0;
   for (let i = 0; i < m.block.length; i++) {
     const zn = m.zone[i]; if (m.ground[i] === BW) continue;      // bridges belong to both sides

@@ -22,6 +22,7 @@ export default async function (t) {
   const c0 = await t.ev('__w.Q.quest.coins');
   await tapAt(R.x0 + 1.4, .8, R.z0 + .35); ok(await until(`__w.val.sung().length === 1`, 6000), 'a tap on a crystal: it sings');
   ok(await until(`__w.action() && __w.action().key.startsWith('kristal')`, 3000), 'next to a crystal the action button rings it');
+  ok(await t.ev(`[0, 1, 2, 3, 4, 5].every(i => !__w.walkable(Math.floor(${R.x0} + 1.4 + i * 1.55), ${R.z0}))`), 'the crystals are solid');
   for (let i = 1; i < 6; i++) { await t.ev(`__w.val.ring(${i})`); await t.sleep(250); }
   ok(await until(`__w.val.rainbow()`, 3000), 'all six sang: a rainbow in the grotto'); await t.sleep(1500); await t.shot('tmp-shots/v-4-rainbow.png');
   ok(await until(`__w.Q.quest.coins === ${c0 + 1}`, 3000), 'and a coin, once a day');
