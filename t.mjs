@@ -17,7 +17,7 @@ const ISLANDS = {
   kasteel: [['t-toys', 'kasteel'], ['t-ways', 'kasteel'], ['t-castle', 'kasteel,race'], ['t-areas', 'kasteel']],
   zee: [['t-toys', 'boot'], ['t-ways', 'zee']],
 };
-const WHOLE = { adventure: 't-adventure', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump' };
+const WHOLE = { adventure: 't-adventure', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump', fly: 't-fly' };
 const PARALLEL = 3;
 
 const args = process.argv.slice(2); if (!args.length) { console.log('usage: node t.mjs <island|look|adventure|all ...>   islands: ' + Object.keys(ISLANDS).join(' ')); process.exit(1); }

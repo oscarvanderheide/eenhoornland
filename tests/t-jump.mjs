@@ -40,12 +40,12 @@ export default async function (t) {
   ok(await until(`__w.info().pos[0] > 40.6 && !__w.kid.path.length`, 3000), 'and lands on the other side ' + await pos());
 
   // the cave: two rooms, the crate goes on the button, the gate sinks
-  await t.ev(`__w.placeAt(27.5, 105.5)`); await t.sleep(1500); await t.shot('tmp-shots/j-4-cave.png');
-  let pz = await J('__w.rooms.puzzle()'); ok(!pz.open && !await t.ev(`__w.walkable(35, 101)`), 'the crystal gate to the back room is closed');
-  ok(await t.ev(`__w.walkTo(42, 100)`) && await until(`__w.rooms.puzzle().box.join() !== '${pz.box.join()}'`, 6000) && await t.ev(`__w.info().pos[0] < 35`), 'walking to the egg room goes to the crate and pushes it instead');
+  await t.ev(`__w.placeAt(27.5, 117.5)`); await t.sleep(1500); await t.shot('tmp-shots/j-4-cave.png');
+  let pz = await J('__w.rooms.puzzle()'); ok(!pz.open && !await t.ev(`__w.walkable(35, 113)`), 'the crystal gate to the back room is closed');
+  ok(await t.ev(`__w.walkTo(42, 112)`) && await until(`__w.rooms.puzzle().box.join() !== '${pz.box.join()}'`, 6000) && await t.ev(`__w.info().pos[0] < 35`), 'walking to the egg room goes to the crate and pushes it instead');
   await t.ev(`__w.rooms.reset()`); pz = await J('__w.rooms.puzzle()');
   { const [px, pzz] = pz.plate; await t.ev(`__w.placeAt(${px + .5}, ${pzz + .5})`); await until(`__w.rooms.puzzle().hold >= 1`, 3000); await t.shot('tmp-shots/j-4b-onbutton.png');
-    const h = await J('__w.rooms.puzzle()'); ok(h.on && h.hold >= 1 && !h.open && !await t.ev(`__w.walkable(35, 101)`), 'standing on the button herself sinks the bars (a hint), the gate stays shut');
+    const h = await J('__w.rooms.puzzle()'); ok(h.on && h.hold >= 1 && !h.open && !await t.ev(`__w.walkable(35, 113)`), 'standing on the button herself sinks the bars (a hint), the gate stays shut');
     await t.ev(`__w.placeAt(${px + 2.5}, ${pzz + .5})`); ok(await until(`__w.rooms.puzzle().hold === 0`, 3000) && !(await J('__w.rooms.puzzle()')).open, 'stepping off: the bars come back up'); }
   // walking into the crate pushes it; pushing it into a corner puffs it back
   const bx = pz.box; await t.ev(`__w.placeAt(${bx[0] + .5}, ${bx[1] - .5 + 2})`); await t.sleep(300); await t.key('ArrowUp', 350);
@@ -54,11 +54,11 @@ export default async function (t) {
   { await t.ev(`__w.placeAt(${bx[0] + 3.5}, ${bx[1] + .5})`); await t.sleep(300); const p = await J('__w.rooms.puzzle().box'); const sc = await J(`__w.screen(${p[0] + .5}, .3, ${p[1] + .6})`); await t.click(sc[0], sc[1]); ok(await until(`__w.rooms.puzzle().box.join() !== '${pz.box.join()}'`, 5000), 'a tap on the crate: she walks round and pushes it the right way'); }
   for (let k = 0; k < 14 && !(await J('__w.rooms.puzzle()')).open; k++) { await t.ev(`__w.rooms.tapBox()`); await until(`!__w.kid.path.length`, 5000); await t.sleep(450); }
   pz = await J('__w.rooms.puzzle()'); ok(pz.open && pz.box.join() === pz.plate.join(), 'tapping the crate pushes it onto the button'); await t.sleep(400); await t.shot('tmp-shots/j-5-button.png');
-  ok(await until(`__w.walkable(35, 101) && __w.walkable(35, 102)`, 4000), 'and the gate sinks'); await t.sleep(300); await t.shot('tmp-shots/j-6-open.png');
-  ok(await t.ev(`__w.walkTo(41, 101)`) && await until(`__w.info().pos[0] > 40`, 8000), 'into the back room with the egg'); await t.sleep(800); await t.shot('tmp-shots/j-7-eggroom.png');
+  ok(await until(`__w.walkable(35, 113) && __w.walkable(35, 114)`, 4000), 'and the gate sinks'); await t.sleep(300); await t.shot('tmp-shots/j-6-open.png');
+  ok(await t.ev(`__w.walkTo(41, 113)`) && await until(`__w.info().pos[0] > 40`, 8000), 'into the back room with the egg'); await t.sleep(800); await t.shot('tmp-shots/j-7-eggroom.png');
   // the crate can be jumped on
   await t.ev(`__w.placeAt(${pz.box[0] - .5}, ${pz.box[1] + .5}); __w.kid.face = 1; __w.jump()`); ok(await until(`!!__w.perch()`, 2000), 'she can jump on top of the crate'); await t.sleep(400); await t.shot('tmp-shots/j-8-on-crate.png');
   // a fresh start: the gate stays open
-  await t.go(URL); await t.sleep(2000); ok(await t.ev(`__w.rooms.puzzle().open && __w.walkable(35, 101)`), 'after a reload the gate is still open');
+  await t.go(URL); await t.sleep(2000); ok(await t.ev(`__w.rooms.puzzle().open && __w.walkable(35, 113)`), 'after a reload the gate is still open');
   console.log(fail ? 'JUMP FAILED ' + fail : 'JUMP OK');
 }

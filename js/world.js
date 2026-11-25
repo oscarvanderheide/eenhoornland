@@ -17,6 +17,8 @@ import { createRooms } from './world-rooms.js';
 import { createSea } from './world-sea.js';
 import { createFishing } from './world-fish.js';
 import { createWays } from './world-ways.js';
+import { createFlight } from './world-fly.js';
+import * as WILD from './art-wild.js';
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -664,6 +666,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const A = (key, icon, run) => ({ key, icon, run });
   const near = (c, r) => c.g.visible && Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) < r;
   function action(grab = false) {                                               // grab: the pick-up key (E/Enter) asks; it never jumps
+    if (fly.on()) return A('land', WILD.landIcon(), () => fly.land());             // up in the sky every button lands
     if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
     if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
@@ -739,6 +742,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const seaLife = ctx.sea = createSea(ctx);
   const fishing = ctx.fishing = createFishing(ctx);
   const ways = ctx.ways = createWays(ctx);
+  ctx.clearWalk = () => { target = null; after = null; resume = null; };
+  ctx.doorTiles = () => BUILDINGS.map(b => I(b.door[0], b.door[1]));
+  const fly = ctx.fly = createFlight(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -754,6 +760,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) play.steer(w.x, w.z); return;
     }
     if (busy) return;
+    if (fly.on()) { const w = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, w)) { fly.toward(w.x, w.z); showMarker(w.x, w.z); } if (!e.replay) { steer = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), on: false }; try { cv.setPointerCapture(e.pointerId); } catch (err) { } } return; }   // flying: a tap is where to fly, a held finger steers
     if (fishing.tap()) return;                                                   // fishing: a tap reels in
     const hits = ray.intersectObjects(pick, false); let shook = false;
     const sw = !mount && life.swimming();
@@ -819,6 +826,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     return false;
   }
   function tapChar(c) {
+    if (fly.on()) return;
     if (c === kid && mount) { setMount(null); return; }
     if (c === kid && toys.carrying()) { toys.putDown(); return; }
     if (c === kid && life.setDown()) return;
@@ -967,6 +975,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     const prev = kid.pos.clone();
     if ((kx || kz) && !busy) { const l = Math.hypot(kx, kz); lastIn = { x: kx / l, z: kz / l, t: time }; }
     if (busy) { if (play.aboard()) play.drive(kx, kz, dt); }
+    else if (fly.on()) fly.drive(kx, kz, dt);                                    // in the sky: free over land and sea
     else if ((kx || kz) && !midJump() && !mount && life.swimming()) {           // paddling: free inside the water, against the edge she hops out
       const sw = life.swimming(); if (Math.abs(kx) > .2) kid.face = Math.sign(kx);
       const l = Math.hypot(kx, kz), sp = 2.4 * dt, nx = kid.pos.x + kx / l * sp, nz = kid.pos.z + kz / l * sp;
@@ -1006,14 +1015,14 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!kid.path.length && after) { const f = after; after = null; f(); }
     // tile events
     const ti = I(Math.floor(kid.pos.x), Math.floor(kid.pos.z));
-    if (ti !== lastTile) { lastTile = ti; if (interactive && !paused) goThrough([ti % W, Math.floor(ti / W)]); }
-    { const b = doors.get(ti); if (b && interactive && !paused && kz < 0 && !kx) { keys.clear(); arrive(b); } }
+    if (ti !== lastTile) { lastTile = ti; if (interactive && !paused && !fly.on()) goThrough([ti % W, Math.floor(ti / W)]); }
+    { const b = doors.get(ti); if (b && interactive && !paused && !fly.on() && kz < 0 && !kx) { keys.clear(); arrive(b); } }
     if (!kid.path.length && target) { const b = target; target = null; if (I(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === I(b.door[0], b.door[1])) arrive(b); }
     if (kid.moving) { stepSnd += dt; if (stepSnd > .32) { stepSnd = 0; sfx.step(); } }
     // trail followers
     if (kid.pos.distanceTo(prev) > .0001) { trail.unshift(new THREE.Vector2(kid.pos.x, kid.pos.z)); if (trail.length > 80) trail.pop(); }
     if (mount === 'uni') { uni.pos.copy(kid.pos); uni.face = kid.face; uni.moving = kid.moving; uni.hop = kid.hop; uni.hopH = kid.hopH; }   // she carries the girl
-    else if (!busy) for (const [c, dist] of [[uni, uni.follow || 2]]) {
+    else if (!busy && !fly.on()) for (const [c, dist] of [[uni, uni.follow || 2]]) {
       let p = trailAt(dist); const before = c.pos.clone();
       if (life.waterAt(p.x, p.y) || tops.has(I(Math.floor(p.x), Math.floor(p.y)))) { c.moving = false; continue; }                  // she is in the water: it waits on the shore
       if (Math.hypot(p.x - c.pos.x, p.y - c.pos.z) > 1.5 && c.hop <= 0) { c.hop = 1; c.hopH = .55; }
@@ -1035,7 +1044,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    spray.update(time); motes.update(time); extras.update(dt, time, interactive && !paused && !busy); tools.update(dt, time, interactive && !paused && !busy); play.update(dt, time, interactive && !paused); life.update(dt, time, interactive && !paused && !busy); toys.update(dt, time, interactive && !paused && !busy); weather.update(dt, time, interactive && !paused && !busy); rooms.update(dt, time, interactive && !paused && !busy); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, interactive && !paused && !busy); ways.update(dt, time, interactive && !paused && !busy); stepWobbles(dt); stepIndoor(dt);
+    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time);
+    spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
     if (chimney) for (const s of smoke) { const k = (time * .25 + s.o) % 1; s.m.position.set(chimney.x + Math.sin(k * 6 + s.o * 9) * .15, chimney.y + k * 1.6, chimney.z); s.m.scale.setScalar(.6 + k * 1.2); s.m.material.opacity = (1 - k) * .8; }
@@ -1045,7 +1055,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3);
     const halfW = viewW / 2; const cx = THREE.MathUtils.clamp(camTarget.x, Math.min(W / 2, halfW - 1), Math.max(W / 2, W - halfW + 1)); const cz = THREE.MathUtils.clamp(camTarget.z, 4, H - 3);
     if (wake) { wake.t += dt; const k = Math.min(1, wake.t / 6), e = k * k * (3 - 2 * k); zoom = .5 + .5 * e; wakeEl.style.opacity = String(.55 * (1 - Math.min(1, wake.t / 14))); if (wake.t > 1.4 && !wake.yawn) { wake.yawn = true; kid.hop = .4; bubble(kid, 'Mmmm!', PX.sparkle('#FFD43B')); sfx.purr(); } if (wake.t > 14) { wake = null; wakeEl.style.opacity = 0; zoom = 1; } }
-    const camD = camDist * zoom;
+    const camD = camDist * zoom * fly.camK;
     camera.position.set(cx, Math.sin(camPitch) * camD, cz + Math.cos(camPitch) * camD); camera.lookAt(cx, .6, cz - .5); camera.updateMatrixWorld(); aimSun(cx, cz - 2);
     post.uniforms.focus.value = camera.position.distanceTo(kid.pos);
     // DOM
@@ -1068,7 +1078,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, fly, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -1089,12 +1099,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     pos: () => [kid.pos.x, kid.pos.z],
     groundCanvas, extras, tools, play, toys, jump, setWho, who: () => who, M,
+    /** up into the sky on a grown unicorn, or back down (the wing button) */
+    fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => fly.can(),
+    /** the map: far away and she can fly, so she flies there and lands; otherwise she walks */
+    travel(x, z) { if ((fly.on() || fly.can()) && Math.hypot(x - kid.pos.x, z - kid.pos.z) > 14) return fly.start([x + .5, z + .5]); target = null; return walkTo(x, z); },
     /** on or off the unicorn (the HUD button); getting off a bike works the same way */
-    ride() { return mount ? setMount(null) : setMount('uni'); }, mount: () => mount,
+    ride() { if (fly.on()) return false; return mount ? setMount(null) : setMount('uni'); }, mount: () => mount,
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

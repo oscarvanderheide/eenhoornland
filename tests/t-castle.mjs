@@ -22,18 +22,18 @@ export default async function (t) {
   }
   if (run('kasteel')) {
     await place(C.door[0] + .5, C.door[1] + 1.5); await t.ev(`__w.setMount('uni')`); await t.sleep(2500); await shot('02-castle-door');
-    await t.ev(`__w.walkToBuilding('kasteel')`); ok(await until(`__w.info().pos[1] > 90`, 20000), 'riding up to the gate goes into the hall'); await t.sleep(2000); await shot('03a-hall'); await t.ev(`__w.walkTo(70, 95)`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`), 'the golden door at the back leads to the garden'); await t.sleep(600); await shot('03-gate-opens'); await t.sleep(2500); await shot('04-garden');
+    await t.ev(`__w.walkToBuilding('kasteel')`); ok(await until(`__w.info().pos[1] > 102`, 20000), 'riding up to the gate goes into the hall'); await t.sleep(2000); await shot('03a-hall'); await t.ev(`__w.walkTo(70, 107)`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`), 'the golden door at the back leads to the garden'); await t.sleep(600); await shot('03-gate-opens'); await t.sleep(2500); await shot('04-garden');
     await tap(95, 100); ok(await until(`__w.Q.quest.blooms.length === 1`, 8000), 'a tap on a sleeping flower: the unicorn wakes it'); await t.sleep(900); await shot('05-first-colour');
     await t.ev(`document.querySelector('#act-close').click()`); await t.sleep(800); ok(await t.ev(`__w.Q.quest.stage`) === 'vriend', 'leaving halfway changes nothing');
-    ok(await until(`__w.info().pos[1] > 90`, 5000), 'leaving the garden: back in the hall'); await t.sleep(1000); await t.ev(`__w.walkTo(70, 95)`); await until(`!!document.querySelector('.act-kasteel canvas')`); await t.sleep(2600); await shot('06-back-again');
+    ok(await until(`__w.info().pos[1] > 102`, 5000), 'leaving the garden: back in the hall'); await t.sleep(1000); await t.ev(`__w.walkTo(70, 107)`); await until(`!!document.querySelector('.act-kasteel canvas')`); await t.sleep(2600); await shot('06-back-again');
     for (const i of [0, 1, 3, 4, 5]) { await tap(35 + i * 30, 100); await until(`__w.Q.quest.blooms.includes(${i}) || __w.Q.quest.stage === 'feest'`, 8000); await t.sleep(300); }
     ok(await t.ev(`__w.Q.quest.stage`) === 'feest' && await t.ev(`__w.Q.quest.herd.length`) === 4, 'six flowers awake: the rainbow is whole, that is the party'); await t.sleep(1500); await shot('07-rainbow'); await t.sleep(2500); await shot('08-party');
     await tap(35, 100); await t.sleep(400); await tap(196, 40); await t.sleep(500); await shot('09-toy');
     await tap(15, 80); await t.sleep(1500); ok(await t.ev(`!document.querySelector('.act-kasteel canvas')`), 'the golden door in the garden leads back into the hall');
     // the hall: coins on the floor and a chest
-    const c0 = await t.ev(`__w.Q.quest.coins`), n0 = (await J('__w.rooms.info()')).coins; await place(62.5, 101.5); await t.sleep(1500); ok(await t.ev(`__w.Q.quest.coins`) === c0 + 1 && (await J('__w.rooms.info()')).coins === n0 - 1, 'walking over a coin picks it up');
-    for (let k = 0; k < 4; k++) { await t.ev(`__w.rooms.openChest()`); await t.sleep(400); } ok(await t.ev(`__w.Q.quest.coins`) === c0 + 4, 'the chest holds three real coins a day'); await place(72.5, 99); await t.sleep(1500); await shot('09c-hall-chest');
-    await place(70.5, 107.5); await t.ev(`__w.walkTo(70, 108)`); ok(await until(`__w.info().pos[1] < 20`, 20000), 'out through the door in the front wall'); await t.sleep(2500); await shot('10-outside-evening');
+    const c0 = await t.ev(`__w.Q.quest.coins`), n0 = (await J('__w.rooms.info()')).coins; await place(62.5, 113.5); await t.sleep(1500); ok(await t.ev(`__w.Q.quest.coins`) === c0 + 1 && (await J('__w.rooms.info()')).coins === n0 - 1, 'walking over a coin picks it up');
+    for (let k = 0; k < 4; k++) { await t.ev(`__w.rooms.openChest()`); await t.sleep(400); } ok(await t.ev(`__w.Q.quest.coins`) === c0 + 4, 'the chest holds three real coins a day'); await place(72.5, 111); await t.sleep(1500); await shot('09c-hall-chest');
+    await place(70.5, 119.5); await t.ev(`__w.walkTo(70, 120)`); ok(await until(`__w.info().pos[1] < 20`, 20000), 'out through the door in the front wall'); await t.sleep(2500); await shot('10-outside-evening');
     ok(await t.ev(`__w.Q.bedtime() && !__w.uni.g.visible`), 'outside it is evening, she lives in the meadow now'); ok((await J('__w.extras.info()')).herd === 4, 'and stands with the others');
     await place(P.gate[0][0] + 1, P.z0 - 1.5); await t.sleep(2500); await shot('11-pen-four');
   }

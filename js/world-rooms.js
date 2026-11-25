@@ -123,14 +123,14 @@ export function createRooms(ctx) {
 
   /* ---------------- the hall: coins on the floor, a chest, and the golden door to the garden ---------------- */
   const h = R.hal, coins = [];
-  const COINS = [[60, 98], [62, 101], [61, 105], [66, 98], [67, 102], [73, 99], [74, 103], [78, 98], [80, 101], [79, 105], [69, 100], [71, 103]];
+  const COINS = [[60, 110], [62, 113], [61, 117], [66, 110], [67, 114], [73, 111], [74, 115], [78, 110], [80, 113], [79, 117], [69, 112], [71, 115]];
   function syncCoins() {
     for (const c of coins) scene.remove(c.m); coins.length = 0;
     const got = Q.quest.picked.munt || [];
     COINS.forEach(([x, z], k) => { if (got.includes(3000 + k) || M.block[M.I(x, z)]) return; const m = makeSprite(ART.coin(), { lean: .3, shadow: false }); m.position.set(x + .5, .25, z + .5); scene.add(m); coins.push({ m, x: x + .5, z: z + .5, k, ph: k * .7 }); });
   }
   const rising = [];
-  const chest = { x: 72.5, z: 97.4, open: 0, m: makeSprite(ART.schatkist(false), { lean: .3, scale: 1.2 }) };
+  const chest = { x: 72.5, z: 109.4, open: 0, m: makeSprite(ART.schatkist(false), { lean: .3, scale: 1.2 }) };
   chest.m.position.set(chest.x, 0, chest.z); scene.add(chest.m); chest.m.userData.alpha = ART.schatkist(false);
   const setChest = open => { const a = ART.schatkist(open), t = tex(a); chest.m.material.map = t; chest.m.material.emissiveMap = t; chest.m.material.needsUpdate = true; };
   function openChest() {

@@ -3,6 +3,7 @@
 import * as PX from './pixel.js';
 import * as ART from './art.js';
 import * as MAP from './map.js';
+import * as WILD from './art-wild.js';
 import * as Q from './quest.js';
 import { sfx, speak } from './audio.js';
 import * as ui from './ui.js';
@@ -45,6 +46,10 @@ const CSS = `
 #b-ride.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #FF7EB6,0 3px 0 var(--ink)}
 #b-ride.on{background:var(--sun);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-ride canvas{width:52px}
+#b-fly{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 164px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;padding:0;background:#E3F1FF}
+#b-fly.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #7EC3FF,0 3px 0 var(--ink)}
+#b-fly.on{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
+#b-fly canvas{width:50px}
 #who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(98px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:center}
 #who .who{width:56px;height:56px;border-radius:50%;padding:0;opacity:.55;transform:scale(.82);transition:transform .15s,opacity .15s}
 #who .who.on{opacity:1;transform:scale(1);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
@@ -52,7 +57,7 @@ const CSS = `
 #tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(166px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
 .kaart-goal{position:absolute;transform:translate(-50%,-50%);cursor:pointer;animation:qpulse 1s ease-in-out infinite;z-index:3;padding:5px;background:#FFF3C4;border:3px solid var(--ink);border-radius:50%;line-height:0;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink);display:flex;align-items:center;font-family:var(--f-pixel);font-weight:700;font-size:1.2rem}
 .kaart-gate{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:1;line-height:0}
-@media (max-width:640px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(148px + env(safe-area-inset-bottom,0px))}#b-jump{width:68px;height:68px}#b-jump canvas{max-width:46px;max-height:46px}#b-ride{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 78px)}#b-ride canvas{width:44px}#who{bottom:calc(92px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+@media (max-width:640px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(148px + env(safe-area-inset-bottom,0px))}#b-jump{width:68px;height:68px}#b-jump canvas{max-width:46px;max-height:46px}#b-ride{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 78px)}#b-ride canvas{width:44px}#b-fly{width:60px;height:60px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 144px)}#b-fly canvas{width:42px}#who{bottom:calc(92px + env(safe-area-inset-bottom,0px))}#who .who{width:48px;height:48px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -96,6 +101,21 @@ export function createHud(getWorld) {
   const rideBtn = document.createElement('button'); rideBtn.className = 'hbtn'; rideBtn.id = 'b-ride'; rideBtn.setAttribute('aria-label', 'Rijden'); rideBtn.hidden = true;
   rideBtn.onclick = () => { const w = getWorld(); if (w) { w.ride(); render(); } }; game.appendChild(rideBtn);
   let rideSig = '';
+  // flying: a grown unicorn (hers once she can carry her, or an old one walking along) has wings. This button takes off
+  // and lands; it asks for a tap (pulses) until the girls have flown once
+  const flyBtn = document.createElement('button'); flyBtn.className = 'hbtn'; flyBtn.id = 'b-fly'; flyBtn.setAttribute('aria-label', 'Vliegen'); flyBtn.hidden = true;
+  flyBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); const w = getWorld(); if (!w || !w.fly) return; if (!w.flying()) { state.extra.flown = true; } w.fly(); syncFly(true); });
+  flyBtn.addEventListener('click', e => { if (e.detail === 0) { const w = getWorld(); w && w.fly && w.fly(); } });
+  game.appendChild(flyBtn);
+  let flySig = '';
+  function syncFly(force) {
+    const w = getWorld(), up = !!(w && w.flying && w.flying()), can = !!(w && w.canFly && w.canFly()), sig = up + ':' + can;
+    if (sig === flySig && !force) return; flySig = sig;
+    flyBtn.hidden = !(up || can); flyBtn.classList.toggle('on', up); flyBtn.classList.toggle('call', can && !up && !state.extra.flown);
+    flyBtn.innerHTML = ''; flyBtn.appendChild(PX.domSprite(up ? WILD.landIcon() : WILD.flyIcon(), 4));
+    rideBtn.style.visibility = up ? 'hidden' : '';
+  }
+  setInterval(() => syncFly(false), 150);
   function syncRide() {
     const w = getWorld(), m = w ? w.mount() : null, sig = (Q.canRide() || m ? 1 : 0) + ':' + m + ':' + state.uni.body + state.uni.mane; rideBtn.hidden = !(Q.canRide() || m); rideBtn.classList.toggle('on', !!m); rideBtn.classList.toggle('call', Q.canRide() && !m);   // not riding although she could: the button asks for it
     if (sig !== rideSig) {
@@ -139,7 +159,7 @@ export function createHud(getWorld) {
   /* ---------- the map: all the islands, where you are, and where to go now ---------- */
   /** where the goal of this moment is: {icon, text, at: [x, z] on the map, go()} */
   function goal(world) {
-    const I = MAP.ISLES, P = MAP.PLACES, w = Q.wishes()[0], walk = t => () => world.walkToTile(t[0], t[1]);
+    const I = MAP.ISLES, P = MAP.PLACES, w = Q.wishes()[0], walk = t => () => world.travel ? world.travel(t[0], t[1]) : world.walkToTile(t[0], t[1]);
     if (Q.bedtime()) { const h = MAP.HOUSES.huisje; return { icon: ART.bedIcon(), text: '', at: [h.x + h.w / 2, h.z + h.d / 2], go: () => world.walkToBuilding('huisje') }; }
     if (!w) return null;
     if (w.t === 'tool') { const ts = world.tools.spot(w.id); return ts && { icon: goalIcon(w), text: '', at: ts, go: walk([Math.floor(ts[0]), Math.floor(ts[1])]) }; }
@@ -167,7 +187,7 @@ export function createHud(getWorld) {
       const b = document.createElement('button'); b.className = 'kaart-pin'; b.setAttribute('aria-label', label); b.appendChild(fit(icon, 22)); const s = document.createElement('span'); s.textContent = label; b.appendChild(s);
       b.onclick = e => { e.stopPropagation(); sfx.pop(); close && close(); speak(say); go(); }; at(b, tx, tz);
     };
-    const P = MAP.PLACES, IS = MAP.ISLES, walk = p => () => world.walkToTile(p.tile[0], p.tile[1]);
+    const P = MAP.PLACES, IS = MAP.ISLES, walk = p => () => world.travel ? world.travel(p.tile[0], p.tile[1]) : world.walkToTile(p.tile[0], p.tile[1]);
     const PIN = { dorp: [ART.houseIcon('huisje'), 'Naar het dorp!', 0, 9], bos: [PX.pine(1), 'Naar het bos!', -12, -5], wei: [PX.flower(), 'Naar de bloemenwei!', -7, -7], strand: [ART.shell(0), 'Naar het strand!', 2, 3], eiland: [PX.rainbow(), 'Naar het regenboogeiland!', 4, 7], kasteel: [PX.crown(), 'Naar het kasteel!', -9, 5] };
     for (const [k, [icon, say, dx, dz]] of Object.entries(PIN)) pin(P[k].name, icon, IS[k].cx + dx, IS[k].cz + dz, walk(P[k]), say);
     // what still closes a bridge, so it is clear why you cannot get somewhere yet

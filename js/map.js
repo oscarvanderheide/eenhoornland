@@ -1,9 +1,9 @@
 // The world as pure data (no rendering, no DOM) so it can be checked in node: `node tests/map.test.mjs`.
 // Eenhoornland is a handful of separate islands in the sea. Each island is one area; the only ways between them are
 // narrow wooden bridges (closed by brambles, boulders or a hole only a unicorn can jump) and one boat.
-export const W = 150, H = 112;
+export const W = 150, H = 124;
 /** the islands lie in rows 0..OUT_H-1; below that, under the sea, is solid rock with the places you walk into (ROOMS) */
-export const OUT_H = 84, ROCK_Z = 88;
+export const OUT_H = 96, ROCK_Z = 100;
 export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock
 /** every island: centre and half-sizes of a rounded rectangle with a wobbly edge */
 export const ISLES = {
@@ -35,9 +35,9 @@ export const CASTLE = { x: 80, z: 5, w: 9, d: 6, door: [84, 11] };
  *  `door` the tile in the world that leads in. The cave is in the forest (the first egg lies there); the hall is inside
  *  the castle, with the coins, and its back door (`garden`) leads to the castle garden (act-kasteel.js). */
 export const ROOMS = {
-  grot: { x0: 20, z0: 97, x1: 46, z1: 107, in: [27, 106], exit: [27, 108], door: [36, 6], out: [36.5, 7.6], egg: [42, 100],
-    wall: 35, gate: [[35, 101], [35, 102]], box: [25, 102], plate: [30, 99] },   // two rooms: the crate goes on the button, the crystal gate in the wall between them sinks
-  hal: { x0: 58, z0: 96, x1: 82, z1: 107, in: [70, 106], exit: [70, 108], door: [84, 11], out: [84.5, 12.6], garden: [70, 95] },
+  grot: { x0: 20, z0: 109, x1: 46, z1: 119, in: [27, 118], exit: [27, 120], door: [36, 6], out: [36.5, 7.6], egg: [42, 112],
+    wall: 35, gate: [[35, 113], [35, 114]], box: [25, 114], plate: [30, 111] },   // two rooms: the crate goes on the button, the crystal gate in the wall between them sinks
+  hal: { x0: 58, z0: 108, x1: 82, z1: 119, in: [70, 118], exit: [70, 120], door: [84, 11], out: [84.5, 12.6], garden: [70, 107] },
 };
 export const CAVE = { x0: 32, z0: 4, x1: 40, z1: 6 };                                   // the rock the cave mouth is in (ROOMS.grot.door)
 export const roomAt = (x, z) => Object.keys(ROOMS).find(k => { const r = ROOMS[k]; return x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 + 1; }) || null;
@@ -195,11 +195,11 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
 
   /* ---- the furniture of the rooms (blocks, like trees; drawn by art.js propArt) ---- */
   { const g = ROOMS.grot, h = ROOMS.hal;
-    for (const [x, z] of [[21, 98], [22, 105], [33, 106], [20, 102], [38, 98], [45, 105], [44, 97], [37, 106]]) prop('druipsteen', x, z, x + z);
-    for (const [x, z] of [[20, 99], [34, 97], [46, 99], [39, 104], [46, 102]]) prop('kristal', x, z, x * 3 + z);
-    for (const [x, z] of [[61, 96], [66, 96], [74, 96], [79, 96]]) prop('harnas', x, z, x);
-    for (const [x, z] of [[64, 100], [76, 100], [64, 104], [76, 104]]) prop('zuil', x, z);
-    for (const [x, z] of [[58, 98], [82, 98], [58, 106], [82, 106], [59, 97]]) prop('muntberg', x, z, x + z);
+    for (const [x, z] of [[21, 110], [22, 117], [33, 118], [20, 114], [38, 110], [45, 117], [44, 109], [37, 118]]) prop('druipsteen', x, z, x + z);
+    for (const [x, z] of [[20, 111], [34, 109], [46, 111], [39, 116], [46, 114]]) prop('kristal', x, z, x * 3 + z);
+    for (const [x, z] of [[61, 108], [66, 108], [74, 108], [79, 108]]) prop('harnas', x, z, x);
+    for (const [x, z] of [[64, 112], [76, 112], [64, 116], [76, 116]]) prop('zuil', x, z);
+    for (const [x, z] of [[58, 110], [82, 110], [58, 118], [82, 118], [59, 109]]) prop('muntberg', x, z, x + z);
     block[I(...h.garden)] = 0; ground[I(...h.garden)] = HF; }
 
   /* ---- vegetation ---- */

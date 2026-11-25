@@ -31,7 +31,7 @@ export default async function (t) {
 
   // the egg in the forest
   ok(await t.ev(`__w.M.zone[__w.M.I(Math.floor(${s.info.egg[0]}),Math.floor(${s.info.egg[1]}))]`) === 'grot', 'the egg lies in the cave in the forest');
-  await place(36.5, 10.5); await settle(1800); await shot('10b-cave-mouth'); await t.ev(`__w.walkTo(36, 6)`); ok(await until(`__w.info().pos[1] > 90`, 30000), 'the dark mouth in the rock leads into the cave'); await settle(2000); await shot('10c-cave');
+  await place(36.5, 10.5); await settle(1800); await shot('10b-cave-mouth'); await t.ev(`__w.walkTo(36, 6)`); ok(await until(`__w.info().pos[1] > 102`, 30000), 'the dark mouth in the rock leads into the cave'); await settle(2000); await shot('10c-cave');
   await place(s.info.egg[0] - 2.5, s.info.egg[1] + 1.5); await settle(2000); await shot('11-egg-hidden');
   await place(s.info.egg[0], s.info.egg[1] + .6); await settle(); s = await q(); ok(s.stage === 'ei' && s.uni && s.w.join() === 'tool:zwaard,star:ster', 'egg found, it follows; now the shears'); await shot('12-egg-found');
   // shears → brambles → star → hatch
@@ -66,7 +66,7 @@ export default async function (t) {
   ok(await until(`__w.info().pos[1] < 28`, 60000), 'there she climbs on by herself and jumps it'); s = await q(); ok(s.mount === 'uni', 'riding'); await settle(2500); await shot('26-jumped');
   await place(84.5, 12.5); await settle(2000); await shot('27-castle');
   // into the castle: in the garden six flowers are asleep; when they are all awake the rainbow is whole
-  await t.ev(`__w.setMount('uni'); __w.walkToBuilding('kasteel')`); ok(await until(`__w.info().pos[1] > 90`, 30000), 'riding up to the castle gate goes into the hall'); await settle(2000); await shot('27b-hall'); await t.ev(`__w.walkTo(70, 95)`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`, 30000), 'the golden door leads to the garden'); await settle(2800); await shot('28-castle-garden');
+  await t.ev(`__w.setMount('uni'); __w.walkToBuilding('kasteel')`); ok(await until(`__w.info().pos[1] > 102`, 30000), 'riding up to the castle gate goes into the hall'); await settle(2000); await shot('27b-hall'); await t.ev(`__w.walkTo(70, 107)`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`, 30000), 'the golden door leads to the garden'); await settle(2800); await shot('28-castle-garden');
   const tapStage = async (x, y) => { const r = JSON.parse(await t.ev(`(()=>{const c=document.querySelector('.pstage canvas'),r=c.getBoundingClientRect();return JSON.stringify({l:r.left,t:r.top,w:r.width,h:r.height,cw:c.width/2,ch:c.height/2})})()`)); await t.click(r.l + x / r.cw * r.w, r.t + y / r.ch * r.h); };
   for (let i = 0; i < 6; i++) { await tapStage(35 + i * 30, 100); await until(`__w.Q.quest.blooms.includes(${i}) || __w.Q.quest.stage === 'feest'`, 10000); await settle(300); }
   await settle(2500); await shot('29-party'); await t.ev(`document.querySelector('#act-close').click()`); await settle(1500);
