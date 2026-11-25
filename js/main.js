@@ -7,6 +7,7 @@ import { createHud } from './hud.js';
 import { playDream } from './dream.js';
 import { playHatch, playFeed } from './cutscene.js';
 import { openShop } from './shop.js';
+import { initGamepad } from './gamepad.js';
 
 const $ = s => document.querySelector(s);
 const ACTS = {
@@ -23,6 +24,7 @@ const ACTS = {
 const params = new URLSearchParams(location.search); // dev only: ?act=atelier opens an activity directly
 let world = null;
 const hud = createHud(() => world);
+initGamepad(() => world);   // a game controller plays through the same buttons (gamepad.js)
 // evening falls by itself when the unicorn has come home; a night's sleep brings the morning (and a new dream)
 let musicStarted = false;
 function syncNight(instant) { const n = Q.bedtime(); if (state.night !== n) { state.night = n; save(); } setNightIcon(); world && world.setNight(n, instant); if (musicStarted) setMood(n ? 'night' : 'day'); }
