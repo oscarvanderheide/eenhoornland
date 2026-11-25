@@ -87,6 +87,25 @@ export function createFlight(ctx) {
     m.position.set(10 + ((k * 37) % 13) * 10.5, ALT - .6 + (k % 3) * .5, 6 + ((k * 23) % 9) * 9.5); m.visible = false; m.renderOrder = 6; scene.add(m); clouds.push(m);
   }
 
+  /* ---------------- a faint rainbow behind her while she flies: one ribbon made of her last positions ---------------- */
+  const BANDS = ['#FF6B6B', '#FFA94D', '#FFE066', '#8CE99A', '#74C0FC', '#B197FC'].map(h => new THREE.Color(h)), N = 36, BH = .075, LIFE = 1.1, FAINT = .38;
+  const trail = [];   // { x, y, z, age }, newest first
+  const tGeo = new THREE.BufferGeometry(), tPos = new Float32Array(N * BANDS.length * 2 * 3), tCol = new Float32Array(N * BANDS.length * 2 * 4), tIdx = [];
+  for (let b = 0; b < BANDS.length; b++) for (let i = 0; i < N - 1; i++) { const a = (b * N + i) * 2; tIdx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 4)); tGeo.setIndex(tIdx);
+  const ribbon = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  ribbon.frustumCulled = false; ribbon.visible = false; ribbon.renderOrder = 5; scene.add(ribbon);
+  function stepTrail(dt, tail) {
+    for (const p of trail) p.age += dt; while (trail.length && trail[trail.length - 1].age > LIFE) trail.pop();
+    if (tail) { const h = trail[0]; if (h && Math.hypot(h.x - tail[0], h.z - tail[2], h.y - tail[1]) < .12) { h.x = tail[0]; h.y = tail[1]; h.z = tail[2]; } else { trail.unshift({ x: tail[0], y: tail[1], z: tail[2], age: 0 }); if (trail.length > N) trail.pop(); } }
+    ribbon.visible = trail.length > 1; if (!ribbon.visible) return;
+    for (let b = 0; b < BANDS.length; b++) for (let i = 0; i < N; i++) {
+      const p = trail[Math.min(i, trail.length - 1)], a = (b * N + i) * 2, fade = i >= trail.length ? 0 : FAINT * (1 - p.age / LIFE) * Math.min(1, i / 3), y = p.y + (BANDS.length / 2 - b) * BH, c = BANDS[b];
+      for (let s = 0; s < 2; s++) { const v = a + s; tPos.set([p.x, y - s * BH, p.z], v * 3); tCol.set([c.r, c.g, c.b, Math.max(0, fade)], v * 4); }
+    }
+    tGeo.attributes.position.needsUpdate = true; tGeo.attributes.color.needsUpdate = true;
+  }
+
   /** up into the sky. `dest` [x, z]: fly there and land by itself (the map) */
   function start(dest, then) {
     if (f) { if (dest) { f.goal = dest; f.autoLand = true; f.then = then || null; } return true; }
@@ -144,7 +163,7 @@ export function createFlight(ctx) {
     update(dt, time) {
       const want = f ? (f.phase === 'down' ? 1 + .45 * Math.min(1, f.alt / ALT) : 1.45) : 1; camK += (want - camK) * Math.min(1, dt * 1.6);
       for (const cl of clouds) { const o = Math.max(0, Math.min(.85, (camK - 1.1) * 3)); cl.material.opacity = o; cl.visible = o > .01; cl.position.x += dt * .25; if (cl.position.x > W + 6) cl.position.x = -6; }
-      if (!f) return;
+      if (!f) return void stepTrail(dt, null);
       f.t += dt; const c = f.flyer.c, sc = c.baseScale;
       if (f.own && uni.g.visible) uni.g.visible = false; if (f.friend && f.friend.g.visible) f.friend.g.visible = false;   // she is the one with the wings now
       if (f.phase === 'up') { f.alt = ALT * Math.min(1, 1 - (1 - Math.min(1, f.t / 1.3)) ** 3); if (f.t >= 1.3) f.phase = 'fly'; }
@@ -153,12 +172,13 @@ export function createFlight(ctx) {
       c.pos.copy(kid.pos); c.face = kid.face; c.moving = false; c.lift = f.alt;
       shadow.visible = true; shadow.position.x = kid.pos.x; shadow.position.z = kid.pos.z + .1; shadow.scale.set(1.5 - f.alt * .12, 1, .8 - f.alt * .06);
       kid.lift = f.alt + .36 * sc;
+      stepTrail(dt, kid.moving && f.alt > .4 ? [kid.pos.x - kid.face * .8, f.alt + .42 * sc / 1.5, kid.pos.z - .12] : null);   // the rainbow streams from her tail
       const flap = f.phase === 'up' || (f.phase === 'down' && f.alt < 1) ? 9 : Math.hypot(f.vx, f.vz) > 2 ? 6 : 3.2, fr = Math.floor(time * flap) % 4, wi = fr === 0 ? 0 : fr === 2 ? 2 : 1;
       for (const w of f.flyer.wings) {
         const near = w.userData.k === 1; w.material.map = f.flyer.wings.tex[near ? wi : (wi + 1) % 3]; w.material.emissiveMap = w.material.map;
         const k = near ? 1.35 : 1.15; w.position.set(kid.pos.x - kid.face * (.12 + .56 * k), f.alt + (near ? .66 : .74) * sc / 1.5, kid.pos.z + (near ? -.05 : -.08)); w.scale.set(k * -kid.face, k, 1);
       }
     },
-    dispose() { if (f) dropFlyer(); f = null; for (const cl of clouds) scene.remove(cl); scene.remove(shadow); },
+    dispose() { if (f) dropFlyer(); f = null; for (const cl of clouds) scene.remove(cl); scene.remove(shadow); scene.remove(ribbon); tGeo.dispose(); ribbon.material.dispose(); },
   };
 }
