@@ -188,7 +188,7 @@ export function createHud(getWorld) {
       b.onclick = e => { e.stopPropagation(); sfx.pop(); close && close(); speak(say); go(); }; at(b, tx, tz);
     };
     const P = MAP.PLACES, IS = MAP.ISLES, walk = p => () => world.travel ? world.travel(p.tile[0], p.tile[1]) : world.walkToTile(p.tile[0], p.tile[1]);
-    const PIN = { dorp: [ART.houseIcon('huisje'), 'Naar het dorp!', 0, 9], bos: [PX.pine(1), 'Naar het bos!', -12, -5], wei: [PX.flower(), 'Naar de bloemenwei!', -7, -7], strand: [ART.shell(0), 'Naar het strand!', 2, 3], eiland: [PX.rainbow(), 'Naar het regenboogeiland!', 4, 7], kasteel: [PX.crown(), 'Naar het kasteel!', -9, 5] };
+    const PIN = { dorp: [ART.houseIcon('huisje'), 'Naar het dorp!', 0, 9], bos: [PX.pine(1), 'Naar het bos!', -12, -5], wei: [PX.flower(), 'Naar de bloemenwei!', -7, -7], strand: [ART.shell(0), 'Naar het strand!', 2, 3], eiland: [PX.rainbow(), 'Naar het regenboogeiland!', -5, 7], kasteel: [PX.crown(), 'Naar het kasteel!', -9, 5] };
     for (const [k, [icon, say, dx, dz]] of Object.entries(PIN)) pin(P[k].name, icon, IS[k].cx + dx, IS[k].cz + dz, walk(P[k]), say);
     // what still closes a bridge, so it is clear why you cannot get somewhere yet
     for (const g of world.tools.gates()) { const e = document.createElement('div'); e.className = 'kaart-gate'; e.appendChild(fit(ART.propArt(g.kind), 22)); at(e, g.x, g.z); }
