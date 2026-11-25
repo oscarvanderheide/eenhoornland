@@ -8,6 +8,7 @@ export default async function (t) {
   const until = async (expr, ms = 30000) => { for (let i = 0; i < ms / 200; i++) { if (await t.ev(expr)) return true; await t.sleep(200); } return false; };
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(2000);
+  if (process.env.CYCLE) { await t.ev(`__w.Q._reset({ cycle: ${+process.env.CYCLE}, seed: 777, sand: [[60, 70, 2]], picked: { munt: [1, 2] } }); 0`); await t.go(URL); await t.sleep(2000); console.log('  (a later cycle: seed ' + await t.ev('__w.seed') + ')'); }
   const pos = () => J('__w.info().pos'), zone = async () => t.ev(`__w.M.zone[__w.M.I(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))]`);
 
   ok(!(await t.ev('__w.fly.can()')) && await t.ev(`document.getElementById('b-fly').hidden`), 'no grown unicorn yet: no wings, no button');
@@ -39,6 +40,12 @@ export default async function (t) {
   ok(pin, 'tap the castle on the map'); ok(await until(`__w.fly.on()`, 2000), 'far away: she flies there'); await t.sleep(2500); await t.shot('tmp-shots/f-6-to-castle.png');
   ok(await until(`!__w.fly.on()`, 25000), 'and lands by herself'); await t.sleep(500); await t.shot('tmp-shots/f-7-castle.png');
   { const p = await pos(); ok(await zone() === 'kasteel' && Math.hypot(p[0] - C[0], p[1] - C[1]) < 6, 'at the castle ' + p); }
+  // the goal on the map (the castle, now that she can ride): she flies there, lands and rides in through the gate
+  await t.ev(`__w.placeAt(32.5, 46.5); __w.setMount('uni'); 0`); await t.sleep(400);
+  await t.ev(`document.getElementById('b-map').click()`); await t.sleep(700);
+  ok(await t.ev(`(() => { const b = document.querySelector('.kaart-goal'); if (!b) return false; b.click(); return true; })()`), 'tap the goal on the map');
+  ok(await until(`__w.fly.on()`, 2000), 'she flies to the castle'); ok(await until(`!__w.fly.on()`, 25000), 'lands');
+  ok(await until(`__w.info().pos[1] > 102`, 15000), 'and rides on in through the castle gate'); await t.sleep(800); await t.shot('tmp-shots/f-7b-hall.png');
   // nothing to fly on in a room
   await t.ev(`__w.placeAt(27.5, 117.5)`); await t.sleep(500); ok(!(await t.ev('__w.fly.can()')), 'no flying in the cave');
   // an old unicorn from the meadow, walking along, flies her too

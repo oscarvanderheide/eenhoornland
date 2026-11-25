@@ -754,7 +754,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** a black blink (like walking through a door), with `then` done while the screen is dark */
   ctx.fade = then => { fadeEl.style.opacity = 1; setTimeout(() => { then && then(); fadeEl.style.opacity = 0; }, 240); };
   /** the camera looks at (x, z) for a while (the treehouse telescope), then comes back to her */
-  ctx.peek = (x, z, secs) => { if (peek) return; peek = { x, z, t: secs + .24, on: false }; ctx.fade(() => { peek.on = true; camTarget.set(x, 0, z); }); };
+  const scopeEl = document.createElement('div'); scopeEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:4;display:none;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 34vmin,#2B1E3A 35vmin)'; document.body.appendChild(scopeEl);
+  ctx.peek = (x, z, secs) => { if (peek) return; peek = { x, z, t: secs + .24, on: false }; ctx.fade(() => { peek.on = true; camTarget.set(x, 0, z); scopeEl.style.display = ''; }); };
   const hut = ctx.hut = createBoomhut(ctx);
   const val = ctx.val = createWaterval(ctx);
   for (const m of treeMeshes) pick.push(m);
@@ -935,7 +936,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!want && inT === 0) return;
     inT += Math.sign(want - inT) * Math.min(Math.abs(want - inT), dt * 4);
     applyNight(nightT); const k = 1 - inDark * inT;
-    hemi.intensity *= k; sun.intensity *= 1 - Math.min(1, inDark * 1.15) * inT; for (const l of rooms.lights) l.intensity = 9 * inT * (l.userData.k || 1);
+    hemi.intensity *= k; sun.intensity *= 1 - Math.min(1, inDark * 1.15) * inT; for (const l of rooms.lights) l.intensity = 9 * inT * (l.userData.k ?? 1);
     post.uniforms.night.value = Math.max(nightT, inT * inDark * .5);
   }
 
@@ -1064,13 +1065,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (markerT > 0) { markerT -= dt * 1.2; marker.material.opacity = Math.max(0, markerT); marker.scale.setScalar(1 + (1 - markerT) * .4); if (markerT <= 0) marker.visible = false; }
     for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.life -= dt * 1.1; s.v.y -= dt * 1.5; s.m.position.addScaledVector(s.v, dt); s.m.scale.setScalar(Math.max(.01, s.life)); if (s.life <= 0) { scene.remove(s.m); sparks.splice(i, 1); } }
     // camera
-    if (peek && (peek.t -= dt) <= 0 && !peek.back) { peek.back = true; ctx.fade(() => { peek = null; camTarget.set(kid.pos.x, 0, kid.pos.z); }); }   // the telescope: a blink there, a blink back
+    if (peek && (peek.t -= dt) <= 0 && !peek.back) { peek.back = true; ctx.fade(() => { peek = null; scopeEl.style.display = 'none'; camTarget.set(kid.pos.x, 0, kid.pos.z); }); }   // the telescope: a blink there, a blink back
     if (!peek || !peek.on) { camTarget.x += (kid.pos.x - camTarget.x) * Math.min(1, dt * 3); camTarget.z += (kid.pos.z - camTarget.z) * Math.min(1, dt * 3); }
     const halfW = viewW / 2; const cx = THREE.MathUtils.clamp(camTarget.x, Math.min(W / 2, halfW - 1), Math.max(W / 2, W - halfW + 1)); const cz = THREE.MathUtils.clamp(camTarget.z, 4, H - 3);
     if (wake) { wake.t += dt; const k = Math.min(1, wake.t / 6), e = k * k * (3 - 2 * k); zoom = .5 + .5 * e; wakeEl.style.opacity = String(.55 * (1 - Math.min(1, wake.t / 14))); if (wake.t > 1.4 && !wake.yawn) { wake.yawn = true; kid.hop = .4; bubble(kid, 'Mmmm!', PX.sparkle('#FFD43B')); sfx.purr(); } if (wake.t > 14) { wake = null; wakeEl.style.opacity = 0; zoom = 1; } }
     const camD = camDist * zoom * fly.camK;
     camera.position.set(cx, Math.sin(camPitch) * camD, cz + Math.cos(camPitch) * camD); camera.lookAt(cx, .6, cz - .5); camera.updateMatrixWorld(); aimSun(cx, cz - 2);
-    post.uniforms.focus.value = camera.position.distanceTo(kid.pos);
+    post.uniforms.focus.value = peek && peek.on ? camera.position.distanceTo(camTarget) : camera.position.distanceTo(kid.pos);
     // DOM
     const wpx = innerWidth, hpx = innerHeight;
     for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; if (b.dead || now > b.until) { b.el.remove(); bubbles.splice(i, 1); continue; } tmp.set(b.c.pos.x, 1.9 * (b.c.isUni ? 1.15 : 1) - (b.c === kid && who === 'anna' ? .25 : 0), b.c.pos.z).project(camera); b.el.style.left = ((tmp.x + 1) / 2 * wpx) + 'px'; b.el.style.top = ((1 - tmp.y) / 2 * hpx) + 'px'; }
@@ -1115,13 +1116,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** up into the sky on a grown unicorn, or back down (the wing button) */
     fly() { return fly.on() ? fly.land() : fly.start(); }, flying: () => fly.on(), canFly: () => fly.can(),
     /** the map: far away and she can fly, so she flies there and lands; otherwise she walks */
-    travel(x, z) { if ((fly.on() || fly.can()) && Math.hypot(x - kid.pos.x, z - kid.pos.z) > 14) return fly.start([x + .5, z + .5]); target = null; return walkTo(x, z); },
+    travel(x, z, then) { if ((fly.on() || fly.can()) && Math.hypot(x - kid.pos.x, z - kid.pos.z) > 14) return fly.start([x + .5, z + .5], then); if (then) return then(); target = null; return walkTo(x, z); },   // `then`: what to do on arrival (walk on into a building)
     /** on or off the unicorn (the HUD button); getting off a bike works the same way */
     ride() { if (fly.on()) return false; return mount ? setMount(null) : setMount('uni'); }, mount: () => mount,
     /** the island this world was built for; when Q.mapSeed() moves on (a new cycle), main.js builds a new world */
     seed,
     destroy() {
-      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); val.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
+      renderer.setAnimationLoop(null); ac.abort(); extras.dispose(); tools.dispose(); play.dispose(); life.dispose(); ways.dispose(); toys.dispose(); weather.dispose(); rooms.dispose(); fly.dispose(); hut.dispose(); val.dispose(); offWear(); fadeEl.remove(); wakeEl.remove(); scopeEl.remove(); labelsEl.innerHTML = ''; if (rt) rt.dispose();
       scene.traverse(o => {
         if (o.geometry) o.geometry.dispose(); if (o.customDepthMaterial) o.customDepthMaterial.dispose();
         for (const m of [].concat(o.material || [])) { for (const k of ['map', 'emissiveMap']) if (m[k] && m[k].dispose) m[k].dispose(); m.dispose(); }

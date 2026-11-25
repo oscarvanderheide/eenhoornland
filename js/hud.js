@@ -151,22 +151,22 @@ export function createHud(getWorld) {
     // what to do now, as pictures: the first chip is the goal of this moment, a second one shows what comes after it.
     // Nobody can read yet and there is no voice, so tapping a chip opens the map, where the goal is marked.
     Q.wishes().forEach((w, i) => chip(i ? 'next' : 'now', goalIcon(w), w.t === 'egg' || w.t === 'tool' ? '?' : '', () => { speak(Q.wishText(w)); openMap(); }, Q.quest.stage + w.t));
-    chip('coins', ART.coin(), String(Q.quest.coins), () => { speak('Met muntjes en met alles wat je vindt kun je bij de kraam in het dorp iets moois ruilen.'); const w = getWorld(); if (w && !ui.activityOpen()) w.walkToTile(MAP.STALL.x, MAP.STALL.z + 1); }, 'coins');   // coins are for the stall: she walks there
+    chip('coins', ART.coin(), String(Q.quest.coins), () => { speak('Met muntjes en met alles wat je vindt kun je bij de kraam in het dorp iets moois ruilen.'); const w = getWorld(); if (w && !ui.activityOpen()) (w.travel ? w.travel(MAP.STALL.x, MAP.STALL.z + 1) : w.walkToTile(MAP.STALL.x, MAP.STALL.z + 1)); }, 'coins');   // coins are for the stall: she walks there
     syncRide();
   }
-  function goToBed() { const w = getWorld(); speak('Naar het huisje, lekker slapen!'); if (w && !ui.activityOpen()) w.walkToBuilding('huisje'); }
+  function goToBed() { const w = getWorld(); speak('Naar het huisje, lekker slapen!'); if (w && !ui.activityOpen()) { const d = MAP.houseDoor(MAP.HOUSES.huisje); w.travel ? w.travel(d[0], d[1] + 1, () => w.walkToBuilding('huisje')) : w.walkToBuilding('huisje'); } }
 
   /* ---------- the map: all the islands, where you are, and where to go now ---------- */
   /** where the goal of this moment is: {icon, text, at: [x, z] on the map, go()} */
   function goal(world) {
     const I = MAP.ISLES, P = MAP.PLACES, w = Q.wishes()[0], walk = t => () => world.travel ? world.travel(t[0], t[1]) : world.walkToTile(t[0], t[1]);
-    if (Q.bedtime()) { const h = MAP.HOUSES.huisje; return { icon: ART.bedIcon(), text: '', at: [h.x + h.w / 2, h.z + h.d / 2], go: () => world.walkToBuilding('huisje') }; }
+    if (Q.bedtime()) { const h = MAP.HOUSES.huisje; return { icon: ART.bedIcon(), text: '', at: [h.x + h.w / 2, h.z + h.d / 2], go: goToBed }; }
     if (!w) return null;
     if (w.t === 'tool') { const ts = world.tools.spot(w.id); return ts && { icon: goalIcon(w), text: '', at: ts, go: walk([Math.floor(ts[0]), Math.floor(ts[1])]) }; }
     if (w.t === 'egg') { const z = I[Q.quest.zone] ? Q.quest.zone : 'bos'; return { icon: goalIcon(w), text: '?', at: [I[z].cx, I[z].cz + 2], go: walk(P[z].tile) }; }
     if (w.t === 'star') return { icon: goalIcon(w), text: '', at: [I.wei.cx + 6, I.wei.cz], go: walk(P.wei.tile) };
     if (w.t === 'fruit') return { icon: goalIcon(w), text: '', at: [MAP.RAINBOW_TREE[0] + 1, MAP.RAINBOW_TREE[1] + 1], go: walk([MAP.RAINBOW_TREE[0] + 1, MAP.RAINBOW_TREE[1] + 1]) };
-    return { icon: goalIcon(w), text: '', at: [MAP.CASTLE.x + MAP.CASTLE.w / 2, MAP.CASTLE.z + MAP.CASTLE.d / 2 + 2], go: () => world.walkToBuilding('kasteel') };
+    return { icon: goalIcon(w), text: '', at: [MAP.CASTLE.x + MAP.CASTLE.w / 2, MAP.CASTLE.z + MAP.CASTLE.d / 2 + 2], go: () => world.travel ? world.travel(MAP.CASTLE.door[0], MAP.CASTLE.door[1] + 2, () => world.walkToBuilding('kasteel')) : world.walkToBuilding('kasteel') };
   }
   function openMap() {
     const world = getWorld(); if (!world || !document.getElementById('modal').hidden) return; sfx.pop();

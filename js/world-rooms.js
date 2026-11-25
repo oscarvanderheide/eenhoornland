@@ -43,9 +43,17 @@ export function createRooms(ctx) {
     const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wallMat[kind](side), wallMat[kind](side), top, top, wallMat[kind](front), wallMat[kind](front)]));
     m.position.set(x0 + w / 2, h / 2, z0 + d / 2); scene.add(m); return m;
   }
-  function torch(x, z, y = 1.35, soft = false) {   // in the cave a glowing crystal instead of a flame
+  // the lights of the rooms: only the room she is in is lit, so five lights move to wherever she is (fewer lights, faster on a phone)
+  const specs = {}, pool = Array.from({ length: 5 }, () => { const l = new THREE.PointLight('#FFFFFF', 0, 7, 1.4); l.userData.k = 0; scene.add(l); lights.push(l); return l; });
+  const lightAt = (room, color, dist, decay, k, x, y, z) => (specs[room] = specs[room] || []).push({ color, dist, decay, k, x, y, z });
+  let litRoom = null;
+  function light(room) {
+    if (room === litRoom) return; litRoom = room; const sp = specs[room] || [];
+    pool.forEach((l, i) => { const s = sp[i]; if (!s) { l.userData.k = 0; l.intensity = 0; return; } l.color.set(s.color); l.distance = s.dist; l.decay = s.decay; l.position.set(s.x, s.y, s.z); l.userData.k = s.k; });
+  }
+  function torch(room, x, z, y = 1.35, soft = false) {   // in the cave a glowing crystal instead of a flame
     const m = makeSprite(soft ? ART.propArt('kristal', x | 0) : ART.fakkel(0), { lean: 0, shadow: false, scale: 1.1 }); m.position.set(x, y - .3, z); scene.add(m); if (!soft) flames.push(m);
-    const l = new THREE.PointLight(soft ? '#FFD6F0' : '#FFB45E', 0, 7, 1.4); l.userData.k = soft ? .35 : 1; l.position.set(x, y + .2, z + .35); scene.add(l); lights.push(l);
+    lightAt(room, soft ? '#FFD6F0' : '#FFB45E', 7, 1.4, soft ? .35 : 1, x, y + .2, z + .35);
   }
   for (const [k, r] of Object.entries(R)) {
     const H2 = k === 'grot' || k === 'val' ? 2.4 : 2.9;
@@ -54,9 +62,9 @@ export function createRooms(ctx) {
     wall(k, r.x0 - 1, r.z1 + 1, r.exit[0] - 1, r.z1 + 1, .45); wall(k, r.exit[0] + 1, r.z1 + 1, r.x1 + 1, r.z1 + 1, .45);   // a low front wall, so nothing hides her
     { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
     if (r.wall) { const gz = r.gate.map(g => g[1]); wall(k, r.wall, r.z0, r.wall, Math.min(...gz) - 1, 1.7); wall(k, r.wall, Math.max(...gz) + 1, r.wall, r.z1, 1.7); }   // the wall between the cave's two rooms
-    if (k === 'val') { for (const fx of [.2, .5, .8]) { const l = new THREE.PointLight('#A8E8FF', 0, 9, 1.3); l.userData.k = .55; l.position.set(r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); scene.add(l); lights.push(l); } continue; }
-    if (k === 'hut') { for (const fx of [.25, .75]) { const l = new THREE.PointLight('#FFD9A0', 0, 8, 1.3); l.userData.k = .5; l.position.set(r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); scene.add(l); lights.push(l); } continue; }   // warm daylight through the windows
-    const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
+    if (k === 'val') { for (const fx of [.2, .5, .8]) lightAt(k, '#A8E8FF', 9, 1.3, .55, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); continue; }
+    if (k === 'hut') { for (const fx of [.25, .75]) lightAt(k, '#FFD9A0', 8, 1.3, .5, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); lightAt(k, '#BFE8FF', 3.5, 1.5, .2, r.zip[0] + .5, 1, r.z0 + .5); continue; }   // warm daylight through the windows
+    const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(k, r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
   }
 
   /* ---------------- the cave mouth in the forest ---------------- */
@@ -168,7 +176,7 @@ export function createRooms(ctx) {
     where: () => MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)),
     info: () => ({ coins: coins.length, chest: chest.open > 0 }),
     update(dt, time, active) {
-      const inRoom = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)); for (const d of darks) d.visible = !!inRoom;
+      const inRoom = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)); for (const d of darks) d.visible = !!inRoom; light(inRoom);
       beam.material.opacity = .32 + Math.sin(time * .8) * .08;
       for (let i = 0; i < flames.length; i++) { const f = Math.floor(time * 6 + i) % 2, t = tex(ART.fakkel(f)); if (flames[i].userData.f !== f) { flames[i].userData.f = f; flames[i].material.map = t; flames[i].material.emissiveMap = t; } }
       for (const c of coins) { const near = Math.abs(c.x - kid.pos.x) < 3.5 && Math.abs(c.z - kid.pos.z) < 3.5; c.m.scale.x = near ? Math.max(.15, Math.abs(Math.cos(time * 2 + c.ph))) : 1; }

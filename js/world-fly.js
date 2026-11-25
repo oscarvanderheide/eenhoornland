@@ -57,7 +57,7 @@ export function createFlight(ctx) {
   }
   function landingNear(px, pz) {
     const cx = Math.floor(px), cz = Math.floor(pz); let best = null, bd = 1e9;
-    for (let r = 0; r < 90 && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+    for (let r = 0; r < W && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue; const x = cx + dx, z = cz + dz;
       if (!landOk(x, z)) continue; const d = Math.hypot(x + .5 - px, z + .5 - pz); if (d < bd) { bd = d; best = [x + .5, z + .5]; }
     }
@@ -88,10 +88,11 @@ export function createFlight(ctx) {
   }
 
   /** up into the sky. `dest` [x, z]: fly there and land by itself (the map) */
-  function start(dest) {
-    if (f) { if (dest) { f.goal = dest; f.autoLand = true; } return true; }
+  function start(dest, then) {
+    if (f) { if (dest) { f.goal = dest; f.autoLand = true; f.then = then || null; } return true; }
     const who = carrier(); if (!who) return false;
-    const ride = who.own; f = { ...who, alt: 0, phase: 'up', t: 0, vx: 0, vz: 0, goal: dest || null, autoLand: !!dest };
+    const ride = who.own; f = { ...who, alt: 0, phase: 'up', t: 0, vx: 0, vz: 0, goal: dest || null, autoLand: !!dest, then: then || null };
+    ctx.placeAt(kid.pos.x, kid.pos.z, -kid.face, 0);                                  // off any stump or bale she stood on
     f.allowed = reachable(Math.floor(kid.pos.x), Math.floor(kid.pos.z), ride || Q.canRide());
     if (ctx.mount() === 'uni') ctx.setMount(null, true);
     kid.path = []; ctx.clearWalk();
@@ -108,12 +109,13 @@ export function createFlight(ctx) {
     f.phase = 'down'; f.land = p; f.t = 0; sfx.whoosh(); return true;
   }
   function touchDown() {
-    const c = f.flyer.c, own = f.own, friend = f.friend; dropFlyer(); shadow.visible = false; const look = f.look; f = null;
+    const c = f.flyer.c, own = f.own, friend = f.friend, then = f.autoLand ? f.then : null; dropFlyer(); shadow.visible = false; const look = f.look; f = null;
     kid.sit = false; kid.lift = 0; kid.zBias = .06; kid.dx = 0; kid.squash = .6;
     ctx.placeAt(kid.pos.x, kid.pos.z, -kid.face, 0);
     if (own) { uni.g.visible = true; uni.pos.copy(kid.pos); ctx.setMount('uni', true); }
     else if (friend) { friend.g.visible = true; friend.pos.set(kid.pos.x - kid.face * 1.2, 0, kid.pos.z + .2); if (!ctx.walkable(Math.floor(friend.pos.x), Math.floor(friend.pos.z))) friend.pos.copy(kid.pos); friend.hop = 1; }
     sfx.pop(); sfx.boing(); burst(kid.pos, 10, true); void c; void look;
+    if (then) setTimeout(then, 350);
   }
 
   return {
@@ -131,7 +133,7 @@ export function createFlight(ctx) {
         f.vx = 0; f.vz = 0; kid.moving = d > .05; return;
       }
       let ix = kx, iz = kz;
-      if (ix || iz) f.goal = null, f.autoLand = false;
+      if (ix || iz) f.goal = null, f.autoLand = false, f.then = null;
       else if (f.goal) { const dx = f.goal[0] - kid.pos.x, dz = f.goal[1] - kid.pos.z, d = Math.hypot(dx, dz); if (d < .6) { f.goal = null; if (f.autoLand) land(); } else { const k = Math.min(1, d / 2.5); ix = dx / d * k; iz = dz / d * k; } }
       const l = Math.hypot(ix, iz), m = l > 1 ? 1 / l : 1, k = Math.min(1, dt * 3.2);
       f.vx += (ix * m * SPEED - f.vx) * k; f.vz += (iz * m * SPEED - f.vz) * k;

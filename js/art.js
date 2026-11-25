@@ -3,7 +3,7 @@
 import * as PX from './pixel.js';
 import * as ISLE from './art-isles.js';
 export { ISLE };
-import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, CV, HF, RK, WF, POND, ROOMS } from './map.js';
+import { GR, PA, WA, PL, SA, SE, FO, CO, SO, BW, CV, HF, RK, WF, POND, ROOMS, OUT_H } from './map.js';
 
 const { sprite, gridSprite, mix, rgb } = PX;
 const EYE = '#2B1E3A';
@@ -58,7 +58,7 @@ export function paintGround(M) {
         const carpet = Math.abs(tx + .5 - (ROOMS.hal.in[0] + .5)) < 1.5 && (px > 2 || tx >= ROOMS.hal.in[0]) && (px < 13 || tx <= ROOMS.hal.in[0]);
         if (carpet) col = (px === 3 && tx === ROOMS.hal.in[0] - 1) || (px === 12 && tx === ROOMS.hal.in[0] + 1) ? '#F7C548' : (py + px) % 7 === 0 ? '#C23A4E' : '#D9475C';
         else { const bx = (px + (tz % 2) * 8) % 16, by = py % 16; col = (bx === 0 || by === 0) ? '#8C8199' : ((tx + tz) % 2 ? '#D5CCE0' : '#C6BCD4'); if (r() < .03) col = '#E4DCEC'; } }
-      else if (t === RK) col = r() < .08 ? '#2A2230' : '#221B28';
+      else if (t === RK) col = tz < OUT_H ? (r() < .3 ? '#9A9EB2' : '#B0B4C4') : r() < .08 ? '#2A2230' : '#221B28';   // a cliff on an island (seen on the map), else the rock round the rooms
       else if (t === WF) { const n = (tx * 11 + tz * 5 + Math.floor(px / 6) * 3 + Math.floor(py / 6) * 7) % 10; col = r() < .03 ? '#E8FAFF' : n < 2 ? '#6E8FA6' : n < 6 ? '#7FA2B8' : '#8DB2C6'; if (py % 6 === 0 && (px + tx) % 5 < 2) col = '#5E7E96'; }   // wet blue stone behind the waterfall
       else if (t === BW) { const by = py % 4; col = by === 0 ? '#8A5A3B' : ['#CC9A68', '#C18F5C', '#D6A674'][(tx * 3 + Math.floor(py / 4) + Math.floor(px / 8)) % 3]; if (by === 2 && (px === 1 || px === 14)) col = '#7A4E33'; }
       put(tx * U + px, tz * U + py, col);

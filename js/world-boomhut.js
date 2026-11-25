@@ -53,7 +53,6 @@ export function createBoomhut(ctx) {
   /* ---------------- inside: the platform at the back, the telescope, the acorns ---------------- */
   const out = makeSprite(WILD.zipDeur(), { lean: 0, shadow: false, scale: 1.1 }); out.position.set(R.zip[0] + .5, 0, R.z0 + .02); scene.add(out);
   out.userData.alpha = WILD.zipDeur(); out.userData.tap = () => { sfx.pop(); ctx.walkToTile(R.zip[0], R.zip[1]); }; pick.push(out);
-  const glow = new THREE.PointLight('#BFE8FF', 0, 3, 1.5); glow.position.set(R.zip[0] + .5, 1, R.z0 + .5); scene.add(glow);
   // the telescope: each look shows another island, the way a bird would see it
   const scope = makeSprite(WILD.telescoop(), { lean: .3, scale: 1.1 }); const SX = R.x0 + 1.5, SZ = R.z0 + .7; scope.position.set(SX, 0, SZ); scene.add(scope); ctx.solid(Math.floor(SX), Math.floor(SZ));
   const VIEWS = ['kasteel', 'eiland', 'strand', 'wei', 'dorp'].map(k => [MAP.PLACES[k].tile[0] + .5, MAP.PLACES[k].tile[1] + .5]); let view = 0;
@@ -96,7 +95,6 @@ export function createBoomhut(ctx) {
     info: () => ({ riding: !!ride, view, A: [A.x, A.y, A.z], B: [B.x, B.y, B.z] }),
     update(dt, time) {
       if (ride) stepRide(dt); if (nap) stepNap(dt, time);
-      glow.intensity = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)) === 'hut' ? 1.6 + Math.sin(time * 2.5) * .5 : 0;
       if (pile.userData.wob > 0) { pile.userData.wob -= dt; pile.rotation.z = Math.sin(pile.userData.wob * 40) * .06; } else pile.rotation.z = 0;
       for (let i = rolling.length - 1; i >= 0; i--) {
         const r = rolling[i]; r.t += dt;

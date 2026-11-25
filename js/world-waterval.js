@@ -24,13 +24,24 @@ export function createWaterval(ctx) {
     for (let k = 0; k < w / 4; k++) { x.fillStyle = '#7BC86C'; x.fillRect(Math.floor(r() * w), Math.floor(r() * h), 2, 1); }
     return c;
   }
-  const grass = new THREE.MeshLambertMaterial({ color: '#7BC86C' }), fallX = x => x >= F.fall[0] && x <= F.fall[1];
+  // one mesh for the whole cliff (two materials: rock on the sides, grass on top), so it costs two draws, not ninety
+  const fallX = x => x >= F.fall[0] && x <= F.fall[1], rockTex = tex(rockCanvas(4, 3, 7)); rockTex.wrapS = rockTex.wrapT = THREE.RepeatWrapping;
+  const pos = [], nor = [], uv = [], sides = [], tops = [];
   for (let x = F.x0; x <= F.x1; x++) {
     let z0 = null, z1 = null; for (let z = F.z0; z <= F.z1; z++) if (M.ground[I(x, z)] === MAP.RK && M.block[I(x, z)]) { if (z0 === null) z0 = z; z1 = z; }
     if (z0 === null) continue;
-    const h = F.h + (fallX(x) ? 0 : .15 + Math.abs(Math.sin(x * 1.7)) * .55), d = z1 - z0 + 1, side = new THREE.MeshLambertMaterial({ map: tex(rockCanvas(d, h, x)) }), front = new THREE.MeshLambertMaterial({ map: tex(rockCanvas(1, h, x * 3)) });
-    const b = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1, h, d), [side, side, grass, grass, front, front])); b.position.set(x + .5, h / 2, z0 + d / 2); scene.add(b);
+    const h = F.h + (fallX(x) ? 0 : .15 + Math.abs(Math.sin(x * 1.7)) * .55), g = new THREE.BoxGeometry(1, h, z1 - z0 + 1).toNonIndexed();
+    g.translate(x + .5, h / 2, (z0 + z1 + 1) / 2);
+    const P = g.attributes.position, N = g.attributes.normal;
+    for (let i = 0; i < P.count; i += 3) {
+      const top = N.getY(i) > .5, list = top ? tops : sides;
+      for (let k = 0; k < 3; k++) { const j = i + k, px = P.getX(j), py = P.getY(j), pz = P.getZ(j); list.push([px, py, pz, N.getX(j), N.getY(j), N.getZ(j), Math.abs(N.getX(j)) > .5 ? pz / 4 : px / 4, (h - (h - py)) / 3 + (top ? 0 : 0)]); }
+    }
   }
+  for (const v of [...sides, ...tops]) { pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5]); uv.push(v[6], v[7]); }
+  const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); cg.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); cg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  cg.addGroup(0, sides.length, 0); cg.addGroup(sides.length, tops.length, 1);
+  scene.add(shadowed(new THREE.Mesh(cg, [new THREE.MeshLambertMaterial({ map: rockTex }), new THREE.MeshLambertMaterial({ color: '#7BC86C' })])));
   for (const [dx, dz, s] of [[2.5, 1.2, 1.2], [11.5, 1.6, 1.4], [5, .4, .9], [13.4, .8, 1]]) { const b = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), new THREE.MeshLambertMaterial({ color: '#B0B4C4', flatShading: true }))); b.position.set(F.x0 + dx, F.h + .3, F.z0 + dz + 1); b.scale.y = .6; scene.add(b); }
   for (const [dx, dz, k] of [[1.5, 2.5, 1], [3.6, 2, 2], [12.4, 2.6, 3], [14, 1.8, 1]]) { const m = makeSprite(ART.propArt('pine', k), { lean: .3 }); m.position.set(F.x0 + dx, F.h, F.z0 + dz + 1); scene.add(m); }
 
