@@ -7,7 +7,7 @@ export const OUT_H = 96, ROCK_Z = 100;
 export const GR = 0, PA = 1, WA = 2, PL = 3, SA = 4, SE = 5, FO = 6, CO = 7, SO = 8, BW = 9, CV = 10, HF = 11, RK = 12, WF = 13; // grass path pond plaza sand sea forest cobble soil boardwalk, cave floor, hall floor, rock, wet stone (behind the waterfall)
 /** every island: centre and half-sizes of a rounded rectangle with a wobbly edge */
 export const ISLES = {
-  dorp: { cx: 31, cz: 42, rx: 16, rz: 13, more: [{ cx: 29, cz: 58, rx: 10, rz: 4.6 }] },   // the south: the pig in the mud
+  dorp: { cx: 31, cz: 42, rx: 16, rz: 13, more: [{ cx: 29, cz: 58, rx: 10, rz: 4.6 }, { cx: 14, cz: 42.5, rx: 7.5, rz: 6 }] },   // the south: the pig in the mud; the west: the duck pond
   bos: { cx: 33, cz: 14, rx: 21, rz: 10, more: [{ cx: 56, cz: 14.5, rx: 6.8, rz: 7.5 }] },   // the east lobe: the treehouse glade
   wei: { cx: 71, cz: 43, rx: 15, rz: 11, more: [{ cx: 93, cz: 41, rx: 9.5, rz: 9.5 }] },   // the east lobe: the cliff with the waterfall
   strand: { cx: 66, cz: 71, rx: 24, rz: 7, more: [{ cx: 58, cz: 80.5, rx: 12, rz: 5.5 }, { cx: 79, cz: 79.5, rx: 9, rz: 4.5 }] },   // the south: dunes and the turtles' nest
@@ -25,7 +25,9 @@ const wobble = (s, x, z) => wobble1(partAt(s, x, z), x, z);
 export function zoneAt(x, z) { let best = 'dorp', bd = 1e9; for (const k of ZONES) { const d = metric(ISLES[k], x, z); if (d < bd) { bd = d; best = k; } } return best; }
 const onLand = (x, z) => ZONES.some(k => metric(ISLES[k], x + .5, z + .5) <= 1 + wobble(ISLES[k], x + .5, z + .5));
 
-export const POND = { cx: 27, cz: 41, rx: 1.95, rz: 1.85 };
+export const POND = { cx: 14.5, cz: 42.5, rx: 2.4, rz: 2 };                         // dorp: the duck pond, in its own corner in the west
+/** dorp: benches to sit on (tiles x..x+1 at z, facing south); `at` is where she stands before she hops on */
+export const BENCHES = [{ x: 12, z: 39 }, { x: 16, z: 39 }, { x: 27, z: 39 }].map(b => Object.assign(b, { cx: b.x + 1, cz: b.z + .5, at: [b.x + (b.x === 12 ? 1 : 0), b.z + 1] }));
 export const FOUNT = { cx: 32, cz: 41 };
 export const START = [31.5, 36.6];                                                    // at her own front door: every day begins at home
 export const LANTERNS = [[19, 38], [28, 38], [35, 38], [44, 38], [28, 44], [35, 44], [26, 47], [44, 43]];
@@ -139,7 +141,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
     [...POTS, CAN, KITE, BUCKET, ...RAMPS, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
-    [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+    [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], ...BENCHES.flatMap(b => [b.at, [b.x, b.z + 1], [b.x + 1, b.z + 1]]), [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -166,7 +168,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
 
   /* ---- dorp ---- */
   rect(20, 36, 43, 37, PA); rect(31, 35, 32, 50, PA); rect(20, 45, 46, 46, PA); rect(29, 39, 34, 43, PL); rect(40, 31, 41, 35, PA); rect(28, 49, 30, 50, PA);
-  for (let z = 30; z < 54; z++) for (let x = 16; x < 46; x++) if (((x + .5 - POND.cx) / POND.rx) ** 2 + ((z + .5 - POND.cz) / POND.rz) ** 2 <= 1) { ground[I(x, z)] = WA; block[I(x, z)] = 1; }
+  trail([[20.5, 36.5], [18, 38], [14, 38.4], [11, 39]], .7); trail([[20.5, 45.5], [17.5, 45.4]], .7);   // out west to the pond
+  for (let z = 30; z < 54; z++) for (let x = 6; x < 46; x++) if (((x + .5 - POND.cx) / POND.rx) ** 2 + ((z + .5 - POND.cz) / POND.rz) ** 2 <= 1) { ground[I(x, z)] = WA; block[I(x, z)] = 1; }
   rect(GARDEN.x0, GARDEN.z0, GARDEN.x1, GARDEN.z1, SO);
   trail([[29, 50.5], [29, 55.5], [27.5, 57.5]], .75);                                           // down to the pig's mud
   /* ---- bos ---- */
@@ -210,6 +213,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   for (const s of solids) solid(...s);
   solid(31, 40, 32, 41);                                         // fountain
   solid(STALL.x, STALL.z, STALL.x + STALL.w - 1, STALL.z);       // the stall
+  for (const b of BENCHES) solid(b.x, b.z, b.x + 1, b.z);        // the benches
   for (const [x, z] of LANTERNS) block[I(x, z)] = 1;
   solid(CASTLE.x, CASTLE.z, CASTLE.x + CASTLE.w - 1, CASTLE.z + CASTLE.d - 1);
   solid(CAVE.x0, CAVE.z0, CAVE.x1, CAVE.z1); block[I(...ROOMS.grot.door)] = 0;                   // the rock, with the dark mouth of the cave in it
@@ -375,7 +379,7 @@ export function validate(m, keep = []) {
   ok(m.reach0[I(Math.floor(BIKE[0]), Math.floor(BIKE[1]))], 'bike unreachable'); for (const b of BALLS) ok(m.reach[I(Math.floor(b[0]), Math.floor(b[1]))], 'ball unreachable');
   // the toys: everything a child sees must be reachable, in the part of the world it belongs to
   const T = ([x, z]) => I(Math.floor(x), Math.floor(z));
-  for (const p of [...POTS, CAN, [STALL.x, STALL.z + 1]]) ok(m.reach0[T(p)] && !m.block[T(p)], 'village toy unreachable ' + p);
+  for (const p of [...POTS, CAN, [STALL.x, STALL.z + 1], ...BENCHES.map(b => b.at)]) ok(m.reach0[T(p)] && !m.block[T(p)], 'village toy unreachable ' + p);
   ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable');
   for (const p of RAMPS) ok(m.reach[T(p)] && !m.block[T(p)], 'ramp unreachable ' + p);
   let sail = 0; for (let z = LAGOON.z0; z <= LAGOON.z1; z++) for (let x = LAGOON.x0; x <= LAGOON.x1; x++) if (m.ground[I(x, z)] === SE && !m.deck[I(x, z)]) sail++;

@@ -362,20 +362,43 @@ export const boei = () => cached('boei', () => sprite(['...k...', '..yk...', '..
 export const kistje = () => cached('kistje', () => sprite(['.bbbbbbb.', 'bByyyyyBb', 'bbbbybbbb', 'bBBByBBBb', 'bBBBBBBBb', 'bbbbbbbbb'], { b: '#8A5A3B', B: '#B5823F', y: '#FFD43B' }));
 export const walvis = () => cached('walvis', () => gridSprite(28, 13, (x, y) => { const dd = ((x + .5 - 14) / 14) ** 2 + ((y + .5 - 13) / 12.5) ** 2; if (dd > 1) return null; if (x >= 20 && x <= 21 && y >= 6 && y <= 7) return y === 6 && x === 21 ? '#FFFFFF' : EYE; if (y === 10 && x > 16 && x < 26) return '#2F5FA0'; if (y > 10 && x > 3) return '#DCEBFA'; return (x * 3 + y * 5) % 17 === 0 ? '#7CA8E6' : '#5B8FD6'; }));
 export const walvisschaduw = () => cached('walvisS', () => gridSprite(24, 10, (x, y) => ((x + .5 - 12) / 12) ** 2 + ((y + .5 - 5) / 5) ** 2 <= 1 ? ((x + y) % 2 ? '#2B74B8' : '#2F7FC0') : null, { outline: false }));
-const uil = () => sprite(['b......b', 'bbbbbbbb', 'bwwbbwwb', 'bwkbbkwb', 'bbbyybbb', 'bBBBBBBb', 'bBBBBBBb'], { b: '#B5823F', B: '#F2D7A6', w: '#FFFFFF', k: EYE, y: '#FFD43B' }, { outline: false });
-/** the stall on the village square: an owl behind the counter and a few of the things she makes */
-export const kraam = () => cached('kraam', () => {
-  const base = gridSprite(34, 32, (x, y) => {
-    if (y < 8) return Math.floor((x + 1) / 4) % 2 ? '#FF7EB6' : '#FFFFFF';
-    if (y < 10) return Math.floor((x + 1) / 2) % 2 ? (Math.floor((x + 1) / 4) % 2 ? '#E0559A' : '#E6DDCF') : null;
-    if (x < 2 || x > 31) return '#8A5A3B';
-    if (y >= 22) return y === 22 ? '#F2D7A6' : (x % 8 === 0 ? '#8A5A3B' : (y % 4 === 1 ? '#B5823F' : '#C18F5C'));
-    return '#4A3560';
-  });
-  const c = copy(base), x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-  x.drawImage(uil(), 14, 16); x.drawImage(PX.crown(), 4, 11); x.drawImage(wearIcon('strik'), 21, 12); x.drawImage(PX.heart(), 26, 17, 6, 6);
-  return c;
-});
+/** the owl who keeps the stall: snowy white with lilac wings and big round eyes, so she stands out against the dark booth */
+export const uil = () => cached('kraamuil', () => sprite([
+  '.LL........LL.',
+  '.LWL......LWL.',
+  '..WWWWWWWWWW..',
+  '.WWWWWWWWWWWW.',
+  'WWyyyyWWyyyyWW',
+  'WWykkyWWykkyWW',
+  'WWykwyWWywkyWW',
+  'WWyyyyooyyyyWW',
+  '.WWWWWooWWWWW.',
+  'LLWWPWWWWPWWLL',
+  'LLWWPPPPPPWWLL',
+  'LLWcWPWWPWcWLL',
+  'LLWWWcWWcWWWLL',
+  '.LLWcWWWWcWLL.',
+  '..LWWWWWWWWL..',
+  '...ff....ff...',
+], { W: '#FFFDF8', L: '#B49CEB', y: '#FFE08A', k: EYE, w: '#FFFFFF', o: '#FF9F43', P: '#FF7EB6', c: '#DCD2F4', f: '#FF9F43' }));
+/** the stall's parts (world-toys.js builds the booth from them): the dark back wall with bunting, the counter's
+ *  painted front, and the striped awning with its scalloped edge */
+export const kraamWand = () => cached('kraamWand', () => gridSprite(34, 22, (x, y) => {
+  if (x < 2 || x > 31) return '#F4EDE4';
+  if (y < 4) { const k = Math.floor((x - 2) / 5), dx = (x - 2) % 5; return y <= (dx <= 2 ? dx : 4 - dx) ? ['#FF7EB6', '#FFD43B', '#4DABF7', '#5DC88A', '#B49CEB', '#FF9F43'][k % 6] : '#4A3560'; }   // a string of little flags
+  return (x * 5 + y * 3) % 29 === 0 ? '#6A5285' : '#4A3560';
+}, { outline: false }));
+export const kraamToonbank = () => cached('kraamToonbank', () => gridSprite(34, 10, (x, y) => {
+  if (y === 0) return '#FFFFFF'; if (y === 9) return '#7FC9AE';
+  const hx = x - 16.5, hy = y - 4.2, heart = (hx * hx + (hy - Math.abs(hx) * .55) ** 2) < 7;   // a heart in the middle
+  if (heart && y > 1 && y < 8 && Math.abs(hx) < 4) return '#FF7EB6';
+  return Math.floor(x / 4) % 2 ? '#A8E6CF' : '#C4F0DD';
+}, { outline: false }));
+export const kraamLuifel = () => cached('kraamLuifel', () => gridSprite(34, 10, (x, y) => {
+  const stripe = Math.floor((x + 1) / 4) % 2 ? '#FF7EB6' : '#FFFFFF';
+  if (y < 7) return stripe;
+  const dx = (x + 1) % 4; return y - 7 < (dx === 0 || dx === 3 ? 1 : 3) ? (stripe === '#FFFFFF' ? '#F2E6EE' : '#E0559A') : null;   // scallops
+}, { outline: false }));
 const DRESS_ICON = ['..d...d..', '..ddddd..', '...ddd...', '..ddddd..', '.ddddddd.', '.ddddddd.', 'DDDDDDDDD'];
 /** a picture of something to wear (the cards of the stall) */
 export function wearIcon(id) {
@@ -494,7 +517,7 @@ const BABY_TOP = [
   '.oybbbbbbbbbbb....',
   '..yBBBBBBBBBBB....',
 ];
-const BABY_LEGS = { idle: ['...BB.bb.BB.bb....', '...ff.ff.ff.ff....'], w1: ['....BBbb..BBbb....', '....ffff..ffff....'], w2: ['..BB..bb.BB...bb..', '..ff..ff.ff...ff..'] };
+const BABY_LEGS = { idle: ['...BB.bb.BB.bb....', '...ff.ff.ff.ff....'], w1: ['...BB.ff.ff.bb....', '...ff.......ff....'], w2: ['...ff.bb.BB.ff....', '......ff.ff.......'] };   // a trot: diagonal pairs lift
 function babySprite(u, frame, sleep) {
   let top = BABY_TOP; if (sleep) top = top.map((r, i) => i === 4 ? r.replace('k', 'b') : (i === 5 ? r.replace('k', 'B') : r));
   return sprite([...top, ...BABY_LEGS[frame] || BABY_LEGS.idle], PX.uniPalette(u), { key: 'baby' + u.body + u.mane + u.horn + frame + sleep });

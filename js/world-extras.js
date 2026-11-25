@@ -18,14 +18,38 @@ export function createExtras(ctx) {
 
   /* ---------------- meadow fence ---------------- */
   {
-    const P = MAP.PEN, white = lam('#FFF6E3'), posts = [];
-    const isGate = (x, z) => P.gate.some(g => g[0] === x && g[1] === z);
-    for (let z = P.z0; z <= P.z1; z++) for (let x = P.x0; x <= P.x1; x++) if ((x === P.x0 || x === P.x1 || z === P.z0 || z === P.z1) && !isGate(x, z)) posts.push([x + .5, z + .5]);
-    const inst = shadowed(new THREE.InstancedMesh(new THREE.BoxGeometry(.16, .8, .16), white, posts.length)); const d = new THREE.Object3D();
-    posts.forEach(([x, z], i) => { d.position.set(x, .4, z); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); }); scene.add(inst);
-    const rail = (x0, z0, x1, z1) => { for (const y of [.3, .58]) { const m = shadowed(new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1 - x0) + .08, .09, Math.abs(z1 - z0) + .08), white)); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); scene.add(m); } };
-    const a = P.x0 + .5, b = P.x1 + .5, n = P.z0 + .5, s = P.z1 + .5, g0 = Math.min(...P.gate.map(g => g[0])), g1 = Math.max(...P.gate.map(g => g[0]));
-    rail(a, s, b, s); rail(a, n, a, s); rail(b, n, b, s); rail(a, n, g0 - .5, n); rail(g1 + 1.5, n, b, n);
+    const P = MAP.PEN, n = P.z0 + .5;
+    const g0 = Math.min(...P.gate.map(g => g[0])), g1 = Math.max(...P.gate.map(g => g[0]));
+    const [board, brush] = canvas(16, 14);
+    const paint = (color, x, y, w, h) => { brush.fillStyle = color; brush.fillRect(x, y, w, h); };
+    for (const y of [4, 9]) {
+      paint('#BC9D88', 0, y, 16, 3);
+      paint('#F3DEBD', 0, y, 16, 2);
+    }
+    paint('#C8AC94', 6, 2, 4, 12);
+    paint('#FFF3D8', 6, 2, 3, 11);
+    paint('#FFF3D8', 7, 1, 2, 1);
+    for (const y of [5, 10]) paint('#BA9782', 7, y, 1, 1);
+    const geo = new THREE.PlaneGeometry(1, 14 / 16);
+    const mat = new THREE.MeshLambertMaterial({ map: tex(board), alphaTest: .5, side: THREE.DoubleSide });
+    function panel(x, z, side) {
+      const m = shadowed(new THREE.Mesh(geo, mat));
+      m.position.set(x, 7 / 16, z);
+      if (side) m.rotation.y = Math.PI / 2;
+      scene.add(m);
+    }
+    for (let x = P.x0; x <= P.x1; x++) {
+      panel(x + .5, P.z1 + .5, false);
+      if (x < g0 || x > g1) panel(x + .5, n, false);
+    }
+    for (let z = P.z0; z < P.z1; z++) {
+      panel(P.x0 + .5, z + 1, true);
+      panel(P.x1 + .5, z + 1, true);
+    }
+    // seen from the south the side panels are edge-on: real posts along them so the sides still read as a fence
+    const sidePosts = []; for (let z = P.z0; z <= P.z1; z++) for (const x of [P.x0, P.x1]) sidePosts.push([x + .5, z + .5]);
+    const pi = shadowed(new THREE.InstancedMesh(new THREE.BoxGeometry(.16, .82, .16), lam('#FFF3D8'), sidePosts.length)), pd = new THREE.Object3D();
+    sidePosts.forEach(([x, z], i) => { pd.position.set(x, .41, z); pd.updateMatrix(); pi.setMatrixAt(i, pd.matrix); }); scene.add(pi);
     // gate arch with a heart: it stands open, this is where the unicorns of earlier adventures live
     const pink = lam('#FF7EB6');
     for (const x of [g0 - .5, g1 + 1.5]) {

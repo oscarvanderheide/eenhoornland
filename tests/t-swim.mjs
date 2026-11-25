@@ -25,7 +25,7 @@ export default async function (t) {
   // a spot on the shore with shallow water right next to it, on her own island
   const spot = await J(`(() => { const w = __w, W = w.M.W, H = w.MAP.OUT_H, R = w.fly.reachable(Math.floor(w.kid.pos.x), Math.floor(w.kid.pos.z), false), k = w.kid.pos;
     let best = null, bd = 1e9; for (let z = 3; z < H - 3; z++) for (let x = 3; x < W - 3; x++) { if (!w.walkable(x, z) || !R[w.M.I(x, z)] || w.M.deck[w.M.I(x, z)]) continue;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (w.life.canSwimAt(x + dx, z + dz) && w.life.canSwimAt(x + 2 * dx, z + 2 * dz) && w.walkable(x - dx, z - dz)) { const d = Math.hypot(x - k.x, z - k.z); if (d < bd) { bd = d; best = [x, z, dx, dz]; } } }
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (w.life.canSwimAt(x + dx, z + dz) && w.life.canSwimAt(x + 2 * dx, z + 2 * dz) && w.walkable(x - dx, z - dz) && [3, 5, 7, 9].every(k => w.M.ground[w.M.I(x + k * dx, z + k * dz)] === w.MAP.SE)) { const d = Math.hypot(x - k.x, z - k.z); if (d < bd) { bd = d; best = [x, z, dx, dz]; } } }
     return best; })()`);
   ok(!!spot, 'a beach to swim from: ' + spot);
   const [sx, sz, dx, dz] = spot;

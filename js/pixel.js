@@ -91,6 +91,8 @@ const FENNA_LEGS = {
   w1: ['....ss..ss....', '....pp..ss....', '........pp....'],
   w2: ['....ss..ss....', '....ss..pp....', '....pp........'],
   jump: ['...ss....ss...', '..pp......pp..', '..............'],
+  sit: ['....ss..ss....', '....ss..ss....', '...pp....pp...'],
+  sit2: ['....ss..ss....', '....ss..pp....', '...pp.........'],
 };
 const ANNA_TOP = [   // a ponytail on her left (our right), held by a yellow tie
   '...hhhhhh...',
@@ -112,6 +114,8 @@ const ANNA_LEGS = {
   w1: ['...pp..ss...', '.......pp...'],
   w2: ['...ss..pp...', '...pp.......'],
   jump: ['..pp....pp..', '............'],
+  sit: ['...ss..ss...', '..pp....pp..'],   // on a bench: feet dangling
+  sit2: ['...ss..pp...', '..pp........'],   // swinging a leg
 };
 function kidPal(k) { return { h: k.hair, y: k.clip, s: SKIN, k: EYE, c: CHEEK, m: MOUTH, d: k.dress, D: k.dress2, p: k.shoe }; }
 export function anna(frame = 'idle', blink = false) {
@@ -175,8 +179,9 @@ const UNI_TOP = [
 ];
 const UNI_LEGS = {
   idle: ['.....BB..bb....BB..bb.....', '.....BB..bb....BB..bb.....', '.....ff..ff....ff..ff.....'],
-  w1: ['......BBbb......BBbb......', '......BBbb......BBbb......', '......ffff......ffff......'],
-  w2: ['....BB....bb..BB....bb....', '....BB....bb..BB....bb....', '....ff....ff..ff....ff....'],
+  // a trot, like the girls' steps: two legs on a diagonal lift their hooves, then the other two (idle in between)
+  w1: ['.....BB..bb....BB..bb.....', '.....BB..ff....ff..bb.....', '.....ff............ff.....'],
+  w2: ['.....BB..bb....BB..bb.....', '.....ff..bb....BB..ff.....', '.........ff....ff.........'],
 };
 export const UNI_BODY = [['Wit', '#FFFFFF'], ['Roze', '#FFC8DD'], ['Lila', '#DCCBFA'], ['Lichtblauw', '#BFE3FF'], ['Geel', '#FFF0A6'], ['Mintgroen', '#C6F1DB']];
 export const UNI_MANE = [['Regenboog', 'rainbow'], ['Roze', '#FF7EB6'], ['Paars', '#9B72E8'], ['Blauw', '#4FA3F7'], ['Goud', '#F5B83D']];

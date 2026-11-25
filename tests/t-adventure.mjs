@@ -92,8 +92,8 @@ export default async function (t) {
   const a0 = JSON.parse(await t.ev(`JSON.stringify((a=>[a.pos.x,a.pos.z,a.name])(__w.animals[0]))`)); await place(a0[0] - 2, a0[1] + 1.5); await settle(800);
   await t.ev(`__w.life.hold(__w.animals[0])`); await t.sleep(700); await shot('41-holding'); await t.ev(`__w.life.toss(__w.animals[0], 5, -1)`); await t.sleep(600); await shot('42-thrown');
   ok(await until(`!__w.animals[0].fly`, 30000), a0[2] + ' lands'); const a1 = JSON.parse(await t.ev(`JSON.stringify((a=>[a.pos.x,a.pos.z,__w.walkable(Math.floor(a.pos.x),Math.floor(a.pos.z)),a.lift])(__w.animals[0]))`)); ok(Math.hypot(a1[0] - a0[0], a1[1] - a0[1]) > 1.5 && a1[2] && a1[3] === 0, 'somewhere else, on its feet, on walkable ground');
-  await t.ev(`__w.life.hold(__w.animals[1]); __w.animals[1].pos.set(8, 0, 44); __w.life.toss(__w.animals[1], -2, 0)`); ok(await until(`!__w.animals[1].fly && !__w.animals[1].swim`, 60000), 'an animal thrown into the sea swims back to land'); ok(await t.ev(`(a=>__w.walkable(Math.floor(a.pos.x),Math.floor(a.pos.z)))(__w.animals[1])`), 'and stands on land');
-  await t.ev(`__w.life.splash(10.5, 44.5)`); await t.sleep(200); ok(await t.ev('__w.life.info().fish') > 0, 'a tap on the sea makes a fish jump');
+  await t.ev(`__w.life.hold(__w.animals[1]); __w.animals[1].pos.set(7.5, 0, 44); __w.life.toss(__w.animals[1], -2, 0)`); ok(await until(`!__w.animals[1].fly && !__w.animals[1].swim`, 60000), 'an animal thrown into the sea swims back to land'); ok(await t.ev(`(a=>__w.walkable(Math.floor(a.pos.x),Math.floor(a.pos.z)))(__w.animals[1])`), 'and stands on land');
+  await t.ev(`__w.life.splash(4.5, 44.5)`); await t.sleep(200); ok(await t.ev('__w.life.info().fish') > 0, 'a tap on the sea makes a fish jump');
   await place(16.5, 18.6); await settle(1500); await shot('43-mushrooms');
   ok(!t.logs.some(l => /EXC|Error/.test(l)), 'no page errors ' + t.logs.filter(l => /EXC|Error/.test(l)).join('|'));
   console.log(fail ? 'FAILED ' + fail : 'ADVENTURE OK');

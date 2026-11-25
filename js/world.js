@@ -23,6 +23,7 @@ import { createWaterval } from './world-waterval.js';
 import { createEiland } from './world-eiland.js';
 import { createStrand } from './world-strand.js';
 import { createBoerderij } from './world-boerderij.js';
+import { createBank } from './world-bank.js';
 import { createDraaimolen } from './world-draaimolen.js';
 import * as WILD from './art-wild.js';
 import * as HD2 from './art-hd2.js';
@@ -220,6 +221,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** what she can jump on top of: tile -> how high its top is (stumps, hay bales, beach rocks; the cave's crate adds itself) */
   const tops = new Map();
   for (const t of trees) { const h = t.kind === 'stump' ? .3 : t.kind === 'hay' ? .42 : t.kind.startsWith('rots-') ? .34 : 0; if (h) tops.set(I(t.x, t.z), h); }
+  const benchTiles = new Set(); for (const b of MAP.BENCHES) for (const x of [b.x, b.x + 1]) { tops.set(I(x, b.z), .19); benchTiles.add(I(x, b.z)); }   // a bench: up she hops and sits (world-bank.js)
   // trees, bushes
   const treeMeshes = [];
   {
@@ -388,31 +390,38 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   for (const b of BUILDINGS) if (!b.castle) b.tent ? tent(b) : house(b);
   doorGlow(CASTLE.x + CASTLE.w / 2, CASTLE.z + CASTLE.d + .1);
 
-  /* fountain: pixel-art billboard with 3 animated water frames */
-  const fountainFrames = [0, 1, 2].map(f => PX.gridSprite(40, 38, (x, y) => {
-    const X = x + .5, Y = y + .5, inE = (cx, cy, rx, ry) => ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 <= 1;
-    // water jets from the top bowl down into the basin (dashed, moving with the frame)
-    for (const side of [-1, 1]) for (let k = 0; k <= 24; k++) { const t = k / 24; const jx = 20 + side * (8 + 9 * t), jy = 13 + 14 * t * t; if (Math.abs(X - jx) < .9 && Math.abs(Y - jy) < .9 && ((k + f * 2) % 6) < 4) return (k + f) % 6 === 0 ? '#FFFFFF' : '#A6E1FA'; }
-    if (x >= 19 && x <= 20 && y >= 3 && y <= 10) return ((y + f) % 3 === 0) ? '#FFFFFF' : '#A6E1FA';      // top spout
-    if (inE(20, 3, 2.2, 1.6) && ((x + y + f) % 2 === 0)) return '#E8FAFF';
-    if (inE(20, 12, 8.5, 2.2)) return ((x * 3 + f * 5) % 11 === 0) ? '#FFFFFF' : '#6CC6F0';             // top bowl water
-    if (y >= 12 && y <= 15 && Math.abs(X - 20) <= 9.5 - (y - 12) * 1.8) return y === 12 ? '#EFE8DC' : (X < 19 ? '#E6DDCF' : '#C8BCAA'); // bowl
-    if (x >= 18 && x <= 21 && y > 15 && y < 27) return x === 18 ? '#EFE8DC' : (x === 21 ? '#B8AC9A' : (y % 4 === 0 ? '#C8BCAA' : '#DCD2C2')); // pillar
-    if (inE(20, 27, 16, 4.2)) {                                                                           // basin water
-      const ring = Math.abs(((X - 20) / 16) ** 2 + ((Y - 27) / 4.2) ** 2 - (.25 + f * .22)) < .07;
-      return ring ? '#A6E1FA' : ((x * 7 + y * 13 + f * 5) % 19 === 0 ? '#FFFFFF' : (Y < 26 ? '#3E9AD6' : '#4FA8DE'));
-    }
-    if (inE(20, 27, 19.5, 6.2)) return Y < 26 ? '#F3EDE3' : '#E6DDCF';                                    // rim
-    if (y >= 27 && y <= 33 && Math.abs(X - 20) <= 19.5 && (y < 33 || inE(20, 32, 19.5, 2.5))) {           // front wall, bricks
-      const mort = y % 3 === 1 || (x + (Math.floor(y / 3) % 2) * 3) % 6 === 0;
-      return mort ? '#A89A8A' : (X < 12 ? '#E6DDCF' : X > 30 ? '#C8BCAA' : '#D9CFC0');
-    }
-    return null;
-  }));
-  const fountain = makeSprite(fountainFrames[0], { lean: .3 }); fountain.position.set(FOUNT.cx, 0, FOUNT.cz + .55); scene.add(fountain);
-  const fountainTex = fountainFrames.map(cv => tex(cv));
-  fountain.userData.fountain = true; fountain.userData.alpha = fountainFrames[0]; pick.push(fountain);
-  const spray = { update(t) { const f = fountainTex[Math.floor(t * 5) % 3]; if (fountain.material.map !== f) { fountain.material.map = f; fountain.material.emissiveMap = f; fountain.customDepthMaterial.map = f; } } };
+  /* fountain: a real round basin of stone (bricks, a rim to sit on), water inside, a pillar with a bowl on top, and
+     drops that arc from the bowl down into the basin. Real geometry, so it has depth from every side and casts a shadow */
+  const fountain = new THREE.Group(); fountain.position.set(FOUNT.cx, 0, FOUNT.cz); scene.add(fountain);
+  const spray = (() => {
+    const stone = (w, h, f) => { const [c, x] = canvas(w, h); for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) { x.fillStyle = f(i, y); x.fillRect(i, y, 1, 1); } const t = tex(c); t.wrapS = THREE.RepeatWrapping; return t; };
+    const bricks = stone(112, 7, (i, y) => (y % 3 === 2 || (i + (Math.floor(y / 3) % 2) * 3) % 7 === 0) ? '#A89A8A' : ((i * 7 + y * 3) % 23 === 0 ? '#F3EDE3' : (i % 7 < 3 ? '#DCD2C2' : '#D3C8B6')));
+    const pale = new THREE.MeshLambertMaterial({ color: '#F1EBE0', flatShading: true, side: THREE.DoubleSide }), inner = new THREE.MeshLambertMaterial({ color: '#B9AE9C', side: THREE.BackSide });
+    const add = (geo, mat, y = 0, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; m.castShadow = shadow; m.receiveShadow = true; m.userData.fountain = true; fountain.add(m); pick.push(m); return m; };
+    const R = 1.12, H0 = .42;
+    add(new THREE.CylinderGeometry(R, R + .04, H0, 16, 1, true), new THREE.MeshLambertMaterial({ map: bricks }), H0 / 2);            // the brick wall of the basin
+    add(new THREE.LatheGeometry([[R - .16, .3], [R - .16, H0 + .06], [R + .07, H0 + .06], [R + .07, H0 - .02]].map(([r, y]) => new THREE.Vector2(r, y)).reverse(), 16), pale);   // its rim
+    add(new THREE.CylinderGeometry(R - .16, R - .16, .3, 16, 1, true), inner, .17, false);                                              // the inside of the wall
+    const water = add(new THREE.CircleGeometry(R - .15, 24), waterMat('#3E9AD6', '#6CC6F0', '#E8FAFF', 8), .34, false); water.rotation.x = -Math.PI / 2;
+    add(new THREE.CylinderGeometry(.3, .36, .16, 12), pale, .4);                                                                       // the foot of the pillar
+    add(new THREE.CylinderGeometry(.11, .15, .66, 10), new THREE.MeshLambertMaterial({ map: stone(16, 10, (i, y) => i % 4 === 0 ? '#C8BCAA' : y % 5 === 0 ? '#E6DDCF' : '#DCD2C2') }), .8);
+    add(new THREE.LatheGeometry([[.08, .98], [.3, 1.03], [.48, 1.13], [.52, 1.2], [.45, 1.2], [.42, 1.15]].map(([r, y]) => new THREE.Vector2(r, y)), 16), pale);   // the bowl on top
+    const top = add(new THREE.CircleGeometry(.43, 16), waterMat('#4FA8DE', '#8FD3F5', '#FFFFFF', 10), 1.16, false); top.rotation.x = -Math.PI / 2;
+    add(new THREE.CylinderGeometry(.05, .07, .2, 8), pale, 1.26);                                                                     // the spout
+    // the drops: eight streams arcing from the bowl into the basin, and a little jet up out of the spout
+    const S = 8, D = 7, J = 6, n = S * D + J, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const c = new THREE.Color(i % 4 === 0 ? '#FFFFFF' : '#A6E1FA'); col.set([c.r, c.g, c.b], i * 3); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const drops = new THREE.Points(geo, new THREE.PointsMaterial({ size: .12, vertexColors: true })); drops.frustumCulled = false; fountain.add(drops);
+    return {
+      update(t) {
+        let i = 0;
+        for (let s = 0; s < S; s++) { const a = s / S * Math.PI * 2 + .2; for (let d = 0; d < D; d++, i++) { const p = (t * .8 + d / D + s * .13) % 1, r = .5 + .4 * p; pos.set([Math.cos(a) * r, 1.19 + .3 * p - 1.13 * p * p, Math.sin(a) * r], i * 3); } }
+        for (let j = 0; j < J; j++, i++) { const p = (t * 1.1 + j / J) % 1, a = j * 2.4; pos.set([Math.cos(a) * .12 * p, 1.36 + .5 * p - .62 * p * p, Math.sin(a) * .12 * p], i * 3); }
+        geo.attributes.position.needsUpdate = true;
+      },
+    };
+  })();
 
   /* particles: fireflies at night, drifting petals by day */
   const motes = (() => {
@@ -440,7 +449,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       setFrame(k) { const key = k + (this.flippable && this.face < 0 ? 'F' : ''); const t = this.texs[key] || this.texs[k]; if (this.mesh.material.map !== t) { this.mesh.material.map = t; this.mesh.material.emissiveMap = t; if (this.ghost) this.ghost.material.map = t; } } };
     c.zBias = (chars.length % 7) * .008; mesh.userData.char = c; pick.push(mesh); chars.push(c); return c;
   }
-  const kidFrames = f => ({ idle: f('idle'), w1: f('w1'), w2: f('w2'), blink: f('idle', true), jump: f('jump') });
+  const kidFrames = f => ({ idle: f('idle'), w1: f('w1'), w2: f('w2'), blink: f('idle', true), jump: f('jump'), sit: f('sit'), sit2: f('sit2') });
   // one girl walks around at a time; the sisters take turns whenever they swap seats (HUD button, saved in state.extra.who)
   const GIRLS = {
     anna: { name: 'Anna', say: ['Hihi!', 'Hoera!', 'Kom mee!'], blobW: .55 },
@@ -492,10 +501,11 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     return [x0, z0];
   }
   const one = cv => ({ idle: cv, w1: cv, w2: cv });
+  const duckHome = [Math.floor(POND.cx - POND.rx), Math.floor(POND.cz - POND.rz), Math.floor(POND.cx + POND.rx), Math.floor(POND.cz + POND.rz)];
   animal(one(PX.puppy()), { name: 'Hondje', say: ['Woef woef!', 'Spelen?'], sound: 'boing', blobW: .55 }, [28, 43, 37, 49]);
   animal(one(ART.ISLE.kip()), { name: 'Kip', say: ['Tok tok!', 'Tok tok tok!'], sound: 'pop', blobW: .5, flippable: true }, [19, 38, 26, 40]);
-  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
-  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, [25, 39, 29, 43], true);
+  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!', 'Kwak kwak!'], sound: 'pop', blobW: .35, flippable: true }, duckHome, true);
+  animal(one(PX.duck()), { name: 'Eendje', say: ['Kwak!'], sound: 'pop', blobW: .35, flippable: true }, duckHome, true);
   for (const a of animals) if (a.water) a.g.children[1].visible = false;
 
   /* ---------------- party & movement ---------------- */
@@ -648,7 +658,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** climb onto the unicorn ('uni') or the bike ('fiets'), or get off (null) */
   function setMount(m, quiet = false) {
     if (m === mount) return true; if (m === 'uni' && !(Q.canRide() && uni.g.visible)) return false;
-    const was = mount; mount = m; kid.sit = !!m; seat(); kid.path = []; target = null; after = null;
+    const was = mount; mount = m; kid.sit = !!m; if (m && perch) { perch = null; liftOn = false; } seat(); kid.path = []; target = null; after = null;
     if (was === 'uni') { uni.pos.copy(kid.pos); resetTrail(); }
     if (!quiet) { kid.hop = .7; (m === 'fiets' ? sfx.bell : m ? sfx.sparkle : sfx.pop)(); if (m === 'uni') burst(kid.pos, 8, true); }
     play && play.mounted(m, was); onMount && onMount(m); return true;
@@ -661,8 +671,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   /* ---------------- jumping is a real leap: forwards while she moves, up onto a stump, a bale, a rock or the crate,
      and off an animal's back (boing!). Standing still it is a hop on the spot (that stomps sand towers and leaf piles). ---------------- */
+  let seatT = 0; const seated = () => !!perch && benchTiles.has(perch.i) && !midJump() && !mount;
   let perch = null, lastIn = null, jumpL0 = 0, jumpD = 1, liftOn = false, stick = { x: 0, z: 0 };
-  const topPoint = (x, z) => { const h = tops.get(I(x, z)); if (h === undefined) return null; const v = new THREE.Vector3(x + .5, 0, z + .62); v.jump = true; v.perch = { i: I(x, z), h }; return v; };
+  const topPoint = (x, z) => { const h = tops.get(I(x, z)); if (h === undefined) return null; const bn = benchTiles.has(I(x, z)) && MAP.BENCHES.find(b => b.z === z && (b.x === x || b.x + 1 === x)), v = new THREE.Vector3(x + .5 + (bn ? (x === bn.x ? .12 : -.12) : 0), 0, z + (bn ? .44 : .62)); v.jump = true; v.perch = { i: I(x, z), h }; return v; };
   /** nothing in the way between her and (x, z) except things to hop over */
   function clearLeap(x, z) { const d = Math.hypot(x - kid.pos.x, z - kid.pos.z), n = Math.ceil(d / .15); for (let k = 1; k <= n; k++) { const px = kid.pos.x + (x - kid.pos.x) * k / n, pz = kid.pos.z + (z - kid.pos.z) * k / n, tx = Math.floor(px), tz = Math.floor(pz); if (!walkable(tx, tz) && !lowAt(tx, tz) && !(perch && I(tx, tz) === perch.i) && !tops.has(I(tx, tz))) return false; } return freeAt(x, z); }
   function leapDir() {
@@ -672,7 +683,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   function leap(dir) {
     if (mount || midJump() || (kid.hop > 0 && !perch) || life.swimming()) return false;   // on a top (bouncing on a mushroom) a step still jumps her off
-    const d = dir || leapDir(), f = d || { x: kid.face, z: 0 }, moving = !!d, go = v => { v.dir = f; kid.path = [v]; target = null; after = null; resume = null; life.jumped(); return true; };
+    const d = dir || leapDir(), f = d || (perch && benchTiles.has(perch.i) ? { x: 0, z: 1 } : { x: kid.face, z: 0 }), moving = !!d, go = v => { v.dir = f; kid.path = [v]; target = null; after = null; resume = null; life.jumped(); return true; };
     if (!perch) for (const a of animals) {                                       // an animal just ahead: she bounces off its back
       if (!a.g.visible || a.fly || a.held || a.water || a.swim || a.cart || a.nap > 0) continue;
       const dx = a.pos.x - kid.pos.x, dz = a.pos.z - kid.pos.z, along = dx * f.x + dz * f.z, side = Math.abs(dx * f.z - dz * f.x);
@@ -688,7 +699,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   }
   /** she lands where she leapt to */
   function landed(v) {
-    if (v.perch) { perch = v.perch; kid.squash = .6; sfx.pop(); return; }
+    if (v.perch) { perch = v.perch; kid.squash = .6; sfx.pop(); if (benchTiles.has(perch.i)) { seatT = time; bank && bank.sat(perch.i); } return; }
     perch = null; kid.squash = .5; toys.stomp(); weather.stomp();
     if (v.bounce) {                                                              // off the animal's back, high up, and on
       const a = v.bounce; a.squash = 1; a.hop = 0; (sfx[a.sound] || sfx.boing)(); sfx.boing(); burst(a.pos, 5, true); a.wait = Math.max(a.wait || 0, 2);
@@ -735,7 +746,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     let best = null, bd = 1.5;
     for (let k = 0; k < pick.length; k++) {
       const m = pick[k], d = m.userData; if (!d.tap || d.sea || d.char || !(d.icon || d.alpha) || !m.visible || (m.parent && !m.parent.visible)) continue;
-      m.getWorldPosition(thingAt); if (tops.has(I(Math.floor(thingAt.x), Math.floor(thingAt.z)))) continue;   // something to stand on (the crate): the button jumps up
+      m.getWorldPosition(thingAt); if (!d.bench && tops.has(I(Math.floor(thingAt.x), Math.floor(thingAt.z)))) continue;   // something to stand on (the crate): the button jumps up
       const dd = Math.hypot(thingAt.x - kid.pos.x, thingAt.z - kid.pos.z);
       if (dd < bd) { bd = dd; const at = thingAt.clone(); best = { k, icon: d.icon || d.alpha, run: () => asObj(() => d.tap({ object: m, point: at })) }; }
     }
@@ -812,6 +823,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const beach = ctx.strand = createStrand(ctx);
   const farm = ctx.farm = createBoerderij(ctx);
   const molen = ctx.molen = createDraaimolen(ctx);
+  ctx.hopOnto = (x, z) => { if (mount || busy || midJump() || life.swimming() || fly.on()) return false; const v = topPoint(x, z); if (!v) return false; v.dir = { x: 0, z: -1 }; kid.path = [v]; target = null; after = null; resume = null; return true; };
+  ctx.seated = () => seated() ? perch.i : -1;
+  const bank = ctx.bank = createBank(ctx);
   for (const m of treeMeshes) pick.push(m);
   refreshUnicorn();
 
@@ -1019,7 +1033,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (c.upright) { c.upright.t = Math.min(1, c.upright.t + dt * 3.5); const e = 1 - (1 - c.upright.t) ** 3; c.mesh.rotation.z = c.upright.from * (1 - e); if (c.upright.t >= 1) { c.upright = null; c.mesh.rotation.z = 0; } }
     if (c.sq) { sx *= c.sq[0]; sy *= c.sq[1]; }                                    // an animal's own way of moving (world-ways.js)
     c.mesh.scale.set(breathe * sx, breathe * sy, 1);
-    if (c.hop > 0 && c.texs.jump && !c.sit) c.setFrame('jump');
+    if (c === kid && c.texs.sit && seated()) { const k = time - seatT; c.setFrame(k > 1.2 && Math.floor(k * 2.2) % 2 ? 'sit2' : 'sit'); }   // on a bench: she sits, and after a moment swings her legs
+    else if (c.hop > 0 && c.texs.jump && !c.sit) c.setFrame('jump');
     else if (c.moving && !c.sit) { const f = Math.floor(c.animT * 7) % 4; c.setFrame(f === 0 ? 'w1' : f === 2 ? 'w2' : 'idle'); }
     else { c.blinkT -= dt; if (c.blinkT < 0) { c.setFrame(c.frames.blink ? 'blink' : 'idle'); if (c.blinkT < -.12) c.blinkT = 2 + Math.random() * 3.5; } else c.setFrame('idle'); }
   }
@@ -1060,7 +1075,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
       else { kid.moving = false; const out = landToward(kid.pos.x + kx / l * 2, kid.pos.z + kz / l * 2); if (out && (out.x - kid.pos.x) * kx + (out.z - kid.pos.z) * kz > 0) { kid.path = [out]; target = null; after = null; } }
     }
     else if ((kx || kz) && !midJump() && perch && !mount) {                       // on top of something: a step off is a jump down (or onto the next top)
-      if (Math.abs(kx) > .2) kid.face = Math.sign(kx); if (time > bumpT) { bumpT = time + .3; const l = Math.hypot(kx, kz); leap({ x: kx / l, z: kz / l }); }
+      const lean = benchTiles.has(perch.i) && kz < 0 && Math.abs(kx) < -kz;      // pushing into a bench's back: she stays sitting (never over the back)
+      if (Math.abs(kx) > .2) kid.face = Math.sign(kx); if (time > bumpT && !lean) { bumpT = time + .3; const l = Math.hypot(kx, kz); leap({ x: kx / l, z: kz / l }); }
     }
     else if ((kx || kz) && !midJump()) {
       if (Math.abs(kx) > .2) kid.face = Math.sign(kx);                            // with the keys too she (and whoever carries her) looks where she goes
@@ -1075,6 +1091,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
         if (lowAt(ax, az) && walkable(ax + ix, az + iz)) { const land = new THREE.Vector3(ax + ix + .5, 0, az + iz + .5); land.jump = true; kid.path = [land]; target = null; after = null; }
         else if (breakAt(ax, az) && time > bumpT) { bumpT = time + 1.5; tools.useAt(ax, az); }
         else if (time > bumpT && rooms.pushAt(ax, az, ix, iz)) bumpT = time + .45;
+        else if (time > bumpT && bank.bumpAt(ax, az, iz)) bumpT = time + .6;   // walking into a bench from the front: she sits down
         else if (time > bumpT && toys.bumpAt(ax, az)) bumpT = time + 1.2;   // walking into a flower pot with the can: she waters it   // the cave's crate slides one tile
         else if (time > bumpT && inb(ax, az) && ground[I(ax, az)] === MAP.SE && !toys.carrying() && !life.carrying() && life.canSwimAt(ax, az)) { bumpT = time + 1.5; life.dip('zee', kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into shallow sea: in she hops
         else if (time > bumpT && inb(ax, az) && ground[I(ax, az)] === WA && life.nearWater()) { bumpT = time + 1.5; life.dip(life.nearWater(), kid.pos.x + ix * 1.4, kid.pos.z + iz * 1.4); }   // walking into the pond: in she jumps
@@ -1122,7 +1139,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     for (const a of animals) if (a.water) a.mesh.position.y = Math.sin(time * 2 + a.animT) * .03 - .05;
     // fx
     for (const u of waterUniforms) u.t.value = time;
-    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time); isle.update(dt, time); beach.update(dt, time); farm.update(dt, time); molen.update(dt, time);
+    const act = interactive && !paused && !busy && !fly.on(); fly.update(dt, time); hut.update(dt, time); val.update(dt, time); isle.update(dt, time); beach.update(dt, time); farm.update(dt, time); bank.update(dt, time); molen.update(dt, time);
     spray.update(time); motes.update(time); extras.update(dt, time, act); tools.update(dt, time, act); play.update(dt, time, interactive && !paused); life.update(dt, time, act); toys.update(dt, time, act); weather.update(dt, time, act); rooms.update(dt, time, act); seaLife.update(dt, time, interactive && !paused); fishing.update(dt, time, act); ways.update(dt, time, act); stepWobbles(dt); stepIndoor(dt);
     for (const t of twinkles) { const k = Math.max(0, Math.sin(time * 2.2 + t.p)); t.m.scale.setScalar(.15 + k * .75); t.m.position.y = t.y + k * .08; t.m.visible = k > .02; }
     for (const bl of balloons) bl.position.y = .2 + Math.sin(time * 1.5 + bl.position.x) * .08;
@@ -1157,7 +1174,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },

@@ -225,9 +225,35 @@ export function createToys(ctx) {
   }
 
   /* ================= dorp: the stall ================= */
-  const S = MAP.STALL, stall = { m: sprite(ART.kraam(), S.x + S.w / 2, S.z + .92, { lean: .22, scale: 1.05 }) }; let stallT = 3;
+  // a real little booth (boxes, so it has depth): a dark back wall with bunting, a painted counter, white posts and a
+  // striped awning. The snowy owl stands on the counter in front, with the crown and the bow beside her, so all three
+  // stand out against the dark wall. A tap on any of it opens the stall (from right in front of it)
+  const S = MAP.STALL, booth = new THREE.Group(), stall = { m: booth };
+  booth.position.set(S.x + S.w / 2, 0, S.z + .5); scene.add(booth);
+  let stallT = 3;
   const openStall = () => ctx.onShop();
-  tappable(stall.m, () => { sfx.pop(); pop(stall, .08); const at = Math.floor(kid.pos.x) === S.x && Math.floor(kid.pos.z) === S.z + 1; at ? openStall() : ctx.walkThen(S.x, S.z + 1, openStall); });
+  function visitStall() {
+    sfx.pop(); pop(stall, .08);
+    const at = Math.floor(kid.pos.z) === S.z + 1 && Math.floor(kid.pos.x) >= S.x && Math.floor(kid.pos.x) < S.x + S.w;
+    at ? openStall() : ctx.walkThen(S.x + (kid.pos.x > S.x + 1 ? 1 : 0), S.z + 1, openStall);
+  }
+  const face = (art, opts = {}) => new THREE.MeshLambertMaterial({ map: tex(art), alphaTest: .5, ...opts });
+  const white = new THREE.MeshLambertMaterial({ color: '#F4EDE4' }), plum = new THREE.MeshLambertMaterial({ color: '#3B2A4E' }), mint = new THREE.MeshLambertMaterial({ color: '#A8E6CF' });
+  function part(w, h, d, x, y, z, mat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w / 16, h / 16, d / 16), mat); m.position.set(x / 16, y / 16, z / 16);
+    m.castShadow = m.receiveShadow = true; booth.add(m); tappable(m, visitStall); m.userData.icon = ART.uil(); return m;
+  }
+  part(34, 32, 2, 0, 16, -6, [white, white, plum, white, face(ART.kraamWand()), white]);                      // back wall
+  part(34, 10, 13, 0, 5, 1.5, [mint, mint, new THREE.MeshLambertMaterial({ color: '#FFFFFF' }), mint, face(ART.kraamToonbank()), mint]);   // counter
+  for (const x of [-16, 16]) { part(2, 40, 2, x, 20, 7, white); part(2, 40, 2, x, 20, -5, white); }        // posts
+  const awn = face(ART.kraamLuifel(), { side: THREE.DoubleSide }), stripes = new THREE.MeshLambertMaterial({ color: '#FF7EB6' });
+  const roof = part(36, 2, 15, 0, 41, 1, [stripes, stripes, awn, stripes, stripes, stripes]); roof.rotation.x = .18;   // the awning slopes down to the front
+  const edge = tex(ART.kraamLuifel()); edge.repeat.set(1, .5);   // only the scalloped bottom of the awning hangs down at the front
+  const valance = new THREE.Mesh(new THREE.PlaneGeometry(36 / 16, 5 / 16), new THREE.MeshLambertMaterial({ map: edge, alphaTest: .5, side: THREE.DoubleSide })); valance.position.set(0, 38 / 16, 8.6 / 16); valance.castShadow = true; booth.add(valance); tappable(valance, visitStall);
+  const owl = makeSprite(ART.hd(ART.uil()), { lean: .15, scale: .5 }); owl.position.set(0, 10 / 16, 4 / 16); booth.add(owl); tappable(owl, visitStall); owl.userData.alpha = ART.hd(ART.uil());
+  for (const [art, x] of [[ART.wearIcon('kroon'), -.66], [ART.wearIcon('strik'), .66]]) {             // the things she can buy, on the counter
+    const m = makeSprite(ART.hd(art), { lean: .2, scale: .5 * 1.1 }); m.position.set(x, 10 / 16, 5 / 16); booth.add(m); tappable(m, visitStall); m.userData.alpha = ART.hd(art);
+  }
   /* the balloon from the stall floats along above her */
   const balloon = { m: sprite(PX.balloon('#FF6B6B'), 0, 0, { lean: .15, shadow: false, scale: 1.1 }), p: v3(kid.pos.x, 1.6, kid.pos.z), up: 0 };
   tappable(balloon.m, () => { balloon.up = 1; sfx.boing(); });
