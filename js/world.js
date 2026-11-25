@@ -25,6 +25,8 @@ import { createStrand } from './world-strand.js';
 import { createBoerderij } from './world-boerderij.js';
 import { createDraaimolen } from './world-draaimolen.js';
 import * as WILD from './art-wild.js';
+import * as HD2 from './art-hd2.js';
+const HD2ON = new URLSearchParams(location.search).has('hd2'); // test of a richer character style (Anna and the foal only)
 
 const W = MAP.W, H = MAP.H, U = 16;      // map size in tiles (see map.js), pixels per tile
 const { GR, WA, POND, FOUNT } = MAP;
@@ -447,7 +449,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   /** draw a girl with what she has on today (bought at the stall) */
   function dress(id) {
     const g = GIRLS[id], w = Q.wearing(id); for (const k in g.texs || {}) g.texs[k].dispose();
-    g.frames = hdF(kidFrames((f, blink) => PX.kidSprite(id, f, blink, w))); g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]);
+    g.frames = hdF(HD2ON && id === 'anna' && !Object.values(w || {}).some(Boolean) ? HD2.annaFrames() : kidFrames((f, blink) => PX.kidSprite(id, f, blink, w))); g.texs = {}; for (const k in g.frames) g.texs[k] = tex(g.frames[k]);
   }
   for (const id in GIRLS) dress(id);
   let who = GIRLS[state.extra.who] ? state.extra.who : 'anna';
@@ -463,7 +465,7 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   // two billboards on the same spot fight over the same pixels and flicker: everyone gets a depth of their own, the girl in front
   kid.zBias = .06;
   // the companion is whatever the quest says: nothing yet, an egg, or the little unicorn (who never grows into another sprite)
-  const uniFrames = () => ART.companionFrames(Q.companionLook(), Q.quest.stage === 'ei' ? 'ei' : 'baby', Q.kind());
+  const uniFrames = () => HD2ON && Q.quest.stage !== 'ei' ? HD2.foalFrames(Q.companionLook()) : ART.companionFrames(Q.companionLook(), Q.quest.stage === 'ei' ? 'ei' : 'baby', Q.kind());
   const uni = makeChar(uniFrames(), { flippable: true, name: () => state.uni.name, say: ['Hihihi!', 'Ik ben ' + state.uni.name + '!', 'Briesss!'], blobW: 1.2 });
   uni.isUni = true;
   function refreshUnicorn() {
