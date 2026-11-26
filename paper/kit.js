@@ -56,7 +56,14 @@ export const papers = new Map();
 export function paper(color, o = {}) {
   // one material per kind of paper, shared: pieces of the same paper can then be drawn in one go (see bake). Never change one after making it
   const key = [color, (o.map || paperMap).uuid, (o.bump || paperBump).uuid, o.bumpScale ?? 1.6, o.side ?? THREE.FrontSide, JSON.stringify(o.extra || 0)].join('|');
-  let m = papers.get(key); if (!m) papers.set(key, m = makePaper(color, o)); return m;
+  let m = papers.get(key); if (!m) { papers.set(key, m = makePaper(color, o)); m.userData.kind = key.slice(key.indexOf('|') + 1); } return m;
+}
+/** the white sheet of a kind of paper (same grain, side and glow, any colour): pieces of one kind are glued into one mesh that
+ *  carries each piece's colour in its corners, so a set costs one draw per kind of paper however many colours it uses */
+const sheets = new Map();
+export function sheetOf(m) {
+  const kind = m.userData.kind; if (!kind) return null;
+  let s = sheets.get(kind); if (!s) { s = m.clone(); s.color.set('#ffffff'); s.vertexColors = true; sheets.set(kind, s); } return s;
 }
 export function makePaper(color, o) {
   return new THREE.MeshStandardMaterial({ color, map: o.map || paperMap, bumpMap: o.bump || paperBump, bumpScale: o.bumpScale ?? 1.6, roughness: .93, metalness: 0, side: o.side ?? THREE.FrontSide, ...(o.extra || {}) });
