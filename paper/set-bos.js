@@ -22,8 +22,8 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
     /* ---------------- the land ---------------- */
-    const { SAND, GRASS, SAND_E, GRASS_E, under, bridge: BR } = bosLand();
-    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]], under);
+    const { SAND, GRASS, SAND_E, GRASS_E, bridge: BR } = bosLand();
+    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]]);
     // the bridge from the village is the village's (set-dorp.js): it lands on this shore at bosLand().bridge
 
     S.sea({ land: [SAND, SAND_E], x0: -58, x1: 62, z0: -25, z1: 19, deep: [230, 180, 0, 0], fine: 1.8 });
@@ -42,7 +42,9 @@ export default {
 
     /* ---------------- clearings and paths, cut by hand ---------------- */
     const laid = [];
-    const lay = (pts, c, y = H_GRASS) => { root.add(slab(pts, y + .015, .015, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
+    // (each piece lies a hair higher than the one before: two flat cards at exactly the same height flicker where they overlap)
+    let layer = 0;
+    const lay = (pts, c, y = H_GRASS) => { const up = .015 + (layer++) * .003; root.add(slab(pts, y + up, up, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     const [cx, cz] = T(30, 12.5), [ox, oz] = T(45, 12), [nx, nz] = T(16.5, 16.5), [ax, az] = T(23.5, 8);
     lay(blob(cx, cz, 3.2, 2.3, 231, 44, .06), GROUND.grass);                          // the clearing

@@ -101,14 +101,18 @@ export function bench(S, x, y, z) {
   for (const s of [-1, 1]) { add(.06, .4, .06, '#5f9fae', s * .46, .2, .16); add(.06, .86, .06, '#5f9fae', s * .46, .43, -.22); add(.06, .05, .46, '#5f9fae', s * .46, .52, -.03); }
   S.wall(x, z - .06, .62, .3);
   const { girl, sfx } = S, [wx, wz] = S.at([x, z]); let mode = null, t = 0, sits = 0;
-  const toy = { look: [wx, wz + .6], step(dt, inp) {
+  const toy = { rest: true, look: [wx, wz + .6], step(dt, inp) {
     t += dt;
     if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx; girl.z = wz + .1 + (1 - k) * .7; girl.lift = .44 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1; if (k >= 1) { mode = 'sit'; sits++; sfx.hop(); } return; }
     if (mode === 'sit') { girl.lift = .44; girl.poseName = 'sit'; if (inp.act || inp.x) { mode = 'off'; t = 0; } return; }
     const k = Math.min(1, t / .28); girl.z = wz + .1 + k * .75; girl.lift = .44 * (1 - k) + Math.sin(k * Math.PI) * .22; girl.poseName = null; if (k >= 1) { girl.lift = 0; mode = null; S.stopPlay(); }
   } };
-  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx, wz + .8, () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); }, 1.1); });
-  return { toy, state: () => ({ mode, sits }) };
+  const sit = () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); };
+  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx, wz + .8, sit, 1.1); });
+  let bump = 0;
+  return { toy, state: () => ({ mode, sits }),
+    /** walking into the bench from the front sits her down as well: one rule for the finger and the stick */
+    step({ dt }) { const p = S.pushing(), at = !S.playing() && Math.abs(girl.x - wx) < .6 && girl.z > wz && girl.z - wz < .75 && p[1] < -.6; bump = at ? bump + dt : 0; if (bump > .22) { bump = 0; sit(); } } };
 }
 /** a lantern: a post with a paper lamp on it. A tap lights it, a tap puts it out. Lit, it glows, and near her it gives real light */
 const lanternMats = [];
@@ -119,9 +123,11 @@ export function lantern(S, x, y, z, n) {
   const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.13, .1, .26, 10, 1, true), mat); lamp.position.y = 1.4; g.add(lamp);
   const cap = m3(new THREE.ConeGeometry(.2, .14, 10), '#4b4450'); cap.position.y = 1.6; g.add(cap); const foot = m3(new THREE.CylinderGeometry(.11, .11, .03, 10), '#4b4450'); foot.position.y = 1.26; g.add(foot);
   S.solid({ x, z, r: .08 });
-  const light = S.lamp(10 + n, '#ffc98a', 6, 1.5); light.position.set(x, y + 1.4, z); let lit = false;
+  const light = S.lamp(10 + n, '#ffc98a', 6, 1.5); light.position.set(x, y + 1.4, z); let lit = false, night = false;
   S.tap(g, () => { lit = !lit; S.sfx.click(); });
-  return { state: () => ({ lit }), step({ dt, eve }) { const want = lit ? 1 : 0; mat.emissiveIntensity += (want * 1.6 - mat.emissiveIntensity) * Math.min(1, dt * 8); light.intensity = want * (1.0 + 1.6 * eve); } };
+  return { state: () => ({ lit }), step({ dt, eve }) {
+    if (eve > .5 && !night) { night = true; lit = true; } else if (eve < .5 && night) { night = false; lit = false; }   // on by themselves when evening falls, off in the morning; a tap still does either
+    const want = lit ? 1 : 0; mat.emissiveIntensity += (want * 1.6 - mat.emissiveIntensity) * Math.min(1, dt * 8); light.intensity = want * (1.0 + 1.6 * eve); } };
 }
 /** a cabin of logs: round logs laid on each other, crossing at the corners, a plank door, a round window, a roof of green
  *  card and a stone chimney. (A tap knocks on the door; what is inside comes later) */

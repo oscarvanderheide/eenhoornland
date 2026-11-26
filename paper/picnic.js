@@ -15,7 +15,7 @@ export function picnic(S, x, y, z, guests) {
   for (const [ax, az, c] of [[-.56, -.3, '#d9706c'], [-.42, -.2, '#e6b748'], [.2, -.45, '#d9706c']]) add(new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), paper(c)), ax, .11, az);
   const [wx, wz] = S.at([x, z]); let mode = null, t = 0, sits = 0, cheered = false;
   const seats = [[wx - 1.25, wz - .15], [wx + 1.3, wz + .1]];
-  const toy = { look: [wx, wz + .4], step(dt, inp) {
+  const toy = { rest: true, look: [wx, wz + .4], step(dt, inp) {
     t += dt;
     if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx - .1; girl.z = wz + .35 + (1 - k) * .6; girl.lift = .03 * k + Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1;
       if (k >= 1) { mode = 'sit'; t = 0; sits++; cheered = false; sfx.hop(); guests.forEach((q, i) => q.guest.invite(seats[i % seats.length])); } return; }

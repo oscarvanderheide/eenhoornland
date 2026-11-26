@@ -13,7 +13,8 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b9a888,0 3px 8px rgba(0,0,0,.25)}
 #sky{right:calc(env(safe-area-inset-right) + 14px)}
 #home{left:calc(env(safe-area-inset-left) + 14px)}
-.btn svg{width:32px;height:32px}
+.btn svg{width:32px;height:32px;grid-area:1/1}
+.btn svg[hidden]{display:none}   /* (an svg does not hide by the hidden attribute alone: the moon hung under the sun) */
 </style>
 <canvas id="c"></canvas>
 <a class="btn" id="home" href="../" aria-label="Eenhoornland">

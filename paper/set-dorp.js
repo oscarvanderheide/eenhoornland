@@ -30,11 +30,11 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
     /* ---------------- the land: a beach, the green, and a terrace in the north where her house stands ---------------- */
-    const { SAND, GRASS, SAND_S, GRASS_S, SAND_W, GRASS_W, HIGH, under } = dorpLand();
+    const { SAND, GRASS, SAND_S, GRASS_S, SAND_W, GRASS_W, HIGH } = dorpLand();
     const WEI = blob(19.6 * K, 2.2 * K, 4.2, 5, 78, 48, .05);        // the near shore of the meadow, across the east bridge (a stand-in)
     // the ground is the island's real printed paper (it costs what it will cost); what stands on it is still grey
     const sandP = GROUND.sand, grassP = GROUND.grass, highP = GROUND.high;
-    shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W, GRASS_S].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]], [...under, blob(19.6 * K, 2.3 * K, 4.5, 5.3, 85, 56, .04)]);
+    shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W, GRASS_S].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]]);   // (no darker card under the land here: out in the water it showed as brown ledges between the waves)
 
     // stairs down from the terrace: in front of her door (south), and at its east end where the street goes on to the bridge
     const edge = (poly, at, axis) => { let best = -99; for (let v = -30; v <= 30; v += .01) if (axis === 'z' ? inPoly(poly, at, v) : inPoly(poly, v, at)) best = v; return best; };
@@ -76,7 +76,9 @@ export default {
        The old map gives where things are, never the shape of anything: nothing here lies on a grid. A path is a ribbon of card
        that winds (kit.js ribbon), a square is a blob, a side path is a row of stepping stones. */
     const laid = [];   // every outline lying on the ground, so no tree is planted on one
-    const lay = (pts, c, y = H_GRASS) => { root.add(slab(pts, y + .015, .015, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
+    // (each piece lies a hair higher than the one before: two flat cards at exactly the same height flicker where they overlap)
+    let layer = 0;
+    const lay = (pts, c, y = H_GRASS) => { const up = .015 + (layer++) * .003; root.add(slab(pts, y + up, up, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     // every path starts inside the square's outline, so it is joined to it; benches and lanterns stand beside paths, never on them
     const SQ = [.6 * K, -.6 * K], F = [-1.2 * K, 9.6 * K];   // the middle of the fountain square; the middle of the farm in the south
@@ -167,7 +169,7 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); },
       wind: (x, z, from) => { for (const m of mills) if (m.at[0] > from && m.at[0] <= x && Math.abs(m.at[1] - z) < 4.5) m.blow(13); },
       toys: { ...live, ...flies, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },

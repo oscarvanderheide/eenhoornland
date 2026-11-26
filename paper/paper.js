@@ -211,6 +211,7 @@ function buildSet(def) {
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
+    pushing: () => push,   // which way she is pushing right now, in the world's measure ([0, 0]: not at all)
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
@@ -395,7 +396,7 @@ const sfx = {
   yip() { tone(700, .12, 'triangle', .07, 1.5); },
   munch() { [0, 110, 220].forEach(d => setTimeout(() => noise(.06, .06, 1500), d)); },
   flutter() { [0, 70, 140, 210].forEach(d => setTimeout(() => noise(.05, .035, 3200), d)); },
-  gust() { noise(1.6, .05, 500); tone(240, 1.4, 'sine', .018, 1.8); },
+  gust() { noise(1.6, .028, 500); tone(240, 1.4, 'sine', .01, 1.8); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
@@ -427,6 +428,30 @@ function stepWind(dt, stepped) {
   if (gust.t > 6.4) { gust.t = -1; gust.g.visible = false; }
 }
 
+/* ---------------- the island's own sound: slow and calm ----------------
+   A few soft notes, far apart, wandering up and down five notes that always sound well together, over a low hum that
+   comes and goes like breathing. Sitting down to rest (a bench, the picnic cloth) the tune comes closer: a second voice
+   joins and the notes come a little sooner. In the evening it is lower and slower; indoors it is only the hum. */
+const tune = { t: 3, i: 2, hum: null, rest: 0 };
+const NOTES = [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3, 659.3];
+function soft(freq, dur, vol) {
+  const a = audio(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain();
+  o.type = 'sine'; o.frequency.value = freq; o2.type = 'triangle'; o2.frequency.value = freq * 2.001; const g2 = a.createGain(); g2.gain.value = .18;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .09); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(a.destination); o.start(t); o2.start(t); o.stop(t + dur + .1); o2.stop(t + dur + .1);
+}
+function stepTune(dt) {
+  if (!ac || ac.state !== 'running') return;
+  if (!tune.hum) { const g = ac.createGain(); g.gain.value = 0; g.connect(ac.destination); for (const f of [130.8, 196.2]) { const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(); } tune.hum = g; }
+  const resting = playing && playing.rest ? 1 : 0, indoors = set.seaAsk ? 0 : 1; tune.rest += (resting - tune.rest) * Math.min(1, dt * 1.5);
+  tune.hum.gain.setTargetAtTime((.012 + .01 * tune.rest) * (.75 + .25 * Math.sin(time * .5)), ac.currentTime, .4);
+  tune.t -= dt; if (tune.t > 0 || indoors) return;
+  tune.i = clamp(tune.i + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)], 0, NOTES.length - 1);
+  const low = eve > .5 ? .5 : 1; soft(NOTES[tune.i] * low, 3.2, .026 + .012 * tune.rest);
+  if (tune.rest > .5 && Math.random() < .7) setTimeout(() => soft(NOTES[Math.min(NOTES.length - 1, tune.i + 2)] * low, 2.8, .018), 260);   // resting: a second voice answers
+  tune.t = (tune.rest > .5 ? 1.5 : 2.8 + Math.random() * 2.4) * (eve > .5 ? 1.35 : 1);
+}
+
 /* the water: a soft wash of waves that grows as she comes near the sea or the pond, and is gone indoors */
 let wash = null, washT = 0;
 function startWash() {
@@ -443,7 +468,8 @@ function stepWater(dt) {
   if (!wash) return; washT -= dt; if (washT > 0) return; washT = .25;
   // how near water is: looking round her at three distances for places with no floor (the sea, the pond)
   let n = 0; if (set.seaAsk) for (const r of [1.3, 2.6, 4]) for (let a = 0; a < 8; a++) if (heightAt(girl.x + Math.cos(a * .785) * r, girl.z + Math.sin(a * .785) * r) === null) n += r < 2 ? 2 : r < 3 ? 1.2 : .7;
-  wash.near = Math.min(1, n / 9); wash.g.gain.setTargetAtTime(.02 + wash.near * .16, ac.currentTime, .5); wash.lp.frequency.setTargetAtTime(500 + wash.near * 500, ac.currentTime, .5);
+  const low = (heightAt(girl.x, girl.z) ?? 0) < -.05;   // only down on the sand, or on planks over the water: up on the grass the waves are out of earshot (Oscar's wish)
+  wash.near = low ? Math.min(1, n / 9) : 0; wash.g.gain.setTargetAtTime(wash.near * .17, ac.currentTime, .6); wash.lp.frequency.setTargetAtTime(500 + wash.near * 500, ac.currentTime, .5);
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
@@ -809,7 +835,7 @@ function frame(now) {
   }
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
   if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
-  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped);
+  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;

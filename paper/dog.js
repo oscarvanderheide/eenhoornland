@@ -6,14 +6,16 @@
 //   the ball     a tap on the ball and she kicks it; it really rolls and bounces off things. The dog runs after it,
 //                brings it back and drops it at her feet. Walking into the ball nudges it along
 import { ANIMALS } from './animals.js';
-import { E, S as smooth, piece, ink } from './cut.js';
+import { E, piece } from './cut.js';
 
 /** a ball that rolls: kicked by a tap (she walks up to it first) or nudged by walking into it. Cut from paper like the
- *  figures: a round card with a white band, turning as it rolls */
-const drawBall = col => g => { piece(g, col, E(32, 32, 22, 22)); piece(g, '#f6efe2', smooth([[12, 30], [32, 22], [52, 30], [52, 37], [32, 30], [12, 37]]), .5); ink(g, 'rgba(255,255,255,.55)', E(24, 22, 6, 4, -.5)); };
+ *  figures: a round card in six wedges of colour, like a beach ball, turning as it rolls */
+const wedge = (a0, a1) => g => { g.moveTo(32, 32); g.arc(32, 32, 22, a0, a1); g.closePath(); };
+const drawBall = () => g => { piece(g, '#f6efe2', E(32, 32, 22, 22)); ['#e98f8f', '#f2c65c', '#9ed9cf', '#f6efe2', '#bba6ea', '#f6efe2'].forEach((c, i) => piece(g, c, wedge(i * Math.PI / 3, (i + 1) * Math.PI / 3), 0)); piece(g, '#fcf8f1', E(32, 32, 4.5, 4.5), .4); };
 export function ball(S, x, y, z, color = '#e98f8f') {
   const { girl, sfx } = S, [wx, wz] = S.at([x, z]);
   const f = S.figure('bal', { w: 64, h: 64, draw: drawBall(color), frames: 1, size: .46 });
+  f.sink = -f.H / 2; f.mesh.position.y = -f.H / 2;   // its card hangs from its own middle, so it turns about its middle (turned about its foot, half of every turn was under the ground)
   const b = { x: wx, z: wz, vx: 0, vz: 0, lift: 0, vy: 0, held: null, kicks: 0, roll: 0, f };
   const kick = (dx, dz, power = 5.2, up = 2.6) => { const l = Math.hypot(dx, dz) || 1; b.vx = dx / l * power; b.vz = dz / l * power; b.vy = up; b.held = null; b.kicks++; sfx.boing(); };
   f.onTap = () => { if (b.held || S.playing()) return; const dx = b.x - girl.x, dz = b.z - girl.z, d = Math.hypot(dx, dz) || 1; S.walkThen(b.x - dx / d * .45, b.z - dz / d * .45, () => kick(b.x - girl.x, b.z - girl.z), .9); };
@@ -31,7 +33,7 @@ export function ball(S, x, y, z, color = '#e98f8f') {
       b.vy -= 9.8 * dt; b.lift += b.vy * dt; if (b.lift <= 0) { b.lift = 0; if (b.vy < -1.4) { b.vy *= -.45; sfx.thud(); } else b.vy = 0; }
       b.roll -= b.vx * dt / .2;
     }
-    f.x = b.x; f.z = b.z; f.lift = b.lift; f.lean = b.roll || .0001;
+    f.x = b.x; f.z = b.z; f.lift = b.lift; f.tilt = b.roll; f.face = 1;
   };
   b.moving = () => !b.held && Math.hypot(b.vx, b.vz) > .4;
   return b;
