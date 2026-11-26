@@ -7,7 +7,9 @@ description: How to add features to or fix bugs in Eenhoornland (the HD-2D pixel
 
 The players are two young children who cannot read. A bug that blocks them ends the fun, so every change is verified in a real browser before it is called done.
 
-**Version 2.0 (the paper game) lives in `paper/`.** Read `paper/PLAN.md` before any work there: it holds what is decided, the order of work, who may change what, and the list of every part of the game with its verdict. The rest of this file describes the pixel game (1.x), which stays as it is; its design rules below apply to 2.0 too.
+**Version 2.0 (the paper game) lives on branch `paper`, in the worktree `.claude/worktrees/paper`, never on `main`.** The `paper/` folder you see on `main` is an old copy from before the branch began: do not work in it. Enter the worktree and read `paper/PLAN.md` there before any 2.0 work: it holds what is decided, the order of work, who may change what, and the list of every part of the game with its verdict. The rest of this file describes the pixel game (1.x), which stays on `main` as it is; its design rules below apply to 2.0 too.
+
+**Publishing:** `.github/workflows/pages.yml` (the same file on both branches) builds the site on every push to `main` or `paper`: the pixel game from `main` at the root, the paper game from branch `paper`'s `paper/` folder at `/paper/`. Hidden files and folders are not published.
 
 ## Rules of the game design
 - Every island has its own plants, rocks and animals (`map.js` vegetation per zone, `art-isles.js`): nothing grows or lives on two islands. A new thing for an island gets new art.
