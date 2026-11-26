@@ -1,11 +1,11 @@
 // The paper island (paper/): loads without errors, she walks, the animals and the house answer a tap, day and evening.
-// node cdp.mjs tests/t-paper.mjs   (screenshots in tmp-shots/p-*.png; PHONE=1 for an iPhone-sized view)
+// node cdp.mjs tests/t-paper.mjs   (screenshots in tmp-shots/p-*.png; PHONE=1 for an iPhone-sized view, WHO=fenna for Fenna)
 export default async function (t) {
   const port = process.env.SERVE || 8765, fs = await import('node:fs'); fs.mkdirSync('tmp-shots', { recursive: true });
   if (process.env.PHONE) await t.send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 2, mobile: true });
   else await t.send('Emulation.setDeviceMetricsOverride', { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false });
   const pre = process.env.PHONE ? 'tmp-shots/p-phone-' : 'tmp-shots/p-';
-  await t.go(`http://127.0.0.1:${port}/paper/`);
+  await t.go(`http://127.0.0.1:${port}/paper/${process.env.WHO ? '?who=' + process.env.WHO : ''}`);   // WHO=fenna plays Fenna
   for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
   ok(await t.ev('!!window.__p'), 'the island loads');
@@ -45,4 +45,20 @@ export default async function (t) {
   const u = await t.ev('__p.info()'); ok(!lost && Math.hypot(u.uni[0] - u.girl[0], u.uni[1] - u.girl[1]) < 2.5, `the unicorn keeps up and never stands in the sea (girl ${u.girl.map(v => v.toFixed(1))}, unicorn ${u.uni.map(v => v.toFixed(1))})`);
   await t.ev('__p.evening(true)'); await t.sleep(1200); await t.shot(pre + 'evening.png');
   await t.ev('__p.placeAt(3.5, 6.6)'); await t.sleep(1500); await t.shot(pre + 'jetty-evening.png');
+  // the paper doll: things to wear from the stall, poses, shut eyes, the balloon on its thread
+  await t.ev('__p.evening(false)'); await t.ev('__p.placeAt(.2, 1.9)'); await t.sleep(900);
+  const w = await t.ev("__p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon'])");
+  ok(w.head === 'kroon' && w.neck === 'ketting' && w.dress === 'jurkregenboog' && w.back === 'vleugels' && w.hand === 'ballon', 'she puts on one thing in each of the five slots');
+  for (let i = 0; i < 40 && (await t.ev('__p.doll()')).warm; i++) await t.sleep(250);
+  const d1 = await t.ev('__p.doll()');
+  ok(d1.warm === 0, 'her new drawings are all made');
+  ok(d1.balloon && d1.balloon[1] > d1.hand[1] + .6 && Math.abs(d1.balloon[0] - d1.hand[0]) < .5, `the balloon floats above her hand (${d1.balloon && d1.balloon.map(v => v.toFixed(2))} over ${d1.hand.map(v => v.toFixed(2))})`);
+  await t.ev("__p.face('front')"); await t.sleep(400); await t.shot(pre + 'dressed.png');
+  await t.ev('__p.walkTo(-2.4, 2.6)'); await t.sleep(900); await t.shot(pre + 'dressed-walk.png'); await t.sleep(1500);
+  const d2 = await t.ev('__p.doll()'); ok(d2.balloon && Math.hypot(d2.balloon[0] - d2.hand[0], d2.balloon[2] - d2.hand[2]) < .8, 'the balloon comes along when she walks');
+  await t.ev("__p.pose('sit')"); await t.sleep(500); ok((await t.ev('__p.doll()')).pose === 'sit', 'she sits down'); await t.shot(pre + 'sit.png');
+  await t.ev('__p.walkTo(-1.2, 2.2)'); await t.sleep(1200); ok((await t.ev('__p.doll()')).pose !== 'sit', 'a step and she is up again');
+  await t.ev("__p.wear(['hoed', 'jurkblauw', 'knuffel'])"); await t.ev("__p.pose('up'); __p.face('front')"); await t.sleep(1500);
+  const d3 = await t.ev('__p.doll()'); ok(d3.pose === 'up' && !d3.balloon, 'arms up, and the balloon is gone with the other outfit'); await t.shot(pre + 'up.png');
+  await t.ev("__p.pose(null); __p.sleep(true)"); await t.sleep(500); ok((await t.ev('__p.doll()')).eyes === 'shut', 'her eyes shut'); await t.ev('__p.sleep(false)');
 }

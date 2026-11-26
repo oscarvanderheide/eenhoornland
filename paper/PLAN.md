@@ -4,6 +4,13 @@ The whole game rebuilt as a handmade paper diorama, with cameras that change to 
 
 Read this before any work under `paper/`. Status at the bottom.
 
+## Where the work lives
+
+- **Branch `paper`**, in the worktree `.claude/worktrees/paper` of the repository. Oscar, 2026-11-26: the pixel game keeps existing on `main`; 2.0 is committed on its own branch. Never commit 2.0 work to `main`.
+- This copy of the plan (on `paper`) is the current one; the copy on `main` stopped at the commit where the branch began.
+- Serve the worktree on its own port for tests: `python3 serve.py 8766`, then `SERVE=8766 node cdp.mjs tests/t-paper.mjs` (the main checkout's server on 8765 serves the pixel game's folder).
+- **Publishing is not set up yet.** The site is built from `main` only, so nothing on `paper` is online. Putting it online needs a change to the repository's Pages settings, which waits for Oscar's yes.
+
 ## Decided
 
 | What | Decision | By |
@@ -25,6 +32,9 @@ Claude's picks. Oscar has seen them and has not objected, but has not said yes t
 | Set size | Smaller and denser than the tile islands (start the village at about 60% of its old footprint, on two or three levels) | The paper island works because everything is close together |
 | Loading | Only the set she is on exists. A bridge (or a door, or the boat) is the gate: the next set is built while she crosses, in a wide shot, and the old one is thrown away. Other islands show on the horizon as flat card cutouts | Oscar asked whether loading the whole world at once is wise; this is the answer he got |
 | Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Outfits and new poses then cost little; the walk is already drawn from one parameter |
+| Carrying | She holds an animal in her arms in front of her (pose `hold`), not over her head as in the pixel game | With a big head and short arms, arms straight up end beside her cheeks; "arms up" (pose `up`) is kept for the moment a tool becomes hers |
+| The balloon | Its own little card on a thread tied to her hand, not part of her card | It floats too far above her to fit on her card, and on a thread it can trail and sway |
+| The bought bow (`strik`) | A big red bow with white dots on top of her head | Both sisters already wear a small bow on their ponytail; the bought one has to look plainly different |
 
 ## What carries over, what does not
 
@@ -222,4 +232,10 @@ Each girl and unicorn needs a side, front and back view.
 ## Status
 
 - 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; Oscar agreed to the list.
-- 2026-11-26: step 2 (figures with outfit layers) started in the main session. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
+- 2026-11-26: step 2 (figures with outfit layers) built, **waiting for Oscar's eye on the figure sheet** (`paper/figures.html`). Not done until he says so.
+  - The sisters are paper dolls (`paper/kids.js`): poses stand, walk, sit, hold, up; eyes that shut and blink; all eleven things the stall sells in five slots, in side, front and back view. Plain, they are pixel for pixel what Oscar approved (checked against the old drawing code, all 13 frames of all three views).
+  - Points on her card (`kidPoints`: hand, between her hands, top of her head, seat) for things she holds or sits on.
+  - On the island: `?who=fenna`, `?wear=kroon,ketting,jurkregenboog,vleugels,ballon`; in the console `__p.wear([...])`, `__p.pose('sit')`.
+  - Shared shapes and the backing card moved to `paper/cut.js`.
+  - Seen at phone size on the island: dresses, wings, hat, crown, bow, wreath and balloon read; the necklace does not and the rabbit barely does. That is risk 3 above, left for the test piece.
+  - Still to draw for later steps: riding, swimming, climbing, asleep in bed (lying down), and every unicorn pose. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).

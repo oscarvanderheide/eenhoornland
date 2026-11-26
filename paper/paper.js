@@ -2,7 +2,7 @@
 // a long lens with shallow focus), to see how Eenhoornland could look in that style. Separate from the game.
 // Everything is drawn in code: the paper is noise + fibres, the figures are cut-paper shapes on canvases.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { FIGS, cutout, WALK } from './figures.js';
+import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
 
 const DPR = Math.min(devicePixelRatio || 1, 2);
 const canvas = document.getElementById('c');
@@ -435,26 +435,40 @@ function drawDuck(g, f) {
 }
 
 const figures = [];
-/** a figure has a side view (facing right, the world flips it) and, if drawn, a front and a back view; each is a standing frame plus a walk */
-function makeFigure(name, { w, h, draw, front, back, frames, size }) {
-  const views = { side: draw, front, back }, all = {};
-  for (const [v, d] of Object.entries(views)) {
-    if (!d) continue; all[v] = [];
-    for (let f = 0; f < frames; f++) { const t = new THREE.CanvasTexture(cutout(w, h, g => d(g, f), PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; all[v].push(t); }
-  }
-  const maps = all.side;
+/** a figure has a side view (facing right, the world flips it) and, if drawn, a front and a back view; each is a standing frame plus a walk.
+ *  A sister (spec.kid) is a paper doll: she also has poses (fig.poseName), eyes that shut and things to wear (fig.redress).
+ *  Drawings are made when first shown and kept; the usual ones are made ahead, a few per frame (warm), so a walk never stutters. */
+const warm = [];
+function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
+  const views = { side: draw, front, back }, cache = new Map();
   const H = size, W = size * w / h;
   const geo = new THREE.PlaneGeometry(W, H); geo.translate(0, H / 2, 0);
-  const mat = new THREE.MeshStandardMaterial({ map: maps[0], alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 });
+  const mat = new THREE.MeshStandardMaterial({ alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 });
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = false;
-  mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: maps[0], alphaTest: .5 });
+  mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: .5 });
   const g = new THREE.Group(), pose = new THREE.Group(); g.add(pose); pose.add(mesh); scene.add(g);
-  const fig = { name, g, pose, mesh, mat, maps, all, view: 'side', x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, dirX: 1, dirZ: 0,
-    setFrame(i, view = this.view) { if (!all[view]) view = 'side'; if (this.frame === i && this.view === view) return; this.frame = i; this.view = view; const m = all[view][i]; mat.map = m; mesh.customDepthMaterial.map = m; } };
+  const fig = { name, g, pose, mesh, mat, views, kid, w, h, W, H, cyc: frames > WALK, view: 'side', x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, dirX: 1, dirZ: 0,
+    wear: {}, poseName: null, eyes: 'open' };
+  const poseOf = i => fig.poseName && fig.poseName !== 'sit' ? fig.poseName : fig.poseName === 'sit' && !i ? 'sit' : i ? 'walk' : 'stand';
+  const tex = (view, i, ps = poseOf(i), eyes = fig.eyes) => {
+    const key = kid ? `${view}|${ps}|${i}|${eyes}` : `${view}|${i}`; let t = cache.get(key);
+    if (!t) { t = new THREE.CanvasTexture(cutout(w, h, kid ? c => drawKid(c, kid, { view, pose: ps, f: i, wear: fig.wear, eyes }) : c => views[view](c, i), PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; cache.set(key, t); }
+    return t;
+  };
+  fig.poseOf = poseOf;
+  fig.setFrame = (i, view = fig.view) => { if (!views[view]) view = 'side'; fig.frame = i; fig.view = view; const m = tex(view, i); if (mat.map !== m) { mat.map = m; mesh.customDepthMaterial.map = m; } };
+  /** make the standing frame and the walk of every view ahead of time: at once (now) or a few per frame */
+  fig.warmUp = now => { for (const v of Object.keys(views)) if (views[v]) for (let i = 0; i < frames; i++) { if (now) tex(v, i, i ? 'walk' : 'stand', 'open'); else warm.push(() => tex(v, i)); } };
+  /** put other things on her: every drawing of her is thrown away and made again */
+  fig.redress = wear => { fig.wear = wear || {}; for (const t of cache.values()) t.dispose(); cache.clear(); mat.map = null; fig.setFrame(fig.frame); fig.warmUp(false); };
+  /** a point on her card (drawing units) as a place in the world */
+  fig.point = ([px, py]) => mesh.localToWorld(new THREE.Vector3((px / w - .5) * W, (1 - py / h) * H, 0));
+  fig.warmUp(true); fig.setFrame(0);
   mesh.userData.fig = fig; figures.push(fig); return fig;
 }
 const fig = (name, k) => makeFigure(name, FIGS[k]);
-const girl = fig('girl', 'anna');
+const ASK = new URLSearchParams(location.search);   // ?who=fenna plays Fenna, ?wear=kroon,ketting,jurkregenboog,vleugels,ballon dresses her
+const girl = fig('girl', ASK.get('who') === 'fenna' ? 'fenna' : 'anna');
 const uni = fig('unicorn', 'baby');
 const mama = fig('mama', 'grown');
 const sheep = makeFigure('sheep', { w: 140, h: 150, draw: drawSheep, frames: 3, size: .95 });
@@ -466,6 +480,31 @@ sheep.x = 3.7; sheep.z = 1.1; sheep.face = -1;
 duck.x = 4.9; duck.z = 5.6; duck.face = 1; duck.y = WATER_Y;
 solids.push({ x: sheep.x, z: sheep.z, r: .42, fig: sheep });
 for (const f of [girl, uni, mama, sheep, duck]) tapTarget(f.g, () => tapFigure(f));
+/** things to wear by their stall ids, sorted into their slots */
+const wearOf = ids => { const o = {}; for (const id of ids) for (const [slot, list] of Object.entries(WEAR)) if (list.includes(id)) o[slot] = id; return o; };
+if (ASK.get('wear')) girl.redress(wearOf(ASK.get('wear').split(',')));
+
+/* the balloon she holds is its own little card on a thread tied to her hand: it floats above her, trails a little behind when she walks and sways */
+const balloon = (() => {
+  const t = new THREE.CanvasTexture(cutout(BALLOON.w, BALLOON.h, drawBalloon, PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const Hb = BALLOON.size, Wb = Hb * BALLOON.w / BALLOON.h;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(Wb, Hb), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, side: THREE.DoubleSide, roughness: .85, bumpMap: paperBump, bumpScale: .6 })); m.castShadow = true;
+  m.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: t, alphaTest: .5 });
+  const thread = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#6f625c' })); thread.frustumCulled = false;
+  const g = new THREE.Group(); g.add(m, thread); g.visible = false; scene.add(g);
+  return { g, m, thread, pos: new THREE.Vector3(), knot: (.5 - BALLOON.knot[1] / BALLOON.h) * Hb, on: false };
+})();
+function stepBalloon(dt) {
+  const on = girl.wear.hand === 'ballon'; balloon.g.visible = on; if (!on) { balloon.on = false; return; }
+  girl.g.updateMatrixWorld(true);
+  const hand = girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hand);
+  // it floats out to the side her hand is on, so it never hangs in front of her face
+  const want = hand.clone(); want.x += (hand.x - girl.x) * .9 + Math.sin(time * 1.3) * .06; want.y += .98 + Math.sin(time * 1.9) * .03;
+  if (!balloon.on) { balloon.pos.copy(want); balloon.on = true; } else balloon.pos.lerp(want, Math.min(1, dt * 3.2));
+  balloon.m.position.copy(balloon.pos); balloon.m.rotation.y = girl.g.rotation.y; balloon.m.rotation.z = (hand.x - balloon.pos.x) * .7;
+  const knot = balloon.pos.clone(); knot.y += balloon.knot; const mid = hand.clone().lerp(knot, .5); mid.x += (hand.x - knot.x) * .25;
+  balloon.thread.geometry.setFromPoints([hand, mid, knot]);
+}
 
 /* ---------------- paper confetti ---------------- */
 const bits = [];
@@ -545,7 +584,7 @@ function tryMove(f, dx, dz) {
 }
 /** walking mostly towards the camera shows her front, mostly away her back, else her side (with a margin so it never flickers) */
 function viewFor(f) {
-  if (!f.all.front) return 'side';
+  if (!f.views.front) return 'side';
   const ax = Math.abs(f.dirX), az = Math.abs(f.dirZ);
   if (az > ax * 1.5) return f.dirZ > 0 ? 'front' : 'back';
   if (ax > az * 1.1) return 'side';
@@ -567,7 +606,7 @@ function pickAt(cx, cy) {
   // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
   return hits.find(h => !h.object.userData.fig || solidAt(h.object.userData.fig, h.uv)) || null;
 }
-const alphaCache = new Map();
+const alphaCache = new WeakMap();
 function solidAt(fig, uv) {
   const cv = fig.mat.map.image; let d = alphaCache.get(cv);
   if (!d) { d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height); alphaCache.set(cv, d); }
@@ -700,27 +739,34 @@ function frame(now) {
     f.y += (ground - f.y) * Math.min(1, dt * 14);
     if (f.hopV || f.hop > 0) { f.hop += f.hopV * dt; f.hopV -= 14 * dt; if (f.hop <= 0) { f.hop = 0; f.hopV = 0; } }
     if (f === duck && f.dive) { f.dive -= dt; }
-    const cyc = f.maps.length > WALK;
+    const cyc = f.cyc;
     if (cyc && f.walking) f.phase = ((f.phase || 0) + wsteps) % WALK;
     if (stepped || (cyc && f.walking && wsteps)) {
       if (cyc) {
         // walking: the next of twelve drawings, a little bounce on each step, a gentle sway
         const ph = f.phase || 0, sw = Math.sin(ph / WALK * Math.PI * 2);
-        if (f.walking) f.view = viewFor(f);
+        if (f.walking) { f.view = viewFor(f); if (f.poseName === 'sit') f.poseName = null; }
+        if (f.kid) {   // a sister blinks now and then while she stands (eyes shut for two stop-motion ticks)
+          if (tick >= (f.blinkAt || 0) + 2) f.blinkAt = tick + 36 + Math.floor(Math.random() * 36);
+          f.eyes = f.asleep || (!f.walking && tick >= f.blinkAt) ? 'shut' : 'open';
+        }
         f.setFrame(f.walking ? 1 + ph : 0, f.view);
+        f.sitY = f.kid && f.poseName === 'sit' ? (1 - (kidPoints(f.kid, 'side', 'sit').seat[1] + 4) / f.h) * f.H : 0;   // sitting, she sits on the ground
         f.bob = f.walking ? (1 - Math.abs(sw)) * .045 : 0;
         f.tilt = f.walking ? sw * .03 : 0;
         if (!f.walking) f.phase = 0;
       } else { f.bob = 0; f.tilt = 0; }
       if (f === duck) { const dv = f.dive > 0 ? Math.sin(clamp(1 - (f.dive - .1) / 1.1, 0, 1) * Math.PI) : 0; f.sink = dv * .55; f.tilt = Math.sin(tick * .4) * .04; f.setFrame(f.dive > 0 ? 1 : 0); }
       // pose = position snapped to the frame, so even a hop moves in little steps
-      f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0);
+      f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0) - (f.sitY || 0);
       f.pose.rotation.z = f.tilt * f.face;
       f.mesh.scale.x = f.view === 'side' ? f.face : 1;
     }
     f.g.position.set(f.x, f.y, f.z);
     f.g.rotation.y = Math.atan2(camera.position.x - f.x, camera.position.z - f.z) * .85;
   }
+  stepBalloon(dt);
+  for (let n = 0; n < 2 && warm.length; n++) warm.shift()();   // drawings made ahead, a few per frame
   // trees wobble when tapped, in steps
   if (stepped) for (const t of trees) if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
   // the door
@@ -765,6 +811,12 @@ window.__p = {
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
+  /** dress her: __p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon']); pose her: __p.pose('sit' | 'hold' | 'up' | null); __p.sleep(true) shuts her eyes */
+  wear(ids) { girl.redress(wearOf(ids || [])); return girl.wear; },
+  pose(name) { girl.poseName = name || null; },
+  sleep(on = true) { girl.asleep = on; },
+  face(view) { girl.view = view; },
+  doll() { return { who: girl.kid, wear: girl.wear, pose: girl.poseOf(girl.frame), eyes: girl.eyes, warm: warm.length, balloon: balloon.g.visible ? balloon.pos.toArray() : null, hand: girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hand).toArray(), y: girl.y }; },
   view(name = 'girl') { return figures.find(f => f.name === name).view; },
   uniOk() { return heightAt(uni.x, uni.z) !== null; },
   hop(name) { return figures.find(f => f.name === name).hop; },

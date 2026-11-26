@@ -2,32 +2,92 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Papieren figuren</title>
-<!-- A sheet of the cut-paper figures: Anna, Fenna, the baby unicorn and the grown unicorn, standing and two walking steps. -->
+<!-- A sheet of the cut-paper figures: the four figures with their views, the sisters' poses, and everything the stall sells tried on. -->
 <style>
 html,body{margin:0;min-height:100%;background:#d9c7a7}
 body{font:600 15px/1.3 ui-rounded,"SF Pro Rounded",system-ui,sans-serif;color:#5a4636}
-#sheet{position:relative;min-height:100vh;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:28px 40px;padding:40px 24px 60px;box-sizing:border-box}
+h2{margin:26px 0 0;text-align:center;font-size:17px;letter-spacing:.04em;color:#7a6250}
+.row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:22px 34px;padding:20px 16px 10px;box-sizing:border-box}
+#sheet{padding-top:20px}
 .fig{display:flex;flex-direction:column;align-items:center;gap:10px}
 .big{filter:drop-shadow(2px 5px 5px rgba(60,40,30,.35))}
 .steps{display:flex;gap:6px;align-items:flex-end}
 .steps canvas{filter:drop-shadow(1px 3px 3px rgba(60,40,30,.3))}
 .name{letter-spacing:.02em}
+body{padding-bottom:60px}
 </style>
-<div id="sheet"></div>
+<div id="sheet" class="row"></div>
+<h2>houdingen</h2><div id="poses" class="row"></div>
+<h2>van het kraampje</h2><div id="stall" class="row"></div>
+<h2>alles aan</h2><div id="all" class="row"></div>
 <script type="module">
-import { FIGS, cutout, paperCanvas } from './figures.js';
+import { FIGS, cutout, paperCanvas, drawKid, kidPoints, drawBalloon, BALLOON, WEAR, POSES, WALK } from './figures.js';
 const grain = paperCanvas(256, 7, 400);
 const bg = paperCanvas(512, 3, 1200, 1.3);
 document.body.style.backgroundImage = `url(${bg.toDataURL()})`; document.body.style.backgroundBlendMode = 'multiply';
 const names = { anna: 'Anna', fenna: 'Fenna', baby: 'baby eenhoorn', grown: 'grote eenhoorn' };
-const sheet = document.getElementById('sheet'), px = 1.05;
+const $ = id => document.getElementById(id);
+const box = (to, label, ...kids) => { const b = document.createElement('div'); b.className = 'fig'; const s = document.createElement('div'); s.className = 'steps'; s.append(...kids); const n = document.createElement('div'); n.className = 'name'; n.textContent = label; b.append(s, n); to.append(b); return b; };
+
+/* the four figures, big, with their front and back and a walking step */
+const sheet = $('sheet'), px = 1.05;
 for (const [k, f] of Object.entries(FIGS)) {
-  const box = document.createElement('div'); box.className = 'fig';
+  const b = document.createElement('div'); b.className = 'fig';
   const big = cutout(f.w, f.h, f.draw, grain); big.className = 'big'; big.style.width = f.w * px * f.size / 1.2 * (k === 'grown' ? .95 : 1) + 'px';
   const steps = document.createElement('div'); steps.className = 'steps';
   for (const [d, fr] of [[f.front, 0], [f.back, 0], [f.draw, 4]]) { if (!d) continue; const c = cutout(f.w, f.h, (g) => d(g, fr), grain); c.style.width = f.w * .36 * f.size + 'px'; steps.append(c); }
   const name = document.createElement('div'); name.className = 'name'; name.textContent = names[k];
-  box.append(big, steps, name); sheet.append(box);
+  b.append(big, steps, name); sheet.append(b);
 }
-window.__ready = true;
+
+/** a sister on her card; with a balloon the card is set on a taller sheet with the balloon on its thread above her hand */
+function kid(who, o = {}, scale = .5) {
+  const f = FIGS[who], c = cutout(f.w, f.h, g => drawKid(g, who, o), grain), k = scale * f.size / 1.2;
+  if (!o.wear || o.wear.hand !== 'ballon') { c.style.width = f.w * k + 'px'; return c; }
+  // the card grows upwards by `up`; the balloon floats beside her head, its thread runs down behind her to her hand
+  const up = 110, out = document.createElement('canvas'); out.width = c.width; out.height = c.height + up * 2; const g = out.getContext('2d');
+  const [hx, hy] = kidPoints(who, o.view, o.pose, o.f).hand, bx = Math.max(44, Math.min(f.w - 44, hx + Math.sign(hx - f.w / 2) * 34)), top = 4;
+  g.strokeStyle = '#6f625c'; g.lineWidth = 2.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx * 2, (hy + up) * 2); g.quadraticCurveTo((hx + (bx - hx) * 1.3) * 2, (hy + up - 70) * 2, bx * 2, (top + BALLOON.knot[1]) * 2); g.stroke();
+  g.drawImage(c, 0, up * 2); g.drawImage(cutout(BALLOON.w, BALLOON.h, drawBalloon, grain), (bx - BALLOON.knot[0]) * 2, top * 2);
+  out.style.width = f.w * k + 'px'; return out;
+}
+
+/* poses: side, front and back */
+const poseName = { stand: 'staan', walk: 'lopen', sit: 'zitten', hold: 'vasthouden', up: 'armen omhoog' };
+for (const who of ['anna', 'fenna']) {
+  box($('poses'), names[who] + ': lopen', ...[2, 5, 8, 11].map(f => kid(who, { pose: 'walk', f })));
+  for (const pose of ['sit', 'hold', 'up']) box($('poses'), poseName[pose], ...['side', 'front', 'back'].map(view => kid(who, { view, pose })));
+  box($('poses'), 'ogen dicht', kid(who, { eyes: 'shut' }), kid(who, { view: 'front', eyes: 'shut' }));
+}
+
+/* everything the stall sells, each tried on by one of the sisters in three views */
+const wearName = { strik: 'strik', krans: 'bloemenkrans', hoed: 'hoed', kroon: 'kroon', ketting: 'ketting', knuffel: 'knuffel', ballon: 'ballon', jurkgeel: 'gele jurk', jurkblauw: 'blauwe jurk', jurkregenboog: 'regenboogjurk', vleugels: 'vleugels' };
+let n = 0;
+for (const [slot, ids] of Object.entries(WEAR)) for (const id of ids) { const who = n++ % 2 ? 'fenna' : 'anna'; box($('stall'), wearName[id], ...['front', 'side', 'back'].map(view => kid(who, { view, wear: { [slot]: id } }))); }
+const OUTFITS = [{ head: 'kroon', neck: 'ketting', dress: 'jurkregenboog', back: 'vleugels', hand: 'ballon' }, { head: 'krans', neck: 'ketting', dress: 'jurkgeel', hand: 'knuffel' }, { head: 'hoed', dress: 'jurkblauw', back: 'vleugels', hand: 'knuffel' }, { head: 'strik', neck: 'ketting', dress: 'jurkregenboog', hand: 'ballon' }];
+OUTFITS.forEach((wear, i) => { const who = i % 2 ? 'fenna' : 'anna'; box($('all'), names[who], kid(who, { view: 'front', wear }, .8), kid(who, { view: 'side', wear, pose: 'walk', f: 3 }, .8), kid(who, { view: 'back', wear }, .8)); });
+
+/* checks for tests/t-figures.mjs: every piece shows in every view on both sisters, every pose is its own drawing, the points lie on the card */
+const data = (who, o) => { const f = FIGS[who], c = cutout(f.w, f.h, g => drawKid(g, who, o), null, 1); return c.getContext('2d').getImageData(0, 0, c.width, c.height).data; };
+const differ = (a, b) => { let k = 0; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 8) k++; return k; };
+const bad = [];
+for (const who of ['anna', 'fenna']) for (const view of ['side', 'front', 'back']) {
+  const plain = data(who, { view });
+  for (const [slot, ids] of Object.entries(WEAR)) for (const id of ids) {
+    if (id === 'ballon' || (id === 'ketting' && view === 'back')) continue;   // the balloon is its own card; from behind her hair hides the necklace
+    if (differ(plain, data(who, { view, wear: { [slot]: id } })) < 150) bad.push(`${who} ${view}: ${id} does not show`);
+  }
+  for (const pose of POSES) {
+    if (pose !== 'stand' && differ(plain, data(who, { view, pose, f: 4 })) < 150) bad.push(`${who} ${view}: pose ${pose} looks like standing`);
+    const p = kidPoints(who, view, pose, 4), f = FIGS[who];
+    for (const [name, [x, y]] of Object.entries(p)) if (!(x > 0 && x < f.w && y > 0 && y < f.h)) bad.push(`${who} ${view} ${pose}: point ${name} is off the card`);
+  }
+  if (view !== 'back' && differ(plain, data(who, { view, eyes: 'shut' })) < 20) bad.push(`${who} ${view}: shut eyes do not show`);
+}
+/* nothing she wears may be cut off by the edge of her card: the outermost rows and columns stay empty */
+for (const who of ['anna', 'fenna']) for (const view of ['side', 'front', 'back']) for (const pose of POSES) {
+  const f = FIGS[who], wear = { head: 'kroon', neck: 'ketting', dress: 'jurkregenboog', back: 'vleugels', hand: 'knuffel' };
+  for (const head of WEAR.head) { const d = data(who, { view, pose, f: 4, wear: { ...wear, head } }); let edge = 0; for (let x = 0; x < f.w; x++) edge += d[x * 4 + 3] + d[((f.h - 1) * f.w + x) * 4 + 3]; for (let y = 0; y < f.h; y++) edge += d[y * f.w * 4 + 3] + d[(y * f.w + f.w - 1) * 4 + 3]; if (edge) bad.push(`${who} ${view} ${pose} ${head}: touches the edge of the card`); }
+}
+window.__bad = bad; window.__ready = true;
 </script>
