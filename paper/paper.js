@@ -166,7 +166,7 @@ function buildSea() {
   const asks = sets.map(s => s.seaAsk).filter(Boolean); if (!asks.length) return;
   const land = asks.flatMap(a => a.land), x0 = Math.min(...asks.map(a => a.x0)), x1 = Math.max(...asks.map(a => a.x1)), z0 = Math.min(...asks.map(a => a.z0)), z1 = Math.max(...asks.map(a => a.z1));
   const deep = asks.length === 1 ? asks[0].deep : [x1 - x0 + 90, z1 - z0 + 80, (x0 + x1) / 2, (z0 + z1) / 2];
-  const blues = ['#5f9fae', '#6fb0b8', '#4f8ea2', '#7fbcc0', '#5a97a8'];
+  const blues = ['#5f9fae', '#6fb0b8', '#4f8ea2', '#7fbcc0', '#5a97a8'], fine = Math.min(...asks.map(a => a.fine));   // how many cuts per step along a wave
   const bed = new THREE.Mesh(new THREE.PlaneGeometry(deep[0], deep[1]), paper('#3f6f80')); bed.rotation.x = -Math.PI / 2; bed.position.set(deep[2], -1.05, deep[3]); bed.receiveShadow = true; seaRoot.add(bed);
   let k = 0;
   for (let z = z0; z <= z1; z += .75, k++) {
@@ -180,7 +180,7 @@ function buildSea() {
     for (const [a, b] of parts) {
       const w = b - a; if (w < .5) continue;
       const pts = [[0, 0]];
-      for (let i = 0; i <= Math.ceil(w * 3); i++) { const x = i / Math.ceil(w * 3) * w; pts.push([x, .5 + Math.sin((a + x) * 2.1 + k * 1.3) * .09 + Math.sin((a + x) * .7 + k) * .05]); }
+      for (let i = 0; i <= Math.ceil(w * fine); i++) { const x = i / Math.ceil(w * fine) * w; pts.push([x, .5 + Math.sin((a + x) * 2.1 + k * 1.3) * .09 + Math.sin((a + x) * .7 + k) * .05]); }
       pts.push([w, 0]);
       const m = card(pts, .05, paper(blues[k % blues.length]), whiteEdge); m.position.set(a, -1.08, z); m.castShadow = false;
       m.userData.live = true; seaRoot.add(m); seaRows.push({ m, z, base: a, k });
@@ -196,7 +196,7 @@ function buildSet(def) {
   const S = {
     THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine,
     at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
-    sea: o => { s.seaAsk = { land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
+    sea: o => { s.seaAsk = { fine: o.fine ?? 3, land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
     floor: (h, pts, inset = 0) => { s.floors.push({ h, pts: pts.map(W), inset }); },
     floorBox: (h, x0, z0, x1, z1) => { s.floors.push({ h, box: [x0 + ox, z0 + oz, x1 + ox, z1 + oz] }); },
     wall: (cx, cz, hx, hz) => { s.walls.push([cx + ox, cz + oz, hx, hz]); },
@@ -823,11 +823,13 @@ function frame(now) {
   // trees wobble when tapped, in steps
   if (stepped) {
     // a tree that stands between the camera and her folds down flat to the side, like a page of a pop-up book, and stands
-    // up again when she has passed: she is never hidden behind one. (Only on the set she stands on: the others' trees are glued)
+    // up again when she has passed. Only on a set that asks for it (`fold: true`): Oscar, 2026-11-26, liked it but found it odd
+    // in the open village, where nobody is lost behind a tree; it is kept for places that hide something. (And only on the set
+    // she stands on: the others' trees are glued)
     const cx = camera.position.x, cz = camera.position.z, D = Math.hypot(girl.x - cx, girl.z - cz) || 1, ux = (girl.x - cx) / D, uz = (girl.z - cz) / D, reach = 2.6 / Math.max(.15, camH / camDist);
     for (const q of sets) for (const t of q.trees) {
       const tx = t.x + q.ox - cx, tz = t.z + q.oz - cz, along = tx * ux + tz * uz, side = tx * uz - tz * ux;
-      const inWay = q === set && !still && along < D - .35 && along > D - reach && Math.abs(side) < 1.05;
+      const inWay = q === set && q.fold && !still && along < D - .35 && along > D - reach && Math.abs(side) < 1.05;
       if (inWay && !t.fold) t.lay = side >= 0 ? 1 : -1;   // it falls away from her line of sight, to whichever side it stands on
       t.fold = (t.fold || 0) + ((inWay ? 1 : 0) - (t.fold || 0)) * .4; if (t.fold < .01) t.fold = 0;
       if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);

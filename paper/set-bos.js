@@ -25,7 +25,7 @@ export default {
     shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]], under);
     // the bridge from the village is the village's (set-dorp.js): it lands on this shore at bosLand().bridge
 
-    S.sea({ land: [SAND, SAND_E], x0: -52, x1: 52, z0: -19, z1: 15, deep: [200, 150, 0, 0] });
+    S.sea({ land: [SAND, SAND_E], x0: -58, x1: 60, z0: -22, z1: 16, deep: [230, 170, 0, 0], fine: 1.8 });
 
     /* ---------------- the cave's rock: three slabs of pale stone and a dark mouth ---------------- */
     const [rx, rz] = T(36, 6.3), ROCK = blob(rx, rz, 2.7, 1.15, 221, 40, .06);
@@ -79,7 +79,7 @@ export default {
       step: e => { for (const c of Object.values(live)) c.step(e); },
       toys: live,
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
-      shadow: { follow: 20 }, back: BACK, sky: 1.4,
+      shadow: { follow: 20 }, back: BACK, sky: 1.65,
       shots: [
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
         { name: 'bos', span: 13, rise: .3 },

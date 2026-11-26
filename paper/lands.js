@@ -4,7 +4,7 @@ import { blob, rng } from './kit.js';
 
 /** how spread out a set is: every place on it is this much further from the set's middle than on the pixel game's map at 0.6
  *  of a step per tile, while the things themselves keep their size. Oscar, 2026-11-26: at 1 everything felt cramped */
-export const SPREAD = 1.5;
+export const SPREAD = 1.8;
 const K = SPREAD, wide = o => { for (const k of Object.keys(o)) { const v = o[k]; o[k] = Array.isArray(v[0]) && Array.isArray(v[0][0]) ? v.map(p => p.map(([x, z]) => [x * K, z * K])) : Array.isArray(v[0]) ? v.map(([x, z]) => [x * K, z * K]) : [v[0] * K, v[1] * K]; } return o; };
 /** how far the forest's shore lies from the village's: the length of the bridge between them. One number: change it and the
  *  forest, the bridge and the far shot all move with it */
