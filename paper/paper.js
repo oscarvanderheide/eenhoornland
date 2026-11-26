@@ -9,7 +9,7 @@ import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
 import bos from './set-bos.js';
 import huis from './set-huis.js';
-import { ORIGIN, NEAR } from './lands.js';
+import { ORIGIN, NEAR, SPREAD } from './lands.js';
 const SETS = { eiland, dorp, bos, huis };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
@@ -356,7 +356,7 @@ const starGeo = (() => { const s = new THREE.Shape(sunPts(.08, 5).map(([x, y]) =
 
 /* ---------------- sound: a few soft synth notes ---------------- */
 let ac = null;
-function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { } } if (ac && ac.state === 'suspended') ac.resume(); if (ac && !wash && typeof startWash === 'function') setTimeout(startWash, 0); return ac; }
 function tone(freq, dur, type = 'sine', vol = .12, slide = 0, vib = 0) {
   const a = audio(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
   o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
@@ -391,6 +391,25 @@ const sfx = {
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
+
+/* the water: a soft wash of waves that grows as she comes near the sea or the pond, and is gone indoors */
+let wash = null, washT = 0;
+function startWash() {
+  const a = audio(); if (!a || wash) return;
+  const len = a.sampleRate * 4, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0); let v = 0;
+  for (let i = 0; i < len; i++) { v = (v + .03 * (Math.random() * 2 - 1)) / 1.03; d[i] = v * 6; }   // brown noise: the low rush of water
+  for (let i = 0; i < 2000; i++) { const k = i / 2000; d[i] *= k; d[len - 1 - i] *= k; }             // so the loop has no click
+  const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+  const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650;
+  const swell = a.createGain(); swell.gain.value = .6; const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = .14; lg.gain.value = .4; lfo.connect(lg); lg.connect(swell.gain); lfo.start();   // waves come and go
+  const g = a.createGain(); g.gain.value = 0; src.connect(lp); lp.connect(swell); swell.connect(g); g.connect(a.destination); src.start(); wash = { g, lp, near: 0 };
+}
+function stepWater(dt) {
+  if (!wash) return; washT -= dt; if (washT > 0) return; washT = .25;
+  // how near water is: looking round her at three distances for places with no floor (the sea, the pond)
+  let n = 0; if (set.seaAsk) for (const r of [1.3, 2.6, 4]) for (let a = 0; a < 8; a++) if (heightAt(girl.x + Math.cos(a * .785) * r, girl.z + Math.sin(a * .785) * r) === null) n += r < 2 ? 2 : r < 3 ? 1.2 : .7;
+  wash.near = Math.min(1, n / 9); wash.g.gain.setTargetAtTime(.02 + wash.near * .16, ac.currentTime, .5); wash.lp.frequency.setTargetAtTime(500 + wash.near * 500, ac.currentTime, .5);
+}
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
 function tapFigure(f) {
@@ -751,7 +770,9 @@ function frame(now) {
       else { const q = target; target = null; if (q.then && Math.hypot((q.gx ?? q.x) - girl.x, (q.gz ?? q.z) - girl.z) < Math.max(.3, q.near || 0)) q.then(); }
     } else { ix = dx / d; iz = dz / d; }
   }
-  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt);
+  // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
+  if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
+  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -913,6 +934,8 @@ window.__p = {
   },
   /** a place in the world as a spot on the screen */
   point(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+  /** how spread out the sets are (lands.js), and how loud the water is right now (0 to 1) */
+  spread: SPREAD, water() { return wash ? wash.near : null; },
   /** where the camera looks and stands */
   cam() { return { look: camLook.toArray(), pos: camPos.toArray() }; },
   /** what she is playing on (a toy's own state), or null */

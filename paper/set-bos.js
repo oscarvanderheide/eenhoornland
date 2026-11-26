@@ -4,10 +4,10 @@
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, GROUND } from './props.js';
 import { hedgehog, owl, squirrel } from './critters.js';
-import { bosLand, BACK } from './lands.js';
+import { bosLand, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (0.6 of a step per tile, the middle of the forest is 0, 0) */
-const T = (x, z) => [(x - 33) * .6, (z - 14) * .6];
+const K = SPREAD, T = (x, z) => [(x - 33) * .6 * K, (z - 14) * .6 * K], kk = pts => pts.map(([x, z]) => [x * K, z * K]);
 const GREY = { path: '#e6e1d6', thing: '#b4afa4', dark: '#8f8a80', rock: '#bdb6c9', rock2: '#cbc5d6', mouth: '#4a4458', bush: '#a9b59c' };
 const H_SAND = -.32, H_GRASS = 0;
 
@@ -25,7 +25,7 @@ export default {
     shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]], under);
     // the bridge from the village is the village's (set-dorp.js): it lands on this shore at bosLand().bridge
 
-    S.sea({ land: [SAND, SAND_E], x0: -40, x1: 40, z0: -13, z1: 12, deep: [170, 120, 0, 0] });
+    S.sea({ land: [SAND, SAND_E], x0: -52, x1: 52, z0: -19, z1: 15, deep: [200, 150, 0, 0] });
 
     /* ---------------- the cave's rock: three slabs of pale stone and a dark mouth ---------------- */
     const [rx, rz] = T(36, 6.3), ROCK = blob(rx, rz, 2.7, 1.15, 221, 40, .06);
@@ -44,14 +44,14 @@ export default {
     const lay = (pts, c, y = H_GRASS) => { root.add(slab(pts, y + .015, .015, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     const [cx, cz] = T(30, 12.5), [ox, oz] = T(45, 12), [nx, nz] = T(16.5, 16.5), [ax, az] = T(23.5, 8);
-    lay(blob(cx, cz, 2.6, 1.85, 231, 44, .06), GROUND.grass);                          // the clearing
-    lay(blob(ox, oz, 2.1, 1.8, 232, 40, .06), GROUND.grass);                           // the orchard
-    lay(blob(nx, nz, 1.5, 1.35, 233, 36, .06), GROUND.grass);                          // the nook
-    lay(ribbon([[BR[0], BR[1] - .3], [4.4, 3.7], [3.1, 2.3], [1.3, 1.1], [-.6, -.1], [-1.5, -.7]], .85, 234), 'path');     // from the bridge into the clearing
-    lay(ribbon([[-.5, -1.5], [.7, -2.2], [1.5, -2.9], [rx, mouthZ + .35]], .8, 235), 'path');                        // on to the mouth of the cave
-    stones([[-3.6, -1.6], [-4.2, -2.0], [-4.8, -2.3], [-5.3, -2.5]], 240);                                           // to the atelier
-    stones([[4.3, 1.7], [5.0, 1.1], [5.7, .5], [6.3, -.1]], 250);                                                    // to the orchard
-    { const [tx0, tz0] = T(56.5, 13); lay(blob(tx0 - .2, tz0 + 1.7, 2.5, 1.6, 236, 40, .06), GROUND.grass); stones([[9.3, -.9], [10.1, -.5], [10.9, -.1], [11.7, .4]], 255); }   // the glade under the big oak, and the way to it
+    lay(blob(cx, cz, 3.2, 2.3, 231, 44, .06), GROUND.grass);                          // the clearing
+    lay(blob(ox, oz, 2.6, 2.2, 232, 40, .06), GROUND.grass);                           // the orchard
+    lay(blob(nx, nz, 1.9, 1.7, 233, 36, .06), GROUND.grass);                          // the nook
+    lay(ribbon([[BR[0], BR[1] - .3], ...kk([[4.4, 3.7], [3.1, 2.3], [1.3, 1.1], [-.6, -.1], [-1.4, -.6]])], .85, 234), 'path');     // from the bridge into the clearing
+    lay(ribbon([...kk([[-.5, -1.6], [.7, -2.2], [1.5, -2.7]]), [rx, mouthZ + .35]], .8, 235), 'path');                        // on to the mouth of the cave
+    stones(kk([[-3.5, -1.5], [-3.9, -1.75], [-4.3, -2.0], [-4.7, -2.2], [-5.1, -2.4], [-5.4, -2.55]]), 240);                                           // to the atelier
+    stones(kk([[4.3, 1.7], [4.75, 1.3], [5.2, .9], [5.65, .5], [6.1, .1]]), 250);                                                    // to the orchard
+    { const [tx0, tz0] = T(56.5, 13); lay(blob(tx0 - .2, tz0 + 2.0, 3.0, 1.9, 236, 40, .06), GROUND.grass); stones(kk([[8.9, -1.0], [9.4, -.8], [9.9, -.55], [10.4, -.3], [10.9, -.05], [11.4, .25], [11.9, .5]]), 255); }   // the glade under the big oak, and the way to it
 
     /* ---------------- things, in grey: the atelier, the bushes somebody hides in, the big oak with the treehouse ---------------- */
     put(box(2.4, 1.8, 1.8, 'path'), ax, .9, az); put(card([[-1.38, 0], [1.38, 0], [0, .85]], 2.2, P('dark'), edgeMat), ax, 1.8, az); S.wall(ax, az, 1.35, 1.02);
@@ -62,11 +62,11 @@ export default {
 
     /* ---------------- trees: a forest's worth ---------------- */
     const greens = [['#7fa676', '#a3c08c'], ['#93b071', '#b3c98d'], ['#6f9670', '#8fb089']], R = rng(271); let n = 0;
-    for (let i = 0; i < 1600 && n < 46; i++) {
-      const x = -13 + R() * 30, z = -6 + R() * 12, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
+    for (let i = 0; i < 2600 && n < 66; i++) {
+      const x = (-13 + R() * 30) * K, z = (-6 + R() * 12) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
       const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .5 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .7 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
-      if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.1 && z > 3.2 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
+      if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.3 && z > BR[1] - 3.4 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.15)) continue;
       if (pineTree) S.pine(x, z, H_GRASS, 1.4 + R() * .8, ['#5f8665', '#6f9670', '#547a5c', '#7fa676'][n % 4]); else S.lollipop(x, z, H_GRASS, .45 + R() * .3, c[0], c[1], 400 + n, 1 + R() * .6);
       n++;
@@ -78,14 +78,14 @@ export default {
     return {
       step: e => { for (const c of Object.values(live)) c.step(e); },
       toys: live,
-      start: [4.6, 3.7], uni: [5.2, 4.3],
+      start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 1.4,
       shots: [
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [4.6, 3.7], clearing: [cx, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], clearing: [cx, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

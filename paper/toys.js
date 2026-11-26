@@ -104,7 +104,7 @@ export function slide(S, x, y, z) {
       }
       if (mode === 'hop') {   // off the end, arms up, onto the sand
         const T = .42, k = Math.min(1, t / T); girl.x = hop.x0 + .85 * k; girl.lift = Math.max(0, hop.y0 + 1.6 * t - 4.9 * t * t * 2.2); girl.lean = 0; girl.poseName = 'up';
-        if (k >= 1) { girl.lift = 0; girl.poseName = null; girl.hopV = 1.4; sfx.thud(); mode = null; S.stopPlay(); }
+        if (k >= 1) { girl.lift = 0; girl.poseName = null; girl.hopV = 1.4; sfx.thud(); mode = null; S.stopPlay(); }   // (if something stands where she lands, the stage steps her clear of it)
       }
     },
   };

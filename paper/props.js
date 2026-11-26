@@ -6,6 +6,23 @@ export const GROUND = {
   sand: paper('#ecd3a0', { map: sandMap, bump: sandBump }), grass: paper('#a3bf76', { map: grassMap, bump: grassBump }),
   high: paper('#bccb84', { map: grassMap, bump: grassBump }), wood: paper('#8fb06c', { map: grassMap, bump: grassBump }), dark: paper('#8f8a80'),
 };
+/** a bed of paper flowers: a patch of soil with flowers and tufts of grass standing in it. `spots` is how many, scattered
+ *  by `seed` inside the outline `bed` (a list of [x, z]); they stand still and are glued with the rest of the set */
+export function flowerBed(S, bed, y, seed, spots = 16) {
+  let s = seed >>> 0 || 1; const R = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  S.root.add(slab(bed, y + .02, .02, paper('#a98f6f'), paper('#8d7557')));
+  const cols = ['#f2efe6', '#e98f8f', '#f2c65c', '#b9a3e0', '#f4a6c4'], stemMat = paper('#6f8f55');
+  const petals = []; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; for (let j = 0; j <= 6; j++) { const b = a - .5 + j / 6; petals.push([Math.cos(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI)), Math.sin(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI))]); } }
+  const xs = bed.map(p => p[0]), zs = bed.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const inside = (x, z) => { let c = false; for (let i = 0, j = bed.length - 1; i < bed.length; j = i++) { const [xi, zi] = bed[i], [xj, zj] = bed[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+  for (let n = 0, tries = 0; n < spots && tries < spots * 30; tries++) {
+    const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); if (!inside(x, z)) continue; n++;
+    const f = new THREE.Group(); f.position.set(x, y + .02, z); f.rotation.y = R() * .5 - .25; S.root.add(f);
+    const h = .22 + R() * .2, stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, h, 4), stemMat); stem.position.y = h / 2; f.add(stem);
+    const fl = card(petals, .02, paper(cols[Math.floor(R() * cols.length)])); fl.position.y = h + .02; fl.scale.setScalar(.9 + R() * .5); f.add(fl);
+    const mid = new THREE.Mesh(new THREE.CircleGeometry(.035, 10), paper('#e2a13c')); mid.position.set(0, h + .02, .014); f.add(mid);
+  }
+}
 /** a set's land: the given outlines as slabs of card, and darker cards under them. `tops` is [[outline, height, depth, paper], ...] */
 export function shore(S, tops, under = []) {
   for (const [pts, h, d, p] of tops) S.root.add(slab(pts, h, d, p, edgeMat));
