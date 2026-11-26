@@ -500,7 +500,8 @@ function stepBalloon(dt) {
   const hand = girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hand);
   // it floats out to the side her hand is on, so it never hangs in front of her face
   const want = hand.clone(); want.x += (hand.x - girl.x) * .9 + Math.sin(time * 1.3) * .06; want.y += .98 + Math.sin(time * 1.9) * .03;
-  if (!balloon.on) { balloon.pos.copy(want); balloon.on = true; } else balloon.pos.lerp(want, Math.min(1, dt * 3.2));
+  const real = v => isFinite(v.x + v.y + v.z); if (!real(want)) return;   // never let a bad frame in: the balloon eases from where it was, so one bad spot would stay for good
+  if (!balloon.on || !real(balloon.pos)) { balloon.pos.copy(want); balloon.on = true; } else balloon.pos.lerp(want, Math.min(1, dt * 3.2));
   balloon.m.position.copy(balloon.pos); balloon.m.rotation.y = girl.g.rotation.y; balloon.m.rotation.z = (hand.x - balloon.pos.x) * .7;
   const knot = balloon.pos.clone(); knot.y += balloon.knot; const mid = hand.clone().lerp(knot, .5); mid.x += (hand.x - knot.x) * .25;
   const pa = balloon.thread.geometry.attributes.position; [hand, mid, knot].forEach((v, i) => pa.setXYZ(i, v.x, v.y, v.z)); pa.needsUpdate = true;   // written in place: no new buffer every frame
@@ -683,7 +684,8 @@ const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 
 
 let camDist = 15, camH = 6.2, portrait = false;
 function resize() {
-  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false);
+  const w = innerWidth, h = innerHeight; if (!w || !h) return;   // a window with no size yet (a page opened in the background): wait for the real size, or the camera ends up nowhere
+  renderer.setSize(w, h, false);
   const a = w / h; camera.aspect = a; portrait = a < 1;
   camera.fov = portrait ? 34 : 24; camera.updateProjectionMatrix();
   // fit the island's width (about 16) in view
