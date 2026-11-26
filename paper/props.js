@@ -6,22 +6,51 @@ export const GROUND = {
   sand: paper('#ecd3a0', { map: sandMap, bump: sandBump }), grass: paper('#a3bf76', { map: grassMap, bump: grassBump }),
   high: paper('#bccb84', { map: grassMap, bump: grassBump }), wood: paper('#8fb06c', { map: grassMap, bump: grassBump }), dark: paper('#8f8a80'),
 };
-/** a bed of paper flowers: a patch of soil with flowers and tufts of grass standing in it. `spots` is how many, scattered
- *  by `seed` inside the outline `bed` (a list of [x, z]); they stand still and are glued with the rest of the set */
-export function flowerBed(S, bed, y, seed, spots = 16) {
-  let s = seed >>> 0 || 1; const R = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-  S.root.add(slab(bed, y + .02, .02, paper('#a98f6f'), paper('#8d7557')));
-  const cols = ['#f2efe6', '#e98f8f', '#f2c65c', '#b9a3e0', '#f4a6c4'], stemMat = paper('#6f8f55');
-  const petals = []; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; for (let j = 0; j <= 6; j++) { const b = a - .5 + j / 6; petals.push([Math.cos(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI)), Math.sin(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI))]); } }
+const PETALS = (() => { const p = []; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; for (let j = 0; j <= 6; j++) { const b = a - .5 + j / 6; p.push([Math.cos(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI)), Math.sin(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI))]); } } return p; })();
+const TUFT = [[-.16, 0], [-.12, .2], [-.06, .05], [0, .26], [.05, .05], [.12, .22], [.16, 0]];
+const rnd = seed => { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
+/** what grows in grass: tufts of two greens and, now and then, a paper flower. `pick(R)` gives a spot [x, y, z] or null (the
+ *  set knows where grass is and what lies on it); `n` things, `flowers` of every ten are flowers. They stand still and are
+ *  glued with the rest of the set, so they cost nothing to draw. One shape of each is cut and used for all */
+export function meadow(S, n, pick, seed, flowers = 2.5, greens = ['#86a466', '#9bb877', '#7f9d5e']) {
+  const R = rnd(seed), cols = ['#f2efe6', '#e98f8f', '#f2c65c', '#b9a3e0', '#f4a6c4'], stemMat = paper('#6f8f55'), midMat = paper('#e2a13c');
+  const tuft = card(TUFT, .02, paper(greens[0])).geometry, petal = card(PETALS, .02, paper(cols[0])).geometry, stemG = new THREE.CylinderGeometry(.012, .012, 1, 4), midG = new THREE.CircleGeometry(.035, 10);
+  for (let k = 0, tries = 0; k < n && tries < n * 40; tries++) {
+    const at = pick(R); if (!at) continue; k++; const [x, y, z] = at;
+    if (R() * 10 >= flowers) {
+      const g = paper(greens[Math.floor(R() * greens.length)]), t = new THREE.Mesh(tuft, [g, g]); t.castShadow = t.receiveShadow = true; t.position.set(x, y, z); t.rotation.y = R() * .6 - .3; t.scale.setScalar(.8 + R() * .7); S.root.add(t);
+      if (R() < .5) { const t2 = new THREE.Mesh(tuft, [g, g]); t2.castShadow = true; t2.position.set(x + .16 + R() * .1, y, z + R() * .12 - .06); t2.rotation.y = R() * .8 - .4; t2.scale.setScalar(.6 + R() * .4); S.root.add(t2); }   // tufts grow in twos and threes
+    } else {
+      const f = new THREE.Group(); f.position.set(x, y, z); f.rotation.y = R() * .5 - .25; S.root.add(f);
+      const h = .2 + R() * .2, stem = new THREE.Mesh(stemG, stemMat); stem.scale.y = h; stem.position.y = h / 2; f.add(stem);
+      const c = paper(cols[Math.floor(R() * cols.length)]), fl = new THREE.Mesh(petal, [c, c]); fl.castShadow = true; fl.position.y = h + .02; fl.scale.setScalar(.9 + R() * .5); f.add(fl);
+      const mid = new THREE.Mesh(midG, midMat); mid.position.set(0, h + .02, .014); f.add(mid);
+    }
+  }
+}
+/** a flower garden: a patch of lighter grass thick with flowers and tufts (no bare soil: Oscar found brown earth not cosy) */
+export function flowerBed(S, bed, y, seed, spots = 18) {
+  S.root.add(slab(bed, y + .012, .012, paper('#c6d795', { map: grassMap, bump: grassBump }), paper('#a9bf7c')));
   const xs = bed.map(p => p[0]), zs = bed.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
   const inside = (x, z) => { let c = false; for (let i = 0, j = bed.length - 1; i < bed.length; j = i++) { const [xi, zi] = bed[i], [xj, zj] = bed[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
-  for (let n = 0, tries = 0; n < spots && tries < spots * 30; tries++) {
-    const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); if (!inside(x, z)) continue; n++;
-    const f = new THREE.Group(); f.position.set(x, y + .02, z); f.rotation.y = R() * .5 - .25; S.root.add(f);
-    const h = .22 + R() * .2, stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, h, 4), stemMat); stem.position.y = h / 2; f.add(stem);
-    const fl = card(petals, .02, paper(cols[Math.floor(R() * cols.length)])); fl.position.y = h + .02; fl.scale.setScalar(.9 + R() * .5); f.add(fl);
-    const mid = new THREE.Mesh(new THREE.CircleGeometry(.035, 10), paper('#e2a13c')); mid.position.set(0, h + .02, .014); f.add(mid);
-  }
+  meadow(S, spots * 2, R => { const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); return inside(x, z) ? [x, y + .012, z] : null; }, seed, 5.5);
+}
+/** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and so does she when she runs past;
+ *  it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */
+export function pinwheel(S, x, y, z, a = '#f4a6c4', b = '#f2c65c', h = .8) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, h, 5), paper('#f4ecdc')); stick.position.y = h / 2; stick.castShadow = true; g.add(stick);
+  const rotor = new THREE.Group(); rotor.position.set(0, h, .04); rotor.userData.live = true; g.add(rotor);
+  for (let i = 0; i < 4; i++) { const sail = card([[0, 0], [.27, .03], [.2, .2], [.04, .12]], .012, paper(i % 2 ? a : b, { side: THREE.DoubleSide })); sail.rotation.z = i * Math.PI / 2; sail.position.z = i * .004; rotor.add(sail); }
+  const pin = new THREE.Mesh(new THREE.CircleGeometry(.035, 10), paper('#f6efe2', { side: THREE.DoubleSide })); pin.position.z = .03; pin.castShadow = pin.receiveShadow = true; rotor.add(pin); S.glue(rotor);
+  const [wx, wz] = S.at([x, z]); let om = 0, spins = 0;
+  const blow = (v = 16) => { if (om < v * .5) { S.sfx.whirr(); spins++; } om = Math.max(om, v); };
+  S.tap(g, () => blow());
+  return { blow, state: () => ({ om, spins }), step({ dt, stepped }) {
+    if (S.girl.walking && om < 5 && Math.hypot(S.girl.x - wx, S.girl.z - wz) < .95) blow(9);   // the wind of her passing
+    om *= Math.exp(-.75 * dt); if (om < .25) om = 0;
+    if (stepped && om) rotor.rotation.z -= om / 12;
+  } };
 }
 /** a set's land: the given outlines as slabs of card, and darker cards under them. `tops` is [[outline, height, depth, paper], ...] */
 export function shore(S, tops, under = []) {

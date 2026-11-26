@@ -211,6 +211,7 @@ function buildSet(def) {
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
+    glue: group => bake(group),   // a thing that moves as a whole (a windmill's sails): glue its pieces into one, so it is one draw
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
   };
   Object.assign(s, def.build(S));
@@ -388,6 +389,7 @@ const sfx = {
   hoot() { tone(330, .3, 'sine', .08, .95); setTimeout(() => tone(290, .45, 'sine', .08, .9), 380); },
   bark() { tone(420, .09, 'square', .06, .7); tone(210, .1, 'sawtooth', .04, .8); },
   yip() { tone(700, .12, 'triangle', .07, 1.5); },
+  whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };

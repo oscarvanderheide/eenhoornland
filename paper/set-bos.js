@@ -2,7 +2,7 @@
 // cave's rock and the rest in grey card. Reached from the village over the north bridge, through the gate (paper.js).
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { shore, GROUND } from './props.js';
+import { shore, meadow, pinwheel, GROUND } from './props.js';
 import { hedgehog, owl, squirrel } from './critters.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
 
@@ -72,12 +72,20 @@ export default {
       n++;
     }
 
+    // the forest floor: tufts (darker than the village's) and a few flowers, thicker in the clearings
+    meadow(S, 260, R2 => {
+      const x = (-13 + R2() * 31) * K, z = (-6 + R2() * 12) * K, on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
+      if (!on || edgeDist(on, x, z) < .3 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .25 || Math.abs(x - ax) < 1.5 && Math.abs(z - az) < 1.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
+      return [x, H_GRASS + (laid.some(o => inPoly(o, x, z)) ? .018 : 0), z];
+    }, 402, 1.6, ['#7a9a5c', '#8fae6e', '#6f9057']);
+    const mill = pinwheel(S, cx + 2.2, H_GRASS, cz + 1.4, '#f2c65c', '#f6efe2');   // a toy windmill somebody left in the clearing
+
     // who lives here (critters.js): the shy hedgehog in the nook, the owl asleep on the cave's ledge, the squirrel at the oak
     const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.2) };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); },
-      toys: live,
+      step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); },
+      toys: { ...live, molen: mill },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,
       shots: [
