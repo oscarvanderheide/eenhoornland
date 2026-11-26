@@ -503,7 +503,7 @@ function stepBalloon(dt) {
   if (!balloon.on) { balloon.pos.copy(want); balloon.on = true; } else balloon.pos.lerp(want, Math.min(1, dt * 3.2));
   balloon.m.position.copy(balloon.pos); balloon.m.rotation.y = girl.g.rotation.y; balloon.m.rotation.z = (hand.x - balloon.pos.x) * .7;
   const knot = balloon.pos.clone(); knot.y += balloon.knot; const mid = hand.clone().lerp(knot, .5); mid.x += (hand.x - knot.x) * .25;
-  balloon.thread.geometry.setFromPoints([hand, mid, knot]);
+  const pa = balloon.thread.geometry.attributes.position; [hand, mid, knot].forEach((v, i) => pa.setXYZ(i, v.x, v.y, v.z)); pa.needsUpdate = true;   // written in place: no new buffer every frame
 }
 
 /* ---------------- paper confetti ---------------- */
