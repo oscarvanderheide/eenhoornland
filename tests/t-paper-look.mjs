@@ -1,13 +1,14 @@
-// The look of the paper island, kept: four still screenshots (day and evening, desktop and phone) with the stop-motion
-// clock standing, to compare before and after a change that must not alter the picture.
+// The look of the paper island, kept: six still screenshots (day and evening; desktop, phone lying down as Oscar holds it,
+// phone upright) with the stop-motion clock standing, to compare before and after a change that must not alter the picture.
 //   PRE=ref node cdp.mjs tests/t-paper-look.mjs     before the change  -> tmp-shots/ref-*.png
 //   node cdp.mjs tests/t-paper-look.mjs             after it           -> tmp-shots/now-*.png, compared with ref-*
 // A pixel counts as changed when a colour channel moved by more than 24 of 255 (the film grain moves it by about 9).
+// Passes under MAX percent of the picture (default 0.02: two untouched runs differ in 0.001, a lost duck in far more).
 export default async function (t) {
   const port = process.env.SERVE || 8765, fs = await import('node:fs'); fs.mkdirSync('tmp-shots', { recursive: true });
-  const pre = process.env.PRE || 'now', q = process.env.Q || '';
+  const pre = process.env.PRE || 'now', q = process.env.Q || '', max = +(process.env.MAX || .02);
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
-  for (const [name, m] of [['desk', { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false }], ['phone', { width: 393, height: 852, deviceScaleFactor: 2, mobile: true }]]) {
+  for (const [name, m] of [['desk', { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false }], ['land', { width: 750, height: 313, deviceScaleFactor: 2, mobile: true }], ['phone', { width: 393, height: 852, deviceScaleFactor: 2, mobile: true }]]) {
     await t.send('Emulation.setDeviceMetricsOverride', m);
     await t.go(`http://127.0.0.1:${port}/paper/${q}`);
     for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
@@ -21,7 +22,7 @@ export default async function (t) {
           let n = 0, sum = 0; for (let i = 0; i < a.data.length; i += 4) { const d = Math.max(Math.abs(a.data[i] - b.data[i]), Math.abs(a.data[i + 1] - b.data[i + 1]), Math.abs(a.data[i + 2] - b.data[i + 2])); sum += d; if (d > 24) n++; }
           return [n / (a.data.length / 4) * 100, sum / (a.data.length / 4)]; } catch (e) { return String(e.message || e); }
       })()`);
-      ok(Array.isArray(d) && d[0] < .3, `${name} ${part}: ` + (Array.isArray(d) ? `${d[0].toFixed(3)}% of the picture changed (mean step ${d[1].toFixed(2)} of 255)` : d));
+      ok(Array.isArray(d) && d[0] < max, `${name} ${part}: ` + (Array.isArray(d) ? `${d[0].toFixed(3)}% of the picture changed (mean step ${d[1].toFixed(2)} of 255)` : d));
     }
   }
 }
