@@ -2,6 +2,7 @@
 // a long lens with shallow focus), to see how Eenhoornland could look in that style. Separate from the game.
 // Everything is drawn in code: the paper is noise + fibres, the figures are cut-paper shapes on canvases.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { FIGS, cutout } from './figures.js';
 
 const DPR = Math.min(devicePixelRatio || 1, 2);
 const canvas = document.getElementById('c');
@@ -406,63 +407,11 @@ function toggleHouse() {
 }
 
 /* ---------------- cut-paper figures ---------------- */
-/** draws a figure from flat shapes, then adds the white cut border and paper grain; returns a canvas */
-function cutout(w, h, draw) {
-  const S = 2, W = w * S, H = h * S;
-  const shape = document.createElement('canvas'); shape.width = W; shape.height = H;
-  const g = shape.getContext('2d'); g.scale(S, S); g.lineJoin = g.lineCap = 'round'; draw(g);
-  const out = document.createElement('canvas'); out.width = W; out.height = H; const o = out.getContext('2d');
-  const r = 5 * S; for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; o.drawImage(shape, Math.cos(a) * r, Math.sin(a) * r); }
-  o.globalCompositeOperation = 'source-in'; o.fillStyle = '#f6efe2'; o.fillRect(0, 0, W, H);
-  o.globalCompositeOperation = 'source-over'; o.drawImage(shape, 0, 0);
-  o.globalCompositeOperation = 'multiply'; o.drawImage(PAPER, 0, 0, W * .8, H * .8, 0, 0, W, H);
-  o.globalCompositeOperation = 'destination-in'; o.drawImage(shape, 0, 0); for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; o.drawImage(shape, Math.cos(a) * r, Math.sin(a) * r); }
-  return out;
-}
 const blobPath = (g, pts) => { g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.closePath(); };
 const ell = (g, x, y, rx, ry, col, rot = 0) => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.fill(); };
 const poly = (g, pts, col) => { g.fillStyle = col; blobPath(g, pts); g.fill(); };
 const limb = (g, x1, y1, x2, y2, wdt, col) => { g.strokeStyle = col; g.lineWidth = wdt; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
 
-// Anna: the small blonde sister in her pink dress, seen a little from the side (facing right)
-function drawGirl(g, f) {
-  const sw = f === 1 ? 1 : f === 2 ? -1 : 0, skin = '#f1c6a2', dress = '#de7b8e', dress2 = '#c9667b';
-  limb(g, 58, 150, 58 - sw * 8, 182, 11, '#e8b896'); limb(g, 72, 150, 72 + sw * 8, 182, 11, '#f1c6a2');
-  ell(g, 56 - sw * 9, 186, 10, 6, '#5a4048'); ell(g, 75 + sw * 9, 186, 10, 6, '#6a4b55');
-  limb(g, 50, 104, 42 - sw * 6, 136, 10, '#e8b896');
-  poly(g, [[48, 96], [84, 96], [100, 158], [32, 158]], dress);
-  poly(g, [[34, 150], [98, 150], [100, 158], [32, 158]], dress2);
-  ell(g, 66, 98, 18, 6, '#f6efe2');
-  limb(g, 82, 104, 92 + sw * 6, 134, 10, skin);
-  ell(g, 66, 62, 30, 32, skin);
-  // hair: a cap with a fringe and a ponytail behind
-  ell(g, 38, 66, 13, 22, '#e5bd55', -.3);
-  g.fillStyle = '#eccb6a'; g.beginPath(); g.ellipse(64, 54, 33, 27, 0, Math.PI * .98, Math.PI * 2.08); g.fill();
-  poly(g, [[44, 44], [92, 44], [96, 58], [84, 52], [72, 60], [62, 50], [50, 58]], '#eccb6a');
-  ell(g, 38, 40, 8, 7, '#de7b8e');
-  ell(g, 80, 68, 3.6, 4.4, '#3a2c34'); ell(g, 81, 66.5, 1.2, 1.2, '#fff');
-  ell(g, 86, 78, 6, 4, 'rgba(230,120,130,.55)');
-  g.strokeStyle = '#7a3c45'; g.lineWidth = 2.4; g.beginPath(); g.arc(84, 80, 5, .3, 1.6); g.stroke();
-}
-// the little unicorn: white with a pastel mane and a gold horn (facing right)
-function drawUnicorn(g, f) {
-  const sw = f === 1 ? 1 : f === 2 ? -1 : 0, body = '#fbf7f0', shade = '#e7dfe9';
-  for (const [x, s, c] of [[40, -1, shade], [96, 1, shade], [52, 1, body], [108, -1, body]]) { limb(g, x, 120, x + s * sw * 8, 152, 13, c); ell(g, x + s * sw * 8, 155, 8, 5, '#c9a7d6'); }
-  // tail
-  for (const [c, dy] of [['#f2a7c0', 0], ['#b9a3e8', 10], ['#9fd8d0', 20]]) { g.strokeStyle = c; g.lineWidth = 10; g.beginPath(); g.moveTo(30, 96 + dy * .4); g.quadraticCurveTo(6, 100 + dy, 14, 128 + dy * .6); g.stroke(); }
-  ell(g, 74, 106, 46, 26, body);
-  ell(g, 70, 116, 34, 12, shade);
-  poly(g, [[96, 100], [112, 54], [130, 60], [120, 108]], body);
-  ell(g, 126, 62, 22, 18, body, -.3);
-  ell(g, 142, 72, 12, 10, '#f6dde4');
-  // mane down the neck
-  for (const [c, o] of [['#f2a7c0', 0], ['#b9a3e8', 9], ['#9fd8d0', 18]]) { g.strokeStyle = c; g.lineWidth = 9; g.beginPath(); g.moveTo(110 - o * .3, 44 + o * .8); g.quadraticCurveTo(96 - o * .5, 60 + o, 98 - o * .6, 92 + o * .4); g.stroke(); }
-  poly(g, [[118, 44], [124, 44], [134, 8], [116, 40]], '#eac15a');
-  g.strokeStyle = '#c99b3a'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(118 + i * 3, 36 - i * 9); g.lineTo(125 + i * 2, 34 - i * 9); g.stroke(); }
-  poly(g, [[108, 48], [114, 30], [120, 48]], '#f3dfe6');
-  ell(g, 130, 60, 3.6, 4.4, '#3a2c34'); ell(g, 131, 58.5, 1.2, 1.2, '#fff');
-  ell(g, 140, 70, 5, 3.4, 'rgba(230,120,140,.55)');
-}
 // the sheep: a cloud of cream wool with a dark face (facing right)
 function drawSheep(g, f) {
   const sw = f === 1 ? 1 : f === 2 ? -1 : 0, wool = '#f4ecdc', wool2 = '#e2d6c1', face = '#4b3d3d';
@@ -486,7 +435,7 @@ function drawDuck(g, f) {
 
 const figures = [];
 function makeFigure(name, w, h, draw, frames, size) {
-  const maps = []; for (let f = 0; f < frames; f++) { const t = new THREE.CanvasTexture(cutout(w, h, g => draw(g, f))); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; maps.push(t); }
+  const maps = []; for (let f = 0; f < frames; f++) { const t = new THREE.CanvasTexture(cutout(w, h, g => draw(g, f), PAPER)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; maps.push(t); }
   const H = size, W = size * w / h;
   const geo = new THREE.PlaneGeometry(W, H); geo.translate(0, H / 2, 0);
   const mat = new THREE.MeshStandardMaterial({ map: maps[0], alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 });
@@ -496,15 +445,19 @@ function makeFigure(name, w, h, draw, frames, size) {
   const fig = { name, g, pose, mesh, mat, maps, x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, setFrame(i) { if (this.frame === i) return; this.frame = i; mat.map = maps[i]; mesh.customDepthMaterial.map = maps[i]; } };
   mesh.userData.fig = fig; figures.push(fig); return fig;
 }
-const girl = makeFigure('girl', 130, 200, drawGirl, 3, 1.25);
-const uni = makeFigure('unicorn', 160, 165, drawUnicorn, 3, 1.15);
+const fig = (name, k) => makeFigure(name, FIGS[k].w, FIGS[k].h, FIGS[k].draw, FIGS[k].frames, FIGS[k].size);
+const girl = fig('girl', 'anna');
+const uni = fig('unicorn', 'baby');
+const mama = fig('mama', 'grown');
 const sheep = makeFigure('sheep', 140, 150, drawSheep, 3, .95);
 const duck = makeFigure('duck', 125, 100, drawDuck, 2, .7);
 girl.x = .8; girl.z = 2.2; uni.x = -.4; uni.z = 2.6; uni.face = 1;
+mama.x = .6; mama.z = -1.2; mama.face = 1;
+solids.push({ x: mama.x, z: mama.z, r: .55, fig: mama });
 sheep.x = 3.7; sheep.z = 1.1; sheep.face = -1;
 duck.x = 4.9; duck.z = 5.6; duck.face = 1; duck.y = WATER_Y;
 solids.push({ x: sheep.x, z: sheep.z, r: .42, fig: sheep });
-for (const f of [girl, uni, sheep, duck]) tapTarget(f.g, () => tapFigure(f));
+for (const f of [girl, uni, mama, sheep, duck]) tapTarget(f.g, () => tapFigure(f));
 
 /* ---------------- paper confetti ---------------- */
 const bits = [];
@@ -549,6 +502,7 @@ const sfx = {
 function tapFigure(f) {
   if (f === sheep) { sheep.hopV = 3.6; sheep.face = girl.x < sheep.x ? -1 : 1; sfx.bleat(); confetti(sheep.x, .5, sheep.z, ['#f4ecdc', '#e2d6c1', '#fbf7f0'], 9, new THREE.CircleGeometry(.07, 8), 1.6); }
   else if (f === duck) { if (!duck.dive) { duck.dive = 1.2; sfx.splash(); setTimeout(() => { sfx.quack(); duck.face *= -1; confetti(duck.x, WATER_Y + .2, duck.z + .1, ['#8fc3cc', '#f6efe2'], 10, bitGeo, 2.6); }, 700); } }
+  else if (f === mama) { mama.hopV = 2.4; sfx.neigh(); confetti(mama.x + .3, 1.6, mama.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, starGeo, 2.2); }
   else if (f === uni) { uni.hopV = 3; sfx.neigh(); confetti(uni.x, .9, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 12, starGeo, 2.4); }
   else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
 }
@@ -716,6 +670,7 @@ function frame(now) {
   }
   // the sheep looks at her when she comes close
   if (Math.hypot(girl.x - sheep.x, girl.z - sheep.z) < 2) sheep.face = girl.x < sheep.x ? -1 : 1;
+  if (Math.hypot(girl.x - mama.x, girl.z - mama.z) < 2.5) mama.face = girl.x < mama.x ? -1 : 1;
 
   // figures: smooth positions, poses that step like stop motion
   for (const f of figures) {
