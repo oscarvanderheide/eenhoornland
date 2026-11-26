@@ -70,3 +70,54 @@ export function dolphin(S, B, water = -.55) {
     if (k >= 1) { t = -1; f.g.visible = false; f.tilt = 0; splash(way[2], way[3]); }
   } };
 }
+
+/* ---------------- the beach ---------------- */
+const SANDY = ['#ecd3a0', '#f7ecd0', '#e2c58a'];
+/** the crab: a tap and it dances, claws up one after the other. A tap on the dancing crab, or her running straight at it:
+ *  it digs itself in, and a little later it is up again at its next spot */
+export function crab(S, x, z, spots) {
+  const { girl, sfx } = S, f = make(S, 'krab', x, z); let mode = null, t = 0, at = 0, dances = 0, digs = 0, last = -1;
+  const dig = () => { mode = 'dug'; t = 0; digs++; sfx.rustle(); S.confetti(f.x, f.y + .15, f.z + .1, SANDY, 9, undefined, 1.6); };
+  f.onTap = () => { if (mode === 'dance') dig(); else if (!mode) { mode = 'dance'; t = 0; dances++; last = -1; f.hopV = 1.6; } };
+  f.act = () => f.setFrame(mode === 'dance' ? 1 + (Math.floor(t / .22) % 2) : mode === 'dug' ? 3 : 0);
+  return { f, state: () => ({ frame: f.frame, mode, dances, digs, at: [f.x, f.z] }), step({ dt }) {
+    if (!mode) { if (near(f, girl, .75) && girl.walking) dig(); return; }
+    t += dt;
+    if (mode === 'dance') { const beat = Math.floor(t / .22); if (beat !== last) { last = beat; sfx.click(); } if (t > 1.9) mode = null; }
+    else if (t > 2.6) { at = (at + 1) % spots.length; [f.x, f.z] = S.at(spots[at]); mode = null; f.hopV = 1.8; S.confetti(f.x, f.y + .15, f.z + .1, SANDY, 7, undefined, 1.4); }
+  } };
+}
+/** the gull sits on a post. A tap: it flaps up and over to its next perch (`perches`: [x, z, height] in the set's measure).
+ *  Every other time it lands with a little fish in its beak; a tap then and it gulps it down */
+export function gull(S, perches) {
+  const { sfx } = S, f = make(S, 'meeuw', perches[0][0], perches[0][1]), P = perches.map(([x, z, h]) => [...S.at([x, z]), h]); let at = 0, t = -1, from = null, flights = 0, fish = false;
+  f.floatY = f.y = P[0][2];
+  f.onTap = () => { if (t >= 0) return; if (fish) { fish = false; f.hopV = 1.6; sfx.munch(); return; } from = P[at]; at = (at + 1) % P.length; t = 0; flights++; sfx.flutter(); };
+  f.act = tick => f.setFrame(t >= 0 ? 1 + (Math.floor(tick / 2) % 2) : fish ? 3 : 0);
+  return { f, state: () => ({ frame: f.frame, flights, fish, flying: t >= 0, at }), step({ dt }) {
+    if (t < 0) return; t += dt; const to = P[at], k = Math.min(1, t / 1.7), e = k * k * (3 - 2 * k);
+    f.x = from[0] + (to[0] - from[0]) * e; f.z = from[1] + (to[1] - from[1]) * e; f.floatY = f.y = from[2] + (to[2] - from[2]) * e + Math.sin(k * Math.PI) * 1.5; if (Math.abs(to[0] - from[0]) > .1) f.face = Math.sign(to[0] - from[0]);
+    if (k >= 1) { t = -1; fish = flights % 2 === 0; f.hopV = .8; }
+  } };
+}
+/** the turtle: a tap and it pulls in its head and legs; then it comes out again and walks, slowly, to its next spot */
+export function turtle(S, x, z, spots) {
+  const { sfx } = S, f = make(S, 'schildpad', x, z); let mode = null, t = 0, at = 0, to = null, tucks = 0;
+  f.onTap = () => { if (mode === 'tuck') return; mode = 'tuck'; t = 0; tucks++; sfx.peep(); };
+  f.act = tick => f.setFrame(mode === 'tuck' ? 3 : mode === 'walk' ? 1 + (Math.floor(tick / 4) % 2) : 0);
+  return { f, state: () => ({ frame: f.frame, mode, tucks, at: [f.x, f.z] }), step({ dt }) {
+    if (mode === 'tuck') { t += dt; if (t > 1.8) { mode = 'walk'; at = (at + 1) % spots.length; to = S.at(spots[at]); } }
+    else if (mode === 'walk') { const dx = to[0] - f.x, dz = to[1] - f.z, d = Math.hypot(dx, dz); if (d < .05) mode = null; else { f.x += dx / d * Math.min(d, .45 * dt); f.z += dz / d * Math.min(d, .45 * dt); if (Math.abs(dx) > .05) f.face = Math.sign(dx); } }
+  } };
+}
+/** the seal on its rock (`y`: the top of the rock). A tap: it claps its flippers. A tap on the clapping seal: a ball on its nose */
+export function seal(S, x, z, y) {
+  const { sfx } = S, f = make(S, 'zeehond', x, z); let mode = null, t = 0, claps = 0, balls = 0, last = -1; f.floatY = f.y = y; f.face = -1;
+  f.onTap = () => { if (mode === 'clap') { mode = 'ball'; t = 0; balls++; f.hopV = 2; sfx.boing(); } else if (!mode) { mode = 'clap'; t = 0; claps++; last = -1; sfx.bark(); } };
+  f.act = () => f.setFrame(mode === 'clap' ? (Math.floor(t / .2) % 2 ? 0 : 1) : mode === 'ball' ? 2 : 0);
+  return { f, state: () => ({ frame: f.frame, mode, claps, balls }), step({ dt }) {
+    if (!mode) return; t += dt;
+    if (mode === 'clap') { const beat = Math.floor(t / .4); if (beat !== last) { last = beat; sfx.thud(); } if (t > 2.0) mode = null; }
+    else if (t > 3.2) mode = null;
+  } };
+}

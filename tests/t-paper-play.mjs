@@ -284,4 +284,23 @@ export default async function (t) {
     ok(await until(`!__p.toy('vliegtuig').flying`, 15), 'it comes down'); await t.sleep(1800); const b = await toy(); ok(b.far > 4, `it glided a good way (${b.far.toFixed(1)} steps)`);
     ok(await t.ev(`__p.canReach(${b.at[0]}, ${b.at[1]})`), 'and lies where she can walk to (or is back at its spot)'); await t.ev(`__p.placeAt(${b.at[0] - 1.4}, ${b.at[1] + .6})`); await t.sleep(2400); await t.shot('tmp-shots/y-plane-down-land.png');
   }
+
+  /* ---------------- the beach: the sandcastle, the lighthouse, the crab, the gull, the seal, the turtle, a palm ---------------- */
+  if (!only || only === 'beach') {
+    await open('?set=strand', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('strand')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
+    ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('wei')`)).south[0]}, ${(await t.ev(`__p.places('wei')`)).south[1]})`), 'the bridge joins the beach to the meadow');
+    await t.ev(`__p.placeAt(${pl.castle[0] + 1.6}, ${pl.castle[1] + .4})`); await t.sleep(2400);
+    for (let k = 1; k <= 5; k++) { await tapOn('zandkasteel'); await until(`__p.toy('zandkasteel').stage === ${k} && !__p.toy('zandkasteel').busy`, 6); if (k === 3) await t.shot('tmp-shots/y-castle-3-land.png'); await t.sleep(250); }
+    ok((await toy('zandkasteel')).stage === 5, 'five taps on the heap of sand: towers, a wall, a flag'); await t.sleep(400); await t.shot('tmp-shots/y-castle-land.png');
+    await tapOn('zandkasteel'); ok(await until(`__p.toy('zandkasteel').stomps === 1 && __p.toy('zandkasteel').stage === 0`, 6), 'a tap on the finished castle: she jumps on it and it is a heap again');
+    await t.ev(`__p.placeAt(${pl.light[0]}, ${pl.light[1]})`); await t.sleep(2600); await tapOn('vuurtoren'); await t.sleep(600); ok((await toy('vuurtoren')).lit, 'a tap on the lighthouse: its light is on'); await t.shot('tmp-shots/y-light-land.png');
+    await t.ev('__p.evening(true)'); await t.sleep(2500); await t.shot('tmp-shots/y-light-night-land.png'); await tapOn('vuurtoren'); await t.sleep(400); ok(!(await toy('vuurtoren')).lit, 'and a tap puts it out, at night too'); await t.ev('__p.evening(false)'); await t.sleep(600);
+    await by('krab'); await t.ev(`__p.tap('krab')`); await t.sleep(500); ok((await toy('krab')).mode === 'dance', 'a tap on the crab: it dances'); await t.shot('tmp-shots/y-crab-land.png');
+    const c0 = (await toy('krab')).at; await t.ev(`__p.tap('krab')`); await t.sleep(300); ok((await toy('krab')).mode === 'dug', 'a tap on the dancing crab: it digs in'); ok(await until(`!__p.toy('krab').mode`, 5) && Math.hypot((await toy('krab')).at[0] - c0[0], (await toy('krab')).at[1] - c0[1]) > 1, 'and comes up at another spot');
+    await by('schildpad'); await t.ev(`__p.tap('schildpad')`); await t.sleep(300); ok((await toy('schildpad')).frame === 3, 'a tap on the turtle: it tucks in'); await t.shot('tmp-shots/y-turtle-land.png'); ok(await until(`__p.toy('schildpad').mode === 'walk'`, 4), 'then it walks on');
+    await t.ev(`__p.placeAt(${pl.pier[0]}, ${pl.pier[1]})`); await t.sleep(2600); await t.ev(`__p.tap('meeuw')`); await t.sleep(700); ok((await toy('meeuw')).flying, 'a tap on the gull: it flies up'); await t.shot('tmp-shots/y-gull-land.png'); ok(await until(`!__p.toy('meeuw').flying && __p.toy('meeuw').at === 1`, 4), 'and lands on the next post');
+    await t.ev(`__p.tap('zeehond')`); await t.sleep(500); ok((await toy('zeehond')).mode === 'clap', 'a tap on the seal: it claps'); await t.ev(`__p.tap('zeehond')`); await t.sleep(400); ok((await toy('zeehond')).frame === 2, 'a tap on the clapping seal: a ball on its nose'); await t.shot('tmp-shots/y-seal-land.png');
+    await t.ev(`__p.placeAt(${pl.start[0] - 2.5}, ${pl.start[1] + 2.4})`); await t.sleep(2400); await tapOn('palm'); await t.sleep(1200); ok((await toy('palm')).nuts === 1, 'a tap on a palm: it shakes and a coconut drops'); await t.shot('tmp-shots/y-palm-land.png');
+  }
 }

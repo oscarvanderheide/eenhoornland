@@ -16,7 +16,7 @@ export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K -
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
  *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
-export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei']];
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -47,5 +47,17 @@ export function weiLand() {
     SAND_E: blob(21.5, -2, 10.3, 10, 403, 72, .05), GRASS_E: blob(21.6, -2, 9.5, 9.2, 404, 72, .05),   // the east: the waterfall
     HILL: blob(-5, -5.4, 5.2, 3.4, 405, 56, .05), TOP: blob(-6.4, -6.4, 2.6, 1.6, 406, 40, .05),       // the windy hill and its top
     bridge: [-14.3, 2.55],   // where the bridge from the village lands
+  };
+}
+
+/** how far the beach's shore lies from the meadow's, over the south bridge */
+export const SOUTH_GAP = 12;
+ORIGIN.strand = [ORIGIN.wei[0] - .5, ORIGIN.wei[1] + 11.0 + SOUTH_GAP + 9.0];
+/** the beach, in its own measure (made at its real size). `bridge`: the bridge from the meadow, this set's own, running north */
+export function strandLand() {
+  return {
+    SAND: blob(0, 0, 15.5, 9.2, 501, 96, .04), DUNE: blob(-7.2, -3.6, 5.6, 3.2, 502, 56, .05),      // the beach; a green dune in the north-west
+    ROCK: blob(11.4, -3.4, 2.5, 1.9, 503, 36, .06), SEALROCK: blob(5.4, 14.4, 1.05, .75, 504, 24, .07),   // the lighthouse's rock; the seal's rock, out by the pier's end
+    bridge: { x0: -.6, x1: .6, z0: -9.0 - SOUTH_GAP - .6, z1: -8.3 },
   };
 }

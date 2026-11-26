@@ -308,7 +308,7 @@ export function bramble(S, x, y, z, span, can) {
     for (let k = 0; k < roses; k++) { const a = k * 2.4 + seed, rose = new THREE.Group(); rose.position.set(Math.cos(a) * r * .55, r * (.7 + .5 * Math.sin(k * 1.7 + seed)), .08 + Math.sin(a) * r * .5); [.11, .075, .04].forEach((rr, q) => { const d = disc(rr, ['#d9706c', '#e98f8f', '#f8dde4'][q]); d.position.z = q * .012; rose.add(d); }); c.add(rose); } };
   const stage = [0, 1, 2].map(() => { const sg = new THREE.Group(); sg.userData.live = true; g.add(sg); return sg; });
   for (const [cz, r, sd] of [[-span * .32, .62, 1], [0, .72, 5], [span * .32, .6, 9]]) { clump(stage[0], cz, r, sd, ['#6b5a4a', '#7d6a55', '#5c4d40'], 0); clump(stage[1], cz, r, sd, ['#6f9057', '#86a466', '#7f9d5e'], 1); }
-  for (const s of [-1, 1]) clump(stage[2], s * (span / 2 + .25), .58, 20 + s, ['#6f9057', '#86a466', '#7f9d5e'], 4);
+  for (const s of [-1, 1]) clump(stage[2], s * (span / 2 + .6), .58, 20 + s, ['#6f9057', '#86a466', '#7f9d5e'], 4);
   stage.forEach(sg => S.glue(sg));
   const wall = S.wall(x, z, .5, span / 2 + .15), [wx, wz] = S.at([x, z]), { girl, sfx } = S;
   const wish = S.figure('wens', THINGS.gieter); wish.g.visible = false; wish.x = wx; wish.z = wz + .1; wish.act = () => wish.setFrame(1);

@@ -10,8 +10,9 @@ import dorp from './set-dorp.js';
 import bos from './set-bos.js';
 import huis from './set-huis.js';
 import wei from './set-wei.js';
+import strand from './set-strand.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei };
+const SETS = { eiland, dorp, bos, huis, wei, strand };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -161,10 +162,10 @@ function pine(x, z, y, h, col) {
 /** the sea: rows of wavy card, like a toy theatre, one sea for everything that exists. Every set says what water it wants
  *  round it (S.sea: the outlines its rows are cut around, how far it reaches); the stage makes one sea of all of that */
 const seaRoot = new THREE.Group(); seaRoot.name = 'sea'; scene.add(seaRoot);
-let seaRows = [], seaBaked = null;
+let seaRows = [], seaBaked = null, seaChunks = [];   // (the glued sea lies in pieces: one the camera cannot see is not drawn)
 const view = new THREE.Frustum(), viewM = new THREE.Matrix4();
 function buildSea() {
-  seaRoot.traverse(o => { if (o.geometry) o.geometry.dispose(); }); seaRoot.clear(); seaRows = []; seaBaked = null;
+  seaRoot.traverse(o => { if (o.geometry) o.geometry.dispose(); }); seaRoot.clear(); seaRows = []; seaBaked = null; seaChunks = [];
   const asks = sets.map(s => s.seaAsk).filter(Boolean); if (!asks.length) return;
   const land = asks.flatMap(a => a.land), x0 = Math.min(...asks.map(a => a.x0)), x1 = Math.max(...asks.map(a => a.x1)), z0 = Math.min(...asks.map(a => a.z0)), z1 = Math.max(...asks.map(a => a.z1));
   const deep = asks.length === 1 ? asks[0].deep : [x1 - x0 + 500, z1 - z0 + 400, (x0 + x1) / 2, (z0 + z1) / 2];   // (deep water far beyond the waves: from the balloon the sea has no end)
@@ -787,9 +788,11 @@ function bakeSea(rows, root) {
   for (const r of rows) {
     const o = r.m, P = o.geometry.attributes.position, N = o.geometry.attributes.normal, U = o.geometry.attributes.uv;
     for (const gr of o.geometry.groups) {
-      const m0 = o.material[gr.materialIndex], m = sheetOf(m0); let lot = lots.get(m.uuid); if (!lot) lots.set(m.uuid, lot = { m, p: [], n: [], u: [], k: [], c: [] });
+      const m0 = o.material[gr.materialIndex], m = sheetOf(m0); let lot = null;
       for (let i = gr.start, e = Math.min(P.count, gr.start + gr.count); i < e; i++) {
-        v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); lot.p.push(v.x - (o.position.x - r.base), v.y, v.z);   // glued at rest; the rocking is added again on the chip
+        v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld);
+        if ((i - gr.start) % 3 === 0) { const key = m.uuid + '|' + Math.floor(v.x / 44) + '|' + Math.floor(r.z / 22); lot = lots.get(key); if (!lot) lots.set(key, lot = { m, p: [], n: [], u: [], k: [], c: [] }); }   // every triangle goes to the piece of sea its first corner lies in
+        lot.p.push(v.x - (o.position.x - r.base), v.y, v.z);   // glued at rest; the rocking is added again on the chip
         lot.n.push(N.getX(i), N.getY(i), N.getZ(i)); lot.u.push(U.getX(i), U.getY(i)); lot.k.push(r.k); lot.c.push(m0.color.r, m0.color.g, m0.color.b);
       }
     }
@@ -804,6 +807,7 @@ function bakeSea(rows, root) {
       mat.onBeforeCompile = sh => { sh.uniforms.uTick = seaTick; sh.vertexShader = 'attribute float aK; uniform float uTick;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.x += sin(uTick * .05 + aK * 1.7) * .12;'); };
       mat.customProgramCacheKey = () => 'sea'; }
     const m = new THREE.Mesh(g, mat); m.receiveShadow = true; m.frustumCulled = false; out.add(m);
+    g.computeBoundingBox(); seaChunks.push({ m, box: g.boundingBox.clone().expandByScalar(.6) });
   }
   root.add(out); return out;
 }
@@ -966,7 +970,7 @@ function frame(now) {
   if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; if (tracking.last) tracking.slow = Math.max(tracking.slow, now - tracking.last); tracking.last = now; }
   renderer.info.reset();
   // a set the camera cannot see sleeps: its pieces are big glued sheets, and without this every island is drawn all the time
-  { camera.updateMatrixWorld(); viewM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); view.setFromProjectionMatrix(viewM); for (const s of sets) s.root.visible = s === set || view.intersectsBox(s.box3); }
+  { camera.updateMatrixWorld(); viewM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); view.setFromProjectionMatrix(viewM); for (const s of sets) s.root.visible = s === set || view.intersectsBox(s.box3); for (const c of seaChunks) c.m.visible = view.intersectsBox(c.box); }
   if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
   measure(now);

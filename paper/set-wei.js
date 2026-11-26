@@ -68,6 +68,7 @@ export default {
     stepping([[2.5, 2.0], [2.75, 1.1], [2.95, .2], [3.1, -.7], [3.2, -1.6], [3.2, -2.5], [3.2, -3.4]], 440);                                      // up to the bakery
     stepping([[10.4, -.6], [10.3, -1.5], [10.45, -2.4], [10.6, -3.2]], 450);                                                                     // up to the balloon
     lay(blob(6.2, 5.3, 2.7, 1.8, 437, 36, .06), GROUND.high);                                                                                     // the sheep's pasture: a paler patch of grass
+    stepping([[-.5, 10.0], [-.45, 10.5]], 458);                                                                                                  // over the sand to the bridge to the beach (set-strand.js)
     stepping([[28.0, -3.0], [28.7, -2.6], [29.3, -2.1]], 455);                                                                                   // on from the last stone
 
     /* ---------------- things ---------------- */
