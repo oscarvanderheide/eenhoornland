@@ -13,8 +13,9 @@ Read this before any work under `paper/`. Status at the bottom.
 | Opening | The girls in bed in the house, dreaming of the egg, then waking up | Oscar, 2026-11-26 |
 | Figures | Simple cut-paper shapes on a white backing card, dot eyes, ponytails with bows | Oscar, 2026-11-26 |
 | New world each cycle | Gone (a hand-built set cannot be reshuffled). A cycle changes where the egg lies, the egg kind and the weather | follows from "hand-built sets" |
+| The list below | Every verdict agreed as written | Oscar, 2026-11-26 |
 
-Still Claude's picks, not yet confirmed by Oscar:
+Claude's picks. Oscar has seen them and has not objected, but has not said yes to each either:
 
 | What | Pick | Why |
 |---|---|---|
@@ -22,6 +23,7 @@ Still Claude's picks, not yet confirmed by Oscar:
 | House games | Houses are walk-in rooms first; bakery, funfair, atelier and stable games come last | They touch neither the map nor the adventure |
 | Saves | 2.0 keeps its own saves and starts fresh | 1.x stays playable beside it; positions cannot carry over anyway |
 | Set size | Smaller and denser than the tile islands (start the village at about 60% of its old footprint, on two or three levels) | The paper island works because everything is close together |
+| Loading | Only the set she is on exists. A bridge (or a door, or the boat) is the gate: the next set is built while she crosses, in a wide shot, and the old one is thrown away. Other islands show on the horizon as flat card cutouts | Oscar asked whether loading the whole world at once is wise; this is the answer he got |
 | Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Outfits and new poses then cost little; the walk is already drawn from one parameter |
 
 ## What carries over, what does not
@@ -39,8 +41,9 @@ Still Claude's picks, not yet confirmed by Oscar:
 2. **Camera changes against steady controls.** Stick and hold-to-steer must not flip when the view changes.
 3. **Figure size when the camera pulls back.** She is already small on a phone at the test island's distance (roughly 50 px tall, read off one screenshot, not measured); a wide shot makes her and every tap target smaller. Measure it in the test piece.
 
-Two smaller questions for the same piece:
+Smaller questions for the same piece:
 
+- How long a set takes to build on the phone, and whether a bridge crossing hides it.
 - How big a set can be before it stops feeling handmade.
 - Whether a hand-built set can sit on the old tile coordinates, so the `MAP.*` spots and the old tests' positions keep their meaning. The set-size pick above points to no; try it on the village before giving it up, because a yes would save rewriting 30 of the 33 browser tests.
 
@@ -75,7 +78,7 @@ Two smaller questions for the same piece:
 
 Verdicts: **keep** (same idea, built in paper), **redesign** (the idea stays, the form changes), **later** (after the adventure plays through), **cut**. "Spine" means the adventure cannot be finished without it.
 
-Oscar: change any verdict; an empty "Oscar" cell means agreed.
+Oscar agreed to every verdict on 2026-11-26. A later change goes in the "Oscar" column.
 
 ### The whole game
 
@@ -97,7 +100,7 @@ Oscar: change any verdict; an empty "Oscar" cell means agreed.
 | Big stones to lift (about 200 along the shores) | redesign | Three or four per island, placed by hand | |
 | Sword cuts grass and flowers | redesign | Hand-placed patches of paper tufts, far fewer | |
 | Swimming along every shore | redesign, later | Only at marked beaches, between the first wave rows | |
-| Flying | redesign, later | A high, wide shot of all the islands as tiny models; she picks where to land | |
+| Flying | redesign, later | A set of its own: all the islands as tiny card models seen from high up; she picks where to land, and that set is then built | |
 | Weather (rain, autumn, snow) | later | Paper leaves, confetti snow, rain on threads | |
 | Old unicorns' five powers | later | | |
 | Bike with trailer | later | | |
@@ -143,8 +146,8 @@ Oscar: change any verdict; an empty "Oscar" cell means agreed.
 |---|---|---|---|
 | The cave: two rooms, the crate, the egg | keep (spine) | Close camera | |
 | Brambles on the bridge | keep (spine) | | |
-| Treehouse: telescope, acorns, hammock | keep | The telescope cuts to wide shots of other islands | |
-| Zipline to the village | keep | A wide shot: a moment of scale | |
+| Treehouse: telescope, acorns, hammock | keep | The telescope shows each other island as a small card model made for the telescope (the real set is not loaded) | |
+| Zipline to the village | keep | A wide shot: a moment of scale. It is a gate: the village is built while she slides, the far end shown as its horizon cutout until then | |
 | Hide and seek in the bushes | keep | | |
 | Hedgehog, owl, squirrel | keep | | |
 | The clearing, the orchard, the nook | keep | Dressing: places for the egg and the apples | |
@@ -218,4 +221,5 @@ Each girl and unicorn needs a side, front and back view.
 
 ## Status
 
-- 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; the list waits for Oscar's marks. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
+- 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; Oscar agreed to the list.
+- 2026-11-26: step 2 (figures with outfit layers) started in the main session. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
