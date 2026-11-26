@@ -204,6 +204,8 @@ function buildSet(def) {
     // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
     lamp: (i, color, distance, decay) => (s.lamps[i] = { color, distance, decay, intensity: 0, position: new THREE.Vector3() }),
     figure: (name, spec) => { const f = makeFigure(name, spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
+    // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
+    play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
   };
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
@@ -370,6 +372,11 @@ const sfx = {
   door(open) { tone(open ? 220 : 180, .12, 'triangle', .1, open ? 1.3 : .7); noise(.08, .05, 3000); },
   neigh() { tone(660, .4, 'triangle', .06, 1.25, 9); setTimeout(() => tone(880, .3, 'sine', .05), 120); },
   hop() { tone(440, .1, 'sine', .07, 1.6); },
+  swish(v = 2) { noise(.22, Math.min(.07, .02 * v), 1800); },
+  whoosh() { noise(.5, .08, 700); tone(300, .45, 'sine', .04, 2.2); },
+  boing() { tone(260, .22, 'sine', .09, 2.1); },
+  thud() { tone(120, .12, 'sine', .12, .6); noise(.08, .05, 400); },
+  click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
 
@@ -379,6 +386,14 @@ function tapFigure(f) {
   else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
   else if (f.onTap) f.onTap();
 }
+
+/* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
+let playing = null, playAct = false;
+function play(toy) { playing = toy; target = null; playAct = false; }
+function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; }
+/** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
+function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = { x, z, then, near }; }
+const herOnScreen = () => { const v = new THREE.Vector3(girl.x, girl.y + (girl.lift || 0) + .5, girl.z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
 
 /* ---------------- where she can stand ---------------- */
 /** how high the floor is at a spot, or null where there is none. In each set the first floor that holds the spot counts (a
@@ -420,7 +435,7 @@ function viewFor(f) {
 
 /* ---------------- input: tap to walk, hold to steer, arrows/WASD ---------------- */
 const keys = new Set();
-addEventListener('keydown', e => { keys.add(e.key.toLowerCase()); audio(); });
+addEventListener('keydown', e => { keys.add(e.key.toLowerCase()); audio(); if (playing && !e.repeat && [' ', 'enter', 's', 'arrowdown'].includes(e.key.toLowerCase())) playAct = true; });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => keys.clear());
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -462,6 +477,10 @@ function groundPoint(cx, cy) {
 }
 canvas.addEventListener('pointerdown', e => {
   audio(); canvas.setPointerCapture(e.pointerId);
+  if (playing) {   // while she plays the finger belongs to the toy: on her it lets go, beside her it pushes that way
+    const [hx, hy] = herOnScreen(); if (Math.hypot(e.clientX - hx, e.clientY - hy) < 34) playAct = true; else hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), since: time };
+    return;
+  }
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
@@ -470,7 +489,7 @@ canvas.addEventListener('pointerdown', e => {
   hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
 });
 canvas.addEventListener('pointermove', e => { if (hold && hold.id === e.pointerId) { hold.x = e.clientX; hold.y = e.clientY; } });
-const endHold = e => { if (hold && hold.id === e.pointerId) { if (performance.now() - hold.t > 220) target = null; hold = null; } };
+const endHold = e => { if (hold && hold.id === e.pointerId) { if (playing) { hold.up = time; return; } if (performance.now() - hold.t > 220) target = null; hold = null; } };
 canvas.addEventListener('pointerup', endHold); canvas.addEventListener('pointercancel', endHold);
 
 /* ---------------- day and evening ---------------- */
@@ -644,15 +663,20 @@ function frame(now) {
   if (keys.has('arrowup') || keys.has('w')) iz -= 1; if (keys.has('arrowdown') || keys.has('s')) iz += 1;
   if (ix || iz) { target = null; [ix, iz] = toFloor(ix, iz); }   // the stick: left is left on the screen, up is away from the camera, whatever the shot
   if (hold && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
+  if (playing) {
+    let px = 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
+    if (hold) { const [hx] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
+    const act = playAct; playAct = false; playing.step(dt, { x: px, act }); ix = iz = 0; target = null;
+  }
   if (target && !ix && !iz) {
     const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
-    if (d < .08) target = null; else { ix = dx / d; iz = dz / d; }
+    if (d < .08) { const then = target.then; target = null; if (then) then(); } else { ix = dx / d; iz = dz / d; }
   }
   const speed = 2.3, il = Math.hypot(ix, iz);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
-    if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) target = null;
+    if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) { const q = target; target = null; if (q.then && Math.hypot(q.x - girl.x, q.z - girl.z) < q.near) q.then(); }
     { const [sx] = toScreen(ix, iz); if (Math.abs(sx) > .2 * il) girl.face = Math.sign(sx); }
   }
   // the unicorn walks after her
@@ -691,7 +715,7 @@ function frame(now) {
       f.pose.rotation.z = f.tilt * f.face;
       f.mesh.scale.x = f.view === 'side' ? f.face : 1;
     }
-    f.g.position.set(f.x, f.y, f.z);
+    f.g.position.set(f.x, f.y + (f.lift || 0), f.z); if (f.lean) f.pose.rotation.z = f.lean; else if (f.leant) f.pose.rotation.z = 0; f.leant = !!f.lean;   // a toy lifts and leans her smoothly
     f.g.rotation.y = Math.atan2(camera.position.x - f.x, camera.position.z - f.z) * .85;
   }
   stepBalloon(dt);
@@ -723,7 +747,8 @@ function frame(now) {
     const k = camCut ? 1 : 1 - Math.exp(-dt * 1.7); for (const n of SHOT_KEYS) cam[n] += (shot[n] - cam[n]) * k;
     const vw = portrait ? cam.tall : cam.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
     camDist = clamp(vw / 2 / tanH, 8, 60); camH = camDist * (portrait ? cam.riseTall : cam.rise);
-    camLook.lerp(new THREE.Vector3(cam.ax + (girl.x - cam.ax) * cam.fx, girl.y * cam.fy + .5, cam.az + (girl.z - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
+    const [lx, lz] = playing && playing.look ? playing.look : [girl.x, girl.z];   // on a toy the camera looks at the toy, not at her going to and fro
+    camLook.lerp(new THREE.Vector3(cam.ax + (lx - cam.ax) * cam.fx, girl.y * cam.fy + .5, cam.az + (lz - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
     camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
     camera.position.copy(camPos); camera.lookAt(camLook);
     camYaw = Math.atan2(camPos.x - camLook.x, camPos.z - camLook.z);
@@ -751,7 +776,7 @@ window.__p = {
   walkTo(x, z) { target = { x, z }; },
   tap(name) { const f = figures.find(f => f.name === name); const named = sets.map(q => q.names[name]).find(Boolean); if (f) tapFigure(f); else if (named) named(); else if (name === 'tree') { set.trees[0].wob = 1; } },
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
-  screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + .4, f.z) : new THREE.Vector3(...sets.map(q => q.spots[name]).find(Boolean)); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+  screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + (f.lift || 0) + .4, f.z) : new THREE.Vector3(...sets.map(q => q.spots[name]).find(Boolean)); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
   still(on = true) { still = on; if (on) tick = 0; },
   stats() { return { set: set.name, sets: sets.map(q => q.name), load: world.ms, px: innerWidth * innerHeight * DPR * DPR, fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
@@ -764,19 +789,19 @@ window.__p = {
   view(name = 'girl') { return figures.find(f => f.name === name).view; },
   uniOk() { return heightAt(uni.x, uni.z) !== null; },
   hop(name) { return figures.find(f => f.name === name).hop; },
-  info() { return { set: set.name, girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], eve, h: heightAt(girl.x, girl.z), ...Object.assign({}, ...sets.map(q => q.info ? q.info() : {})) }; },
+  info() { return { set: set.name, lift: girl.lift || 0, pose: girl.poseName, girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], eve, h: heightAt(girl.x, girl.z), ...Object.assign({}, ...sets.map(q => q.info ? q.info() : {})) }; },
   /** throw away what exists and build the set called `name` with its neighbours; gives how long that took */
   load(name) { loadWorld(name); return world.ms; },
   dbg: { get set() { return set; }, scene, renderer, figures },
   /** what exists right now: to see that a set thrown away is really gone */
   count() { const all = k => sets.reduce((n, q) => n + q[k].length, 0); return { set: set.name, ms: world.ms, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs.length, newest: Math.max(...renderer.info.programs.map(p => p.id)), calls: stat.calls, taps: all('taps'), solids: all('solids'), trees: all('trees'), ground: all('ground'), figures: figures.length, things: scene.children.length }; },
   /** which of the set's named places she can walk to from where she starts: a flood over the floor in small steps, by the same rule as her walk */
-  reach(step = .15) {
+  reach(step = .15, extra = []) {
     const key = (i, j) => i * 10000 + j, seen = new Map(), [sx, sz] = set.start, todo = [[0, 0]]; seen.set(key(5000, 5000), heightAt(sx, sz));
     while (todo.length) { const [i, j] = todo.pop(), h = seen.get(key(i + 5000, j + 5000));
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = key(i + di + 5000, j + dj + 5000); if (seen.has(k)) continue; const x = sx + (i + di) * step, z = sz + (j + dj) * step; if (Math.abs(i + di) > 400 || Math.abs(j + dj) > 400 || !free(x, z, h)) continue; seen.set(k, heightAt(x, z)); todo.push([i + di, j + dj]); } }
     const at = ([x, z]) => { for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) if (seen.has(key(Math.round((x - sx) / step) + di + 5000, Math.round((z - sz) / step) + dj + 5000))) return true; return false; };
-    return { cells: seen.size, places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
+    return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
   pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
@@ -791,6 +816,12 @@ window.__p = {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), top = (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H;
     return { on: shot.name, changes: shotChanges, yaw: camYaw, list: [...sets.flatMap(q => q.shots.filter(s => s.zone)), set.shots[set.shots.length - 1]].map(s => { const d = clamp((portrait ? s.tall : s.span) / 2 / (tan * camera.aspect), 8, 60), rise = portrait ? s.riseTall : s.rise; return { name: s.name, play: s.play, zone: s.zone || null, her: top / (2 * d * Math.hypot(1, rise) * tan) * innerHeight }; }) };
   },
+  /** where the camera looks and stands */
+  cam() { return { look: camLook.toArray(), pos: camPos.toArray() }; },
+  /** what she is playing on (a toy's own state), or null */
+  toy(name) { const q = sets.map(s => s.toys && s.toys[name]).find(Boolean); return q ? { ...q.state(), on: playing === q.toy } : null; },
+  /** can she walk from where she starts to this spot? */
+  canReach(x, z) { const r = this.reach(.15, [[x, z]]); return r.extra[0]; },
   /** hold keys down as a child would ('a', 'd', 'w', 's'), or none */
   keys(list = []) { keys.clear(); for (const k of list) keys.add(k); },
   /** follow her for a while: how far she went on the screen's left-right and up-down, and the smallest step along `want` ([right, down]) in any frame: under zero means she turned back */

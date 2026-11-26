@@ -7,6 +7,7 @@
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { cottage, shore, GROUND } from './props.js';
+import { swing, slide } from './toys.js';
 import { dorpLand, bosLand, ORIGIN, BACK } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile) */
@@ -78,7 +79,7 @@ export default {
     lay(ribbon([[2.7, -.1], [4.3, .65], [6.0, 1.85], [7.6, 2.45], [9.3, 2.4]], .9, 65), 'path');                        // east to the bridge
     lay(ribbon([[-1.5, -.8], [-2.5, -1.85], [-4.8, -2.3], [-6.6, -2.05], [-7.5, -1.0], [-8.15, .1]], .8, 66), 'path');  // west, round the playground to the pond
     lay(ribbon([[6.0, -5.75], [5.9, -4.4], [5.35, -3.3], [5.5, -1.6], [6.05, .2], [6.5, 1.75]], .85, 67), 'path');      // from the north bridge past the terrace's east stairs
-    lay(blob(-5.2, .3, 2.9, 1.75, 68, 44, .06), sandP);                                                                 // the playground's sand
+    lay(blob(-5.3, .3, 3.1, 1.9, 68, 44, .06), sandP);                                                                 // the playground's sand
     lay(blob(-3.9, 4.75, 2.1, 1.05, 69, 40, .07), 'soil');                                                              // the carrot patch
     stones([[4.75, 1.45], [4.5, 1.95], [4.3, 2.45], [4.2, 2.95]], 160);                                                 // to the gate of the unicorns' meadow
     stones([[-.25, 2.55], [-.85, 2.75], [-1.5, 2.85], [-2.15, 3.05], [-2.8, 3.15]], 170);                               // to the sword's stone and the patch
@@ -97,13 +98,8 @@ export default {
       put(cyl(.035, 1.4, 'dark', 8), x, y + .7, z); put(new THREE.Mesh(new THREE.SphereGeometry(.1, 12, 8), P('path')), x, y + 1.42, z); S.solid({ x, z, r: .08 });
     }
 
-    /* ---------------- the playground: a swing and a slide ---------------- */
-    { const [x, z] = T(20.5, 41.5);
-      for (const sx of [-.95, .95]) for (const sz of [-.3, .3]) { const leg = put(cyl(.04, 1.75, 'dark', 6), x + sx, .82, z + sz * .5); leg.rotation.x = -sz * .55; }
-      const beam = put(cyl(.04, 2, 'dark', 6), x, 1.62, z); beam.rotation.z = Math.PI / 2;
-      for (const sx of [-.22, .22]) put(cyl(.012, 1.15, 'thing', 4), x + sx, 1.04, z); put(box(.52, .05, .2), x, .46, z);
-      S.wall(x - .95, z, .12, .3); S.wall(x + .95, z, .12, .3); }
-    { const [x, z] = T(24.5, 43.5); const ramp = put(box(1.5, .06, .5), x + .15, .52, z); ramp.rotation.z = -.52; put(box(.5, 1.0, .5, 'dark'), x - .62, .5, z); S.wall(x, z, .95, .32); }
+    /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
+    const theSwing = swing(S, -6.7, H_GRASS + .015, -.45), theSlide = slide(S, -5.7, H_GRASS + .015, 1.15);
     { const [x, z] = T(24.5, 41.5); put(new THREE.Mesh(new THREE.SphereGeometry(.16, 14, 10), P('path')), x, .16, z).castShadow = true; }   // the ball
 
     /* ---------------- the unicorns' meadow: a fence with an open gate, and the race arch beside it ---------------- */
@@ -123,7 +119,7 @@ export default {
     put(box(.5, .6, 1.2, 'dark'), 10.9, DECK + .3, 2.4); S.wall(10.9, 2.4, .35, .7);
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
-    const busy = [[-1.6, -7, 2.2, -2.9], [-8.1, -1.5, -2.1, 2.1], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5]];   // her house and its doorstep, the playground, the pen, the arch
+    const busy = [[-1.6, -7, 2.2, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, -1.2, 5.2], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5]];   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch
     const cols = [['#93b071', '#b3c98d'], ['#d8b35a', '#e8cd85'], ['#d9806c', '#e9a48f'], ['#7fa676', '#a3c08c']];
     const R = rng(91); let n = 0;
     for (let i = 0; i < 900 && n < 26; i++) {
@@ -142,14 +138,15 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.4,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => HOUSE.step(e),
+      step: e => { HOUSE.step(e); theSwing.step(e); },
+      toys: { swing: theSwing, slide: theSlide },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
       // turned, 'up' on the stick would walk her into the railing
       shots: [
         { name: 'thuis', zone: [-2.4, -4.7, 3.0, -2.95], span: 9.5, tall: 6.5, rise: .2 },                      // at her front door: close and low, the morning
-        { name: 'speeltuin', zone: [-8.1, -1.5, -2.5, 2.0], span: 12, rise: .3, yaw: .3 },                      // the playground, seen a little from the east
+        { name: 'speeltuin', zone: [-8.4, -1.7, -2.4, 2.3], span: 12, rise: .3, yaw: .3 },                      // the playground, seen a little from the east
         { name: 'vijver', zone: [-14, -3.2, -8.6, 3.8], span: 10.5, rise: .38, yaw: .22 },                      // the pond: closer, looking down on the water
         { name: 'wei', zone: [1.3, 3.4, 7.2, 6.3], span: 12, rise: .36 },                                       // in the unicorns' meadow
         { name: 'brug-oost', zone: [9.0, .9, 17, 3.9], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },    // the bridge to the meadow: far back, she is small
@@ -157,9 +154,9 @@ export default {
         { name: 'modder', zone: [-8, 7.6, 6, 13], span: 11, rise: .3 },                                         // the pig's corner in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
-      spots: { door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
+      spots: { swing: [-6.7, 1.9, -.45], slide: [-4.3, .85, 1.15], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
-      places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: T(20.5, 42.6), slide: T(22.5, 43.6), pond: T(14.5, 45.4), bench: T(28, 40.6), garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6, -9], east: [10.2, 2.4] },
+      places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: [-6.7, .5], slide: [-6.1, 1.3], pond: T(14.5, 45.4), bench: T(28, 40.6), garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6, -9], east: [10.2, 2.4] },
     };
   },
 };
