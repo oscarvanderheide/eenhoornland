@@ -1,102 +1,235 @@
-# Eenhoornland 2.0: the paper game
+# Eenhoornland in paper (2.0): the plan
 
-The whole game rebuilt as a handmade paper diorama, with cameras that change to give a sense of scale. The pixel game (1.x, `index.html` + `js/`) stays playable and untouched until 2.0 takes over.
+The paper look tried on one island becomes the whole game. This file is the source of truth: it holds what Oscar decided, how the game is built, what exists, and what comes next. It was rewritten on 2026-11-26 (late) after a long day of Oscar playing each step and steering; the day's log is at the bottom.
 
-Read this before any work under `paper/`. Status at the bottom.
+Read this before any work under `paper/`. Then `paper/STYLE.md` if you draw a figure.
 
 ## Where the work lives
 
-- **Branch `paper`**, in the worktree `.claude/worktrees/paper` of the repository. Oscar, 2026-11-26: the pixel game keeps existing on `main`; 2.0 is committed on its own branch. Never commit 2.0 work to `main`.
-- This copy of the plan (on `paper`) is the current one; the copy on `main` stopped at the commit where the branch began.
-- Serve the worktree on its own port for tests: `python3 serve.py 8766`, then `SERVE=8766 node cdp.mjs tests/t-paper.mjs` (the main checkout's server on 8765 serves the pixel game's folder).
-- **Publishing (set up 2026-11-26 with Oscar's yes):** `.github/workflows/pages.yml`, the same file on `main` and on `paper`, builds the site on every push to either branch: the pixel game from `main` at the root (https://oscarvanderheide.github.io/eenhoornland/), this branch's `paper/` folder at `/paper/` (figure sheet: `/paper/figures.html`). So a push to `paper` puts it online; commit and push after the tests pass, as for the pixel game. Hidden files and folders are not published. Settings changed for this: Pages build type `workflow` (was `legacy`), and `paper` added to the branches the `github-pages` environment may deploy from. To undo: set the build type back to `legacy` with source `main` `/`. If the workflow file changes, change it on both branches.
-- **Everything the paper game loads must live under `paper/`.** The site takes only this branch's `paper/` folder; `/js/` on the site is `main`'s. An import of `../js/quest.js` would pass every local test and load the pixel game's copy when live. Modules carried over from the pixel game (quest, state, saves, audio, gamepad) are copied into `paper/` and changed there.
-- A push to `main` publishes only while branch `paper` exists and has `paper/index.html`: the workflow checks both and stops otherwise, leaving the site as it was.
+- **Branch `paper`**, in the worktree `.claude/worktrees/paper` of the repository. The pixel game keeps existing on `main`; never commit 2.0 work to `main`.
+- Serve the worktree on its own port: `python3 serve.py 8766`, then `SERVE=8766 node cdp.mjs tests/t-paper-smoke.mjs`.
+- **A push to `paper` publishes** `paper/` at https://oscarvanderheide.github.io/eenhoornland/paper/ (start in the village: `?set=dorp`; readout: `&fps`; figure sheets: `figures.html`, `animals.html`, `people.html`). The workflow `.github/workflows/pages.yml` is the same file on `main` and `paper`; change it on both or not at all. It retries the deploy step once by itself.
+- **Everything the paper game loads lives under `paper/`.** The site takes only that folder from this branch; an import of `../js/...` would load the pixel game's file when live.
 
-## Decided
+## What Oscar wants (all said on 2026-11-26)
 
-| What | Decision | By |
-|---|---|---|
-| World | Every island is a **hand-built set**, not a re-skin of the tile map | Oscar, 2026-11-26 |
-| Scenes | No 2D side-view scenes. Big moments happen in the world with a camera move | Oscar, 2026-11-26 |
-| Opening | The girls in bed in the house, dreaming of the egg, then waking up | Oscar, 2026-11-26 |
-| Figures | Simple cut-paper shapes on a white backing card, dot eyes, ponytails with bows | Oscar, 2026-11-26 |
-| New world each cycle | Gone (a hand-built set cannot be reshuffled). A cycle changes where the egg lies, the egg kind and the weather | follows from "hand-built sets" |
-| The list below | Every verdict agreed as written | Oscar, 2026-11-26 |
-| Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Oscar, 2026-11-26 (on the figure sheet) |
-| Carrying | She holds an animal in her arms in front of her (pose `hold`), not over her head as in the pixel game | Oscar, 2026-11-26 (on the figure sheet) |
-| Blinking | The sisters blink now and then while they stand | Oscar, 2026-11-26 (on the figure sheet) |
-| The balloon | Its own little card on a thread tied to her hand, not part of her card | Oscar, 2026-11-26 (on the figure sheet) |
-| The bought bow (`strik`) | A big red bow with white dots on top of her head | Oscar, 2026-11-26 (on the figure sheet) |
-| Camera | Shots that glide into each other and never turn far from north; hard cuts only at doors and between sets. "Up" on the stick is always away from the camera | Oscar, 2026-11-26, on the village blockout: "i really love the camera movement" |
-| Shapes | Nothing lies on a grid. The old map gives where things are, never the shape of anything: paths wind, squares are round, side paths are stepping stones | Oscar, 2026-11-26: the tiled square and streets of the first blockout "no longer really have to be like so tiled" |
-| What a tap feels like | The island's way is the model for everything that answers a tap: a wobble or a hop in stop-motion steps, a few bits of paper confetti, one soft sound, always the same | Oscar, 2026-11-26: "so much better than what we had in the pixel art version" |
+| What | Decision |
+|---|---|
+| The look | A handmade paper diorama, as on the first test island. He approved the sisters as paper dolls on the figure sheet |
+| Sets | Every island is built by hand. **The pixel game's map says roughly where things are, never the shape of anything:** nothing lies on a grid, paths wind, squares are round, side paths are stepping stones |
+| Straying | "Overall it's fine to stray from the pixel art game ... this new style is so much nicer and allows much nicer, calmer, yet more interesting interactions and feel of exploration. Be critical whether it would work and creative." The inventory at the bottom of this file is a memory aid, not a contract |
+| Room | Things stand far apart: `SPREAD` in `paper/lands.js` is 1.7 (1.0 and 1.5 felt cramped, 1.8 a little too much). Islands lie well apart too; the bridge between two is long |
+| Camera | He loves it: shots that glide into one another, close at a door or a cave, far back on a bridge. Never turned far from north. Cuts only at doors |
+| Between islands | One world. A bridge is a real bridge and nothing happens on it. He found a sheet of paper sliding across "really intrusive" |
+| A tap | The first island's way is the model for everything that answers a tap: a hop or a wobble in stop-motion steps, a few bits of confetti, one soft sound, always the same. "So much better than what we had in the pixel art version" |
+| More to do | "Overall there could be more things to interact with in the world." Each should be a small real action, not a menu |
+| Calm | A slow, calm tune belongs to the island. Waves are heard only on the sand by the water. Small touches of sound matter to him |
+| Nothing by itself | The toy windmills turn only when tapped ("don't auto-blow"). The fountain runs and gusts of wind cross, because he asked for those; when adding a new thing, it waits for her unless he said otherwise |
+| Flowers | She picks one at a time and holds the very flower she picked. Gardens are flowers only, laid out as if somebody planted them; no bare brown soil |
+| Night | Lanterns come on by themselves; she can also light and put out each one |
+| Trees in the way | A tree can fold flat out of the camera's way (`fold: true` on a set), but not in open places: "we don't really get lost behind trees anyways". He sees it for secret areas |
+| No sword | "Not sure I like the idea of a sword in this style of game any more." It is out. Nothing is cut or hit |
+| People | Not only animals: grown-ups who sit on benches and do funny things |
+| The step | A kick scooter instead of the pixel game's bike, later, for getting about faster |
+| The pixel game's rules that still hold | No text (the girls cannot read), no fail states, no timers, no counters or collection books (coins only), the world waits for the child, a missing thing hints instead of saying no |
+| How to work | Fast: no full test round before a publish, publish small and often, say plainly what was not checked. He reacts to what he sees, so show real things early and label stand-ins |
 
-Claude's picks. Oscar has seen them and has not objected, but has not said yes to each either:
+Claude's picks that he has seen working and not objected to, but never said yes to one by one: every island exists at once with the far ones asleep (see "How it is built"); a second flower picked puts the first in her hair; a toy takes her over and the finger then belongs to the toy; her front door is a cut to a room that stands beside the world.
 
-| What | Pick | Why |
-|---|---|---|
-| House games | Houses are walk-in rooms first; bakery, funfair, atelier and stable games come last | They touch neither the map nor the adventure |
-| Saves | 2.0 keeps its own saves and starts fresh | 1.x stays playable beside it; positions cannot carry over anyway |
-| Set size | Smaller and denser than the tile islands (start the village at about 60% of its old footprint, on two or three levels) | The paper island works because everything is close together |
-| Loading | The set she is on and its neighbours across a bridge exist together, in one world (`ORIGIN` and `NEAR` in `paper/lands.js`); a bridge is a real bridge and walking over it changes nothing. Sets further away do not exist. Not built yet: building a set aside, a little each frame, when a third island comes into reach, and throwing the one behind away | Oscar asked whether loading the whole world at once is wise. A first version changed sets mid-bridge behind a sliding sheet of paper; Oscar, 2026-11-26: it gets in the way, and the islands felt too close. Changing sets unseen is not possible in the far bridge shot (both shores are in view), so both exist instead |
+**Open questions for him** (do not build past these without asking):
 
-## What carries over, what does not
+1. With the sword gone, what opens the brambles on the bridge to the meadow? Proposal, being built as the default: **a full watering can makes them bloom into roses and curl aside.**
+2. The pixel game's other two tools: the hookshot (the gap in the bridge to the beach) and riding the unicorn (the hole in the bridge to the castle). Proposal: the beach bridge is mended by her (planks lie about the meadow; she carries each to the gap); the castle bridge stays a jump on the grown unicorn.
+3. Is the adventure (dream, egg, warm thing, hatching, fruit, riding, the castle's flowers, the rainbow, home) still the spine, or is this becoming a world to play in with the adventure as one thread through it? Everything built today is the second.
 
-- **Carries over as-is** (checked: no imports from the map or the pixel art): `js/state.js`, `js/audio.js`, `js/gamepad.js` (it presses the on-screen buttons by id, so 2.0 keeps those ids).
-- **Carries over with small changes:** `js/quest.js` (stages, tools, coins, outfits owned). `mapSeed()` goes; `q.zone` and `q.spot` then pick one of the egg spots a set offers; its `rng` import moves out of `js/pixel.js`. `js/saves.js` keeps its rules but draws its pictures with pixel art today, so those are redrawn.
-- **Every set must offer** egg spots (the egg of a cycle lies in bos, wei, strand, eiland or dorp, by kind), the meadow a spot for each kind's warm thing, and the rainbow island each kind's food on the tree (`Q.KINDS`, `Q.WARM`, `Q.FOOD`: five kinds).
-- **Rebuilt with the old file as the spec:** every `js/world-*.js`. Drawing and tile rules are woven together in them, so they cannot be reused by swapping the renderer.
-- **Redrawn:** all art. Paper has 6 figures today; the game has 2 girls with 11 outfits, 18 animals with their own acts, the unicorn family and each island's plants and props.
-- **Design rules stay:** everything in the project skill's "Rules of the game design" (no text, no fail states, the world waits for the child, one toy per island, one rule per thing for every input, coins only).
+## Paper or folded card
 
-## The three risks the first test piece must answer
+Oscar asked whether what lives should be paper. The rule now:
 
-1. **Frame rate on the phone** with shadows, paper grain and soft focus on a set many times the size of the test island.
-2. **Camera changes against steady controls.** Stick and hold-to-steer must not flip when the view changes.
-3. **Figure size when the camera pulls back.** She is already small on a phone at the test island's distance (roughly 50 px tall, read off one screenshot, not measured); a wide shot makes her and every tap target smaller. Measure it in the test piece.
+- **A flat cut-paper card on a white backing card** (a "figure": drawn in code with `cut.js`, always facing the camera): everything that **lives** (the sisters, unicorns, animals, people, birds, butterflies), and everything she **holds, carries, kicks, eats or is given** (the ball, the watering can, a carrot, an egg, a bun, a fish, a kite). Also a scarecrow, because it is a somebody.
+- **Folded and stacked card in three dimensions**: everything she **walks on, round, into or sits on**: land, water, bridges, houses, fences, benches, beds, the swing and slide, trees, lanterns, the fountain, the well, the picnic cloth.
+- **Plants** are little three-dimensional paper makes (a stem, a cut head); a picked flower stays that same make in her hand.
+- **Air** (confetti, water drops, wind curls) is loose flat paper.
+- When unsure: would a child pick it up? Then it is a card.
 
-Smaller questions for the same piece:
+Still breaking the rule on 2026-11-26: the watering can, the pulled carrot, the hen's eggs, the scarecrow and its birds (their cards are drawn and the code is written, see the log); the picnic basket and apples.
 
-- How long a set takes to build on the phone, and whether a bridge crossing hides it.
-- How big a set can be before it stops feeling handmade.
-- (Answered 2026-11-26: yes, see the status.) Whether a hand-built set can sit on the old tile coordinates, so the `MAP.*` spots and the old tests' positions keep their meaning. The set-size pick above points to no; try it on the village before giving it up, because a yes would save rewriting 30 of the 33 browser tests.
+## How it is built
+
+No build step: ES modules, three.js r160 from a CDN.
+
+| File | What it is |
+|---|---|
+| `paper/kit.js` | Paper, card slabs with a cut edge, hand-cut outlines (`blob`, `ribbon` for a winding path), `paper()` shared materials, `sheetOf` |
+| `paper/paper.js` | The stage: light, lens and film pass, the theatre behind (sky, hills, clouds on threads), she and her unicorn, walking, way-finding, taps, the camera director, toys, doors, sound, the readout |
+| `paper/lands.js` | Where each set stands in the world (`ORIGIN`), which sets are awake together (`NEAR`), `SPREAD`, the islands' outlines |
+| `paper/set-*.js` | One file per place: `eiland` (the first test island, kept as the reference picture), `dorp` (village), `bos` (forest), `huis` (the room inside her house). `{ name, build(S) }` |
+| `paper/props.js` | Things for more than one set: her house, flower beds, the flower in her hand, tufts and wild flowers, windmills, fountain, bench, lantern, log cabin |
+| `paper/toys.js`, `farm.js`, `picnic.js`, `dog.js`, `critters.js` | The swing and slide; the farm; the picnic; the dog and her ball; the smaller animals |
+| `paper/cut.js`, `kids.js`, `figures.js`, `animals.js`, `things.js`, `people.js` | Figures: the shapes and the backing card, the sisters as paper dolls, the unicorns, animals, held things, people. Sheets: `figures.html`, `animals.html`, `people.html` |
+
+The seams, each one place in `paper.js`:
+
+- **A set** builds everything under its own group with the toolbox `S`: `floor`, `floorBox` (a floor of height `null` is a hole), `wall`, `solid`, `tap`, `figure`, `lollipop`, `pine`, `sea`, `lamp`, `door`, `play`/`stopPlay`/`walkThen`, `free`, `heightAt`, `move`, `hand`, `head`, `offer`, `glue`, `at`. A set thinks in its own measure; the stage moves what it registers to its place in the world.
+- **Gluing.** Everything that stands still is glued into one mesh per kind of paper with its colour in its corners; a thing that moves as a whole (a tree's crown, a windmill's sails) is glued inside its own group (`S.glue`). `paper()` materials are shared and never changed. Whatever moves sits in a group marked `userData.live`.
+- **Two real lights, many lamps.** A set describes lamps; the stage gives its two lights to the lit lamps nearest her. Never add or remove a light or throw a material away while playing: the graphics chip rebuilds programs and the game hitches.
+- **The camera director.** A set lists shots: a zone on the floor and how to look. Numbers glide. On a bridge the camera looks straight along it. A close, low shot needs a clear way to the camera: plant nothing there.
+- **A toy** (`S.play(toy)`) takes her over: the finger belongs to the toy, the camera looks at the toy. One rule for every input: sideways pushes, touching her gets off. `toy.rest` makes the island's tune come closer.
+- **A door** (`S.door`) is a cut between two doors of the same name. Nothing is built at a door.
+- **Way-finding.** A tap is a place to go; she takes the straight line if it is free, else a way round. A held finger steers directly. She can never stay stuck: standing where she cannot walk, she steps clear.
+- **Figures** are cards with frames. `f.act(tick)` picks the frame in stop-motion steps; `f.lift` and `f.lean` are smooth.
+- **A pixel budget** of three million caps what is drawn on big screens.
+
+Traps that have bitten more than once: a `// comment` at the end of a dense one-line statement swallows the rest of the line (put comments on their own line); a test hook's field called `on` is overwritten by `__p.toy()`; `placeAt` in a test puts the unicorn just north of her, on top of whatever is there.
+
+## The world
+
+One world. `?set=dorp` starts her at her own front door.
+
+### The village (`dorp`): built
+
+Her house on a terrace with a flower garden and two windmills; the room inside (beds she hops onto, a lamp); the fountain square with the dog and her ball; the playground (a real swing, a slide); the pond with ducks and benches; the unicorns' meadow; the farm in the south (well, watering can, carrots that grow and are pulled for the pig, a scarecrow and its birds, the hen and chicks); lanterns; butterflies; wild flowers to pick.
+
+Still grey stand-ins: the stall, the race arch, the pole, the bike (to become the step), the block on the east bridge. To come: people (a grandma knitting on a bench, the baker at what was the stall, the gardener asleep in his wheelbarrow on the farm, the accordion player on the square), the brambles that bloom open, a paper aeroplane thrown from the terrace, a dolphin leaping over the north bridge.
+
+### The forest (`bos`): built as a first pass
+
+Bigger than the pixel game's. A log cabin (no inside yet), the cave's rock with a close shot at its mouth (no inside yet), the clearing with the picnic the animals come to, the orchard, the nook, the oak with a platform. Hedgehog, owl, squirrel. To come: a fawn, a row of boar piglets, more squirrels (cards drawn); the inside of the cave and the cabin; the ride down the zipline from the oak to the village; hide and seek in the bushes; mushrooms.
+
+### The meadow (`wei`): next
+
+Not a port. Ideas, to be judged by building them: a wide rolling meadow on two or three levels with a windy hill; **a kite** she really flies (run, and the wind takes it); dandelion clocks to blow; a flock of sheep and lambs; the waterfall with its pool and stepping stones that each sing a note; the bakery; a painter at his easel who paints what she brings him; **a balloon on a rope** she goes up in, the camera pulling far back until all the islands lie below like models (the game's big moment of scale, and what the pixel game's map and flying become).
+
+### The beach (`strand`), the rainbow island (`eiland` in the pixel game), the castle (`kasteel`): after that
+
+Beach: sand that keeps what she builds (bucket towers), shells, the crab, the fisherman on his pier with his boot, a lighthouse that turns at night, the boat she steers to the rainbow island in a wide shot. Rainbow island: paint puddles and coloured footprints, bouncy mushrooms, the rainbow tree, flamingos, the parrot. Castle: a walk-in hall, the garden, the carousel, the peacock, the little dragon, somebody funny at the gate.
+
+### How many islands exist at once
+
+All of them, built once at the start; only the set she stands on and its neighbours (`NEAR`) are awake: stepped, with loose tappable trees. A far set costs nothing while out of view (its trees are one glued piece; whole sets are skipped by the camera). This replaces "only the set she is on exists": with real bridges there is no moment to swap unseen. If the start becomes slow on the phone, build the far sets a little each frame behind the first picture.
 
 ## Order of work
 
-1. **The list below, marked by Oscar.** It is the spec.
-2. **Figures, with outfit layers.** Body, hair, dress, head, neck, hand and back pieces are separate paper parts from the start (the stall sells exactly those five slots). Poses come from a rig, not from redrawing each frame. Judged on the figure sheet (`paper/figures.html`).
-3. **The test piece ("the morning"):** bedroom, out the door, the village at real size, one bridge, one cave room, the swing, the dog, the sword pulled from its stone. Judged on Oscar's phone.
-4. **The kit, pulled out of the test piece and then frozen:**
-   - paper materials and card building blocks (slab, card, cut edge, printed paper);
-   - the figure rig, views and outfit layers;
-   - a set as data (ground shapes with heights, solids, things, exits, camera zones, light);
-   - the camera director; input (tap, hold, stick, controller: one rule);
-   - a test handle like `__w` (`placeAt`, `walkTo`, `tap`, `info`) and a page that shows any one set alone;
-   - style rules written into the project skill (palette, card thickness, door height against a figure, frame rates).
-5. **One island at a time, in adventure order:** dorp, bos + cave, wei + waterfall cave, strand + sea, eiland, kasteel + garden + the ending. Each goes:
-   1. grey-card blockout with its camera shots (Oscar judges composition and scale before any art);
-   2. dressing;
-   3. its toys and animals;
-   4. tests and phone screenshots;
-   5. Oscar and the girls play it.
-6. **Everything marked "later" below**, then 2.0 becomes the front page and the pixel game moves to its own address.
+1. Put in what is drawn and written but not yet in the game: the paper can, carrot, eggs, scarecrow and birds; the fawn, the boar piglets, more squirrels.
+2. All sets exist, far ones asleep.
+3. The brambles on the east bridge bloom open when watered (the fountain fills the can too).
+4. The meadow, with at least the kite, the sheep, the waterfall and the balloon.
+5. People, as their cards arrive.
+6. The beach; the rainbow island; the castle.
+7. The insides: the cave, the cabin, the bakery.
+8. The thread of the adventure, once Oscar has answered the open questions.
+9. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
 
-## Who does what
+## How to work
 
-- **Main session:** steps 1 to 4, and every change to the kit afterwards.
-- **One session per island** from step 5, each with this file, the kit's style rules, its rows of the list and the old `js/` files as the spec. An island session never edits the kit; it asks the main session.
-- **A figure workshop session** in parallel from step 5: animals and outfits on the figure sheet.
-- **Oscar:** the gate at every blockout and every finished island. Tests show that it works, not that it is wonderful.
-- **Which model** (Oscar asked on 2026-11-26 whether a cheaper one could take some of it):
-  - a cheaper, faster model (Sonnet) for work that is well specified and judged from a screenshot: animals and props on the figure sheet once the style rules are frozen, dressing an island after its blockout is approved, tests, running the browser checks;
-  - the strongest model for what sets the look or is built on by everything else: the test piece, the kit, cameras, each island's blockout.
+- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
+- **Never a full round before a publish.** Check what changed, look at a picture, push.
+- **Helpers** draw figures well from `STYLE.md` and a precise brief: new files only, their own browser port (`PORT=9555`), no commits. Their sheets go to Oscar.
+- **Phone.** He holds it lying down: 750 by 313 points. He has not yet read the frame rate on the phone with the big world; on his laptop it was 60 after the pixel budget. Watch draws (about 180 at her door now).
 
-## The list
+## Log of 2026-11-26 (as it happened; the sections above are the summary)
+
+- 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; Oscar agreed to the list.
+- 2026-11-26: step 2 (figures with outfit layers) built, **approved by Oscar on the figure sheet** (2026-11-26), with the four choices made along the way (carrying in front, the dotted bow, the balloon on its thread, blinking).
+  - The sisters are paper dolls (`paper/kids.js`): poses stand, walk, sit, hold, up; eyes that shut and blink; all eleven things the stall sells in five slots, in side, front and back view. Plain, they are pixel for pixel what Oscar approved (checked against the old drawing code, all 13 frames of all three views).
+  - Points on her card (`kidPoints`: hand, between her hands, top of her head, seat) for things she holds or sits on.
+  - On the island: `?who=fenna`, `?wear=kroon,ketting,jurkregenboog,vleugels,ballon`; in the console `__p.wear([...])`, `__p.pose('sit')`.
+  - Shared shapes and the backing card moved to `paper/cut.js`.
+  - Seen at phone size on the island: dresses, wings, hat, crown, bow, wreath and balloon read; the necklace does not and the rabbit barely does. That is risk 3 above, left for the test piece.
+  - Still to draw for later steps: riding, swimming, climbing, asleep in bed (lying down), and every unicorn pose. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
+- 2026-11-26: step 3 (the test piece) started in the main session. Sorted by which risk each part answers. Done so far:
+  1. **A readout for the phone** (`/paper/?fps`, also with `?set=dorp`): frames a second and the slowest frame, how tall she is in points and which shot is on, draws and triangles; switches `?shadows=0`, `?dof=0`, `?post=0`, `?dpr=1`, `?bake=0` to see what costs what.
+  2. **Oscar's phone, the test island, 2026-11-26** (before the gluing of item 3 went further): everything on 53 frames a second (slowest 45), 202 draws, 45k triangles, she is 58 points tall; without shadows and soft focus 60 (slowest wobbling round 30), 116 draws. What that says: 60 is the cap, so the full look had no room to spare on the smallest set; the pair cannot tell shadows from soft focus apart. **Asked for, not yet in:** the village with everything on, with `shadows=0` alone and with `dof=0` alone. Do not pick what to trim before those are in.
+  3. **He holds the phone lying down: 750 by 313 points at x2.** Every phone test uses that shape first (upright is second). 750 and not the full width means the page does not draw under the notch; look at that when the on-screen buttons come.
+  4. **Pieces are glued** (`bake` in `paper/paper.js`): everything outside a group marked `userData.live` becomes one mesh per kind of paper, each piece's colour kept in its corners (`sheetOf` in `paper/kit.js`); a thing that moves as a whole (a tree's crown, a cloud on its thread) is glued the same way inside its own group; the sea is one mesh, rocked on the graphics chip. The island went from 757 draws to 69, the village blockout draws about 120. The picture is unchanged.
+  5. **The look is guarded** (`tests/t-paper-look.mjs`): six still shots of the island (day and evening; desktop, phone lying down, phone upright) against reference shots, passing only under 0.02% of the picture (two untouched runs differ in 0.001%). `PRE=ref` takes new references; run it around every change to the stage.
+  6. **A set can be built and thrown away.** `paper/kit.js` is the kit (paper, card, outlines), `paper/paper.js` the stage (light, lens, theatre, she and her unicorn, walking and tapping), `paper/props.js` things that stand on more than one set (her house), `paper/set-*.js` one file per set: `{ name, build(S) }`, where `S` is the stage's toolbox (`floor`, `floorBox`, `wall`, `solid`, `tap`, `figure`, `lollipop`, `pine`, `sea`, `lamp`). `?set=dorp` picks one; `__p.load(name)` swaps it. Rules this sets, to keep when the kit is frozen:
+     - `paper()` materials are shared and never changed after making. A material a set changes (a glowing pane) is made once at the top of its file and kept.
+     - Whatever moves sits in a group marked `live`. Taps still find the hidden glued pieces.
+     - The stage owns exactly two lamps (`S.lamp(0 | 1, ...)`), dark when unused. Adding or removing a light, or throwing a material away, makes the graphics chip build programs again: a hitch at every gate. Figure and sea materials are therefore kept and handed to the next set. `tests/t-paper-dorp.mjs` goes island, village, island six times and fails if anything piles up or any program is built twice.
+     - A floor with height `null` is a hole (the pond). The first floor that holds a spot counts.
+     - The village builds in about 65 ms on the Mac; the phone's time is the last thing on the readout's third line ("built in ... ms"); it counts the building and gluing, not the first frame's upload to the graphics chip.
+  7. **The village blockout** (`paper/set-dorp.js`, live at `/paper/?set=dorp`): everything where `js/map.js` has it, by `T(x, z) = ((x - 31) * .6, (z - 42) * .6)`, on three levels (beach, green, and a terrace in the north with her house and two stairs). Real ground paper, her real house, 30 real trees, sea and shadows at village size; fountain, stall, benches, lanterns, swing, slide, pond, pen, arch, sword stone, pole, mud and the two bridges in grey card. 16 named places of the old map can all be walked to (a flood over the floor, `__p.reach()`). **That settles the tile-coordinate question for now: yes**, a set can sit on the old map through one linear map, so `MAP.*` spots keep their meaning; at 0.6 the village is about 25 by 20 steps and does not feel empty or crowded in the blockout. The south lobe and the west lobe are the thin parts. Oscar saw the first shot and found the grey house bland beside the island's; told it was a stand-in he said "ahh ok". The real house and real ground are in because they cost nothing.
+  8. **The camera director** (top of the set section in `paper/paper.js`; the shots themselves in each set file). A shot is a zone on the floor plus how to look: span (how wide the picture is, so how small she is), rise, a small yaw, how far it follows her, soft focus. All numbers glide from one shot to the next; a new set is a cut. The stick is turned by the camera's yaw, so 'up' is always away from the camera; her left/right and front/back drawings follow the screen too. A shot's zone has a wider way out than in (`pad`). Tested on the village by walking her over every border both ways with a key held (that proves one change per crossing; that she keeps her heading is true by construction there), and with a finger held still on the glass onto the east bridge and into the playground, where the camera turns (`tests/t-paper-dorp.mjs`). The island's one shot is its old camera exactly.
+     - **On a bridge the camera looks straight along it.** With a yaw, 'up' walks her into the railing. Yaw only where she has room.
+     - **How tall she is, at the size of Oscar's phone (points; measured in the test browser at 750 by 313, not read off his phone):** at her door 76, pond 65, mud 64, playground 59, pen 58, the village's wide default 51, the two bridges 26 and 27. The floor the test holds: 40 wherever there are things to tap, 22 where she only walks through (`play: false`).
+     - **A finger that just misses still counts** (`nearTap`): anything that answers a tap is at least 48 points across on the screen, however far back the camera stands.
+     - Confetti is cut from the shared paper and never thrown away, and one bit is drawn out of sight at the start, so the first tap on an animal builds nothing while she watches.
+  9. **Oscar's laptop, the village, 2026-11-26:** 45 frames a second at her door, 40 on the east bridge, built in 82 ms. A laptop window at x2 is five to seven million pixels against the phone's one, and soft focus, shadows and the film pass are paid per pixel. With the budget below he reads 60 at both spots. So the picture now has a **budget of three million pixels** (`BUDGET` in `paper/paper.js`; `?px=0` switches it off, `?px=4` sets another): over it, the picture is drawn coarser and stretched. The phone is under it and unchanged. The test browser could not show his 40 (it reads 54 to 60 at the same size, `tests/t-paper-cost.mjs`); his own reading settled it. He says the phone tends to run better than the laptop.
+  10. **The village's paths are cut by hand** after Oscar saw the first blockout's tile rectangles: `ribbon()` in the kit for a winding path, blobs for the square, the sand and the patch, stepping stones for side paths; lanterns stand beside paths, not on the old grid.
+  11. **A sheet of paper between sets, built and taken out again the same day.** The first gate swapped the village for the forest mid-bridge behind a sliding sheet. Oscar: it gets in the way, and the islands feel very close. It is gone (the commit before this one has it, `stepGate`, should a door ever want it).
+  12. **One world** (`loadWorld` in `paper/paper.js`; `tests/t-paper-cross.mjs`). Each set file still thinks in its own measure; the stage puts it at `ORIGIN[name]` and moves whatever it registers (floors, walls, solids, shots' zones, places, lamps). `?set=dorp` builds the village and its `NEAR` neighbour the forest, about 110 ms together on the Mac. The stage asks every set that exists for floor, walls, taps and shots; which set she stands on (`set`) decides only the shot for "everywhere else", and whose trees are drawn loose. Rules this sets:
+      - **A shared thing has one owner.** The north bridge, its floor and its far shot are the village's, all the way to the forest's shore. The forest builds no bridge.
+      - **One sea** for everything that exists (`buildSea`): each set says what water it wants, the stage makes the rows once.
+      - **Two real lights, many lamps.** A set makes lamp descriptions (`S.lamp`); the stage gives its two lights to the two lit lamps nearest her.
+      - **The shadow sheet follows the camera** on these sets (`shadow: { follow: 20 }`), moved in whole stitches so shadows do not crawl. The island keeps its own still sheet.
+      - **The trees of a set she is not on are one glued piece** (`glueTrees`), swapped for the loose, tappable trees when she steps onto it; a test holds her mid-bridge and checks the picture is the same either way (0.005%). From her door, with the forest in view: about 85 draws and 160k triangles on the phone's shape.
+      - **The bridge's length is one number**, `NORTH_GAP` in `paper/lands.js`, now 13 steps (it was 6): about six seconds of walking, in the far shot. Oscar has not seen this length yet.
+      - Who lives on a set (`S.figure`) stands in the world's measure: use `S.at(x, z)` for where.
+  13. **The forest blockout** (`paper/set-bos.js`, `/paper/?set=bos` starts her there): real ground, 46 real trees, the cave's rock with a dark mouth, the clearing, orchard and nook, winding paths, and in grey the atelier, the seven bushes and the oak with the treehouse. At the cave's mouth the camera comes close and low (she is 84 points tall there on the phone's shape). **A close, low shot needs a clear way to the camera:** no tree is planted between the mouth and where the camera stands, or she is hidden behind it. The cave is not a room yet: the mouth is a dark card.
+  14. **A tree is one draw** (two with its shadow): trunk and crown share shadow flags and paper side. Trunks now take the shadow of their own crown, which changed 0.05% of the island's picture; the reference shots were taken again on purpose (2026-11-26).
+  15. Walking the whole bridge both ways: two changes of shot each way, the longest frame 17 ms on the Mac, no program built, nothing left behind after three more crossings.
+  16. **Making the two islands rich before adding a third** (Oscar, 2026-11-26: animals, interactions, the slide and swing, going into the house; "with this new style we can have much more meaningful interactions"). In three slices, each published for him to react to:
+      - **Done: the swing and the slide** (`paper/toys.js`; `tests/t-paper-play.mjs`). A toy takes her over through one seam in the stage (`S.play(toy)`, `toy.step(dt, inp)`): while she plays the finger belongs to the toy, and the camera looks at the toy so the picture holds still. One rule for every input: sideways pushes (the stick, or a finger held left or right of her), touching her (or the jump key) gets off. The swing is a real pendulum: a finger held one way for six seconds leaves her under half height, pushing in time takes her to the top. Letting go throws her as the swing moves (a good bit harder than a real swing would); thrown into the pond or the sea she lands there with a splash and hops back out. A close shot with a toy in it needs a clear way to the camera, like the cave's mouth.
+      - **Done: walking into her house** (`paper/set-huis.js`; doors in `paper/paper.js`). The girls' bedroom is a set of its own, built like a doll's house with the front off, standing far beside the world where no camera of the world reaches (and the world's cameras do not reach it: 18 draws inside). `S.door(name, zone, stand, dir)`: two doors of the same name on two sets are one doorway; walking into one in its direction is a cut to the other, with a short dip to dark, and nothing is built. Her front door opens by itself when she comes close; walking along the house does not take her in; inside, walking down off the front of the room anywhere is the way out. A bed is a toy: she hops on and shuts her eyes, a push and she is up. The lamp answers a tap. `reach()` goes through doors.
+      - **She finds her way round things** (`wayTo` in `paper/paper.js`). A tap used to send her in a straight line, and she stuck behind the flower pots on the way to her own door. Now: the straight line if it is free; otherwise a flood over the floor from where she stands (a few steps beyond the goal at most) and the corners cut. A finger held down still steers her directly.
+      - Then: the animals. Eight are drawn on a sheet of their own (`paper/animals.js`, `/paper/animals.html`, `tests/t-animals.mjs`; made by a helper from the rules in `paper/STYLE.md`): dog, hen, chick, pig, pond duck, hedgehog, owl, squirrel, each with its frames. **Waiting for Oscar's yes on the sheet.** The helper's own doubts: the duck's dive is the weakest drawing, the walks are subtle at phone size, the hen's nest pose has no nest. The dog gets its part first, and with depth.
+      - **Done: the animals have parts** (`paper/dog.js`, `paper/critters.js`). The dog waits on the square, says hello, comes along (over the bridge, into the house), sits when she stops, rolls over, and fetches the ball she kicks (a ball that really rolls and bounces). The hen lays an egg, chicks hop, the pig gets up out of its mud, ducks dive and swim on, the hedgehog curls up when she comes close and rolls when tapped, the owl sleeps by day and hoots when woken, the squirrel runs up the oak for an acorn. Oscar has the sheet's link; no word on the drawings yet.
+      - **A tree between the camera and her can fold down flat**, like a page of a pop-up book, and stand up again when she has passed. **Switched off for now:** Oscar liked how it is made but found it odd on the open starting island ("we don't really get lost behind trees anyways"); he sees it for secret areas. A set turns it on with `fold: true`. So views are kept clear by not planting trees in them.
+      - **She can never be stuck:** if she ever stands where she could not walk (the slide once let her off inside a tree: Oscar's bug), the stage steps her to the nearest spot where she can.
+  17. **Oscar's steer, 2026-11-26, after playing the above:**
+      - **Everything felt cramped.** Both islands are now spread out by one number (`SPREAD` in `paper/lands.js`): 1.5 at first, 1.8 after his second look ("spacing can be even more"); things keep their size. The pond moved to the middle of the west lobe, away from the playground. **Paths start inside the square's outline** so they are joined to it, and benches and lanterns stand beside paths, never on them (he saw a path stop short of the square with a bench on it). The dog stands on the square in the open. The camera's spans are unchanged, so there is simply more ground between things.
+      - **The path to the mud floated on over the sand** where the green ends. A path now lies at the level of what it crosses: the green part ends at the edge, a second piece lies on the sand.
+      - **Sound:** a soft wash of waves that grows as she comes near the sea or the pond and is gone indoors (`startWash`, `stepWater`). More sound to come: he asked for calm, small touches like this.
+      - **A flower garden by her house** (his idea): two beds on the terrace (`flowerBed` in `paper/props.js`), on lighter grass thick with tufts: the first version stood in brown soil, which he found not cosy.
+      - **The grass is not bare** (he missed the first island's tufts): `meadow()` scatters tufts in twos and threes and a flower here and there over both islands, never on a path; they are glued, so they cost no draws.
+      - **Toy windmills** (his idea): `pinwheel()`, three in the garden, one by the playground, one by the pond, one in the forest clearing. A tap spins one, and so does running past it; it turns in stop-motion steps and slows by itself.
+      - **Stray from the pixel game where paper does it better.** "This new style is so much nicer and allows much nicer, calmer, yet more interesting interactions and feel of exploration": port with judgement, drop what does not suit, propose new things. The list above is no longer a contract.
+      - **Fewer test runs.** No full round before a publish. `tests/t-paper-smoke.mjs` is the half-minute look; run a longer test only when what it covers changed. **`t-paper-dorp.mjs`, `t-paper-cross.mjs` and `t-paper-play.mjs` still carry places from before the spreading and will fail until their numbers are multiplied by `__p.spread`.**
+  18. **Oscar's list of ideas, 2026-11-26** ("feel free to take it and make your own things out of it"). What becomes of each:
+      - *The pig's corner has nothing but the pig* + *what happened to the farm, the scarecrow and the birds; watering and growing carrots*: **the south of the village becomes the farm**: the well, the watering can, rows of carrots that grow when watered and can be pulled and fed to the pig, the scarecrow with its birds, the hen and her chicks. Being built first.
+      - *A well to throw coins in, for something special later*: the farm's well. For now the can is filled there; the coins come with the coins.
+      - *The forest larger, with more animals and things to do; a cabin of logs instead of a normal house; a picnic blanket*: being built second: the forest's land grows, the grey atelier becomes a log cabin, and at the picnic blanket she sits down and the forest's animals come and sit with her.
+      - *A treehouse with a zipline again*: the oak has its platform; the ride over the water to the village is a piece of its own, after the above.
+      - *Butterflies floating around*: a few, by the flowers; one lands on her head when she stands still.
+      - *Gusts of wind over the sea, with dark spirally things*: now and then a gust crosses with paper curls in it; where it passes, windmills spin and tree crowns sway.
+      - *A pink unicorn onesie in the shop*: goes on the list of things to wear, to be drawn with the stall.
+      - *A step (a kick scooter) instead of the bike*, not necessarily on the first island, for going faster later: noted in place of the bike; needs her drawn riding it.
+      - ***No sword any more*** ("not sure I like the idea of a sword in this style of game"). The sword and its stone are out. The brambles on the bridge to the meadow then need another key. Claude's proposal, not yet put to him: **water them**: a full watering can on the withered bramble and it blooms into roses and curls aside. It uses the toy she already knows, and nothing is cut.
+  19. **Built from that list and from his next looks, 2026-11-26:**
+      - **The farm** (`paper/farm.js`; the `farm` part of `tests/t-paper-play.mjs`): the south of the village is green now and holds the well, the watering can, three rows of carrots, the scarecrow with three birds, the pig's mud and the hen. The loop: tap the can (she carries it in front of her), tap the well (the bucket goes down, the can is full, good for two rows), tap a row (she pours, the carrots grow in two steps), tap grown carrots (she pulls one and it flies to the pig, who eats it); an emptied row is seedlings again after a while. With empty hands or an empty can the can gives a hop: no wrong. The birds fly up when she comes close and settle when she has gone.
+      - **Spacing 1.7** (1.8 was a little too much).
+      - **On the swing she tilts with the ropes** (she leaned the other way): a toy's lean now turns her about the point she sits on.
+      - **The ball is cut from paper** like the figures: a round card with a white band that turns as it rolls.
+      - **The unicorns' meadow stands wholly on the green** (a corner of its fence hung over the sand).
+      - **The fountain** has a basin, a pillar and a bowl of pale stone and water leaping in paper drops (three cut-outs shown in turn); a tap is a big splash.
+      - **Benches** are painted wood and can be sat on: a tap, she walks round, hops on; a push and she is up.
+      - **Lanterns** are a post with a paper lamp: a tap lights one, a tap puts it out; lit ones near her give real light (the stage's two lights go to the nearest lit lamps).
+      - **The flower garden is flowers only**, of five kinds and many sizes (daisy, tulip, tall sunflower, rose, a stalk of bells). **The big ones can be picked:** up to five make a bunch in her hand, and whoever she taps next is given it (`S.offer`). A picked flower grows back.
+      - Draws at her door went from about 110 to about 175 with all this (pickable flowers, lamps, birds, drops are loose pieces). Still unknown on the phone; if it costs frames, the birds and the flowers are the first to glue further.
+      - **The forest is bigger** (its land about a fifth wider and a quarter deeper than the pixel game's, 84 trees) and has **a cabin of logs** where the atelier stood (`cabin` in `paper/props.js`; a tap knocks and the chimney puffs; no inside yet).
+      - **The picnic** (`paper/picnic.js`) in the clearing: a tap on the checked cloth and she sits; the hedgehog and the squirrel come over and sit with her (they are asked through `guest` in `paper/critters.js`), a little cheer when both are there; a push and she is up, and they go home.
+      - **Butterflies** (`butterfly` in `paper/critters.js`): five, by the garden, the farm and the forest's flowers. When she stands still near one for a moment it comes and sits on her head, and flies off when she walks on.
+      - **Gusts of wind** (`stepWind` in `paper/paper.js`): now and then dark curls of paper cross the picture from the left; trees they pass sway, and a set's `wind(x, z)` spins its windmills. Out of doors only. `__p.wind(true)` sends one now.
+      - Still open from his list: the ride down the zipline from the treehouse, the coins for the well, the unicorn onesie, the step, and what opens the brambles now that the sword is gone.
+  20. **From his next looks, 2026-11-26:**
+      - **Sound.** The island has a tune of its own, slow and calm (`stepTune`): soft notes far apart over a low hum; resting on a bench or the picnic cloth it comes closer (a second voice, `toy.rest`); lower and slower in the evening; only the hum indoors. **The wash of waves plays only down on the sand or on planks over the water**, not on the grass.
+      - **Benches:** a tap sits her down, and so does walking into one from the front (he could not sit).
+      - **Lanterns come on by themselves at night** and go off in the morning; a tap still does either.
+      - **The day and night button** shows one picture: an svg does not hide by the `hidden` attribute alone, so the moon hung under the sun.
+      - **The ball** is a beach ball in six wedges of colour and turns about its middle (turned about its foot it was under the ground half the time).
+      - **No darker card under the islands** on the big sets: out in the water it showed as brown ledges between the waves.
+      - **Flat cards that overlap lie at slightly different heights** (`lay` in the set files): at the same height they flickered where a path crossed a clearing.
+      - **His question: should what lives or is held be paper too?** Claude's answer, adopted as a rule: **everything that lives, and everything she holds or kicks, is a flat cut-paper card on a white backing card** (figures, the ball, the can, the scarecrow, birds, a carrot, an egg); **the world she walks in is folded and stacked card in three dimensions** (land, houses, furniture, trees, toys she sits on). The can, the scarecrow, its birds and the small things are being redrawn as cards, with a fawn and a boar piglet for the forest (a helper, on `paper/animals.html`).
+      - Still to do from this look: the flower gardens laid out as if somebody planted them, flowers picked anywhere and not only in the beds.
+  21. After that, in this order: Oscar's phone readings (the village at her door, on the east bridge and halfway over the north bridge; with everything on, with `shadows=0`, with `dof=0`; and "built in ... ms"); then the bedroom, the inside of the cave (a door is a cut), the swing, the dog, the sword. Known rough spots: the ends of sea rows show beside narrow land, no animal lives in the village or the forest yet, every set file is fetched at the start, and a third island will need sets built aside and thrown away (see the Loading row). The full test round takes about eight minutes because the tests walk her in real time: while changing one thing, run the one test that covers it, and the full round once before a push.
+- Before any figure work is handed to a cheaper model, the style rules have to be written down (palette, how pieces are layered and shaded, sizes against a girl, frame rates); the code in `cut.js` and `kids.js` is the only statement of them so far.
+
+## Appendix: what the pixel game had (a memory aid, not a contract)
 
 Verdicts: **keep** (same idea, built in paper), **redesign** (the idea stays, the form changes), **later** (after the adventure plays through), **cut**. "Spine" means the adventure cannot be finished without it.
 
-Oscar agreed to every verdict on 2026-11-26. A later change goes in the "Oscar" column.
+Oscar agreed to these verdicts on the morning of 2026-11-26; by the evening he had said to stray freely, and the sword (and with it "sword cuts grass") is out. Kept for what it reminds us of.
 
 ### The whole game
 
@@ -239,100 +372,3 @@ Each girl and unicorn needs a side, front and back view.
 - **Unicorns:** the egg (per kind), the baby, the friend she rides (with wings), the mama, the old unicorns.
 - **Animals, by island:** dog, chicken and chick, ducks, pig; hedgehog, owl, squirrel; sheep, deer, cricket, otter; crab, gull, turtle and babies; rabbit, parrot, flamingo; peacock, dragon; whale, dolphins, jellyfish.
 
-## Status
-
-- 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; Oscar agreed to the list.
-- 2026-11-26: step 2 (figures with outfit layers) built, **approved by Oscar on the figure sheet** (2026-11-26), with the four choices made along the way (carrying in front, the dotted bow, the balloon on its thread, blinking).
-  - The sisters are paper dolls (`paper/kids.js`): poses stand, walk, sit, hold, up; eyes that shut and blink; all eleven things the stall sells in five slots, in side, front and back view. Plain, they are pixel for pixel what Oscar approved (checked against the old drawing code, all 13 frames of all three views).
-  - Points on her card (`kidPoints`: hand, between her hands, top of her head, seat) for things she holds or sits on.
-  - On the island: `?who=fenna`, `?wear=kroon,ketting,jurkregenboog,vleugels,ballon`; in the console `__p.wear([...])`, `__p.pose('sit')`.
-  - Shared shapes and the backing card moved to `paper/cut.js`.
-  - Seen at phone size on the island: dresses, wings, hat, crown, bow, wreath and balloon read; the necklace does not and the rabbit barely does. That is risk 3 above, left for the test piece.
-  - Still to draw for later steps: riding, swimming, climbing, asleep in bed (lying down), and every unicorn pose. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
-- 2026-11-26: step 3 (the test piece) started in the main session. Sorted by which risk each part answers. Done so far:
-  1. **A readout for the phone** (`/paper/?fps`, also with `?set=dorp`): frames a second and the slowest frame, how tall she is in points and which shot is on, draws and triangles; switches `?shadows=0`, `?dof=0`, `?post=0`, `?dpr=1`, `?bake=0` to see what costs what.
-  2. **Oscar's phone, the test island, 2026-11-26** (before the gluing of item 3 went further): everything on 53 frames a second (slowest 45), 202 draws, 45k triangles, she is 58 points tall; without shadows and soft focus 60 (slowest wobbling round 30), 116 draws. What that says: 60 is the cap, so the full look had no room to spare on the smallest set; the pair cannot tell shadows from soft focus apart. **Asked for, not yet in:** the village with everything on, with `shadows=0` alone and with `dof=0` alone. Do not pick what to trim before those are in.
-  3. **He holds the phone lying down: 750 by 313 points at x2.** Every phone test uses that shape first (upright is second). 750 and not the full width means the page does not draw under the notch; look at that when the on-screen buttons come.
-  4. **Pieces are glued** (`bake` in `paper/paper.js`): everything outside a group marked `userData.live` becomes one mesh per kind of paper, each piece's colour kept in its corners (`sheetOf` in `paper/kit.js`); a thing that moves as a whole (a tree's crown, a cloud on its thread) is glued the same way inside its own group; the sea is one mesh, rocked on the graphics chip. The island went from 757 draws to 69, the village blockout draws about 120. The picture is unchanged.
-  5. **The look is guarded** (`tests/t-paper-look.mjs`): six still shots of the island (day and evening; desktop, phone lying down, phone upright) against reference shots, passing only under 0.02% of the picture (two untouched runs differ in 0.001%). `PRE=ref` takes new references; run it around every change to the stage.
-  6. **A set can be built and thrown away.** `paper/kit.js` is the kit (paper, card, outlines), `paper/paper.js` the stage (light, lens, theatre, she and her unicorn, walking and tapping), `paper/props.js` things that stand on more than one set (her house), `paper/set-*.js` one file per set: `{ name, build(S) }`, where `S` is the stage's toolbox (`floor`, `floorBox`, `wall`, `solid`, `tap`, `figure`, `lollipop`, `pine`, `sea`, `lamp`). `?set=dorp` picks one; `__p.load(name)` swaps it. Rules this sets, to keep when the kit is frozen:
-     - `paper()` materials are shared and never changed after making. A material a set changes (a glowing pane) is made once at the top of its file and kept.
-     - Whatever moves sits in a group marked `live`. Taps still find the hidden glued pieces.
-     - The stage owns exactly two lamps (`S.lamp(0 | 1, ...)`), dark when unused. Adding or removing a light, or throwing a material away, makes the graphics chip build programs again: a hitch at every gate. Figure and sea materials are therefore kept and handed to the next set. `tests/t-paper-dorp.mjs` goes island, village, island six times and fails if anything piles up or any program is built twice.
-     - A floor with height `null` is a hole (the pond). The first floor that holds a spot counts.
-     - The village builds in about 65 ms on the Mac; the phone's time is the last thing on the readout's third line ("built in ... ms"); it counts the building and gluing, not the first frame's upload to the graphics chip.
-  7. **The village blockout** (`paper/set-dorp.js`, live at `/paper/?set=dorp`): everything where `js/map.js` has it, by `T(x, z) = ((x - 31) * .6, (z - 42) * .6)`, on three levels (beach, green, and a terrace in the north with her house and two stairs). Real ground paper, her real house, 30 real trees, sea and shadows at village size; fountain, stall, benches, lanterns, swing, slide, pond, pen, arch, sword stone, pole, mud and the two bridges in grey card. 16 named places of the old map can all be walked to (a flood over the floor, `__p.reach()`). **That settles the tile-coordinate question for now: yes**, a set can sit on the old map through one linear map, so `MAP.*` spots keep their meaning; at 0.6 the village is about 25 by 20 steps and does not feel empty or crowded in the blockout. The south lobe and the west lobe are the thin parts. Oscar saw the first shot and found the grey house bland beside the island's; told it was a stand-in he said "ahh ok". The real house and real ground are in because they cost nothing.
-  8. **The camera director** (top of the set section in `paper/paper.js`; the shots themselves in each set file). A shot is a zone on the floor plus how to look: span (how wide the picture is, so how small she is), rise, a small yaw, how far it follows her, soft focus. All numbers glide from one shot to the next; a new set is a cut. The stick is turned by the camera's yaw, so 'up' is always away from the camera; her left/right and front/back drawings follow the screen too. A shot's zone has a wider way out than in (`pad`). Tested on the village by walking her over every border both ways with a key held (that proves one change per crossing; that she keeps her heading is true by construction there), and with a finger held still on the glass onto the east bridge and into the playground, where the camera turns (`tests/t-paper-dorp.mjs`). The island's one shot is its old camera exactly.
-     - **On a bridge the camera looks straight along it.** With a yaw, 'up' walks her into the railing. Yaw only where she has room.
-     - **How tall she is, at the size of Oscar's phone (points; measured in the test browser at 750 by 313, not read off his phone):** at her door 76, pond 65, mud 64, playground 59, pen 58, the village's wide default 51, the two bridges 26 and 27. The floor the test holds: 40 wherever there are things to tap, 22 where she only walks through (`play: false`).
-     - **A finger that just misses still counts** (`nearTap`): anything that answers a tap is at least 48 points across on the screen, however far back the camera stands.
-     - Confetti is cut from the shared paper and never thrown away, and one bit is drawn out of sight at the start, so the first tap on an animal builds nothing while she watches.
-  9. **Oscar's laptop, the village, 2026-11-26:** 45 frames a second at her door, 40 on the east bridge, built in 82 ms. A laptop window at x2 is five to seven million pixels against the phone's one, and soft focus, shadows and the film pass are paid per pixel. With the budget below he reads 60 at both spots. So the picture now has a **budget of three million pixels** (`BUDGET` in `paper/paper.js`; `?px=0` switches it off, `?px=4` sets another): over it, the picture is drawn coarser and stretched. The phone is under it and unchanged. The test browser could not show his 40 (it reads 54 to 60 at the same size, `tests/t-paper-cost.mjs`); his own reading settled it. He says the phone tends to run better than the laptop.
-  10. **The village's paths are cut by hand** after Oscar saw the first blockout's tile rectangles: `ribbon()` in the kit for a winding path, blobs for the square, the sand and the patch, stepping stones for side paths; lanterns stand beside paths, not on the old grid.
-  11. **A sheet of paper between sets, built and taken out again the same day.** The first gate swapped the village for the forest mid-bridge behind a sliding sheet. Oscar: it gets in the way, and the islands feel very close. It is gone (the commit before this one has it, `stepGate`, should a door ever want it).
-  12. **One world** (`loadWorld` in `paper/paper.js`; `tests/t-paper-cross.mjs`). Each set file still thinks in its own measure; the stage puts it at `ORIGIN[name]` and moves whatever it registers (floors, walls, solids, shots' zones, places, lamps). `?set=dorp` builds the village and its `NEAR` neighbour the forest, about 110 ms together on the Mac. The stage asks every set that exists for floor, walls, taps and shots; which set she stands on (`set`) decides only the shot for "everywhere else", and whose trees are drawn loose. Rules this sets:
-      - **A shared thing has one owner.** The north bridge, its floor and its far shot are the village's, all the way to the forest's shore. The forest builds no bridge.
-      - **One sea** for everything that exists (`buildSea`): each set says what water it wants, the stage makes the rows once.
-      - **Two real lights, many lamps.** A set makes lamp descriptions (`S.lamp`); the stage gives its two lights to the two lit lamps nearest her.
-      - **The shadow sheet follows the camera** on these sets (`shadow: { follow: 20 }`), moved in whole stitches so shadows do not crawl. The island keeps its own still sheet.
-      - **The trees of a set she is not on are one glued piece** (`glueTrees`), swapped for the loose, tappable trees when she steps onto it; a test holds her mid-bridge and checks the picture is the same either way (0.005%). From her door, with the forest in view: about 85 draws and 160k triangles on the phone's shape.
-      - **The bridge's length is one number**, `NORTH_GAP` in `paper/lands.js`, now 13 steps (it was 6): about six seconds of walking, in the far shot. Oscar has not seen this length yet.
-      - Who lives on a set (`S.figure`) stands in the world's measure: use `S.at(x, z)` for where.
-  13. **The forest blockout** (`paper/set-bos.js`, `/paper/?set=bos` starts her there): real ground, 46 real trees, the cave's rock with a dark mouth, the clearing, orchard and nook, winding paths, and in grey the atelier, the seven bushes and the oak with the treehouse. At the cave's mouth the camera comes close and low (she is 84 points tall there on the phone's shape). **A close, low shot needs a clear way to the camera:** no tree is planted between the mouth and where the camera stands, or she is hidden behind it. The cave is not a room yet: the mouth is a dark card.
-  14. **A tree is one draw** (two with its shadow): trunk and crown share shadow flags and paper side. Trunks now take the shadow of their own crown, which changed 0.05% of the island's picture; the reference shots were taken again on purpose (2026-11-26).
-  15. Walking the whole bridge both ways: two changes of shot each way, the longest frame 17 ms on the Mac, no program built, nothing left behind after three more crossings.
-  16. **Making the two islands rich before adding a third** (Oscar, 2026-11-26: animals, interactions, the slide and swing, going into the house; "with this new style we can have much more meaningful interactions"). In three slices, each published for him to react to:
-      - **Done: the swing and the slide** (`paper/toys.js`; `tests/t-paper-play.mjs`). A toy takes her over through one seam in the stage (`S.play(toy)`, `toy.step(dt, inp)`): while she plays the finger belongs to the toy, and the camera looks at the toy so the picture holds still. One rule for every input: sideways pushes (the stick, or a finger held left or right of her), touching her (or the jump key) gets off. The swing is a real pendulum: a finger held one way for six seconds leaves her under half height, pushing in time takes her to the top. Letting go throws her as the swing moves (a good bit harder than a real swing would); thrown into the pond or the sea she lands there with a splash and hops back out. A close shot with a toy in it needs a clear way to the camera, like the cave's mouth.
-      - **Done: walking into her house** (`paper/set-huis.js`; doors in `paper/paper.js`). The girls' bedroom is a set of its own, built like a doll's house with the front off, standing far beside the world where no camera of the world reaches (and the world's cameras do not reach it: 18 draws inside). `S.door(name, zone, stand, dir)`: two doors of the same name on two sets are one doorway; walking into one in its direction is a cut to the other, with a short dip to dark, and nothing is built. Her front door opens by itself when she comes close; walking along the house does not take her in; inside, walking down off the front of the room anywhere is the way out. A bed is a toy: she hops on and shuts her eyes, a push and she is up. The lamp answers a tap. `reach()` goes through doors.
-      - **She finds her way round things** (`wayTo` in `paper/paper.js`). A tap used to send her in a straight line, and she stuck behind the flower pots on the way to her own door. Now: the straight line if it is free; otherwise a flood over the floor from where she stands (a few steps beyond the goal at most) and the corners cut. A finger held down still steers her directly.
-      - Then: the animals. Eight are drawn on a sheet of their own (`paper/animals.js`, `/paper/animals.html`, `tests/t-animals.mjs`; made by a helper from the rules in `paper/STYLE.md`): dog, hen, chick, pig, pond duck, hedgehog, owl, squirrel, each with its frames. **Waiting for Oscar's yes on the sheet.** The helper's own doubts: the duck's dive is the weakest drawing, the walks are subtle at phone size, the hen's nest pose has no nest. The dog gets its part first, and with depth.
-      - **Done: the animals have parts** (`paper/dog.js`, `paper/critters.js`). The dog waits on the square, says hello, comes along (over the bridge, into the house), sits when she stops, rolls over, and fetches the ball she kicks (a ball that really rolls and bounces). The hen lays an egg, chicks hop, the pig gets up out of its mud, ducks dive and swim on, the hedgehog curls up when she comes close and rolls when tapped, the owl sleeps by day and hoots when woken, the squirrel runs up the oak for an acorn. Oscar has the sheet's link; no word on the drawings yet.
-      - **A tree between the camera and her can fold down flat**, like a page of a pop-up book, and stand up again when she has passed. **Switched off for now:** Oscar liked how it is made but found it odd on the open starting island ("we don't really get lost behind trees anyways"); he sees it for secret areas. A set turns it on with `fold: true`. So views are kept clear by not planting trees in them.
-      - **She can never be stuck:** if she ever stands where she could not walk (the slide once let her off inside a tree: Oscar's bug), the stage steps her to the nearest spot where she can.
-  17. **Oscar's steer, 2026-11-26, after playing the above:**
-      - **Everything felt cramped.** Both islands are now spread out by one number (`SPREAD` in `paper/lands.js`): 1.5 at first, 1.8 after his second look ("spacing can be even more"); things keep their size. The pond moved to the middle of the west lobe, away from the playground. **Paths start inside the square's outline** so they are joined to it, and benches and lanterns stand beside paths, never on them (he saw a path stop short of the square with a bench on it). The dog stands on the square in the open. The camera's spans are unchanged, so there is simply more ground between things.
-      - **The path to the mud floated on over the sand** where the green ends. A path now lies at the level of what it crosses: the green part ends at the edge, a second piece lies on the sand.
-      - **Sound:** a soft wash of waves that grows as she comes near the sea or the pond and is gone indoors (`startWash`, `stepWater`). More sound to come: he asked for calm, small touches like this.
-      - **A flower garden by her house** (his idea): two beds on the terrace (`flowerBed` in `paper/props.js`), on lighter grass thick with tufts: the first version stood in brown soil, which he found not cosy.
-      - **The grass is not bare** (he missed the first island's tufts): `meadow()` scatters tufts in twos and threes and a flower here and there over both islands, never on a path; they are glued, so they cost no draws.
-      - **Toy windmills** (his idea): `pinwheel()`, three in the garden, one by the playground, one by the pond, one in the forest clearing. A tap spins one, and so does running past it; it turns in stop-motion steps and slows by itself.
-      - **Stray from the pixel game where paper does it better.** "This new style is so much nicer and allows much nicer, calmer, yet more interesting interactions and feel of exploration": port with judgement, drop what does not suit, propose new things. The list above is no longer a contract.
-      - **Fewer test runs.** No full round before a publish. `tests/t-paper-smoke.mjs` is the half-minute look; run a longer test only when what it covers changed. **`t-paper-dorp.mjs`, `t-paper-cross.mjs` and `t-paper-play.mjs` still carry places from before the spreading and will fail until their numbers are multiplied by `__p.spread`.**
-  18. **Oscar's list of ideas, 2026-11-26** ("feel free to take it and make your own things out of it"). What becomes of each:
-      - *The pig's corner has nothing but the pig* + *what happened to the farm, the scarecrow and the birds; watering and growing carrots*: **the south of the village becomes the farm**: the well, the watering can, rows of carrots that grow when watered and can be pulled and fed to the pig, the scarecrow with its birds, the hen and her chicks. Being built first.
-      - *A well to throw coins in, for something special later*: the farm's well. For now the can is filled there; the coins come with the coins.
-      - *The forest larger, with more animals and things to do; a cabin of logs instead of a normal house; a picnic blanket*: being built second: the forest's land grows, the grey atelier becomes a log cabin, and at the picnic blanket she sits down and the forest's animals come and sit with her.
-      - *A treehouse with a zipline again*: the oak has its platform; the ride over the water to the village is a piece of its own, after the above.
-      - *Butterflies floating around*: a few, by the flowers; one lands on her head when she stands still.
-      - *Gusts of wind over the sea, with dark spirally things*: now and then a gust crosses with paper curls in it; where it passes, windmills spin and tree crowns sway.
-      - *A pink unicorn onesie in the shop*: goes on the list of things to wear, to be drawn with the stall.
-      - *A step (a kick scooter) instead of the bike*, not necessarily on the first island, for going faster later: noted in place of the bike; needs her drawn riding it.
-      - ***No sword any more*** ("not sure I like the idea of a sword in this style of game"). The sword and its stone are out. The brambles on the bridge to the meadow then need another key. Claude's proposal, not yet put to him: **water them**: a full watering can on the withered bramble and it blooms into roses and curls aside. It uses the toy she already knows, and nothing is cut.
-  19. **Built from that list and from his next looks, 2026-11-26:**
-      - **The farm** (`paper/farm.js`; the `farm` part of `tests/t-paper-play.mjs`): the south of the village is green now and holds the well, the watering can, three rows of carrots, the scarecrow with three birds, the pig's mud and the hen. The loop: tap the can (she carries it in front of her), tap the well (the bucket goes down, the can is full, good for two rows), tap a row (she pours, the carrots grow in two steps), tap grown carrots (she pulls one and it flies to the pig, who eats it); an emptied row is seedlings again after a while. With empty hands or an empty can the can gives a hop: no wrong. The birds fly up when she comes close and settle when she has gone.
-      - **Spacing 1.7** (1.8 was a little too much).
-      - **On the swing she tilts with the ropes** (she leaned the other way): a toy's lean now turns her about the point she sits on.
-      - **The ball is cut from paper** like the figures: a round card with a white band that turns as it rolls.
-      - **The unicorns' meadow stands wholly on the green** (a corner of its fence hung over the sand).
-      - **The fountain** has a basin, a pillar and a bowl of pale stone and water leaping in paper drops (three cut-outs shown in turn); a tap is a big splash.
-      - **Benches** are painted wood and can be sat on: a tap, she walks round, hops on; a push and she is up.
-      - **Lanterns** are a post with a paper lamp: a tap lights one, a tap puts it out; lit ones near her give real light (the stage's two lights go to the nearest lit lamps).
-      - **The flower garden is flowers only**, of five kinds and many sizes (daisy, tulip, tall sunflower, rose, a stalk of bells). **The big ones can be picked:** up to five make a bunch in her hand, and whoever she taps next is given it (`S.offer`). A picked flower grows back.
-      - Draws at her door went from about 110 to about 175 with all this (pickable flowers, lamps, birds, drops are loose pieces). Still unknown on the phone; if it costs frames, the birds and the flowers are the first to glue further.
-      - **The forest is bigger** (its land about a fifth wider and a quarter deeper than the pixel game's, 84 trees) and has **a cabin of logs** where the atelier stood (`cabin` in `paper/props.js`; a tap knocks and the chimney puffs; no inside yet).
-      - **The picnic** (`paper/picnic.js`) in the clearing: a tap on the checked cloth and she sits; the hedgehog and the squirrel come over and sit with her (they are asked through `guest` in `paper/critters.js`), a little cheer when both are there; a push and she is up, and they go home.
-      - **Butterflies** (`butterfly` in `paper/critters.js`): five, by the garden, the farm and the forest's flowers. When she stands still near one for a moment it comes and sits on her head, and flies off when she walks on.
-      - **Gusts of wind** (`stepWind` in `paper/paper.js`): now and then dark curls of paper cross the picture from the left; trees they pass sway, and a set's `wind(x, z)` spins its windmills. Out of doors only. `__p.wind(true)` sends one now.
-      - Still open from his list: the ride down the zipline from the treehouse, the coins for the well, the unicorn onesie, the step, and what opens the brambles now that the sword is gone.
-  20. **From his next looks, 2026-11-26:**
-      - **Sound.** The island has a tune of its own, slow and calm (`stepTune`): soft notes far apart over a low hum; resting on a bench or the picnic cloth it comes closer (a second voice, `toy.rest`); lower and slower in the evening; only the hum indoors. **The wash of waves plays only down on the sand or on planks over the water**, not on the grass.
-      - **Benches:** a tap sits her down, and so does walking into one from the front (he could not sit).
-      - **Lanterns come on by themselves at night** and go off in the morning; a tap still does either.
-      - **The day and night button** shows one picture: an svg does not hide by the `hidden` attribute alone, so the moon hung under the sun.
-      - **The ball** is a beach ball in six wedges of colour and turns about its middle (turned about its foot it was under the ground half the time).
-      - **No darker card under the islands** on the big sets: out in the water it showed as brown ledges between the waves.
-      - **Flat cards that overlap lie at slightly different heights** (`lay` in the set files): at the same height they flickered where a path crossed a clearing.
-      - **His question: should what lives or is held be paper too?** Claude's answer, adopted as a rule: **everything that lives, and everything she holds or kicks, is a flat cut-paper card on a white backing card** (figures, the ball, the can, the scarecrow, birds, a carrot, an egg); **the world she walks in is folded and stacked card in three dimensions** (land, houses, furniture, trees, toys she sits on). The can, the scarecrow, its birds and the small things are being redrawn as cards, with a fawn and a boar piglet for the forest (a helper, on `paper/animals.html`).
-      - Still to do from this look: the flower gardens laid out as if somebody planted them, flowers picked anywhere and not only in the beds.
-  21. After that, in this order: Oscar's phone readings (the village at her door, on the east bridge and halfway over the north bridge; with everything on, with `shadows=0`, with `dof=0`; and "built in ... ms"); then the bedroom, the inside of the cave (a door is a cut), the swing, the dog, the sword. Known rough spots: the ends of sea rows show beside narrow land, no animal lives in the village or the forest yet, every set file is fetched at the start, and a third island will need sets built aside and thrown away (see the Loading row). The full test round takes about eight minutes because the tests walk her in real time: while changing one thing, run the one test that covers it, and the full round once before a push.
-- Before any figure work is handed to a cheaper model, the style rules have to be written down (palette, how pieces are layered and shaded, sizes against a girl, frame rates); the code in `cut.js` and `kids.js` is the only statement of them so far.
