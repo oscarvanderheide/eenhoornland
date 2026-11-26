@@ -156,4 +156,22 @@ export function cloudPts(w, seed) {
 }
 export function sunPts(r, rays) { const p = []; for (let i = 0; i < rays * 2; i++) { const a = i / (rays * 2) * Math.PI * 2, rr = i % 2 ? r * .78 : r; p.push([Math.cos(a) * rr, Math.sin(a) * rr]); } return p; }
 export function circlePts(r, seed, n = 40) { const R = rng(seed), p = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (1 + (R() - .5) * .025); p.push([Math.cos(a) * rr, Math.sin(a) * rr]); } return p; }
+/** a path cut by hand: a ribbon of card along a line of points ([x, z]), about `w` wide, bending smoothly through them,
+ *  its edges a little uneven as scissors leave them. Gives the outline (for slab) */
+export function ribbon(line, w, seed, wob = .09) {
+  const R = rng(seed), ph = R() * 6, mid = [], n = line.length, at = i => line[Math.max(0, Math.min(n - 1, i))];
+  for (let i = 0; i < n - 1; i++) for (let k = 0; k < 8; k++) {
+    const t = k / 8, [a, b, c, d] = [at(i - 1), at(i), at(i + 1), at(i + 2)];
+    mid.push([0, 1].map(j => .5 * (2 * b[j] + (c[j] - a[j]) * t + (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t * t + (3 * b[j] - a[j] - 3 * c[j] + d[j]) * t * t * t)));
+  }
+  mid.push(line[n - 1]);
+  const left = [], right = [];
+  mid.forEach(([x, z], i) => {
+    const [px, pz] = mid[Math.max(0, i - 1)], [qx, qz] = mid[Math.min(mid.length - 1, i + 1)], l = Math.hypot(qx - px, qz - pz) || 1, nx = -(qz - pz) / l, nz = (qx - px) / l;
+    const end = Math.min(1, .55 + Math.min(i, mid.length - 1 - i) * .15);   // the ends are cut round
+    const hl = w / 2 * end * (1 + wob * Math.sin(i * .7 + ph) + (R() - .5) * .05), hr = w / 2 * end * (1 + wob * Math.sin(i * .5 + ph * 2) + (R() - .5) * .05);
+    left.push([x + nx * hl, z + nz * hl]); right.push([x - nx * hr, z - nz * hr]);
+  });
+  return [...left, ...right.reverse()];
+}
 export const WATER_Y = -.62;   // where things float

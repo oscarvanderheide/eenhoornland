@@ -11,11 +11,15 @@ const SETS = { eiland, dorp };
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
 const ASK = new URLSearchParams(location.search);
-const DPR = ASK.get('dpr') ? Math.max(.5, Math.min(3, +ASK.get('dpr') || 1)) : Math.min(devicePixelRatio || 1, 2);
+// how many pixels the picture may have, in millions: a phone lying down draws about one, a laptop's window at x2 five or more,
+// and soft focus, shadows and the film pass are paid per pixel. Over the budget the picture is drawn a little coarser and
+// stretched (it is soft and grainy anyway). ?px=4 sets another budget, ?px=0 none; ?dpr=1 fixes the pixels per point instead
+const BUDGET = ASK.has('px') ? +ASK.get('px') * 1e6 : 3e6;
+let DPR = 1;
+const dprFor = (w, h) => ASK.get('dpr') ? Math.max(.5, Math.min(3, +ASK.get('dpr') || 1)) : Math.min(devicePixelRatio || 1, 2, BUDGET ? Math.sqrt(BUDGET / (w * h)) : 9);
 const SHADOWS = ASK.get('shadows') !== '0', DOF = ASK.get('dof') !== '0', POST = ASK.get('post') !== '0', BAKE = ASK.get('bake') !== '0';
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(DPR);
 renderer.shadowMap.enabled = SHADOWS; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.info.autoReset = false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(26, 1, .5, 140);
@@ -458,7 +462,7 @@ const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 
 let camDist = 15, camH = 6.2, portrait = false, dofBase = 9, camCut = true;
 function resize() {
   const w = innerWidth, h = innerHeight; if (!w || !h) return;   // a window with no size yet (a page opened in the background): wait for the real size, or the camera ends up nowhere
-  renderer.setSize(w, h, false);
+  DPR = dprFor(w, h); renderer.setPixelRatio(DPR); renderer.setSize(w, h, false);
   const a = w / h; camera.aspect = a; portrait = a < 1;
   camera.fov = portrait ? 34 : 24; camera.updateProjectionMatrix();
   const pw = Math.floor(w * DPR), ph = Math.floor(h * DPR);
@@ -560,7 +564,7 @@ function measure(now) {
   // her height on the screen in points: from her feet to the top of her head
   const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
   stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
-  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${innerWidth}×${innerHeight} at ×${+DPR.toFixed(2)}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
 }
 
 /* ---------------- the loop ---------------- */
@@ -678,7 +682,7 @@ window.__p = {
   screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + .4, f.z) : new THREE.Vector3(...set.spots[name]); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
   still(on = true) { still = on; if (on) tick = 0; },
-  stats() { return { set: set.name, load: set.ms, fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
+  stats() { return { set: set.name, load: set.ms, px: innerWidth * innerHeight * DPR * DPR, fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
   /** dress her: __p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon']); pose her: __p.pose('sit' | 'hold' | 'up' | null); __p.sleep(true) shuts her eyes */
   wear(ids) { girl.redress(wearOf(ids || [])); return girl.wear; },
   pose(name) { girl.poseName = name || null; },

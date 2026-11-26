@@ -1,10 +1,11 @@
 // The village, as a blockout: grey card stand-ins on real ground, with her real house. Nothing else here is drawn yet. It exists to answer three questions before any
 // drawing is done: does a set of this size run on the phone, do the camera's shots work with the controls, and how small
 // does she get. Everything stands where the pixel game's map (js/map.js) has it, scaled down: T() below turns a tile of
-// that map into a place on this set, so the old map's spots keep their meaning. The numbers are copied, never imported
+// that map into a place on this set, so the old map's spots keep their meaning. Only places come from the map: the shape of
+// every path, square and patch is cut by hand, never a row of tiles. The numbers are copied, never imported
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
-import { THREE, rng, paper, slab, blob, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump, sandMap, sandBump } from './kit.js';
+import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump, sandMap, sandBump } from './kit.js';
 import { cottage } from './props.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile) */
@@ -20,8 +21,6 @@ export default {
     const box = (w, h, d, c = 'thing') => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), P(c)); m.castShadow = m.receiveShadow = true; return m; };
     const cyl = (r, h, c = 'thing', n = 10) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, n), P(c)); m.castShadow = m.receiveShadow = true; return m; };
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
-    /** a flat card on the ground between two tiles of the old map (a path, a square, a patch) */
-    const patch = (tx0, tz0, tx1, tz1, c, y = H_GRASS) => { const [x0, z0] = T(tx0, tz0), [x1, z1] = T(tx1 + 1, tz1 + 1); root.add(slab(rect(x0, z0, x1, z1), y + .015, .015, P(c), whiteEdge)); return [x0, z0, x1, z1]; };
 
     /* ---------------- the land: a beach, the green, and a terrace in the north where her house stands ---------------- */
     const SAND = blob(0, 0, 10.4, 8.5, 71, 80, .04), GRASS = blob(0, -.1, 9.5, 7.7, 72, 80, .04);
@@ -75,13 +74,23 @@ export default {
     S.floorBox(DECK, NORTH.x0, NORTH.z0, NORTH.x1, NORTH.z1); S.floorBox(DECK, EAST.x0, EAST.z0, EAST.x1, EAST.z1);
     for (const s of [SAND, SAND_S, SAND_W]) S.floor(H_SAND, s, .22);
 
-    /* ---------------- streets and squares (flat cards) ---------------- */
-    patch(26, 36, 35, 37, 'path', H_HIGH);                    // the street in front of her house (on the terrace, and on past it)
-    patch(20, 36, 22, 37, 'path'); patch(39, 36, 43, 37, 'path');
-    patch(31, 38, 32, 50, 'path'); patch(20, 45, 46, 46, 'path'); patch(40, 31, 41, 35, 'path'); patch(28, 49, 30, 50, 'path');
-    patch(29, 39, 34, 43, 'high');                            // the fountain square
-    { const [x0, z0] = T(18, 40), [x1, z1] = T(27, 45); root.add(slab(rect(x0, z0, x1, z1), H_GRASS + .015, .015, sandP, whiteEdge)); }   // the playground's sand
-    patch(21, 48, 27, 51, 'soil');                            // the carrot patch
+    /* ---------------- the square, the paths, the patches: all cut by hand ----------------
+       The old map gives where things are, never the shape of anything: nothing here lies on a grid. A path is a ribbon of card
+       that winds (kit.js ribbon), a square is a blob, a side path is a row of stepping stones. */
+    const laid = [];   // every outline lying on the ground, so no tree is planted on one
+    const lay = (pts, c, y = H_GRASS) => { root.add(slab(pts, y + .015, .015, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
+    const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
+    lay(blob(.6, -.45, 2.35, 1.7, 61, 48, .05), 'high');                                                               // the square round the fountain
+    lay(ribbon([[-3.5, -3.5], [-1.6, -3.36], [.3, -3.46], [2.2, -3.36], [3.85, -3.45]], .82, 62), 'path', H_HIGH);      // along the terrace, past her door
+    lay(ribbon([[.35, -1.75], [.45, -1.2]], .95, 63, .03), 'path');                                                    // from the foot of the stairs onto the square
+    lay(ribbon([[.7, 1.0], [.35, 2.2], [.75, 3.5], [.15, 4.8], [-.7, 5.9], [-1.3, 7.2], [-1.9, 8.6], [-2.1, 9.5]], .85, 64), 'path');   // south, winding down to the pig's mud
+    lay(ribbon([[2.7, -.1], [4.3, .65], [6.0, 1.85], [7.6, 2.45], [9.3, 2.4]], .9, 65), 'path');                        // east to the bridge
+    lay(ribbon([[-1.5, -.8], [-2.5, -1.85], [-4.8, -2.3], [-6.6, -2.05], [-7.5, -1.0], [-8.15, .1]], .8, 66), 'path');  // west, round the playground to the pond
+    lay(ribbon([[6.0, -5.75], [5.9, -4.4], [5.35, -3.3], [5.5, -1.6], [6.05, .2], [6.5, 1.75]], .85, 67), 'path');      // from the north bridge past the terrace's east stairs
+    lay(blob(-5.2, .3, 2.9, 1.75, 68, 44, .06), sandP);                                                                 // the playground's sand
+    lay(blob(-3.9, 4.75, 2.1, 1.05, 69, 40, .07), 'soil');                                                              // the carrot patch
+    stones([[4.75, 1.45], [4.5, 1.95], [4.3, 2.45], [4.2, 2.95]], 160);                                                 // to the gate of the unicorns' meadow
+    stones([[-.25, 2.55], [-.85, 2.75], [-1.5, 2.85], [-2.15, 3.05], [-2.8, 3.15]], 170);                               // to the sword's stone and the patch
 
     /* ---------------- her house, on the terrace ---------------- */
     const HOUSE = cottage(S, .3, H_HIGH, -5.5);                 // the real one (props.js): the only drawn thing here
@@ -92,8 +101,8 @@ export default {
     { const [x, z] = T(32, 41); put(cyl(.66, .32, 'thing', 20), x, .16, z); put(cyl(.5, .05, 'water', 20), x, .33, z); put(cyl(.1, .9, 'dark'), x, .45, z); put(cyl(.26, .08, 'thing', 14), x, .9, z); S.solid({ x, z, r: .66 }); }
     { const [x, z] = T(37, 40.5); put(box(1.2, .8, .55), x, .4, z); put(box(1.4, .06, .8, 'roof'), x, 1.35, z); for (const sx of [-.62, .62]) put(cyl(.03, 1.35, 'dark', 6), x + sx, .68, z + .3); S.wall(x, z, .72, .4); }
     for (const [tx, tz] of [[13, 39.5], [17, 39.5], [28, 39.5]]) { const [x, z] = T(tx, tz); put(box(.95, .1, .32), x, .3, z); put(box(.95, .34, .06), x, .5, z - .14); for (const sx of [-.4, .4]) put(box(.06, .28, .28, 'dark'), x + sx, .14, z); S.wall(x, z, .58, .26); }
-    for (const [tx, tz] of [[19, 38], [28, 38], [35, 38], [44, 38], [28, 44], [35, 44], [26, 47], [44, 43]]) {
-      const [x, z] = T(tx + .5, tz + .5), y = inPoly(HIGH, x, z) ? H_HIGH : H_GRASS;
+    for (const [x, z] of [[-1.5, -2.1], [2.7, -2.1], [-6.4, -2.95], [4.6, -.3], [7.2, 1.5], [-.5, 3.3], [6.6, -3.0], [-8.3, 1.5]]) {   // lanterns, each beside a path
+      const y = inPoly(HIGH, x, z) ? H_HIGH : H_GRASS;
       put(cyl(.035, 1.4, 'dark', 8), x, y + .7, z); put(new THREE.Mesh(new THREE.SphereGeometry(.1, 12, 8), P('path')), x, y + 1.42, z); S.solid({ x, z, r: .08 });
     }
 
@@ -123,14 +132,14 @@ export default {
     put(box(.5, .6, 1.2, 'dark'), 10.9, DECK + .3, 2.4); S.wall(10.9, 2.4, .35, .7);
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
-    const busy = [[-1.6, -7, 2.2, -2.2], [-1.4, -2.2, 2.7, 1.5], [-8.1, -1.5, -2.1, 2.1], [-6.3, 3.3, -1.5, 5.7], [.9, 2.7, 7.6, 6.4], [-.3, -4.4, 1.5, 6], [-7, 1.5, 9.9, 3.3], [5.1, -7, 6.9, -2.7], [-7, -4.1, 8.1, -2.7], [-12, -1.2, -7.8, 1.8], [7.5, 2.5, 9.5, 5]];
+    const busy = [[-1.6, -7, 2.2, -2.9], [-8.1, -1.5, -2.1, 2.1], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5]];   // her house and its doorstep, the playground, the pen, the arch
     const cols = [['#93b071', '#b3c98d'], ['#d8b35a', '#e8cd85'], ['#d9806c', '#e9a48f'], ['#7fa676', '#a3c08c']];
     const R = rng(91); let n = 0;
     for (let i = 0; i < 900 && n < 26; i++) {
       const x = -14 + R() * 24, z = -8 + R() * 16, r = .42 + R() * .3, c = cols[Math.floor(R() * cols.length)], pineTree = R() < .3;
       const on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : null;
       if (!on || edgeDist(on, x, z) < .5 || (on !== HIGH && inPoly(HIGH, x, z)) || (on !== HIGH && edgeDist(HIGH, x, z) < .7) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .5) continue;
-      if (busy.some(([x0, z0, x1, z1]) => x > x0 - .35 && x < x1 + .35 && z > z0 - .35 && z < z1 + .35)) continue;
+      if (busy.some(([x0, z0, x1, z1]) => x > x0 - .35 && x < x1 + .35 && z > z0 - .35 && z < z1 + .35) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.3)) continue;
       const y = on === HIGH ? H_HIGH : H_GRASS;
       if (pineTree) S.pine(x, z, y, 1.3 + R() * .6, ['#6f9670', '#7fa676', '#5f8665'][n % 3]); else S.lollipop(x, z, y, r, c[0], c[1], 100 + n, .9 + R() * .55);
