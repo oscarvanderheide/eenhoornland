@@ -12,6 +12,7 @@ import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
 import { farm, well, scarecrow } from './farm.js';
 import { grandma, gardener, fisher, player } from './folk.js';
+import { dolphin } from './critters2.js';
 import { dorpLand, bosLand, weiLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile, spread out by SPREAD) */
@@ -145,6 +146,7 @@ export default {
     // the people of the village (folk.js): grandma knitting on the square's bench, the accordion player on the square, the gardener asleep
     // in his wheelbarrow by the carrots, the fisherman at the pond
     const folk = { oma: grandma(S, SQ[0] + 2.3, SQ[1] - 3.0, benches[2]), muzikant: player(S, SQ[0] - 2.35, SQ[1] - 1.25), tuinman: gardener(S, F[0] - 4.4, F[1] - 2.9, theFarm), visser: fisher(S, pcx + 2.62, pcz - .4, -1) };
+    const flipper = dolphin(S, EAST);   // leaps over her once on every crossing of the long bridge (critters2.js)
     theFountain.tapped = () => { if (theFarm.holding() && !theFarm.full()) S.walkThen(SQ[0], SQ[1] + 1.45, () => theFarm.fill(), 1.6); };
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
@@ -174,8 +176,8 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); },
-      toys: { ...live, ...flies, ...folk, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); },
+      toys: { ...live, ...flies, ...folk, dolfijn: flipper, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:

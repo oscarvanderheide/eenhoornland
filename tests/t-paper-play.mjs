@@ -203,6 +203,10 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]);
     ok(await until(`__p.toy('braam').open`, 8), 'watered, the brambles bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-open-land.png');
     ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and now the meadow can be walked to');
+    // the dolphin of the long bridge
+    await t.ev(`__p.placeAt(${(d.thorns[0] + w.start[0]) / 2 - 3}, ${d.thorns[1]})`); await t.sleep(1800); ok((await toy('dolfijn')).leaps === 0, 'standing on the bridge: no dolphin yet');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(900); const dol = await toy('dolfijn'); ok(dol.leaps === 1 && dol.up && dol.at[1] > 0, 'walking over the water: a dolphin leaps over the bridge ahead of her'); await t.shot('tmp-shots/y-dolphin-land.png');
+    await t.sleep(2600); await t.ev(`__p.keys([])`); ok((await toy('dolfijn')).leaps === 1 && !(await toy('dolfijn')).up, 'once on a crossing');
     // the kite on the hill's top
     await t.ev(`__p.placeAt(${w.top[0] + .8}, ${w.top[1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('vlieger')`); ok(await until(`__p.toy('vlieger').held`, 5), 'a tap on the kite: she takes its string'); ok(!(await toy('boerderij')).held, 'and the can she carried is put down: one thing in her hands at a time');
     ok(await until(`__p.toy('vlieger').alt > 2.2`, 6), 'on the windy top it goes up by itself'); await t.shot('tmp-shots/y-kite-land.png');

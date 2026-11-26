@@ -48,3 +48,25 @@ export function otter(S, x, z, spots) {
     if (mode === 'dive') { t += dt; if (to) { const dx = to[0] - f.x, dz = to[1] - f.z, d = Math.hypot(dx, dz); if (d > .05) { f.x += dx / d * Math.min(d, 2.4 * dt); f.z += dz / d * Math.min(d, 2.4 * dt); if (Math.abs(dx) > .05) f.face = Math.sign(dx); } else to = null; } if (t > .8 && !to) { mode = null; S.confetti(f.x, .15, f.z + .1, WATER, 6, undefined, 1.6); } }
   } };
 }
+
+/** The dolphin of a bridge (Oscar: "when walking the bridge it would be cool to have a dolphin jumping over us"). `B`: the
+ *  bridge { x0, x1, z0, z1 } in the set's measure, running east-west. Once on every crossing, when she is well out over
+ *  the water and walking, it comes up out of the sea behind the bridge, sails over the deck just ahead of her and dives in
+ *  on the near side. A tap on it in the air: it turns a flip. One body turned about one point of the card (see animals2.js) */
+export function dolphin(S, B, water = -.55) {
+  const { girl, sfx } = S, f = make(S, 'dolfijn', B.x0, B.z0), [ax, az] = S.at([B.x0, B.z0]), [bx, bz] = S.at([B.x1, B.z1]); f.g.visible = false;
+  const PIV = (1 - 112 / 240) * f.H, DUR = 1.6, PEAK = 3.5; let t = -1, way = null, leaps = 0, done = false, flip = 0, flips = 0;
+  const splash = (x, z) => { sfx.splash(); S.confetti(x, water + .3, z, WATER, 16, undefined, 3); };
+  f.onTap = () => { if (t >= 0 && !flip) { flip = 1; flips++; sfx.hop(); } };
+  f.act = () => { const k = t / DUR; f.setFrame(k < .34 ? 0 : k < .66 ? 1 : 2); };
+  return { f, state: () => ({ leaps, flips, up: t >= 0, at: [f.x, f.y, f.z] }), step({ dt }) {
+    const over = girl.x > ax + 5 && girl.x < bx - 5 && girl.z > az - .3 && girl.z < bz + .3;
+    if (!(girl.x > ax - 1 && girl.x < bx + 1 && girl.z > az - 1 && girl.z < bz + 1)) done = false;   // off the bridge: the next crossing has a dolphin of its own
+    if (over && !done && t < 0 && girl.walking) { done = true; t = 0; leaps++; flip = 0; const d = girl.dirX >= 0 ? 1 : -1, mx = girl.x + d * 2.8; way = [mx - 1.3, az - 2.6, mx + 1.3, bz + 2.6]; f.g.visible = true; f.face = 1; splash(way[0], way[1]); }
+    if (t < 0) return;
+    t += dt; const k = Math.min(1, t / DUR);
+    f.x = way[0] + (way[2] - way[0]) * k; f.z = way[1] + (way[3] - way[1]) * k; f.floatY = f.y = water - .5 + 4 * PEAK * k * (1 - k) - PIV;
+    if (flip) { flip = Math.max(0, flip - dt * 1.6); f.tilt = (1 - flip) * Math.PI * 2 * (flip > 0 ? 1 : 0); } else f.tilt = 0;
+    if (k >= 1) { t = -1; f.g.visible = false; f.tilt = 0; splash(way[2], way[3]); }
+  } };
+}
