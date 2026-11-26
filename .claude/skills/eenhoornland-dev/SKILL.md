@@ -7,6 +7,8 @@ description: How to add features to or fix bugs in Eenhoornland (the HD-2D pixel
 
 The players are two young children who cannot read. A bug that blocks them ends the fun, so every change is verified in a real browser before it is called done.
 
+**Version 2.0 (the paper game) lives in `paper/`.** Read `paper/PLAN.md` before any work there: it holds what is decided, the order of work, who may change what, and the list of every part of the game with its verdict. The rest of this file describes the pixel game (1.x), which stays as it is; its design rules below apply to 2.0 too.
+
 ## Rules of the game design
 - Every island has its own plants, rocks and animals (`map.js` vegetation per zone, `art-isles.js`): nothing grows or lives on two islands. A new thing for an island gets new art.
 - Nothing the adventure needs just lies around: every tool and goal item comes with a small funny moment (sword in a stone, a chest that opens with stones on its buttons, shy star, fruit shaken out of a tree).
