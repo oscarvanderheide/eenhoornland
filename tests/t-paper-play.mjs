@@ -133,4 +133,27 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${bp.oak[0] - 2.6}, ${bp.oak[1] + .6})`); await t.sleep(3000); await tapOn('eekhoorn'); await t.sleep(800); ok((await toy('eekhoorn')).lift > 1.5, 'a real tap on the squirrel: up the oak it runs'); await t.shot('tmp-shots/y-squirrel-land.png');
     await t.sleep(1300); ok((await toy('eekhoorn')).frame === 3 && (await toy('eekhoorn')).lift === 0, 'and comes down with an acorn');
   }
+
+  if (!only || only === 'farm') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const farm = () => t.ev(`__p.toy('boerderij')`), pl = await t.ev('__p.places()'), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
+    await t.ev(`__p.placeAt(${pl.well[0] - 1.6}, ${pl.well[1] + 2.4})`); await t.sleep(2800); await t.shot('tmp-shots/y-farm-land.png');
+    // a row without a can: nothing happens but a hint
+    await tapAt(pl.rows[0], .1, pl.rows[1] - .5); await t.sleep(600); ok((await farm()).watered === 0, 'a tap on a row with empty hands waters nothing');
+    // the can: a real tap
+    const c0 = (await farm()).can; await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'a tap on the watering can: she walks over and picks it up'); await t.sleep(300);
+    ok((await t.ev('__p.info()')).pose === 'hold', 'she carries it in front of her');
+    // the well fills it
+    await tapAt(pl.well[0], .5, pl.well[1] - 1.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'a tap on the well: the bucket goes down and the can is full'); await t.shot('tmp-shots/y-farm-well-land.png');
+    // water a row: it grows in two steps
+    await tapAt(pl.rows[0], .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').watered === 1`, 8), 'a tap on a row: she walks over and pours');
+    ok(await until(`__p.toy('boerderij').rows[0].stage === 2`, 5), 'and the carrots grow'); await t.shot('tmp-shots/y-farm-grown-land.png');
+    ok((await farm()).full === 1, 'the can has water for one more row');
+    // pull one: it flies to the pig
+    const n0 = (await farm()).rows[0].left; await tapAt(pl.rows[0] - .95, .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').pulled === 1`, 6), 'a tap on grown carrots: she pulls one out');
+    await t.sleep(1100); ok((await farm()).rows[0].left === n0 - 1 && await t.ev(`__p.hop('varken')`) >= 0, 'one carrot fewer in the row, and it went to the pig');
+    // the scarecrow's birds
+    await t.ev(`__p.placeAt(${pl.crow[0] + 4.5}, ${pl.crow[1] + 1.5})`); await t.sleep(4200); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'from a way off the birds sit on the scarecrow');
+    await t.ev(`__p.placeAt(${pl.crow[0]}, ${pl.crow[1]})`); await t.sleep(1500); ok((await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: up they fly'); await t.shot('tmp-shots/y-farm-crow-land.png');
+  }
 }

@@ -6,10 +6,11 @@
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { cottage, shore, flowerBed, meadow, pinwheel, GROUND } from './props.js';
+import { cottage, shore, flowerBed, meadow, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
 import { swing, slide } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck } from './critters.js';
+import { farm, well, scarecrow } from './farm.js';
 import { dorpLand, bosLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile, spread out by SPREAD) */
@@ -29,11 +30,11 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
     /* ---------------- the land: a beach, the green, and a terrace in the north where her house stands ---------------- */
-    const { SAND, GRASS, SAND_S, SAND_W, GRASS_W, HIGH, under } = dorpLand();
+    const { SAND, GRASS, SAND_S, GRASS_S, SAND_W, GRASS_W, HIGH, under } = dorpLand();
     const WEI = blob(19.6 * K, 2.2 * K, 4.2, 5, 78, 48, .05);        // the near shore of the meadow, across the east bridge (a stand-in)
     // the ground is the island's real printed paper (it costs what it will cost); what stands on it is still grey
     const sandP = GROUND.sand, grassP = GROUND.grass, highP = GROUND.high;
-    shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]], [...under, blob(19.6 * K, 2.3 * K, 4.5, 5.3, 85, 56, .04)]);
+    shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W, GRASS_S].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]], [...under, blob(19.6 * K, 2.3 * K, 4.5, 5.3, 85, 56, .04)]);
 
     // stairs down from the terrace: in front of her door (south), and at its east end where the street goes on to the bridge
     const edge = (poly, at, axis) => { let best = -99; for (let v = -30; v <= 30; v += .01) if (axis === 'z' ? inPoly(poly, at, v) : inPoly(poly, v, at)) best = v; return best; };
@@ -67,7 +68,7 @@ export default {
     for (const s of stairs) S.floorBox(s.h, ...s.b);
     S.floor(null, POND);
     S.floor(H_HIGH, HIGH);
-    S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_W); S.floor(H_GRASS, WEI);
+    S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_W); S.floor(H_GRASS, GRASS_S); S.floor(H_GRASS, WEI);
     S.floorBox(DECK, NORTH.x0, NORTH.z0, NORTH.x1, NORTH.z1); S.floorBox(DECK, EAST.x0, EAST.z0, EAST.x1, EAST.z1);
     for (const s of [SAND, SAND_S, SAND_W]) S.floor(H_SAND, s, .22);
 
@@ -78,24 +79,21 @@ export default {
     const lay = (pts, c, y = H_GRASS) => { root.add(slab(pts, y + .015, .015, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     // every path starts inside the square's outline, so it is joined to it; benches and lanterns stand beside paths, never on them
-    const SQ = [.6 * K, -.6 * K];
+    const SQ = [.6 * K, -.6 * K], F = [-1.2 * K, 9.6 * K];   // the middle of the fountain square; the middle of the farm in the south
     lay(blob(SQ[0], SQ[1], 3.3, 2.5, 61, 48, .05), 'high');                                                               // the square round the fountain
     lay(ribbon(kk([[-3.5, -3.5], [-1.6, -3.36], [.3, -3.46], [2.2, -3.36], [3.85, -3.45]]), .82, 62), 'path', H_HIGH);      // along the terrace, past her door
     lay(ribbon([[.3 * K, -2.9 * K + 1.3], [.34 * K, (-2.9 * K + SQ[1]) / 2], [SQ[0] - .3, SQ[1] - 2.0]], .95, 63, .04), 'path');                                                    // from the foot of the stairs onto the square
-    lay(ribbon([[SQ[0] + .1, SQ[1] + 2.0], ...kk([[.4, 2.0], [.75, 3.4], [.15, 4.8], [-.7, 5.9], [-1.15, 6.85]])], .85, 64), 'path');                          // south, winding down to the edge of the green
-    lay(ribbon(kk([[-1.5, 8.0], [-1.9, 8.8], [-2.1, 9.45]]), .85, 641), 'path', H_SAND);                                                // and on over the sand, a level lower, to the pig's mud
+    lay(ribbon([[SQ[0] + .1, SQ[1] + 2.0], ...kk([[.4, 2.0], [.75, 3.4], [.15, 4.8], [-.7, 5.9], [-1.15, 6.9], [-1.2, 7.7]]), [F[0] + .3, F[1] - 2.9]], .85, 64), 'path');   // south, winding down to the farm's well
     lay(ribbon([[SQ[0] + 2.8, SQ[1] + .3], ...kk([[3.9, .5], [6.0, 1.85], [7.6, 2.45], [9.3, 2.4]])], .9, 65), 'path');                        // east to the bridge
     lay(ribbon([[SQ[0] - 2.8, SQ[1] - .2], ...kk([[-2.6, -1.3], [-4.6, -2.15], [-7.0, -2.3], [-9.0, -1.5]]), [pcx + 3.3, pcz - .9]], .8, 66), 'path');  // west, round the north of the playground to the pond
     lay(ribbon(kk([[6.0, -5.75], [5.9, -4.4], [5.35, -3.3], [5.5, -1.6], [6.05, .2], [6.5, 1.75]]), .85, 67), 'path');      // from the north bridge past the terrace's east stairs
     lay(blob(-5.3 * K, .3 * K, 4.4, 2.8, 68, 44, .06), sandP);                                                                 // the playground's sand
-    lay(blob(-3.9 * K, 4.75 * K, 2.4, 1.2, 69, 40, .07), 'soil');                                                              // the carrot patch
-    stones(kk([[4.75, 1.5], [4.6, 1.85], [4.45, 2.2], [4.3, 2.55], [4.2, 2.9]]), 160);                                                 // to the gate of the unicorns' meadow
-    stones(kk([[-.2, 2.5], [-.6, 2.62], [-1.0, 2.75], [-1.4, 2.85], [-1.8, 2.95], [-2.2, 3.05], [-2.6, 3.12], [-3.0, 3.2]]), 170);                               // to the sword's stone and the patch
+    stones([0, 1, 2, 3, 4].map(i => [3.4 * K + .4 + (4.6 * K - 3.4 * K - .4) * (1 - i / 4) * .35, 4.3 * K - 2.0 - i * .52]), 160);                                                 // to the gate of the unicorns' meadow
 
     /* ---------------- her house, on the terrace ---------------- */
     const HOUSE = cottage(S, .3 * K, H_HIGH, -5.5 * K, 'voordeur');     // the real one (props.js); its front door is a cut to the room inside (set-huis.js)
     // a flower garden on both sides of the house (Oscar's idea, 2026-11-26): two beds of paper flowers
-    for (const s of [-1, 1]) flowerBed(S, blob(.3 * K + s * 3.5, -5.5 * K + .1, 1.9, 1.25, 310 + s, 28, .08), H_HIGH, 320 + s, 22);
+    const beds = [-1, 1].map(s => flowerBed(S, blob(.3 * K + s * 3.6, -5.5 * K + .1, 2.1, 1.35, 310 + s, 28, .08), H_HIGH, 320 + s));
     // toy windmills (his idea too): three in the garden, one by the playground, one by the pond. A tap, or running past, spins them
     const mills = [pinwheel(S, .3 * K - 2.6, H_HIGH, -5.5 * K + 1.0), pinwheel(S, .3 * K + 2.5, H_HIGH, -5.5 * K + .9, '#9ed9cf', '#f6efe2'), pinwheel(S, .3 * K + 4.3, H_HIGH, -5.5 * K + .5, '#bba6ea', '#f2c65c', .65),
       pinwheel(S, -5.3 * K + 3.9, H_GRASS, .3 * K + 2.9, '#e98f8f', '#f6efe2'), pinwheel(S, pcx + 2.9, H_GRASS, pcz + 2.2, '#9ed9cf', '#f4a6c4')];
@@ -103,14 +101,12 @@ export default {
     { const [x, z] = [.3 * K - 1.9, -5.5 * K + 1.7]; put(cyl(.09, .22, 'thing'), x, H_HIGH + .11, z); }                                                                    // the watering can
 
     /* ---------------- the square: fountain, stall, benches, lanterns ---------------- */
-    { const [x, z] = T(32, 41); put(cyl(.66, .32, 'thing', 20), x, .16, z); put(cyl(.5, .05, 'water', 20), x, .33, z); put(cyl(.1, .9, 'dark'), x, .45, z); put(cyl(.26, .08, 'thing', 14), x, .9, z); S.solid({ x, z, r: .66 }); }
+    const theFountain = fountain(S, SQ[0], H_GRASS + .015, SQ[1]);
     { const [x, z] = T(37, 40.5); put(box(1.2, .8, .55), x, .4, z); put(box(1.4, .06, .8, 'roof'), x, 1.35, z); for (const sx of [-.62, .62]) put(cyl(.03, 1.35, 'dark', 6), x + sx, .68, z + .3); S.wall(x, z, .72, .4); }
     // two benches looking at the pond, one at the square
-    for (const [x, z] of [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]]) { put(box(.95, .1, .32), x, .3, z); put(box(.95, .34, .06), x, .5, z - .14); for (const sx of [-.4, .4]) put(box(.06, .28, .28, 'dark'), x + sx, .14, z); S.wall(x, z, .58, .26); }
-    for (const [x, z] of [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 3.4, pcz + 1.2]]) {   // lanterns, each beside a path
-      const y = inPoly(HIGH, x, z) ? H_HIGH : H_GRASS;
-      put(cyl(.035, 1.4, 'dark', 8), x, y + .7, z); put(new THREE.Mesh(new THREE.SphereGeometry(.1, 12, 8), P('path')), x, y + 1.42, z); S.solid({ x, z, r: .08 });
-    }
+    const benches = [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]].map(([x, z]) => bench(S, x, H_GRASS, z));
+    // lanterns, each beside a path: a tap lights one, a tap puts it out (Oscar: "let me turn them on")
+    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 3.4, pcz + 1.2]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const SW = [-6.4 * K, -.4 * K], SL = [-4.9 * K, 1.05 * K];
@@ -119,11 +115,18 @@ export default {
     const theBall = ball(S, -3.9 * K, H_GRASS + .015, -.5 * K), theDog = dog(S, SQ[0] - 1.5, SQ[1] + 1.2, theBall);   // on the square, in the open
     // who else lives here (critters.js): the hen and her chicks by the carrot patch, the pig in its mud, two ducks on the pond
     const pondSpots = [[pcx - .8, pcz - .35], [pcx + .85, pcz + .5], [pcx + .05, pcz - .85], [pcx - .55, pcz + .75]];
-    const live = { kip: hen(S, -5.5 * K, H_GRASS, 3.9 * K), kuiken1: chick(S, -5.5 * K - .6, 3.9 * K + .6, 'kuiken1'), kuiken2: chick(S, -5.5 * K + .5, 3.9 * K + .7, 'kuiken2'), varken: pig(S, ...T(27.5, 59.2)),
+    /* ---------------- the farm, in the south (farm.js): the well, the can, three rows of carrots, the scarecrow, the pig's mud, the hen ---------------- */
+    lay(blob(F[0] + 5.4, F[1] + .7, 1.35, .95, 87, 32, .06), 'mud');
+    const theWell = well(S, F[0] + .3, H_GRASS, F[1] - 1.8), crow = scarecrow(S, F[0] - 7.6, H_GRASS, F[1] - .1);
+    const live = { kip: hen(S, F[0] + 1.3, H_GRASS, F[1] + 2.0), kuiken1: chick(S, F[0] + .6, F[1] + 2.6, 'kuiken1'), kuiken2: chick(S, F[0] + 2.0, F[1] + 2.7, 'kuiken2'), varken: pig(S, F[0] + 5.4, F[1] + .7),
       eend1: duck(S, ...pondSpots[0], 'eend1', pondSpots), eend2: duck(S, ...pondSpots[1], 'eend2', [pondSpots[1], pondSpots[2], pondSpots[3], pondSpots[0]]) };
 
+    const theFarm = farm(S, { can: [F[0] + 1.7, F[1] - 1.3], well: theWell, rows: [0, 1, 2].map(i => [F[0] - 4.6, F[1] - .9 + i * 1.0]), y: H_GRASS, eaters: [() => live.varken.f] });
+    mills.push(pinwheel(S, F[0] - 2.6, H_GRASS, F[1] + 2.4, '#f2c65c', '#e98f8f'));
+
     /* ---------------- the unicorns' meadow: a fence with an open gate, and the race arch beside it ---------------- */
-    { const [x0, z0] = T(33.5, 47.5), [x1, z1] = T(42.5, 51.5), [g0] = T(37, 47), [g1] = T(39, 47);
+    const PEN = [3.4 * K - 2.6, 4.3 * K - 1.6, 3.4 * K + 3.4, 4.3 * K + 1.6];   // wholly on the green: its far corner once hung out over the sand
+    { const [x0, z0, x1, z1] = PEN, g0 = (x0 + x1) / 2 - .7, g1 = (x0 + x1) / 2 + .7;
       const rail = (ax, az, bx, bz) => { const l = Math.hypot(bx - ax, bz - az), r = put(box(l, .05, .04), (ax + bx) / 2, .42, (az + bz) / 2), r2 = put(box(l, .05, .04), (ax + bx) / 2, .22, (az + bz) / 2); r.rotation.y = r2.rotation.y = -Math.atan2(bz - az, bx - ax);
         for (let i = 0; i <= Math.round(l / .9); i++) put(box(.07, .56, .07, 'dark'), ax + (bx - ax) * i / Math.round(l / .9), .28, az + (bz - az) * i / Math.round(l / .9));
         S.wall((ax + bx) / 2, (az + bz) / 2, Math.abs(bx - ax) / 2 + .12, Math.abs(bz - az) / 2 + .12); };
@@ -131,20 +134,18 @@ export default {
     { const [x, z] = T(44.5, 47.5); for (const sz of [-.75, .75]) put(cyl(.06, 1.7, 'dark', 8), x, .85, z + sz + .9); const top = put(box(.12, .3, 1.7, 'roof'), x, 1.75, z + .9); top.castShadow = true; }
 
     /* ---------------- single things: the sword's stone, the zipline's pole, the bike, the mud ---------------- */
-    { const [x, z] = T(24.5, 47.5); put(new THREE.Mesh(new THREE.DodecahedronGeometry(.36, 0), P('thing')), x, .2, z).castShadow = true; put(box(.05, .5, .1, 'dark'), x, .6, z); S.solid({ x, z, r: .36 }); }
     { const [x, z] = T(44.5, 34.5); put(cyl(.07, 2.3, 'dark', 8), x, 1.15, z); S.solid({ x, z, r: .1 }); }
     { const [x, z] = T(42.5, 43.5); for (const sx of [-.28, .28]) { const w = put(cyl(.2, .04, 'dark', 14), x + sx, .2, z); w.rotation.x = Math.PI / 2; } put(box(.6, .05, .05), x, .34, z); }
-    { const [x, z] = T(27.5, 59.2); root.add(slab(blob(x, z, 1.15, .8, 87, 32, .06), H_SAND + .02, .02, P('mud'), whiteEdge)); }
     // the bramble that shuts the bridge to the meadow, as a block
     put(box(.5, .6, 1.2, 'dark'), EAST.x0 + 3.2, DECK + .3, 2.4 * K); S.wall(EAST.x0 + 3.2, 2.4 * K, .35, .7);
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
-    const busy = [[-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);   // (the last three: the view from the square up the stairs to her door, the square itself with its view from the south, round the pond)   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch, where the slide lets her off
+    const busy = [[-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[F[0] - 9.5, F[1] - 3.6, F[0] + 8.5, F[1] + 4.6], [3.4 * K - 3.2, 4.3 * K - 4.2, 3.4 * K + 4, 4.3 * K + 2.2], [.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);   // (the last three: the view from the square up the stairs to her door, the square itself with its view from the south, round the pond)   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch, where the slide lets her off
     const cols = [['#93b071', '#b3c98d'], ['#d8b35a', '#e8cd85'], ['#d9806c', '#e9a48f'], ['#7fa676', '#a3c08c']];
     const R = rng(91); let n = 0;
     for (let i = 0; i < 1400 && n < 38; i++) {
-      const x = (-14 + R() * 24) * K, z = (-8 + R() * 16) * K, r = .42 + R() * .3, c = cols[Math.floor(R() * cols.length)], pineTree = R() < .3;
-      const on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : null;
+      const x = (-14 + R() * 24) * K, z = (-8 + R() * 21) * K, r = .42 + R() * .3, c = cols[Math.floor(R() * cols.length)], pineTree = R() < .3;
+      const on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null;
       if (!on || edgeDist(on, x, z) < .5 || (on !== HIGH && inPoly(HIGH, x, z)) || (on !== HIGH && edgeDist(HIGH, x, z) < .7) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .5) continue;
       if (busy.some(([x0, z0, x1, z1]) => x > x0 - .35 && x < x1 + .35 && z > z0 - .35 && z < z1 + .35) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.3)) continue;
@@ -153,8 +154,8 @@ export default {
       n++;
     }
     // the grass is not bare: tufts in twos and threes, and a flower here and there (never on a path or a patch)
-    meadow(S, 230, R2 => {
-      const x = (-15.5 + R2() * 26) * K, z = (-8 + R2() * 16) * K, on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : null;
+    meadow(S, 290, R2 => {
+      const x = (-15.5 + R2() * 26) * K, z = (-8 + R2() * 21) * K, on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null;
       if (!on || edgeDist(on, x, z) < .3 || (on !== HIGH && edgeDist(HIGH, x, z) < .3) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .25 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22)) return null;
       if (Math.abs(x - .3 * K) < 1.5 && z > -5.5 * K - 1.1 && z < -5.5 * K + 2.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
       return [x, on === HIGH ? H_HIGH : H_GRASS, z];
@@ -165,8 +166,8 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); },
-      toys: { ...live, molen: mills[0], swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); },
+      toys: { ...live, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
@@ -175,15 +176,15 @@ export default {
         { name: 'thuis', zone: [.3 * K - 2.8, -5.5 * K + .9, .3 * K + 2.8, -2.9 * K - .1], span: 9.5, tall: 6.5, rise: .2 },                      // at her front door: close and low, the morning
         { name: 'speeltuin', zone: [-5.3 * K - 4.5, .3 * K - 2.9, -5.3 * K + 4.5, .3 * K + 2.9], span: 12, rise: .3, yaw: .3 },                      // the playground, seen a little from the east
         { name: 'vijver', zone: [pcx - 5, pcz - 4.6, pcx + 4.2, pcz + 4.4], span: 10.5, rise: .38, yaw: .22 },                      // the pond: closer, looking down on the water
-        { name: 'wei', zone: kz([1.3, 3.4, 7.2, 6.3]), span: 12, rise: .36 },                                       // in the unicorns' meadow
+        { name: 'wei', zone: [3.4 * K - 2.5, 4.3 * K - 1.5, 3.4 * K + 3.3, 4.3 * K + 1.5], span: 12, rise: .36 },                                       // in the unicorns' meadow
         { name: 'brug-oost', zone: [EAST.x0 + .7, 2.4 * K - 1.5, EAST.x1 + 1, 2.4 * K + 1.5], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },    // the bridge to the meadow: far back, she is small
         { name: 'brug-noord', zone: [6 * K - 1.1, NORTH.z0 + .2, 6 * K + 1.1, NORTH.z1 - .9], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge to the forest: far back and high
-        { name: 'modder', zone: kz([-8, 7.75, 6, 13]), span: 11, rise: .3 },                                         // the pig's corner in the south
+        { name: 'boerderij', zone: [F[0] - 9.6, F[1] - 3.7, F[0] + 9.6, F[1] + 4.8], span: 12.5, rise: .34 },              // the farm in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
       spots: { swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
-      places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: [SW[0], SW[1] + .95], slide: [SL[0] - .4, SL[1] + .15], pond: [pcx, pcz + 2.6], bench: [SQ[0] + 2.3, SQ[1] - 2.2], garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6 * K, NORTH.z1 - 3.5], east: [EAST.x0 + 1.9, 2.4 * K] },
+      places: { start: [sx, sz], fountain: [SQ[0], SQ[1] + 2.0], stall: T(37, 41.8), swing: [SW[0], SW[1] + .95], slide: [SL[0] - .4, SL[1] + .15], pond: [pcx, pcz + 2.6], bench: [SQ[0] + 2.3, SQ[1] - 2.2], pen: [3.4 * K + .4, 4.3 * K], arch: T(44.5, 46.6), pole: T(43.5, 35.5), mud: [F[0] + 5.4, F[1] - .9], well: [F[0] + .3, F[1] - .8], rows: [F[0] - 4.6, F[1] - .35], crow: [F[0] - 7.6, F[1] + 1.0], north: [6 * K, NORTH.z1 - 3.5], east: [EAST.x0 + 1.9, 2.4 * K] },
     };
   },
 };

@@ -5,33 +5,33 @@
 //   a tap again  it rolls over on its back
 //   the ball     a tap on the ball and she kicks it; it really rolls and bounces off things. The dog runs after it,
 //                brings it back and drops it at her feet. Walking into the ball nudges it along
-import { THREE, paper } from './kit.js';
 import { ANIMALS } from './animals.js';
+import { E, S as smooth, piece, ink } from './cut.js';
 
-/** a ball that rolls: kicked by a tap (she walks up to it first) or nudged by walking into it */
+/** a ball that rolls: kicked by a tap (she walks up to it first) or nudged by walking into it. Cut from paper like the
+ *  figures: a round card with a white band, turning as it rolls */
+const drawBall = col => g => { piece(g, col, E(32, 32, 22, 22)); piece(g, '#f6efe2', smooth([[12, 30], [32, 22], [52, 30], [52, 37], [32, 30], [12, 37]]), .5); ink(g, 'rgba(255,255,255,.55)', E(24, 22, 6, 4, -.5)); };
 export function ball(S, x, y, z, color = '#e98f8f') {
-  const { girl, sfx } = S, R = .17, [wx, wz] = S.at([x, z]);
-  const g = new THREE.Group(); g.userData.live = true; g.position.set(x, y + R, z); S.root.add(g);
-  const m = new THREE.Mesh(new THREE.SphereGeometry(R, 16, 12), paper(color)); m.castShadow = true; g.add(m);
-  { const band = new THREE.Mesh(new THREE.TorusGeometry(R * .99, .022, 6, 20), paper('#f6efe2')); band.rotation.x = Math.PI / 2; m.add(band); }
-  const b = { x: wx, z: wz, vx: 0, vz: 0, lift: 0, vy: 0, held: null, kicks: 0 };
+  const { girl, sfx } = S, [wx, wz] = S.at([x, z]);
+  const f = S.figure('bal', { w: 64, h: 64, draw: drawBall(color), frames: 1, size: .46 });
+  const b = { x: wx, z: wz, vx: 0, vz: 0, lift: 0, vy: 0, held: null, kicks: 0, roll: 0, f };
   const kick = (dx, dz, power = 5.2, up = 2.6) => { const l = Math.hypot(dx, dz) || 1; b.vx = dx / l * power; b.vz = dz / l * power; b.vy = up; b.held = null; b.kicks++; sfx.boing(); };
-  S.tap(g, () => { if (b.held || S.playing()) return; const dx = b.x - girl.x, dz = b.z - girl.z, d = Math.hypot(dx, dz) || 1; S.walkThen(b.x - dx / d * .45, b.z - dz / d * .45, () => kick(b.x - girl.x, b.z - girl.z), .9); });
+  f.onTap = () => { if (b.held || S.playing()) return; const dx = b.x - girl.x, dz = b.z - girl.z, d = Math.hypot(dx, dz) || 1; S.walkThen(b.x - dx / d * .45, b.z - dz / d * .45, () => kick(b.x - girl.x, b.z - girl.z), .9); };
   b.kick = kick;
   b.step = dt => {
-    if (b.held) { const f = b.held; b.x = f.x + f.face * .34; b.z = f.z + .02; b.lift = .22; b.vx = b.vz = b.vy = 0; }
+    if (b.held) { const h = b.held; b.x = h.x + h.face * .34; b.z = h.z + .02; b.lift = .16; b.vx = b.vz = b.vy = 0; }
     else {
       if (girl.walking && !S.playing() && Math.hypot(girl.x - b.x, girl.z - b.z) < .34 && Math.hypot(b.vx, b.vz) < 1) kick(b.x - girl.x, b.z - girl.z, 2.4, .8);   // walking into it nudges it
       const h = S.heightAt(b.x, b.z) ?? 0;
       // it rolls on, and bounces off whatever she could not walk through either (walls, the pond, the edge of the land)
       const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
-      if (S.free(nx, b.z, h, null)) b.x = nx; else b.vx *= -.55;
-      if (S.free(b.x, nz, h, null)) b.z = nz; else b.vz *= -.55;
+      if (S.free(nx, b.z, h)) b.x = nx; else b.vx *= -.55;
+      if (S.free(b.x, nz, h)) b.z = nz; else b.vz *= -.55;
       const drag = Math.exp(-(b.lift > .01 ? .4 : 1.9) * dt); b.vx *= drag; b.vz *= drag; if (Math.hypot(b.vx, b.vz) < .12) b.vx = b.vz = 0;
       b.vy -= 9.8 * dt; b.lift += b.vy * dt; if (b.lift <= 0) { b.lift = 0; if (b.vy < -1.4) { b.vy *= -.45; sfx.thud(); } else b.vy = 0; }
+      b.roll -= b.vx * dt / .2;
     }
-    const [lx, lz] = [b.x - S.at([0, 0])[0], b.z - S.at([0, 0])[1]], gy = (S.heightAt(b.x, b.z) ?? y);
-    g.position.set(lx, gy + R + b.lift, lz); m.rotation.z -= b.vx * dt / R; m.rotation.x += b.vz * dt / R;
+    f.x = b.x; f.z = b.z; f.lift = b.lift; f.lean = b.roll || .0001;
   };
   b.moving = () => !b.held && Math.hypot(b.vx, b.vz) > .4;
   return b;

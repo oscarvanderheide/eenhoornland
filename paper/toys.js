@@ -39,7 +39,7 @@ export function swing(S, x, y, z) {
         const drive = inp.x * PUSH * Math.cos(th) ** 2;
         om += (-K * Math.sin(th) - DAMP * om + drive) * dt; th += om * dt;
         if (Math.abs(th) > MAX) { th = Math.sign(th) * MAX; om *= -.2; }
-        girl.x = wx + L * Math.sin(th); girl.z = wz; girl.lift = seatY() - y; girl.lean = -th * .75; girl.poseName = 'sit'; girl.face = 1; girl.view = 'side';
+        girl.x = wx + L * Math.sin(th); girl.z = wz; girl.lift = seatY() - y; girl.lean = th; girl.poseName = 'sit';   // she tilts with the ropes, as the seat does girl.face = 1; girl.view = 'side';
         if (Math.abs(om) > 1.3 && Math.abs(th) < .12 && t - puff > .35) { puff = t; sfx.swish(Math.abs(om)); }   // the air at the bottom of a good swing
         if (inp.act) letGo();
         return;
@@ -99,7 +99,7 @@ export function slide(S, x, y, z) {
       }
       if (mode === 'sit') { girl.x = wx + X0 - .15; girl.lift = TOP + .04; girl.poseName = 'sit'; if (t > .45) { mode = 'whoosh'; t = 0; sfx.whoosh(); } return; }
       if (mode === 'whoosh') {
-        const k = Math.min(1, t / .7), lx = X0 - .15 + (X1 + .3 - X0) * k * k; girl.x = wx + lx; girl.lift = chuteY(lx) + .04; girl.lean = -.3; girl.poseName = 'sit';
+        const k = Math.min(1, t / .7), lx = X0 - .15 + (X1 + .3 - X0) * k * k; girl.x = wx + lx; girl.lift = chuteY(lx) + .04; girl.lean = .22; girl.poseName = 'sit';
         if (k >= 1) { mode = 'hop'; t = 0; hop = { x0: girl.x, y0: girl.lift }; sfx.boing(); } return;
       }
       if (mode === 'hop') {   // off the end, arms up, onto the sand

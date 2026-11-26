@@ -4,7 +4,7 @@ import { blob, rng } from './kit.js';
 
 /** how spread out a set is: every place on it is this much further from the set's middle than on the pixel game's map at 0.6
  *  of a step per tile, while the things themselves keep their size. Oscar, 2026-11-26: at 1 everything felt cramped */
-export const SPREAD = 1.8;
+export const SPREAD = 1.7;
 const K = SPREAD, wide = o => { for (const k of Object.keys(o)) { const v = o[k]; o[k] = Array.isArray(v[0]) && Array.isArray(v[0][0]) ? v.map(p => p.map(([x, z]) => [x * K, z * K])) : Array.isArray(v[0]) ? v.map(([x, z]) => [x * K, z * K]) : [v[0] * K, v[1] * K]; } return o; };
 /** how far the forest's shore lies from the village's: the length of the bridge between them. One number: change it and the
  *  forest, the bridge and the far shot all move with it */
@@ -22,7 +22,7 @@ export function dorpLand() {
     return out; })();
   return wide({
     SAND: blob(0, 0, 10.4, 8.5, 71, 80, .04), GRASS: blob(0, -.1, 9.5, 7.7, 72, 80, .04),
-    SAND_S: blob(-1.2, 9.7, 6.3, 3.0, 73, 56, .05),                                              // the south: the pig's mud
+    SAND_S: blob(-1.2, 9.7, 6.3, 3.0, 73, 56, .05), GRASS_S: blob(-1.2, 9.6, 5.6, 2.5, 79, 56, .05),   // the south: the farm
     SAND_W: blob(-10.4, .3, 5.0, 4.0, 74, 56, .05), GRASS_W: blob(-10.3, .3, 4.3, 3.4, 75, 56, .05),   // the west: the duck pond
     HIGH,
     under: [[0, .1, 10.8, 8.8, 81], [-1.2, 9.8, 6.6, 3.3, 82], [-10.4, .4, 5.3, 4.3, 83]].map(([cx, cz, rx, rz, seed]) => blob(cx, cz, rx, rz, seed, 56, .04)),

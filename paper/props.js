@@ -28,12 +28,100 @@ export function meadow(S, n, pick, seed, flowers = 2.5, greens = ['#86a466', '#9
     }
   }
 }
-/** a flower garden: a patch of lighter grass thick with flowers and tufts (no bare soil: Oscar found brown earth not cosy) */
-export function flowerBed(S, bed, y, seed, spots = 18) {
+const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
+const disc = (r, col, n = 14) => { const pts = []; for (let i = 0; i < n; i++) pts.push([Math.cos(i / n * 6.283) * r, Math.sin(i / n * 6.283) * r]); return card(pts, .02, paper(col)); };
+const LEAFY = [[0, 0], [.07, .04], [.16, .02], [.2, .1], [.12, .12], [.04, .09]];
+/** one paper flower of a kind, standing at the group's foot. Kinds: daisy, tulip, sun (tall, big), rose, spike (a stalk of little bells) */
+const KINDS = ['daisy', 'tulip', 'sun', 'rose', 'spike', 'daisy', 'tulip'];
+function bloom(kind, R, big = 1) {
+  const g = new THREE.Group(), pick = a => a[Math.floor(R() * a.length)], stemMat = paper('#6f8f55');
+  const h = (kind === 'sun' ? .5 : kind === 'spike' ? .34 : .24) * (.85 + R() * .4) * big, sc = (.9 + R() * .45) * big;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.013, .013, h, 4), stemMat); stem.position.y = h / 2; stem.castShadow = stem.receiveShadow = true; g.add(stem);
+  const leaf = card(LEAFY, .015, paper(pick(['#86a466', '#7f9d5e']))); leaf.position.y = h * .35; leaf.scale.setScalar(sc * .9); if (R() < .5) leaf.scale.x *= -1; g.add(leaf);
+  const head = new THREE.Group(); head.position.y = h + .02; head.scale.setScalar(sc); g.add(head);
+  if (kind === 'daisy') { head.add(card(PETALS, .02, paper(pick(['#f2efe6', '#f4a6c4', '#f2c65c', '#b9a3e0'])))); const c = disc(.04, '#e2a13c'); c.position.z = .012; head.add(c); }
+  else if (kind === 'tulip') head.add(card([[-.06, 0], [-.09, .13], [-.04, .09], [0, .16], [.04, .09], [.09, .13], [.06, 0], [0, -.03]], .03, paper(pick(['#e98f8f', '#d9706c', '#f4a6c4', '#bba6ea', '#f2c65c']))));
+  else if (kind === 'sun') { const pts = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283, r = i % 2 ? .1 : .17; pts.push([Math.cos(a) * r, Math.sin(a) * r]); } head.add(card(pts, .02, paper(pick(['#f2c65c', '#e6b748', '#f6dfa6'])))); const c = disc(.075, '#8d6a48'); c.position.z = .012; head.add(c); }
+  else if (kind === 'rose') { const cols = pick([['#d9706c', '#e98f8f', '#f8dde4'], ['#bba6ea', '#d3c6f2', '#f2efe6'], ['#f4a6c4', '#f8dde4', '#fcf8f1']]); [.1, .068, .036].forEach((r, k) => { const d = disc(r, cols[k]); d.position.set(k * .012, k * .01, k * .012); head.add(d); }); }
+  else { const col = pick(['#bba6ea', '#9ed9cf', '#f4a6c4']); for (let k = 0; k < 5; k++) { const d = disc(.04 - k * .004, col, 8); d.scale.y = 1.4; d.position.set((k % 2 ? .035 : -.035), -k * .055 + .04, k * .004); head.add(d); } }
+  return g;
+}
+/** A flower garden: flowers only, of many kinds and sizes (no bare soil, no grass tufts: Oscar's wish). The small ones are
+ *  dressing. The big ones can be picked: a tap, she walks over, and it is in her hand; up to five make a bunch she carries,
+ *  and whoever she taps next gets it. A picked flower grows back after a while. Gives back step() and state() */
+export function flowerBed(S, bed, y, seed, small = 16, big = 7) {
+  const R = rnd(seed), { girl, sfx } = S, origin = S.at([0, 0]);
   S.root.add(slab(bed, y + .012, .012, paper('#c6d795', { map: grassMap, bump: grassBump }), paper('#a9bf7c')));
   const xs = bed.map(p => p[0]), zs = bed.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
   const inside = (x, z) => { let c = false; for (let i = 0, j = bed.length - 1; i < bed.length; j = i++) { const [xi, zi] = bed[i], [xj, zj] = bed[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
-  meadow(S, spots * 2, R => { const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); return inside(x, z) ? [x, y + .012, z] : null; }, seed, 5.5);
+  const spot = () => { for (let t = 0; t < 60; t++) { const x = x0 + R() * (x1 - x0), z = z0 + R() * (z1 - z0); if (inside(x, z)) return [x, z]; } return [(x0 + x1) / 2, (z0 + z1) / 2]; };
+  for (let k = 0; k < small; k++) { const [x, z] = spot(), f = bloom(KINDS[k % KINDS.length], R, .8); f.position.set(x, y + .012, z); f.rotation.y = R() * .5 - .25; S.root.add(f); }
+  const bigs = []; let held = 0, picks = 0, gifts = 0;
+  for (let k = 0; k < big; k++) {
+    const [x, z] = spot(), f = bloom(KINDS[(k + 2) % 5], R, 1.5); f.position.set(x, y + .012, z); f.userData.live = true; S.root.add(f); S.glue(f);
+    const o = { f, at: S.at([x, z]), back: 0 }; bigs.push(o);
+    S.tap(f, () => { if (S.playing() || !f.visible) return; S.walkThen(o.at[0], o.at[1] + .5, () => { if (!f.visible) return; f.visible = false; o.back = 40 + R() * 20; held = Math.min(5, held + 1); picks++; sfx.hop(); S.confetti(o.at[0], y + .5, o.at[1], ['#f4a6c4', '#f2c65c', '#f2efe6'], 6, undefined, 1.6); }, 1.0); });
+  }
+  // the bunch in her hand: up to five flower heads
+  const bunch = new THREE.Group(); bunch.userData.live = true; bunch.visible = false; S.root.add(bunch);
+  const heads = [0, 1, 2, 3, 4].map(k => { const b = bloom(['daisy', 'tulip', 'rose', 'daisy', 'tulip'][k], R, .9); b.position.set((k - 2) * .07, Math.abs(k - 2) * -.03, k * .01); b.rotation.z = -(k - 2) * .22; bunch.add(b); return b; });
+  S.offer(who => { if (!held) return false; held = 0; gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
+  return { state: () => ({ held, picks, gifts, big: bigs.map(o => ({ at: o.at, there: o.f.visible })) }), step({ dt }) {
+    for (const o of bigs) if (o.back > 0) { o.back -= dt; if (o.back <= 0) { o.f.visible = true; } }
+    bunch.visible = held > 0 && !S.playing(); heads.forEach((b, k) => { b.visible = k < held; });
+    if (bunch.visible) { girl.poseName = 'hold'; const h = S.hand(); bunch.position.set(h.x - origin[0], h.y - .16, h.z - origin[1] + .05); }
+  } };
+}
+/** The fountain: a round basin of pale stone, a pillar, a bowl on top, and water that leaps in paper drops (three cut-outs of
+ *  drops shown one after the other, as in stop motion). A tap: a big splash */
+export function fountain(S, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const add = (m, px, py, pz) => { m.position.set(px, py, pz); g.add(m); return m; };
+  add(m3(new THREE.CylinderGeometry(.74, .8, .36, 22), '#c9c3d4'), 0, .18, 0); add(m3(new THREE.CylinderGeometry(.62, .62, .03, 22), '#7fbcc0'), 0, .36, 0);
+  add(m3(new THREE.CylinderGeometry(.1, .14, .7, 10), '#bdb6c9'), 0, .7, 0); add(m3(new THREE.CylinderGeometry(.34, .16, .14, 16), '#c9c3d4'), 0, 1.08, 0); add(m3(new THREE.CylinderGeometry(.29, .29, .02, 16), '#8fd0e0'), 0, 1.15, 0);
+  const dropG = new THREE.CircleGeometry(.038, 8), phases = [0, 1, 2].map(ph => {
+    const pg = new THREE.Group(); pg.userData.live = true; pg.visible = ph === 0; g.add(pg);
+    for (let a = 0; a < 7; a++) for (let j = 0; j < 3; j++) {
+      const u = (j + ph / 3) / 3 + .04, ang = a / 7 * 6.283 + .3, r = .3 + .36 * u, d = new THREE.Mesh(dropG, paper(j % 2 ? '#f6efe2' : '#8fd0e0', { side: THREE.DoubleSide }));
+      d.position.set(Math.cos(ang) * r, 1.18 + 1.15 * u - 1.95 * u * u, Math.sin(ang) * r); d.scale.set(.8 + u * .5, 1.2 + u * .5, 1); d.castShadow = true; pg.add(d);
+    }
+    S.glue(pg); return pg;
+  });
+  S.solid({ x, z, r: .78 });
+  const [wx, wz] = S.at([x, z]); let splashes = 0;
+  S.tap(g, () => { splashes++; S.sfx.splash(); S.confetti(wx, y + 1.2, wz, ['#8fd0e0', '#f6efe2', '#7fbcc0'], 18, undefined, 3); });
+  return { state: () => ({ splashes }), step({ tick, stepped }) { if (stepped) { const on = Math.floor(tick / 2) % 3; phases.forEach((p, i) => { p.visible = i === on; }); } } };
+}
+/** a bench of painted wood. A tap: she walks round to the front, hops on and sits; any push on the stick, or a touch, and she is up */
+export function bench(S, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const add = (w, h, d, col, px, py, pz, rx = 0) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); m.rotation.x = rx; g.add(m); return m; };
+  for (const k of [-1, 0, 1]) add(1.1, .04, .12, '#d9a066', 0, .4, k * .13);                       // the seat's slats
+  for (const k of [0, 1]) add(1.1, .11, .035, '#d9a066', 0, .62 + k * .16, -.24, -.12);            // the back
+  for (const s of [-1, 1]) { add(.06, .4, .06, '#5f9fae', s * .46, .2, .16); add(.06, .86, .06, '#5f9fae', s * .46, .43, -.22); add(.06, .05, .46, '#5f9fae', s * .46, .52, -.03); }
+  S.wall(x, z - .06, .62, .3);
+  const { girl, sfx } = S, [wx, wz] = S.at([x, z]); let mode = null, t = 0, sits = 0;
+  const toy = { look: [wx, wz + .6], step(dt, inp) {
+    t += dt;
+    if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx; girl.z = wz + .1 + (1 - k) * .7; girl.lift = .44 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1; if (k >= 1) { mode = 'sit'; sits++; sfx.hop(); } return; }
+    if (mode === 'sit') { girl.lift = .44; girl.poseName = 'sit'; if (inp.act || inp.x) { mode = 'off'; t = 0; } return; }
+    const k = Math.min(1, t / .28); girl.z = wz + .1 + k * .75; girl.lift = .44 * (1 - k) + Math.sin(k * Math.PI) * .22; girl.poseName = null; if (k >= 1) { girl.lift = 0; mode = null; S.stopPlay(); }
+  } };
+  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx, wz + .8, () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); }, 1.1); });
+  return { toy, state: () => ({ mode, sits }) };
+}
+/** a lantern: a post with a paper lamp on it. A tap lights it, a tap puts it out. Lit, it glows, and near her it gives real light */
+const lanternMats = [];
+export function lantern(S, x, y, z, n) {
+  const mat = lanternMats[n] || (lanternMats[n] = new THREE.MeshStandardMaterial({ color: '#f6efe2', emissive: '#ffcf86', emissiveIntensity: 0, roughness: .9, side: THREE.DoubleSide })); mat.emissiveIntensity = 0;
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const post = m3(new THREE.CylinderGeometry(.035, .045, 1.25, 8), '#4b4450'); post.position.y = .625; g.add(post);
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.13, .1, .26, 10, 1, true), mat); lamp.position.y = 1.4; g.add(lamp);
+  const cap = m3(new THREE.ConeGeometry(.2, .14, 10), '#4b4450'); cap.position.y = 1.6; g.add(cap); const foot = m3(new THREE.CylinderGeometry(.11, .11, .03, 10), '#4b4450'); foot.position.y = 1.26; g.add(foot);
+  S.solid({ x, z, r: .08 });
+  const light = S.lamp(10 + n, '#ffc98a', 6, 1.5); light.position.set(x, y + 1.4, z); let lit = false;
+  S.tap(g, () => { lit = !lit; S.sfx.click(); });
+  return { state: () => ({ lit }), step({ dt, eve }) { const want = lit ? 1 : 0; mat.emissiveIntensity += (want * 1.6 - mat.emissiveIntensity) * Math.min(1, dt * 8); light.intensity = want * (1.0 + 1.6 * eve); } };
 }
 /** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and so does she when she runs past;
  *  it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */

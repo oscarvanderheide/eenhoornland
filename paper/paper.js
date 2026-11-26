@@ -192,7 +192,7 @@ function buildSea() {
 function buildSet(def) {
   const t0 = performance.now(), [ox, oz] = ORIGIN[def.name] || [0, 0], W = ([x, z]) => [x + ox, z + oz];
   const root = new THREE.Group(); root.name = def.name; root.position.set(ox, 0, oz); scene.add(root);
-  const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], doors: [], names: {}, spots: {} };
+  const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], doors: [], offers: [], names: {}, spots: {} };
   const S = {
     THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine,
     at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
@@ -211,6 +211,8 @@ function buildSet(def) {
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
+    offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
+    hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
     glue: group => bake(group),   // a thing that moves as a whole (a windmill's sails): glue its pieces into one, so it is one draw
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
   };
@@ -272,6 +274,7 @@ function dropSet(s) {
   scene.remove(s.root);
   s.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   for (const f of s.figs) { figures.splice(figures.indexOf(f), 1); scene.remove(f.g); f.mesh.geometry.dispose(); f.dispose(); }
+  for (const o of s.offers) offers.splice(offers.indexOf(o), 1);
 }
 const sun3 = new THREE.Vector3(-7, 11, 8); let shadowFollow = 0;
 
@@ -389,6 +392,8 @@ const sfx = {
   hoot() { tone(330, .3, 'sine', .08, .95); setTimeout(() => tone(290, .45, 'sine', .08, .9), 380); },
   bark() { tone(420, .09, 'square', .06, .7); tone(210, .1, 'sawtooth', .04, .8); },
   yip() { tone(700, .12, 'triangle', .07, 1.5); },
+  munch() { [0, 110, 220].forEach(d => setTimeout(() => noise(.06, .06, 1500), d)); },
+  flutter() { [0, 70, 140, 210].forEach(d => setTimeout(() => noise(.05, .035, 3200), d)); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
@@ -414,7 +419,9 @@ function stepWater(dt) {
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
+const offers = [];   // what she is holding that can be given: each is asked when somebody else is tapped, and says true if it was given
 function tapFigure(f) {
+  if (f !== girl && offers.some(o => o(f))) return;
   if (f === uni) { uni.hopV = 3; sfx.neigh(); confetti(uni.x, .9, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 12, starGeo, 2.4); }
   else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
   else if (f.onTap) f.onTap();
@@ -817,7 +824,7 @@ function frame(now) {
       f.pose.rotation.z = f.tilt * f.face;
       f.mesh.scale.x = f.view === 'side' ? f.face : 1;
     }
-    f.g.position.set(f.x, f.y + (f.lift || 0), f.z); if (f.lean) f.pose.rotation.z = f.lean; else if (f.leant) f.pose.rotation.z = 0; f.leant = !!f.lean;   // a toy lifts and leans her smoothly
+    f.g.position.set(f.x, f.y + (f.lift || 0), f.z); f.g.rotation.z = f.lean || 0;   // a toy lifts her and leans her, smoothly, about the point she sits or stands on
     f.g.rotation.y = Math.atan2(camera.position.x - f.x, camera.position.z - f.z) * .85;
   }
   stepBalloon(dt);
