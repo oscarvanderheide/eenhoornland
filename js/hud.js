@@ -102,13 +102,13 @@ export function createHud(getWorld) {
   const jumpBtn = padBtn('b-jump', 'Doen', 'x', ART.handIcon(), w => { w.jump(); syncAct(true); });
   const hopBtn = padBtn('b-hop', 'Springen', 'o', ART.jumpIcon(), w => w.leapNow());
   const swordBtn = padBtn('b-sword', 'Zwaard', 'sq', ART.toolIcon('zwaard'), w => w.slash());
-  const hookBtn = padBtn('b-hook', 'Haak', 'tri', null, w => w.hook && w.hook());
+  const hookBtn = padBtn('b-hook', 'Haak', 'tri', ART.toolIcon('haak'), w => w.hook && w.hook());
   let actKey = '';
   function syncAct(force) {
     const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey, up = !!(w && w.flying && w.flying());
     pad.style.visibility = up ? 'hidden' : '';                                   // up in the sky the wing button is the one that lands
     swordBtn.classList.toggle('off', !Q.hasTool('zwaard'));
-    hookBtn.classList.toggle('off', !(Q.TOOLS.haak && Q.hasTool('haak')));
+    hookBtn.classList.toggle('off', !Q.hasTool('haak'));
     if (key === actKey && !force) return;
     if (a && key !== actKey) {
       actKey = key; const idle = key === 'jump';                                  // nothing here: ✕ just hops, so it shows an empty hand
@@ -165,7 +165,7 @@ export function createHud(getWorld) {
   function syncWho() { const w = getWorld(), cur = w ? w.who() : (state.extra.who || 'anna'); for (const id in whoBtn) whoBtn[id].classList.toggle('on', id === cur); }
   syncWho();
   const toolRow = document.createElement('div'); toolRow.id = 'tools'; game.appendChild(toolRow);
-  const TOOL_SAY = { zwaard: 'Dit is het zwaard. Tik op een doornstruik om hem weg te hakken!', hamer: 'Dit is de hamer. Tik op een grote steen om hem kapot te slaan!' };
+  const TOOL_SAY = { zwaard: 'Dit is het zwaard. Tik op een doornstruik om hem weg te hakken!' };
 
   let lastSig = {};
   function chip(cls, icon, text, onTap, key, parent = panel) {

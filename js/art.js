@@ -153,9 +153,20 @@ const bigMushroom = () => cached('bigmush', () => sprite(['...RRRRRR...', '.RRwR
 const bramble = seed => cached('bramble' + (seed % 2), () => { const r = PX.rng(seed * 7 + 3), n = []; for (let i = 0; i < 18 * 14; i++) n.push(r()); return gridSprite(18, 14, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 8) / 6.5) ** 2; if (dd > 1) return null; const v = n[y * 18 + x]; if ((x * 3 + y * 5 + seed) % 11 === 0) return '#F3EDE3'; if ((x + y * 2) % 7 === 0 && v < .6) return '#6B4A3A'; if ((x * 5 + y * 3) % 17 === 0) return '#C2456E'; return v < .3 ? '#5C9A4E' : v < .7 ? '#3F7A45' : '#2F5E3C'; }); });
 const boulder = seed => cached('boulder' + (seed % 2), () => gridSprite(18, 15, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 8.5) / 7) ** 2; if (dd > 1 || y > 13) return null; if ((x === 6 + seed % 2 && y > 3 && y < 9) || (y === 8 && x > 6 && x < 10) || (x === 12 && y > 6 && y < 12)) return '#6B7088'; const v = (x - 4) * .55 + (y - 3); return v < 2 ? '#E2E5EE' : v < 6 ? '#BFC4D4' : v < 10 ? '#9FA5BC' : '#848AA2'; }));
 const plas = () => cached('plas', () => gridSprite(18, 12, (x, y) => { const dd = ((x + .5 - 9) / 9) ** 2 + ((y + .5 - 6) / 6) ** 2; if (dd > 1) return null; if (dd > .78) return '#8FD6F5'; return (x + y * 2) % 9 === 0 || (x === 5 && y === 3) || (x === 6 && y === 3) ? '#E8FAFF' : (y < 5 ? '#4FA8DE' : '#3E9AD6'); }, { outline: '#2F7FC0' }));
-export const toolIcon = id => id === 'hamer'
+export const toolIcon = id => id === 'haak'
+  ? cached('haak', () => sprite(['..........G.G', '.tttttttt.GG.', 'tTTTTTTTTgg..', 'ttttttttt.GG.', '.rr.hh....G.G', '.rr.hH.......', '....hh.......', '....hh.......'], { t: '#3FB8A8', T: '#A8F0E4', G: '#F7C548', g: '#D99A2B', r: '#FF5E9C', h: '#8A5A3B', H: '#B5823F' }))
+  : id === 'hamer'
   ? cached('hamer', () => sprite(['..ssssssss..', '.sSSSSSSSSs.', '.sSSSSSSSSs.', '..ssssssss..', '.....hh.....', '.....hh.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hH.....', '.....hh.....'], { s: '#9FA5BC', S: '#D8DCE8', h: '#B5823F', H: '#8A5A3B' }))
   : cached('zwaard', () => sprite(['......Ws', '.....WSs', '....WSs.', '...WSs..', 'g.WSs...', 'ggSs....', '.yg.....', 'y.gg....', '...g....'], { W: '#FFFFFF', S: '#D8DCE8', s: '#9FA5BC', g: '#F7C548', y: '#FF5E9C' }));
+/** the hookshot's post by the gap in the bridge: a wooden pole with a golden ring to hook into */
+export const haakPaal = () => cached('haakpaal', () => gridSprite(10, 28, (x, y) => {
+  const r = Math.hypot(x + .5 - 5, y + .5 - 4.5); if (y < 9) return r <= 4.2 && r >= 2.2 ? (r < 3 || x < 4 ? '#FFE27A' : '#D99A2B') : null;
+  if (x < 3 || x > 6) return y > 24 && (x === 2 || x === 7) ? '#6E4630' : null;
+  return y === 9 ? '#6E4630' : x === 3 ? '#B5823F' : x === 6 ? '#6E4630' : y % 6 === 0 ? '#8A5A3B' : '#9C6B44';
+}));
+/** the hook at the end of the chain, and one link of the chain */
+export const haakKop = () => cached('haakkop', () => sprite(['G...G', 'GG.GG', '.GgG.', '..g..'], { G: '#F7C548', g: '#D99A2B' }));
+export const schakel = () => cached('schakel', () => sprite(['.s.', 's.s', '.s.'], { s: '#C9CEDC' }));
 /** the sword standing in its stone in the village (before it is there, and once it is pulled out, only the stone with its slot) */
 export const zwaardSteen = (withSword = true) => cached('zwsteen2' + withSword, () => gridSprite(22, 34, (x, y) => {
   const cx = x + .5 - 11;
@@ -327,7 +338,7 @@ export const tuinpoort = () => cached('tuinpoort', () => gridSprite(26, 34, (x, 
 const PROPS = {
   berk: ISLE.berk, bloesem: ISLE.bloesem, zonnebloemen: ISLE.zonnebloemen, lolly: ISLE.lolly, wolkstruik: ISLE.wolkstruik, kristalbloem: ISLE.kristalbloem, cipres: ISLE.cipres, lavendel: ISLE.lavendel, bol: ISLE.bol, helm: ISLE.helm,
   druipsteen, kristal, harnas, zuil, muntberg,
-  bramble, boulder, plas, rainbowtree, gat, regenboogbrug,
+  bramble, boulder, plas, rainbowtree, gat, regenboogbrug, kloof: () => haakPaal(),
   tree: s => PX.treeRound(s), pine: s => PX.pine(s), bush: s => PX.bush(s), palm, rock, apple: appleTree, oak, stump, log, fern, rose, hedge, sign, scarecrow, umbrella, sandcastle, boat, statue, flag, trough, hay,
 };
 const SCALE = { berk: 1.25, bloesem: 1.3, lolly: 1.2, cipres: 1.25, zonnebloemen: 1.1, zuil: 1.1, harnas: 1.15, rainbowtree: 1.5, tree: 1.25, pine: 1.25, apple: 1.25, oak: 1.5, palm: 1.35, flag: 1.2, statue: 1.15, scarecrow: 1.05 };

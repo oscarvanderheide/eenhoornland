@@ -55,7 +55,7 @@ export default async function (t) {
   await t.ev(`(c => { __w.placeAt(${F.cx} - 3.5, ${F.cz} + 2.5); __w.life.hold(c); c.pos.set(${F.cx} - 2.5, 0, ${F.cz} + 1); __w.life.toss(c, 3, -1); })(__w.life.stones[0])`);
   ok(await until(`__w.Q.quest.coins > ${c0}`, 20000), 'a pebble in the fountain brings up a coin'); await t.shot('tmp-shots/l-12-wish.png');
   // an animal thrown into the paint is painted
-  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(500);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('haak'); 0`); await t.sleep(500);
   const pd = await J('__w.toys.info().puddles[0]'); const rb = await idx('Konijn');
   await t.ev(`(a => { __w.placeAt(${pd[0]} - 2, ${pd[1]} + .5); __w.life.hold(a); a.pos.set(${pd[0]} - 1.2, 0, ${pd[1]}); __w.life.toss(a, 1.1, 0); })(${A(rb)})`);
   ok(await until(`!!${A(rb)}.painted`, 20000), 'a rabbit thrown into the paint is painted'); await t.sleep(600); await t.shot('tmp-shots/l-13-painted.png');

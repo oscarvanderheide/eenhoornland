@@ -53,10 +53,11 @@ export function createSpeeltuin(ctx) {
   box(slide, .4, .05, .55, X1 + .18, Y1 + .02, .5, yellow, tapSlide, slIcon);                                                 // the flat bit at the bottom
   box(slide, .06, (TOP + Y1) / 2, .06, (X0 + X1) / 2, (TOP + Y1) / 4, .5, white);                                             // a leg under the middle
 
+  const WATCH = (() => { const t = ctx.nearestWalkable(MAP.PLAY.x0 + 3.5, MAP.PLAY.z1 + 1.5); return t ? [t[0] + .5, t[1] + .5] : [MAP.PLAY.x0 + 3.5, MAP.PLAY.z1 + 1.5]; })();
   /* ---------------- playing ---------------- */
   let mode = null, t = 0, from = null, fly = null, lastAt = new THREE.Vector3();
   const near = (x, z, r) => Math.hypot(kid.pos.x - x, kid.pos.z - z) < r;
-  const free = () => !mode && !ctx.mount() && !ctx.fly.on() && !ctx.life.swimming() && ctx.seated() < 0 && !ctx.toys.carrying() && !ctx.life.carrying();
+  const free = () => !mode && !ctx.mount() && !ctx.fly.on() && !ctx.life.swimming() && ctx.seated() < 0 && !ctx.toys.carrying() && !(ctx.keien && ctx.keien.holding());   // an animal in her arms comes along (down the slide: whee)
   function begin(m) { mode = m; t = 0; from = kid.pos.clone(); from.lift = kid.lift || 0; kid.path = []; ctx.clearWalk(); }
   function end() { mode = null; fly = null; kid.lift = 0; kid.mesh.rotation.z = 0; kid.squash = .6; }
   function boardSwing() {
@@ -92,7 +93,9 @@ export function createSpeeltuin(ctx) {
   const ease = k => k * k * (3 - 2 * k);
   return {
     swingIcon: swIcon, slideIcon: slIcon,
-    on: () => !!mode, mode: () => mode, info: () => ({ mode, th: +th.toFixed(3), om: +om.toFixed(3), amp: +Math.max(Math.abs(th), Math.sqrt(th * th + om * om / K)).toFixed(3) }),
+    on: () => !!mode, mode: () => mode,
+    /** where her egg or unicorn waits while she plays: at the edge of the sand, looking on */
+    watch: () => mode ? WATCH : null, info: () => ({ mode, th: +th.toFixed(3), om: +om.toFixed(3), amp: +Math.max(Math.abs(th), Math.sqrt(th * th + om * om / K)).toFixed(3) }),
     boardSwing, startSlide, jumpOff,
     /** what the action button does while she plays: on the swing it jumps her off, on the slide nothing */
     action: () => mode === 'swing' ? jumpOff : () => { },

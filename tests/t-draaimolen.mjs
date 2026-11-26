@@ -17,5 +17,13 @@ export default async function (t) {
   ok(await until('!__w.molen.riding() && !__w.busy()', 12000), 'it slows down and she hops off');
   ok(await t.ev(`__w.walkable(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))`), 'on her feet');
   ok(await t.ev(`__w.action() && __w.action().key`) === 'draaimolen', 'in front of it the action button gets her on again');
+  // stirring the stick round winds it up; her unicorn waits in front and looks on
+  await t.ev(`__w.setMount(null); __w.uni.g.visible = true`); await t.ev('__w.molen.go()'); await t.sleep(1500);
+  const s0 = await t.ev('__w.molen.spin()'); await t.sleep(1000); const slow = await t.ev('__w.molen.spin()') - s0;
+  for (let k = 0; k < 40; k++) { const a = k * .5; await t.ev(`__w.stick(${Math.cos(a).toFixed(3)}, ${Math.sin(a).toFixed(3)})`); await t.sleep(50); }
+  const boost = await t.ev('__w.molen.boost()'); const s1 = await t.ev('__w.molen.spin()'); await t.sleep(1000); const fast = await t.ev('__w.molen.spin()') - s1; await t.ev('__w.stick(0, 0)');
+  ok(boost > 1 && fast > slow * 1.6, 'stirring the stick makes it go faster: ' + slow.toFixed(2) + ' -> ' + fast.toFixed(2) + ' (boost ' + boost.toFixed(2) + ')'); await t.shot('tmp-shots/m-3-fast.png');
+  const W = await J('__w.molen.watch()'); ok(!!W && await t.ev(`Math.hypot(__w.uni.pos.x - ${W[0]}, __w.uni.pos.z - ${W[1]}) < .4`), 'her unicorn waits in front of the carousel: ' + W);
+  ok(await until('!__w.molen.riding() && !__w.busy()', 20000), 'once she stops stirring it slows down and she hops off');
   if (fail) console.log('  DRAAIMOLEN FAILED ' + fail);
 }

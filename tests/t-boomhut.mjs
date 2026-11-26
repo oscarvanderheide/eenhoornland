@@ -20,7 +20,7 @@ export default async function (t) {
   ok(await until(`__w.kid.lift > 1.2 && !__w.MAP.roomAt(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))`, 4000), 'she climbs up the ladder'); await t.shot('tmp-shots/b-1b-ladder.png');
   ok(await until(`__w.MAP.roomAt(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z)) === 'hut'`, 10000), 'a tap on the oak: up the ladder into the treehouse'); await t.sleep(1500); await t.shot('tmp-shots/b-2-inside.png');
   // the telescope looks out over the islands
-  const S = [R.x0 + 1.5, R.z0 + .7]; await goNear(S[0], S[1]);
+  const S = [R.x1 - .5, R.z0 + .75]; await goNear(S[0], S[1]);   // at the big window in the back wall
   { const k = await J('__w.action() && __w.action().key'); ok(String(k).startsWith('tap'), 'next to the telescope the action button shows it (' + k + ')'); await t.shot('tmp-shots/b-2b-act-telescope.png'); }
   await tapAt(S[0], .5, S[1]);
   ok(await until(`__w.hut.info().view === 1`, 6000), 'a tap on the telescope: she looks through it'); await t.sleep(900); await t.shot('tmp-shots/b-3-telescope.png');
@@ -32,7 +32,7 @@ export default async function (t) {
   await goNear(R.x0 + 4.5, R.z0 + .8); await tapAt(R.x0 + 4.5, .5, R.z0 + .8); ok(await until(`__w.hut.napping()`, 6000), 'a tap on the hammock: she swings in it'); await t.sleep(1800); await t.shot('tmp-shots/b-4b-hammock.png');
   ok(await until(`!__w.hut.napping() && !__w.busy()`, 6000), 'and hops out again');
   // the zipline
-  await goNear(R.zip[0] + .5, R.z0 + .1); await tapAt(R.zip[0] + .5, 1, R.z0 + .1);
+  await goNear(R.x0 + .5, R.zip[1] + .5); await tapAt(R.x0 + .05, 1, R.zip[1] + .5);   // the door in the left wall, at the front
   ok(await until(`__w.hut.riding()`, 8000), 'a tap on the platform door: onto the zipline'); await t.sleep(1900); await t.shot('tmp-shots/b-5-zip.png');
   ok(await t.ev(`__w.kid.lift > .4`), 'she hangs high above the water');
   ok(await until(`!__w.hut.riding() && !__w.busy()`, 8000), 'and lands'); await t.sleep(600); await t.shot('tmp-shots/b-6-landed.png');

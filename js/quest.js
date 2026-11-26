@@ -44,24 +44,25 @@ let q = state.extra.quest && state.extra.quest.v === 2 && STAGES.includes(state.
 if (!q) { q = state.extra.quest = fresh(state.extra.quest); save(); }
 delete q.bag; delete q.totals;   // from when found things went into a bag
 for (const k of ['picked', 'tools', 'own']) if (!q[k] || typeof q[k] !== 'object') q[k] = {};
+if (q.tools.hamer) { q.tools.haak = true; delete q.tools.hamer; }   // the hammer is gone: whoever had it has the hookshot
 for (const k of ['garden', 'sand', 'blooms']) if (!Array.isArray(q[k])) q[k] = [];
 if (q.tools.schaar) { q.tools.zwaard = true; delete q.tools.schaar; }   // the shears became a sword
 if (!Array.isArray(q.herd)) q.herd = []; if (!Array.isArray(q.broken)) q.broken = [];
 export const quest = q;
 
 /* ---------- tools & the world of this cycle ---------- */
-/** shears cut the brambles on the bridge to the flower meadow, the hammer smashes the boulders on the bridge to the beach. Tools are kept forever. */
+/** the sword cuts the brambles on the bridge to the flower meadow; the hookshot pulls her across the gap in the bridge to the beach. Tools are kept forever. */
 export const TOOLS = {
   zwaard: { name: 'zwaard', found: 'Jullie hebben het zwaard! Daarmee hak je doornstruiken weg. Ga naar de brug met de doornstruiken!', need: 'Au, doornstruiken! Hier heb je een zwaard voor nodig.' },
-  hamer: { name: 'hamer', found: 'Jullie hebben de hamer gevonden! Daarmee sla je grote stenen kapot. Ga naar de brug met de stenen!', need: 'Wat een grote steen! Hier heb je de hamer voor nodig.' },
+  haak: { name: 'haak', found: 'Jullie hebben de grijphaak! Schiet hem naar de paal aan de overkant van de kapotte brug!', need: 'De brug is kapot! Hier heb je een grijphaak voor nodig.' },
 };
 export const hasTool = id => id === 'rit' ? canRide() : !!q.tools[id];
-/** the tool the children have to find now (or null). The shears only turn up once there is an egg, the hammer once it has hatched. */
-export function neededTool() { return q.stage === 'ei' && !q.tools.zwaard ? 'zwaard' : q.stage === 'baby' && !q.tools.hamer ? 'hamer' : null; }
+/** the tool the children have to find now (or null). The sword only turns up once there is an egg, the hookshot once it has hatched. */
+export function neededTool() { return q.stage === 'ei' && !q.tools.zwaard ? 'zwaard' : q.stage === 'baby' && !q.tools.haak ? 'haak' : null; }
 /** does this tool lie somewhere in the world right now? */
-// (the sword in its stone and the gnome with his hammer are always there: whoever finds them early simply has them early)
+// (whoever finds a tool early simply has it early)
 export const toolOut = id => !q.tools[id];
-/** the sword turns up in its stone once the egg is found, the gnome's hammer once the unicorn has hatched */
+/** the sword turns up in its stone once the egg is found, the hookshot's chest in the forest once the unicorn has hatched */
 export const toolReady = id => STAGES.indexOf(q.stage) >= (id === 'zwaard' ? 1 : 2);
 export function giveTool(id) { if (!TOOLS[id] || q.tools[id]) return false; q.tools[id] = true; commit(['tool', id]); return true; }
 /** obstacle `i` of this cycle's world was cut or smashed; loose ones hide a coin */
@@ -103,9 +104,9 @@ export function wishText(w) {
   if (w.t === 'egg') return (q.cycle ? 'Er ligt weer ergens een ei verstopt! ' : 'Je droomde van een geheimzinnig ei. Zou het echt bestaan? ') + (HINT[q.zone] || HINT.bos);
   if (w.t === 'tool') return w.id === 'zwaard'
     ? 'Het ei heeft het koud! In de bloemenwei ligt ' + warmName() + '. Maar de brug zit dicht met doornstruiken. In het dorp staat een zwaard in een steen. Trek het eruit! Kijk maar op de kaart.'
-    : n + ' heeft honger! Ze wil ' + foodName() + '. Maar er liggen grote stenen op de brug naar het strand. Zoek de hamer in het bos! Kijk maar op de kaart.';
+    : n + ' heeft honger! Ze wil ' + foodName() + '. Maar de brug naar het strand is kapot. In het bos staat een kist met een grijphaak. Leg stenen op de knoppen! Kijk maar op de kaart.';
   if (w.t === 'star') return neededTool() ? 'Met het zwaard kun je naar de bloemenwei. Daar ligt ' + warmName() + ' voor het ei.' : 'Het ei heeft het koud! Zoek ' + warmName() + ' in de bloemenwei. Hak de doornstruiken op de brug weg.';
-  if (w.t === 'fruit') return neededTool() ? 'Met de hamer kun je naar het strand. Daar ligt een boot naar het regenboogeiland.' : n + ' heeft honger! Sla de stenen op de brug kapot, ga naar het strand en neem de boot naar het regenboogeiland. Daar groeit ' + foodName() + '!';
+  if (w.t === 'fruit') return neededTool() ? 'Met de grijphaak kun je naar het strand. Daar ligt een boot naar het regenboogeiland.' : n + ' heeft honger! Schiet de grijphaak over de kapotte brug, ga naar het strand en neem de boot naar het regenboogeiland. Daar groeit ' + foodName() + '!';
   if (w.t === 'wei') return n + ' is nu sterk genoeg. Tik op ' + n + ' en klim op haar rug! Spring over de kapotte brug naar het kasteel en ga naar binnen. In de kasteeltuin slaapt de regenboog: maak hem wakker!';
   return '';
 }

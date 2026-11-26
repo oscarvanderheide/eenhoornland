@@ -186,9 +186,33 @@ export const zipDeur = () => cached('zipDeur', () => gridSprite(22, 34, (x, y) =
   return leaf ? ((x + y) % 3 ? '#62BC62' : '#8FD06A') : y < 14 ? '#BFE8FF' : '#9FD8F5';
 }));
 /** a brass telescope on three legs, pointing out of the window */
-export const telescoop = () => cached('telescoop', () => sprite([
-  '..........bb', '........bbBb', '......bbBbb.', '....bbBbb...', '...gbBbb....', '..ggbb......', '...gg.......', '...g.g......', '..g...g.....', '..g...g.....', '.g.....g....', '.g.....g....',
-], { b: '#E0B046', B: '#FFE08A', g: '#6B4126' }));
+export const telescoop = () => cached('telescoop2', () => gridSprite(20, 26, (x, y) => {
+  const X = x + .5, Y = y + .5;
+  // the tube: a brass telescope tilted up towards the window, wider at the lens end
+  const ax = 3, ay = 13, bx = 17, by = 4, vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy, t = ((X - ax) * vx + (Y - ay) * vy) / l2;
+  if (t > -.05 && t < 1.05) {
+    const px = ax + vx * t, py = ay + vy * t, d = Math.hypot(X - px, Y - py), r = 1.5 + 1.1 * Math.max(0, Math.min(1, t)), side = (X - px) * vy - (Y - py) * vx;
+    if (d < r) {
+      if (t > .93) return d < r - .9 ? '#9FE3FF' : '#B5823F';                    // the lens with its rim
+      if (t < .04) return '#6E4630';                                              // the eyepiece
+      if (Math.abs(t - .35) < .04 || Math.abs(t - .7) < .04) return '#B5823F';    // brass rings
+      return side < -r * .3 ? '#FFE08A' : side > r * .5 ? '#C9962E' : '#E8B84A';
+    }
+  }
+  // the tripod: three wooden legs from under the tube
+  const hx = 10, hy = 11.5;
+  for (const [fx, fy] of [[3, 25.5], [10, 25.5], [17, 25.5]]) { const lx = fx - hx, ly = fy - hy, u = ((X - hx) * lx + (Y - hy) * ly) / (lx * lx + ly * ly); if (u > 0 && u < 1 && Math.hypot(X - hx - lx * u, Y - hy - ly * u) < .75) return u > .9 ? '#4A2E1A' : '#8A5A33'; }
+  if (Math.hypot(X - hx, Y - hy) < 1.3) return '#6E4630';
+  return null;
+}));
+/** a big window in the treehouse's back wall: sky, a cloud, the tops of trees */
+export const raamGroot = () => cached('raamGroot', () => gridSprite(28, 22, (x, y) => {
+  if (x < 2 || x > 25 || y < 2 || y > 19) return x === 0 || x === 27 || y === 0 || y === 21 ? '#5A3A22' : '#8A5A33';   // the frame
+  if (x === 13 || x === 14 || y === 10) return '#8A5A33';                                                             // the cross
+  if (y > 15 && (Math.sin(x * 1.3) + Math.sin(x * .55)) * 1.2 + 16.5 < y) return y % 2 ? '#5DA34A' : '#4E9A51';     // tree tops
+  if (Math.hypot((x - 7) / 3.4, y - 6) < 1.6 || Math.hypot((x - 9.5) / 2.4, y - 5.3) < 1.3 || Math.hypot((x - 20) / 3, y - 13.3) < 1.1) return '#FFFFFF';   // clouds
+  return y < 8 ? '#8FD0F5' : y < 14 ? '#A8DCF8' : '#C4E8FB';
+}));
 /** the squirrel's pile of acorns */
 export const eikels = () => cached('eikels', () => gridSprite(16, 9, (x, y) => {
   const d = ((x + .5 - 8) / 7.8) ** 2 + ((y + .5 - 9) / 8.4) ** 2; if (d > 1) return null;
@@ -236,3 +260,28 @@ export const paddo = (k = 0) => cached('paddo' + k, () => {
     return null;
   });
 });
+
+/** the meadow's musician: a cricket on a stump playing the fiddle, looking left towards the bench. f: the bow (0 / 1) */
+export const krekel = (f = 0) => cached('krekel' + f, () => gridSprite(20, 28, (x, y) => {
+  const X = x + .5, Y = y + .5, line = (ax, ay, bx, by, w) => { const vx = bx - ax, vy = by - ay, t = Math.max(0, Math.min(1, ((X - ax) * vx + (Y - ay) * vy) / (vx * vx + vy * vy))); return Math.hypot(X - ax - vx * t, Y - ay - vy * t) < w; };
+  // the stump
+  if (y >= 21) return y === 21 ? '#E9C99A' : y === 22 ? '#C9A06C' : x < 3 || x > 16 ? null : x % 4 === 1 ? '#6E4630' : '#8A5A3B';
+  // the bow, sawing across the strings
+  if (f ? line(2, 13.5, 12, 9.5, .55) : line(2.5, 9, 12, 13.5, .55)) return '#F2E6C9';
+  // the fiddle under its chin
+  if (line(4.8, 6.5, 4.2, 12, .6)) return '#5E3A1E';
+  if (((X - 4.5) / 2.3) ** 2 + ((Y - 13.2) / 3) ** 2 <= 1) return Y < 12 ? '#D9823A' : '#B5651D';
+  // antennae
+  if (line(9, 3, 13.5, -1, .5) || line(10, 3.5, 16.5, 1, .5)) return '#4E8A3E';
+  // the head with its big eye
+  const h = ((X - 9.5) / 3.6) ** 2 + ((Y - 6) / 3.3) ** 2;
+  if (h <= 1) { if (Math.hypot(X - 8, Y - 5.6) < 1.5) return Math.hypot(X - 7.6, Y - 5.1) < .6 ? '#FFFFFF' : '#2B1E3A'; if (x === 7 && y === 8) return '#3E6B30'; return Y < 4.5 ? '#A8E08A' : '#7BC86C'; }
+  // the body, standing up on its long hind legs
+  const b = ((X - 11) / 3.4) ** 2 + ((Y - 14) / 5.2) ** 2;
+  if (b <= 1) return X < 10.5 ? '#B5E8A0' : (x + y) % 5 === 0 ? '#5FAE52' : '#7BC86C';
+  if (line(12.5, 17, 16, 15, .7) || line(16, 15, 15, 21, .7) || line(10, 18.5, 9, 21, .6)) return '#4E8A3E';   // the legs
+  if (line(13, 10, 17.5, 19, .9)) return '#9BD98A';                                                           // a folded wing
+  return null;
+}));
+/** a music note floating up */
+export const noot = (k = 0) => cached('noot' + (k % 4), () => sprite(k % 2 ? ['..ss', '..s.', '..s.', 'hhs.', 'hh..'] : ['.ss.', '.s.s', '.s..', 'hs..', 'h...'], { s: '#7A4E8A', h: ['#FF7EB6', '#FFD43B', '#7FD3F7', '#9BE8A8'][k % 4] }));

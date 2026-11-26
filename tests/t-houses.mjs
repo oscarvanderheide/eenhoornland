@@ -4,7 +4,7 @@ export default async function (t) {
   fs.mkdirSync('tmp-shots', { recursive: true });
   let fail = 0; const ok = (c, m) => { console.log(c ? '  ok  ' : '  FAIL', m); if (!c) fail++; };
   await t.go('http://127.0.0.1:8765/dev.html?go&debug'); await t.ev('localStorage.clear()'); await t.go('http://127.0.0.1:8765/dev.html?go&debug');
-  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('haak'); 0`); await t.sleep(800);
   ok(await t.ev(`document.querySelectorAll('.blabel').length`) === 0, 'no signs above the houses');
   for (const id of ['huisje', 'stal', 'atelier', 'bakkerij', 'kermis']) {
     await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='${id}'); __w.placeAt(b.door[0]+.5,b.door[1]+2.5)})()`); await t.sleep(2500); await t.shot(`tmp-shots/h-${id}.png`);

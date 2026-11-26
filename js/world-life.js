@@ -104,7 +104,7 @@ export function createLife(ctx) {
   const dist = c => Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z);
   function lift(c) {
     if (c.fly || c.cart || carried === c) return; if (c.nap > 0) wake(c); if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
-    carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); if (!c.stone) { bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true); }
+    carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; c.up = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); if (!c.stone) { bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true); }
   }
   function setDown() {
     const c = carried; if (!c) return false; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; c.hop = 1; c.wait = 2; sfx.pop();
@@ -438,7 +438,7 @@ export function createLife(ctx) {
       if (carried && ctx.mount() === 'fiets') { const c = carried; carried = null; c.held = false; c.lift = 0; c.mesh.rotation.z = 0; ctx.play.tapAnimal(c); }
       else if (carried && (ctx.mount() || (ctx.toys && ctx.toys.carrying()))) setDown();
       if (carried) { const c = carried; c.pos.set(kid.pos.x, 0, kid.pos.z + .1); c.face = kid.face;   // just in front of her spot (she sorts at +.06), so it is drawn over her head, not behind it
-      c.lift = Math.min(1.02, c.lift + dt * 5); c.mesh.rotation.z = Math.sin(time * 5) * .1; }
+      c.up = Math.min(1.02, (c.up || .2) + dt * 5); c.lift = c.up + (kid.lift || 0); c.mesh.rotation.z = Math.sin(time * 5) * .1; }   // over her head, also up on a stone or the slide
       for (const a of animals) if (a.fly) stepFlight(a, dt); else if (a.held && a !== carried) a.mesh.rotation.z = Math.sin(time * 18) * .18;
       for (const a of animals) {
         if (a.ghost) a.ghost.visible = !a.cart && !a.held && !a.swim;

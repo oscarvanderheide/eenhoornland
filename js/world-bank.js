@@ -1,4 +1,5 @@
-// Benches in the village (MAP.BENCHES): two on the north shore of the duck pond, one by the fountain. A tap on a bench,
+// Benches (MAP.BENCHES): two on the north shore of the duck pond, one by the fountain, and a log in the flower meadow
+// where the cricket plays (world-muziek.js). A tap on a bench,
 // the action button next to it, or walking into it from the front and up she hops and sits down (the seat is a "top" in
 // world.js, so every step, tap or button press gets her off again, nothing can keep her there). After a moment she swings
 // her legs. On a pond bench the ducks paddle over to see her.
@@ -19,12 +20,20 @@ export function createBank(ctx) {
   const [pc, px] = canvas(32, 4); for (let y = 0; y < 4; y++) for (let x = 0; x < 32; x++) { px.fillStyle = y === 3 ? '#9C6A3E' : y === 0 ? '#EBC08A' : (x * 7 + y * 3) % 11 === 0 ? '#B98250' : '#D9A066'; px.fillRect(x, y, 1, 1); }
   const wood = new THREE.MeshLambertMaterial({ map: tex(pc) }), iron = new THREE.MeshLambertMaterial({ color: '#5E4A6A' });
   const icon = benchIcon(), benches = [];
+  const [bc, bx] = canvas(16, 8); for (let y = 0; y < 8; y++) for (let x = 0; x < 16; x++) { bx.fillStyle = (x * 3 + y * 5) % 7 === 0 ? '#5E3A22' : y % 3 === 0 ? '#7A4E33' : '#8A5A3B'; bx.fillRect(x, y, 1, 1); }
+  const bark = new THREE.MeshLambertMaterial({ map: tex(bc) }), rings = new THREE.MeshLambertMaterial({ color: '#E9C99A', side: THREE.DoubleSide });
   for (const b of MAP.BENCHES) {
     const g = new THREE.Group(); g.position.set(b.cx, 0, b.z); scene.add(g);
     const box = (w, h, d, x, y, z, mat, rx = 0) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.x = rx; m.castShadow = m.receiveShadow = true;
       m.userData.tap = () => sitOn(b); m.userData.icon = icon; m.userData.bench = true; g.add(m); pick.push(m); return m;
     };
+    if (b.log) {                                                                                  // the meadow's bench is a fallen log
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(.21, .23, 1.85, 12), bark); log.rotation.z = Math.PI / 2; log.position.set(0, .2, .45); log.castShadow = log.receiveShadow = true;
+      log.userData.tap = () => sitOn(b); log.userData.icon = icon; log.userData.bench = true; g.add(log); pick.push(log);
+      for (const x of [-.93, .93]) { const end = new THREE.Mesh(new THREE.CircleGeometry(.21, 12), rings); end.rotation.y = x > 0 ? Math.PI / 2 : -Math.PI / 2; end.position.set(x, .2, .45); g.add(end); }
+      benches.push(b); continue;
+    }
     for (const z of [.3, .44, .58]) box(1.7, .05, .12, 0, .27, z, wood);                       // the seat
     for (const y of [.44, .6]) box(1.7, .1, .045, 0, y, .21 - (y - .44) * .2, wood, -.18);     // the back, leaning a little
     for (const x of [-.8, .8]) {

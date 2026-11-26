@@ -10,7 +10,7 @@ export default async function (t) {
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null, run = n => !only || only.includes(n);
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL);
-  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('haak'); 0`); await t.sleep(800);
   const M = await J('({POTS:__w.MAP.POTS,CAN:__w.MAP.CAN,STALL:__w.MAP.STALL,BUCKET:__w.MAP.BUCKET,KITE:__w.MAP.KITE,WHALE:__w.MAP.WHALE,POND:__w.MAP.POND,C:__w.MAP.CASTLE})');
 
   if (run('dorp')) {   // the watering can and the flower pots
@@ -76,7 +76,7 @@ export default async function (t) {
   if (run('strand')) {   // sand towers
     await place(M.BUCKET[0] + 1.5, M.BUCKET[1] + 1.5); await t.sleep(2500); await shot('21-bucket');
     ok(await t.ev(`__w.toys.tapGround(60, 72)`) === false, 'without the bucket a tap on the sand just walks');
-    await t.ev(`__w.toys.take('emmer')`); await t.sleep(1200); await shot('21b-ghost'); ok(await t.ev(`__w.toys.info().ahead !== null`), 'with the bucket a see-through tower shows where it goes');
+    await t.ev(`__w.toys.take('emmer')`); await t.sleep(1200); await shot('21b-ghost'); ok(await t.ev(`__w.toys.info().ahead !== null`), 'with the bucket a damp patch of sand shows where it goes');
     await t.ev(`__w.toys.putDown()`); await t.sleep(400); ok(await t.ev(`__w.toys.info().towers.length === 1 && __w.toys.carrying() === 'emmer'`), 'putting it down on the sand flips it into a tower'); await t.ev(`(([x, z]) => __w.Q.stompSand(x, z))(__w.toys.info().towers[0]); 0`); await t.sleep(300);
     ok(await t.ev(`__w.toys.tapGround(59, 72)`) === true, 'with the bucket a tap on the sand builds'); ok(await until(`__w.toys.info().towers.length === 1`, 20000), 'a sand tower stands');
     await t.ev(`__w.toys.build(59,72); __w.toys.build(59,72); __w.toys.build(61,72); __w.toys.build(56,72)`); await t.sleep(900); let s = await toys(); ok(s.towers.length === 3 && s.towers.some(x => x[2] === 3), 'towers grow three high'); await place(58.5, 73.6); await t.sleep(1500); await shot('22-towers');

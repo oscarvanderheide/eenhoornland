@@ -35,7 +35,7 @@ export function createDraaimolen(ctx) {
     }
   }
   function go() {
-    if (ride) return; ride = { t: 0, n: 0 }; ctx.setBusy(true); if (ctx.mount()) ctx.setMount(null, true);
+    if (ride) return; ride = { t: 0, n: 0, T: 9, boost: 0, ang: null }; ctx.setBusy(true); if (ctx.mount()) ctx.setMount(null, true);
     const h = horses[0]; kid.face = 1; burst(kid.pos, 6, true); sfx.sparkle(); ride.h = h;
   }
   const near = () => Math.hypot(C.on[0] + .5 - kid.pos.x, C.on[1] + .5 - kid.pos.z) < 1.2;
@@ -43,13 +43,21 @@ export function createDraaimolen(ctx) {
   for (const m of [floor, roof, pole, ...horses.map(h => h.m)]) { m.userData.tap = tap; pick.push(m); }
   ctx.addUse(() => !ride && !ctx.toys.carrying() && near() ? { key: 'draaimolen', art: ART.uniSprite(LOOKS[2], 'idle', false, { baby: true }), run: go } : null);
   const TUNE = [4, 2, 0, 2, 4, 4, 4, 2, 2, 2, 4, 7, 7];
+  const WATCH = (() => { const t = ctx.nearestWalkable(C.on[0] + 2, C.on[1] + 1.5); return t ? [t[0] + .5, t[1] + .5] : [C.on[0] + 2, C.on[1] + 1.5]; })();
   place(0);
   return {
-    riding: () => !!ride, spin: () => spin, go,
+    riding: () => !!ride, spin: () => spin, go, boost: () => ride ? ride.boost : 0,
+    /** where her egg or unicorn waits while she rides: in front, looking on */
+    watch: () => ride ? WATCH : null,
     update(dt, time) {
       if (ride) {
-        const r = ride; r.t += dt; const T = 9; speed = r.t < 1.2 ? r.t / 1.2 : r.t > T - 1.6 ? Math.max(0, (T - r.t) / 1.6) : 1;
-        if (r.t > r.n * .42 + .3 && r.t < T - 1.2) { sfx.chime(TUNE[r.n % TUNE.length]); r.n++; }
+        const r = ride; r.t += dt;
+        // stirring the stick (or the arrows) round and round winds it up: faster and faster, and it keeps going while she stirs
+        const v = ctx.input ? ctx.input() : { x: 0, z: 0 };
+        if (Math.hypot(v.x, v.z) > .5) { const a = Math.atan2(v.z, v.x); if (r.ang !== null) { let d = a - r.ang; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 1.6) { r.boost = Math.min(3, r.boost + Math.abs(d) * .3); if (r.boost > .3) r.T = Math.min(r.t + 3, 60, Math.max(r.T, r.t + 3)); } } r.ang = a; } else r.ang = null;
+        r.boost = Math.max(0, r.boost - dt * .35); if (r.boost > 2.2 && Math.random() < dt * 6) burst(kid.pos, 1, true);
+        const T = r.T; speed = (r.t < 1.2 ? r.t / 1.2 : r.t > T - 1.6 ? Math.max(0, (T - r.t) / 1.6) : 1) * (1 + r.boost);
+        if (r.t > r.n * .42 / (1 + r.boost * .5) + .3 && r.t < T - 1.2) { sfx.chime(TUNE[r.n % TUNE.length]); r.n++; }   // the tune speeds up too
         kid.pos.set(r.h.x, 0, r.h.z + .02); kid.lift = r.h.y + .32; kid.zBias = .02; kid.face = r.h.m.scale.x > 0 ? 1 : -1;
         if (r.t >= T) { ride = null; speed = 0; kid.lift = 0; kid.zBias = .06; ctx.placeAt(C.on[0] + .5, C.on[1] + .6, 0, 1); kid.hop = 1; sfx.boing(); burst(kid.pos, 8, true); ctx.setBusy(false); }
       } else if (speed > 0) speed = Math.max(0, speed - dt);

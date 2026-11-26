@@ -35,7 +35,8 @@ export function createFlight(ctx) {
   function reachable(sx, sz, ride) {
     const re = new Uint8Array(M.block.length), q = [I(sx, sz)]; re[q[0]] = 1;
     const docks = [I(...MAP.BOAT.strand.dock), I(...MAP.BOAT.eiland.dock)];
-    const pass = j => { const b = M.block[j]; return b === 0 || b === MAP.LOW || (ride && b === MAP.GAP); };
+    const hook = Q.hasTool('haak') && ctx.haak;
+    const pass = j => { const b = M.block[j]; return b === 0 || b === MAP.LOW || (ride && b === MAP.GAP) || (hook && ctx.haak.gapTile(j)); };   // the hookshot crosses the gap in the bridge
     for (let h = 0; h < q.length; h++) {
       const i = q[h], x = i % W, z = Math.floor(i / W);
       if (i === docks[0] && !re[docks[1]]) { re[docks[1]] = 1; q.push(docks[1]); }

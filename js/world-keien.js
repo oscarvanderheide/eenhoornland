@@ -44,18 +44,18 @@ export function createKeien(ctx) {
     s.wob = .5; sfx.wrong && sfx.wrong(); return false;                              // no room anywhere: it wiggles, she keeps it
   }
   /** a stone the hookshot pulled: it slides to the tile next to her */
-  function slideTo(s, x, z) {
+  function slideTo(s, x, z, dur = .25) {
     if (s === held) return false;
     ctx.solid(s.x, s.z, false); ctx.tops.delete(I(s.x, s.z)); const ox = s.x, oz = s.z;
     if (!lay(s, x, z)) { lay(s, ox, oz); return false; }
-    kept[s.id] = [x, z]; save(); s.slide = { from: new THREE.Vector3(ox + .5, 0, oz + .55), t: 0 }; sfx.bonk(); return true;
+    kept[s.id] = [x, z]; save(); s.slide = { from: new THREE.Vector3(ox + .5, 0, oz + .55), t: 0, sp: 1 / Math.max(.1, dur) }; return true;
   }
 
   // the stones of this world: from map.js, or where the girls left them
-  (M.bigStones || []).forEach(([x, z, zone], k) => {
+  (M.bigStones || []).forEach(([x, z, zone, tag], k) => {
     const art = ART.propArt('rots-' + zone, 1 + (k % 3)), mesh = makeSprite(art, { lean: .3, scale: ART.propScale('rots-' + zone) * 1.05 });
     mesh.userData.alpha = art; scene.add(mesh);
-    const s = { id: k, x, z, zone, mesh, art, wob: 0, up: 0 };
+    const s = { id: k, x, z, zone, tag, mesh, art, wob: 0, up: 0 };
     const at = kept[k]; if (!(at && lay(s, at[0], at[1])) && !lay(s, x, z)) {
       const t = ctx.nearestWalkable(x + .5, z + .5); if (!(t && lay(s, t[0], t[1]))) { mesh.visible = false; return; }
     }
@@ -90,7 +90,7 @@ export function createKeien(ctx) {
           s.mesh.rotation.z = Math.sin(time * 6) * .03;
           continue;
         }
-        if (s.slide) { s.slide.t = Math.min(1, s.slide.t + dt * 4); const k = s.slide.t; s.mesh.position.lerpVectors(s.slide.from, new THREE.Vector3(s.x + .5, 0, s.z + .55), k); s.mesh.rotation.z = Math.sin(k * Math.PI) * .2; if (k >= 1) s.slide = null; }
+        if (s.slide) { s.slide.t = Math.min(1, s.slide.t + dt * s.slide.sp); if (s.slide.t >= 1) sfx.bonk(); const k = s.slide.t; s.mesh.position.lerpVectors(s.slide.from, new THREE.Vector3(s.x + .5, 0, s.z + .55), k); s.mesh.rotation.z = Math.sin(k * Math.PI) * .2; if (k >= 1) s.slide = null; }
         if (s.wob > 0) { s.wob -= dt; s.mesh.rotation.z = Math.sin(s.wob * 40) * .08; if (s.wob <= 0) s.mesh.rotation.z = 0; }
       }
     },

@@ -25,7 +25,7 @@ export default async function (t) {
   ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 2, 'the goal is the egg'); await settle(1500); await shot('08-outside');
   await t.ev(`document.querySelector('#quest .qchip').click()`); await settle(700); ok(await t.ev(`!!document.querySelector('.kaart-goal') && document.querySelectorAll('.kaart-gate').length === 3`), 'the chip opens the map with the goal and the three closed bridges'); await shot('09-map');
   await t.ev(`document.querySelector('#modal [data-close]').click()`);
-  ok(await t.ev(`!__w.tools.spot('zwaard') && !__w.tools.spot('hamer')`), 'no sword in the stone and no hammer by the gnome yet'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
+  ok(await t.ev(`!__w.tools.spot('zwaard') && !__w.tools.spot('haak')`), 'no sword in the stone and no hookshot chest yet'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
   ok(await t.ev(`document.querySelector('#b-ride').hidden`), 'no ride button yet');
   // the world is closed: the meadow cannot be walked to
   await place(45.5, 45.5); ok(await t.ev(`__w.walkTo(64,45)`) === true, 'walking to the meadow walks up to the brambles'); await settle(5000); s = await q(); ok(s.pos[0] < 49, 'and stops there (x=' + s.pos[0] + ')'); await shot('10-brambles');
@@ -49,10 +49,12 @@ export default async function (t) {
   for (const n of ['16a-cold', '16b-warm', '16c-wobble', '16d-flash', '16e-born', '16f-friends']) { await t.sleep(3200); await shot(n); await tap(); }
   ok(await until(`!document.querySelector('#scene')`, 30000), 'the hatching scene ends'); await settle(1500); await shot('17-hatched');
   await place(76.5, 31.5); await settle(600); await t.ev(`__w.walkTo(76,25)`); await settle(5000); s = await q(); ok(s.pos[1] > 28.9 && s.mount === null, 'a baby cannot jump the broken bridge yet (z=' + s.pos[1] + ')');
-  s = await q(); ok(s.uni && s.w.join() === 'tool:hamer,fruit:fruit', 'a little unicorn follows; now the hammer');
-  // hammer → boulders → boat → fruit
-  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('hamer'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the gnome with the hammer sleeps in the forest'); await place(p[0] - 2.5, p[1] + 1); await settle(1800); await shot('17b-gnome'); await place(p[0] - .9, p[1] + .1); await t.sleep(1200); await shot('17c-awake'); ok(await until(`__w.Q.hasTool('hamer')`, 15000), 'he wakes up and gives her the hammer'); await settle(2000);
-  await place(70.5, 56.5); await settle(1500); await shot('18-boulders'); await t.ev(`__w.tools.useAt(70,58)`); await settle(1200); ok(await t.ev(`__w.walkable(70,58) && __w.walkable(71,58)`), 'the boulders are smashed');
+  s = await q(); ok(s.uni && s.w.join() === 'tool:haak,fruit:fruit', 'a little unicorn follows; now the hookshot');
+  // hookshot → the gap → boat → fruit
+  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('haak'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the hookshot chest stands in the forest'); await place(p[0] + .5, p[1] + 3.5); await settle(1800); await shot('17b-chest');
+  await t.ev(`(() => { const H = __w.haak.info(), st = __w.keien.stones().filter(s => s.tag === 'puzzle'); st.forEach((s, k) => __w.keien.slideTo(s, H.plates[k][0], H.plates[k][1])); })()`);
+  ok(await until(`__w.Q.hasTool('haak')`, 6000), 'a stone on each button: the chest opens, the hookshot is hers'); await settle(1500); await shot('17c-hookshot');
+  await place(70.5, 55.5); await settle(1500); await shot('18-gap'); await t.ev(`__w.hook()`); ok(await until(`__w.kid.pos.z > 60 && !__w.busy()`, 8000), 'the hookshot pulls her across the gap in the bridge');
   await place(88.5, 70.5); await settle(1500); await shot('19-beach'); ok(await t.ev(`__w.walkTo(134,67)`) === true, 'walking to the island walks to the pier'); ok(await until(`__w.busy()`, 40000), 'she gets into the boat'); await t.sleep(2500); await shot('20-sailing'); ok(await t.ev(`__w.sea.info().arrow`), 'a rainbow arrow by the boat points the way'); await t.ev(`__w.play.steer(126.5, 66.5)`);
   ok(await until(`!__w.busy()`, 150000), 'the boat arrives'); s = await q(); ok(s.play.side === 'eiland' && s.pos[0] > 110, 'on the rainbow island');  await settle(1500); await shot('21-island');
   ok(s.info.fruitInTree, 'the fruit hangs in the rainbow tree'); await place(s.info.fruit[0] + 1, s.info.fruit[1] + .9); await settle(2000); await shot(`22-rainbow-tree`);
@@ -81,7 +83,7 @@ export default async function (t) {
   await t.ev(`(()=>{const b=__w.BUILDINGS.find(b=>b.id==='huisje'); __w.placeAt(b.door[0]+.5,b.door[1]+.5); __w.walkTo(b.door[0],b.door[1],b)})()`); ok(await until(`!document.querySelector('#act').hidden`, 15000), 'bedroom opens'); await settle(800); await shot('31-bed');
   await t.ev(`document.querySelector('.act-huisje .tool').click()`); await t.sleep(4200); await shot('32-dreaming');
   ok(await until(`!!document.querySelector('.act-huisje .btn')`, 40000), 'morning arrives'); await shot('33-morning'); await t.ev(`document.querySelector('.act-huisje .btn').click()`); await settle(3000);
-  s = await q(); ok(s.stage === 'zoek' && s.cycle === 1 && s.seed !== 0 && s.w.join() === 'egg:ei', 'a new egg in a new world'); ok(await t.ev(`__w.Q.hasTool('zwaard') && __w.Q.hasTool('hamer') && __w.tools.gates().length === 3`), 'tools are kept, the bridges are closed again'); await shot('34-next-day');
+  s = await q(); ok(s.stage === 'zoek' && s.cycle === 1 && s.seed !== 0 && s.w.join() === 'egg:ei', 'a new egg in a new world'); ok(await t.ev(`__w.Q.hasTool('zwaard') && __w.Q.hasTool('haak') && __w.tools.gates().length === 2`), 'tools are kept, the brambles and the hole are back'); await shot('34-next-day');
 
   // just for fun: the bike and the ball
   s = await q(); await place(s.play.bike[0] - 1, s.play.bike[1] + 1); await settle(1500); await shot('35-bike'); await t.ev(`__w.play.tapBike()`); await settle(1500); s = await q(); ok(s.mount === 'fiets', 'on the bike');

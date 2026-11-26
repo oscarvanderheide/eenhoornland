@@ -159,7 +159,11 @@ export function createPlay(ctx) {
   shadow.position.set(W0[0], .07, W0[1] + .4); scene.add(shadow); whale.position.set(W0[0], -2, W0[1]); whale.visible = false; scene.add(whale);
   shadow.userData.alpha = ART.walvisschaduw(); shadow.userData.tap = () => whaleUp(); pick.push(shadow);
   let whaleT = -1, whaleCool = 0, spoutT = 0;
-  function whaleUp() { if (whaleT >= 0 || whaleCool > 0) return false; whaleT = 0; whale.visible = true; sfx.splash(); sfx.boing(); return true; }
+  function whaleUp() {
+    if (whaleT >= 0 || whaleCool > 0) return false; whaleT = 0; whale.visible = true; sfx.splash(); sfx.boing();
+    if (aboard && Math.hypot(bp.x - W0[0], bp.z - W0[1]) < 3.2) setTimeout(() => { sfx.whoosh(); if (Q.giftOnce('walvis', 'munt')) { sfx.chime(5); ctx.life.bit(ART.coin(), W0[0] - .35, 2.4, W0[1] + .1, { vx: (bp.x - W0[0]) * .8, vy: 3, g: 6, life: 1.2, spin: 9 }); } }, 900);   // up on the spout: wheee (and once a day a coin in the spray)
+    return true;
+  }
   const off = Q.on(type => { if (type === 'day' || type === 'stage') syncChests(); });
   syncChests();
 
@@ -208,7 +212,7 @@ export function createPlay(ctx) {
         if (whaleT > 3.4) { whaleT = -1; whaleCool = 4; whale.visible = false; }
       }
       // boat
-      const bob = Math.sin(time * 2) * .03 + (whaleT >= 0 && Math.hypot(bp.x - W0[0], bp.z - W0[1]) < 3 ? Math.sin(Math.min(1, whaleT / 1.2) * Math.PI) * .35 : 0);
+      const lifted = whaleT >= 0 && Math.hypot(bp.x - W0[0], bp.z - W0[1]) < 3.2, bob = Math.sin(time * 2) * .03 + (lifted ? Math.sin(Math.min(1, Math.max(0, whaleT - .3) / 1.9) * Math.PI) * 1.1 : 0);   // close by, the spout lifts the boat right up
       if (aboard) {
         if (route.length) {
           const [tx, tz] = route[0], dx = tx - bp.x, dz = tz - bp.z, d = Math.hypot(dx, dz), st = 3.3 * dt; if (Math.abs(dx) > .05) dir = dx > 0 ? 1 : -1;

@@ -9,7 +9,7 @@ export default async function (t) {
   const only = (process.env.ONLY || '').split(',').filter(Boolean), run = k => !only.length || only.includes(k);
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(1500);
-  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('schaar'); __w.Q.giveTool('hamer'); 0`); await t.sleep(500);
+  await t.ev(`__w.Q._reset({ stage: 'vriend' }); __w.Q.giveTool('schaar'); __w.Q.giveTool('haak'); 0`); await t.sleep(500);
   const shot = n => t.shot(`tmp-shots/w-${n}.png`);
   const A = name => `__w.animals.find(a => a.name === '${name}')`;
   const doing = (name, kind, ms = 10000) => until(`(${A(name)}.way || {}).kind === '${kind}'`, ms);
@@ -76,7 +76,11 @@ export default async function (t) {
     await t.ev(`__w.play.steer(103.5, 64.5)`); ok(await until(`!__w.play.info().moving`, 60000), 'sailed to the seals'); await t.sleep(800); await shot('23-seals');
     const sp = await J(`__w.screen(102.4, .5, 61.3)`); await t.click(sp[0], sp[1]); await t.sleep(200);
     ok(await t.ev(`__w.sea.info().ballFlying || __w.sea.info().ball === 0`), 'a tap on a seal from the boat: the ball flies to it (the boat does not sail off)'); await t.sleep(400); await shot('24-ball'); ok(!(await t.ev('__w.play.info().moving')), 'the boat stays put');
-    await until(`!__w.sea.info().ballFlying`, 3000);
+    await until(`!__w.sea.info().ballFlying`, 3000); await t.sleep(1500);
+    // with a controller there is no finger: ✕ in the boat plays with whatever is nearest at sea
+    const sk = await t.ev(`__w.action() && __w.action().key`); ok(/^sea|^walvis/.test(String(sk)), 'in the boat ✕ shows the nearest sea thing: ' + sk);
+    const b0 = await J('__w.sea.info()'); await t.ev('__w.jump()'); await t.sleep(300); const b1 = await J('__w.sea.info()');
+    ok(JSON.stringify(b0) !== JSON.stringify(b1), '✕ plays with it (the same as a tap)'); await until(`!__w.sea.info().ballFlying`, 3000);
     await t.ev(`__w.play.steer(108, 50.5)`); ok(await until(`!__w.play.info().moving`, 60000), 'sailed to the jellyfish'); await t.sleep(600);
     const n = (await J('__w.sea.info()')).jellies.length; ok(n >= 4, n + ' jellyfish');
     for (let i = 0; i < n; i++) { await t.ev(`__w.sea.tapJelly(${i})`); await t.sleep(250); } await shot('25-jellies'); ok((await J('__w.sea.info()')).jellies.every(v => v > 0), 'each one glows when it sings');

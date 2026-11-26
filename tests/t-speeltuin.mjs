@@ -38,5 +38,13 @@ export default async function (t) {
   ok(await until(`__w.park.mode() === null`, 3000), 'and off at the bottom');
   const E = await J(`[Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z), __w.kid.lift]`); ok(E[0] === S.SL.off[0] && E[1] === S.SL.off[1] && E[2] === 0, 'standing at the end of the slide ' + E);
   ok(await t.ev(`(__w.placeAt(${S.SL.on[0] + .5}, ${S.SL.on[1] + .5}), __w.action().key)`) === 'glijbaan', 'in front of the ladder the button is the slide');
+  // 5. with an animal in her arms down the slide; her egg waits at the edge of the sand
+  await t.ev(`__w.Q._reset({ stage: 'ei' }); __w.placeAt(${S.SL.on[0] + .5}, ${S.SL.on[1] + .5}); 0`); await t.sleep(800);
+  await t.ev(`(a => { a.pos.set(__w.kid.pos.x, 0, __w.kid.pos.z + .3); a.path = []; a.wait = 30; a.fly = null; a.swim = null; window.__a = a; __w.life.lift(a); })(__w.animals.find(a => a.g.visible && !a.water && !a.uniKind && !a.way && !a.dog))`); await t.sleep(400);
+  await t.ev('__w.park.startSlide()'); ok(await until(`__w.park.mode() === 'top' || __w.park.mode() === 'slide'`, 3000), 'with an animal in her arms she climbs the slide');
+  ok(await t.ev('__w.life.carrying() === __a && __a.lift > __w.kid.lift + .5'), 'the animal is up there with her, over her head'); await t.shot('tmp-shots/sp-3-animal.png');
+  const PW = await J('__w.park.watch()'); await t.sleep(600);
+  ok(!!PW && await t.ev(`Math.hypot(__w.uni.pos.x - ${PW[0]}, __w.uni.pos.z - ${PW[1]}) < 1.2`), 'her egg waits at the edge of the sand: ' + PW + ' / ' + await J('[__w.uni.pos.x, __w.uni.pos.z]'));
+  ok(await until(`__w.park.mode() === null`, 4000) && await t.ev('__w.life.carrying() === __a'), 'down they go together');
   if (fail) throw new Error(fail + ' failed');
 }

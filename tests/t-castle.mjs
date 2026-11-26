@@ -10,7 +10,7 @@ export default async function (t) {
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL);
   const herd = `[{body:'#FFC8DD',mane:'#9B72E8',horn:'#F7C548',name:'Roosje',kind:'bos'},{body:'#BFE3FF',mane:'rainbow',horn:'#D3DAE6',name:'Wolkje',kind:'zee'},{body:'#FFF0A6',mane:'#FF7EB6',horn:'#FF9EC7',name:'Zonnetje',kind:'bloem'}]`;
-  await t.ev(`__w.Q._reset({ stage: 'vriend', herd: ${herd} }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('hamer'); 0`); await t.sleep(800);
+  await t.ev(`__w.Q._reset({ stage: 'vriend', herd: ${herd} }); __w.Q.giveTool('zwaard'); __w.Q.giveTool('haak'); 0`); await t.sleep(800);
   // canvas taps in an activity: logical coordinates of the pixel stage
   const tap = async (x, y) => { const r = await J(`(()=>{const c=document.querySelector('.pstage canvas'),r=c.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height,cw:c.width/2,ch:c.height/2}})()`); await t.click(r.l + x / r.cw * r.w, r.t + y / r.ch * r.h); };
   const P = await J('__w.MAP.PEN'), C = await J('__w.MAP.CASTLE'), R = await J('__w.MAP.RACE');

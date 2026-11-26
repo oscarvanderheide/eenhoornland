@@ -260,15 +260,14 @@ export function createToys(ctx) {
 
   /* ================= what to do next shows itself ================= */
   // While she is near the watering can or the bucket, the next step of that toy glows softly: the can; with an empty
-  // can, the fountain; with water in it, a thirsty pot; the bucket; with the bucket, a see-through tower on the sand
+  // can, the fountain; with water in it, a thirsty pot; the bucket; with the bucket, a patch of damp sand where the tower will go
   // in front of her. Nothing has to be worked out, and only the toy she is next to shows anything.
   let fetching = null;
   const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,250,215,1)'); r.addColorStop(.35, 'rgba(255,226,122,.5)'); r.addColorStop(1, 'rgba(255,200,90,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
   const beckon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true })); beckon.visible = false; beckon.renderOrder = 5; scene.add(beckon);
-  /** the tower that would stand there, as a dotted white outline: clearly "not there yet" */
-  const ghostArt = l => PX.gridSprite(ART.zandtoren(l).width, ART.zandtoren(l).height, (() => { const c = ART.zandtoren(l), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, a = (x, y) => x >= 0 && y >= 0 && x < c.width && y < c.height && d[(y * c.width + x) * 4 + 3] > 0;
-    return (x, y) => !a(x, y) ? null : (!a(x - 1, y) || !a(x + 1, y) || !a(x, y - 1) || !a(x, y + 1)) ? '#FFFFFF' : (x + y) % 2 === 0 ? '#FFF1CF' : null; })(), { outline: false, key: 'ghost' + l });
-  const ghost = makeSprite(ghostArt(1), { lean: .3, shadow: false, scale: 1.15 }); ghost.visible = false; scene.add(ghost);
+  /** where the tower will go: a soft patch of damp sand on the ground (a white see-through tower looked like a wireframe) */
+  const spotArt = PX.gridSprite(16, 10, (x, y) => { const d = ((x + .5 - 8) / 8) ** 2 + ((y + .5 - 5) / 5) ** 2; return d > 1 ? null : d > .6 ? ((x + y) % 2 ? '#E8C886' : null) : (x * 3 + y) % 5 === 0 ? '#F2D79A' : '#DDB873'; }, { outline: false, key: 'zandplek' });
+  const ghost = makeSprite(spotArt, { lean: Math.PI / 2, shadow: false, scale: 1 }); ghost.visible = false; scene.add(ghost);
   function nextStep() {
     if (carry === can) {
       if (!can.water) return near(P.cx, P.cz, 4) ? null : [F.cx, 1.1, F.cz + .3, 2.4];
@@ -323,7 +322,7 @@ export function createToys(ctx) {
       if (fetching && carry === can && can.water) { const p = fetching; fetching = null; setTimeout(() => near(p.x, p.z + .5, 1.4) ? usePot(p) : ctx.approach(Math.floor(p.x), Math.floor(p.z), () => usePot(p)), 350); }
       if (carry !== can) fetching = null;
       { const n = active ? nextStep() : null; beckon.visible = !!n; if (n) { const k = Math.sin(time * 3); beckon.position.set(n[0], n[1], n[2]); beckon.scale.setScalar(n[3] * (1 + .08 * k)); beckon.material.opacity = .5 + .22 * k; } }
-      { const a = active && !kid.moving ? sandAhead() : null; ghost.visible = !!a; if (a) { const t = towers.get(a[0] + ',' + a[1]), l = t ? t.l + 1 : 1; if (ghost.userData.l !== l) { setArt(ghost, ghostArt(l)); ghost.userData.l = l; } ghost.position.set(a[0] + .5, 0, a[1] + .62 + (t ? .02 : 0)); ghost.position.y = Math.abs(Math.sin(time * 3)) * .05; } }
+      { const a = active && !kid.moving ? sandAhead() : null; ghost.visible = !!a && !towers.get(a[0] + ',' + a[1]); if (a) { ghost.position.set(a[0] + .5, .015, a[1] + .5); ghost.scale.setScalar(1 + Math.sin(time * 3) * .06); } }   // on an empty spot only: a tower already standing is its own hint
       /* the kite: up when she runs, down when she stands */
       if (carry === kite) {
         const fast = ctx.mount() ? 1.35 : 1, h = kid.moving ? 2.5 * fast : 1.25, k = Math.min(1, dt * 2.2);

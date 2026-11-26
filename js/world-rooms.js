@@ -63,7 +63,7 @@ export function createRooms(ctx) {
     { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
     if (r.wall) { const gz = r.gate.map(g => g[1]); wall(k, r.wall, r.z0, r.wall, Math.min(...gz) - 1, 1.7); wall(k, r.wall, Math.max(...gz) + 1, r.wall, r.z1, 1.7); }   // the wall between the cave's two rooms
     if (k === 'val') { for (const fx of [.2, .5, .8]) lightAt(k, '#A8E8FF', 9, 1.3, .55, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); continue; }
-    if (k === 'hut') { for (const fx of [.25, .75]) lightAt(k, '#FFD9A0', 8, 1.3, .5, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); lightAt(k, '#BFE8FF', 3.5, 1.5, .2, r.zip[0] + .5, 1, r.z0 + .5); continue; }   // warm daylight through the windows
+    if (k === 'hut') { for (const fx of [.25, .75]) lightAt(k, '#FFD9A0', 8, 1.3, .5, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); lightAt(k, '#BFE8FF', 3.5, 1.5, .2, r.x0 + .5, 1, r.zip[1] + .5); lightAt(k, '#CFEFFF', 4, 1.4, .25, r.x1 - .5, 1.3, r.z0 + .4); continue; }   // warm daylight through the windows, sky through the zipline door and the big window
     const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(k, r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
   }
 

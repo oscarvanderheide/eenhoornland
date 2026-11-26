@@ -51,10 +51,13 @@ export function createBoomhut(ctx) {
   }
 
   /* ---------------- inside: the platform at the back, the telescope, the acorns ---------------- */
-  const out = makeSprite(WILD.zipDeur(), { lean: 0, shadow: false, scale: 1.1 }); out.position.set(R.zip[0] + .5, 0, R.z0 + .02); scene.add(out);
+  // the zipline door is in the left wall at the front, the way the rope runs off outside (to the south-west)
+  const out = makeSprite(WILD.zipDeur(), { lean: Math.PI / 2, shadow: false, scale: 1.1 }); out.rotation.set(0, Math.PI / 2, 0); out.position.set(R.x0 + .03, 0, R.zip[1] + .5); scene.add(out);
   out.userData.alpha = WILD.zipDeur(); out.userData.tap = () => { sfx.pop(); ctx.walkToTile(R.zip[0], R.zip[1]); }; pick.push(out);
-  // the telescope: each look shows another island, the way a bird would see it
-  const scope = makeSprite(WILD.telescoop(), { lean: .3, scale: 1.1 }); const SX = R.x0 + 1.5, SZ = R.z0 + .7; scope.position.set(SX, 0, SZ); scene.add(scope); ctx.solid(Math.floor(SX), Math.floor(SZ));
+  // the telescope stands at the big window in the back wall: each look shows another island, the way a bird would see it
+  const SX = R.x1 - .5, SZ = R.z0 + .75;
+  const win = makeSprite(WILD.raamGroot(), { lean: 0, shadow: false, scale: 1.15 }); win.position.set(SX - .1, .55, R.z0 + .02); scene.add(win);
+  const scope = makeSprite(WILD.telescoop(), { lean: .3, scale: 1.05 }); scope.position.set(SX, 0, SZ); scene.add(scope); ctx.solid(Math.floor(SX), Math.floor(SZ));
   const VIEWS = ['kasteel', 'eiland', 'strand', 'wei', 'dorp'].map(k => [MAP.PLACES[k].tile[0] + .5, MAP.PLACES[k].tile[1] + .5]); let view = 0;
   const look = () => { kid.face = -1; sfx.click(); const [x, z] = VIEWS[view++ % VIEWS.length]; ctx.peek(x, z, 3.2); };
   scope.userData.alpha = WILD.telescoop(); scope.userData.tap = () => { sfx.pop(); if (near(SX, SZ + 1, 1.3)) look(); else ctx.approach(Math.floor(SX), Math.floor(SZ) + 1, look); }; pick.push(scope);
