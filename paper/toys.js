@@ -226,3 +226,48 @@ export function seesaw(S, x, y, z) {
   S.tap(g, () => { if (S.playing()) return; S.walkThen(wx - A + .05, wz + .72, () => { if (S.playing()) return; mode = 'on'; t = 0; psi = 1; om = 0; air = airV = uair = uairV = 0; from = [uni.x, uni.z]; S.play(toy); }, 1.1); });
   return { toy, state: () => ({ mode, psi, streak, best, kicks, flips, air, uair }), step() { if (!mode) pivot.rotation.z = psi * TMAX; } };
 }
+
+/* ---------------- the paper aeroplane ---------------- */
+const PLANE = { w: 128, h: 88, frames: 1, size: .34, draw(g) {
+  piece(g, '#7fbcc0', P([[118, 46], [34, 48], [22, 74]]), .5); piece(g, '#9ed9cf', P([[118, 46], [8, 18], [34, 48]])); piece(g, '#f6efe2', P([[118, 46], [8, 18], [20, 30]]), .4);
+  line(g, '#e98f8f', 3, [[104, 44.5], [40, 40]]);
+} };
+/** A paper aeroplane (Oscar: "little paper airplanes can also be nice details in our new paper style game"). It lies where
+ *  it landed. A tap: she picks it up. A tap on it in her hands: she throws it the way she faces, and it glides for real:
+ *  how fast it goes and which way its nose points, lift that grows with speed, so it swoops, climbs, slows and swoops
+ *  again. A tap on it in the air gives it a push: a loop. It stays where it comes down; from the sea, a tree top or
+ *  anywhere she cannot walk it comes back to its first spot. */
+export function plane(S, x, y, z) {
+  const { girl, sfx } = S, f = S.figure('vliegtuig', PLANE), [hx, hz] = S.at([x, z]), me = {};
+  const G = 5, V0 = 3.5, LIFT = G / (V0 * V0), DRAG = .05;
+  let at = [hx, hz], held = false, fly = null, throws = 0, loops = 0, far = 0, back = 0;
+  const down = () => { held = false; girl.poseName = null; at = [girl.x + girl.face * .5, girl.z + .2]; };
+  const home = () => { at = [hx, hz]; f.hopV = 2.2; sfx.flutter(); };
+  f.onTap = () => {
+    if (fly) { if (fly.t > .15) { fly.v += 2.2; fly.a += .9; loops++; sfx.swish(3); } return; }   // in the air: a push, and round it goes
+    if (S.playing()) return;
+    if (held) { held = false; S.hands.free(me); girl.poseName = null; throws++; const d = girl.face || 1; fly = { x: girl.x + d * .3, y: (S.hand().y), z: girl.z + .1, v: 4.9, a: .22, d, t: 0, x0: girl.x }; sfx.swish(3); return; }
+    S.walkThen(at[0] - .35, at[1] + .15, () => { S.hands.take(me, down); held = true; sfx.hop(); }, 1.0);
+  };
+  f.act = () => { f.tilt = fly ? fly.a : held ? .1 : 0; };
+  return { f, state: () => ({ held, flying: !!fly, throws, loops, far, at, y: f.y }), step({ dt }) {
+    if (back > 0) { back -= dt; if (back <= 0) home(); }
+    if (fly) {
+      const q = fly; q.t += dt;
+      q.v += (-G * Math.sin(q.a) - DRAG * q.v * q.v) * dt; q.a += (LIFT * q.v * q.v - G * Math.cos(q.a)) / Math.max(q.v, .6) * dt;
+      q.x += q.d * q.v * Math.cos(q.a) * dt; q.y += q.v * Math.sin(q.a) * dt; q.z += .35 * dt;
+      f.x = q.x; f.z = q.z; f.floatY = f.y = q.y - f.H / 2; f.face = q.d; f.lean = 0;
+      const h = S.heightAt(q.x, q.z), floor = h === null ? -.6 : h;
+      if (q.y <= floor + .12 || q.t > 14) {   // down
+        far = Math.abs(q.x - q.x0); fly = null;
+        if (h === null) { sfx.splash(); S.confetti(q.x, -.3, q.z, ['#8fc3cc', '#f6efe2', '#7fbcc0'], 12, undefined, 2.4); f.g.visible = false; back = 1.4; }
+        else if (!S.free(q.x, q.z, h)) { back = .9; at = [q.x, q.z]; sfx.thud(); }
+        else { at = [q.x, q.z]; sfx.thud(); S.confetti(q.x, h + .1, q.z, ['#9ed9cf', '#f6efe2'], 5, undefined, 1.2); }
+      }
+      return;
+    }
+    f.g.visible = true;
+    if (held) { if (S.playing()) { f.g.visible = false; return; } girl.poseName = 'hold'; const h = S.hand(); f.x = h.x + girl.face * .12; f.z = h.z + .05; f.floatY = f.y = h.y - .1; f.face = girl.face; f.lean = 0; }
+    else { f.x = at[0]; f.z = at[1]; f.floatY = undefined; f.lean = 0; f.face = 1; }
+  } };
+}

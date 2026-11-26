@@ -272,4 +272,16 @@ export default async function (t) {
     await t.sleep(1500); await t.ev(`__p.keys(['a'])`); ok(await until(`__p.toy('wip').mode === null`, 4), 'a push to the side: off they hop'); await t.ev(`__p.keys([])`); await t.sleep(600);
     const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
   }
+
+  /* ---------------- the paper aeroplane: picked up, thrown, it glides for real ---------------- */
+  if (!only || only === 'plane') {
+    await open('?set=dorp', LAND); await t.sleep(1200);
+    const toy = () => t.ev(`__p.toy('vliegtuig')`), p0 = (await toy()).at;
+    await t.ev(`__p.placeAt(${p0[0] - 1.6}, ${p0[1] + .6})`); await t.sleep(2400); await t.shot('tmp-shots/y-plane-land.png');
+    await t.ev(`__p.tap('vliegtuig')`); ok(await until(`__p.toy('vliegtuig').held`, 5), 'a tap on the paper aeroplane: she picks it up'); await t.sleep(400);
+    await t.ev(`__p.tap('vliegtuig')`); await t.sleep(700); const a = await toy(); ok(a.flying && a.throws === 1, 'a tap on it in her hands: she throws it'); await t.shot('tmp-shots/y-plane-fly-land.png');
+    await t.ev(`__p.tap('vliegtuig')`); await t.sleep(100); ok((await toy()).loops === 1, 'a tap in the air: a push, for a loop');
+    ok(await until(`!__p.toy('vliegtuig').flying`, 15), 'it comes down'); await t.sleep(1800); const b = await toy(); ok(b.far > 4, `it glided a good way (${b.far.toFixed(1)} steps)`);
+    ok(await t.ev(`__p.canReach(${b.at[0]}, ${b.at[1]})`), 'and lies where she can walk to (or is back at its spot)'); await t.ev(`__p.placeAt(${b.at[0] - 1.4}, ${b.at[1] + .6})`); await t.sleep(2400); await t.shot('tmp-shots/y-plane-down-land.png');
+  }
 }
