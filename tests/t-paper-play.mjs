@@ -175,4 +175,18 @@ export default async function (t) {
     await t.ev(`__p.keys(['d'])`); await t.sleep(600); await t.ev('__p.keys([])'); ok(!(await toy('vlinder1')).sitting, 'she walks on and it flies off');
     await t.ev(`__p.tap('hut')`);
   }
+
+  if (!only || only === 'flowers') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
+    // a flower in the grass: a real tap on it; she walks over and has it in her hand
+    const f = (await toy('gras')).first; await t.ev(`__p.placeAt(${f[0] + 1.6}, ${f[1] + 1.5})`); await t.sleep(2800);
+    const h = (await t.ev('__p.info()')).h; await tapAt(f[0], h + .3, f[1]); ok(await until(`__p.toy('bos').held === 1`, 6), 'a real tap on a flower in the grass: she walks over and picks it'); await t.sleep(300);
+    ok((await toy('gras')).picked === 1 && (await t.ev('__p.info()')).pose === 'hold', 'it is gone from the grass and in her hand'); await t.shot('tmp-shots/y-flower-land.png');
+    // a tulip from the garden goes into the same bunch
+    const tu = (await toy('tuin')).tulips[2]; await t.ev(`__p.placeAt(${tu.at[0] + 1.2}, ${tu.at[1] + 1.8})`); await t.sleep(2600);
+    await tapAt(tu.at[0], .48 + .45, tu.at[1]); ok(await until(`__p.toy('bos').held === 2`, 6), 'a tulip from the bed joins the bunch'); ok(!(await toy('tuin')).tulips[2].there, 'and its place in the row is empty');
+    // whoever she taps next is given the bunch
+    await t.ev(`__p.tap('unicorn')`); await t.sleep(300); const b = await toy('bos'); ok(b.held === 0 && b.gifts === 1 && (await t.ev('__p.info()')).pose === null, 'a tap on the unicorn: she gives it the flowers');
+  }
 }

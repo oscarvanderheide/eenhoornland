@@ -6,7 +6,7 @@
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { cottage, shore, flowerBed, meadow, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
+import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
 import { swing, slide } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
@@ -95,9 +95,10 @@ export default {
     /* ---------------- her house, on the terrace ---------------- */
     const HOUSE = cottage(S, .3 * K, H_HIGH, -5.5 * K, 'voordeur');     // the real one (props.js); its front door is a cut to the room inside (set-huis.js)
     // a flower garden on both sides of the house (Oscar's idea, 2026-11-26): two beds of paper flowers
-    const beds = [-1, 1].map(s => flowerBed(S, blob(.3 * K + s * 3.6, -5.5 * K + .1, 2.1, 1.35, 310 + s, 28, .08), H_HIGH, 320 + s));
-    // toy windmills (his idea too): three in the garden, one by the playground, one by the pond. A tap, or running past, spins them
-    const mills = [pinwheel(S, .3 * K - 2.6, H_HIGH, -5.5 * K + 1.0), pinwheel(S, .3 * K + 2.5, H_HIGH, -5.5 * K + .9, '#9ed9cf', '#f6efe2'), pinwheel(S, .3 * K + 4.3, H_HIGH, -5.5 * K + .5, '#bba6ea', '#f2c65c', .65),
+    const bunch = bouquet(S);   // the flowers she has picked, from the beds or from the grass
+    const beds = [-1, 1].map(s => flowerBed(S, .3 * K + s * 3.7, H_HIGH, -5.5 * K + .15, 320 + s, bunch, 3.6, 2.0, s < 0 ? ['#e98f8f', '#f2c65c'] : ['#bba6ea', '#f4a6c4']));
+    // toy windmills (his idea too): one at the outer corner of each flower bed, one by the unicorns' gate, the playground, the pond. A tap, or running past, spins them
+    const mills = [pinwheel(S, .3 * K - 5.75, H_HIGH, -5.5 * K + 1.15), pinwheel(S, .3 * K + 5.75, H_HIGH, -5.5 * K + 1.15, '#9ed9cf', '#f6efe2'), pinwheel(S, 3.4 * K - 2.3, H_GRASS, 4.3 * K - 2.5, '#bba6ea', '#f2c65c', .65),
       pinwheel(S, -5.3 * K + 3.9, H_GRASS, .3 * K + 2.9, '#e98f8f', '#f6efe2'), pinwheel(S, pcx + 2.9, H_GRASS, pcz + 2.2, '#9ed9cf', '#f4a6c4')];
     for (const dx of [-1.3, -.75, .75, 1.3]) { const [x, z] = [.3 * K + dx, -5.5 * K + 1.6]; put(cyl(.11, .2, 'dark'), x, H_HIGH + .1, z); S.solid({ x, z, r: .1 }); }   // the flower pots
     { const [x, z] = [.3 * K - 1.9, -5.5 * K + 1.7]; put(cyl(.09, .22, 'thing'), x, H_HIGH + .11, z); }                                                                    // the watering can
@@ -157,21 +158,22 @@ export default {
       n++;
     }
     // the grass is not bare: tufts in twos and threes, and a flower here and there (never on a path or a patch)
-    meadow(S, 290, R2 => {
+    const grass = meadow(S, 290, R2 => {
       const x = (-15.5 + R2() * 26) * K, z = (-8 + R2() * 21) * K, on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null;
       if (!on || edgeDist(on, x, z) < .3 || (on !== HIGH && edgeDist(HIGH, x, z) < .3) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .25 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22)) return null;
       if (Math.abs(x - .3 * K) < 1.5 && z > -5.5 * K - 1.1 && z < -5.5 * K + 2.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
+      if (Math.abs(Math.abs(x - .3 * K) - 3.7) < 2.3 && Math.abs(z - (-5.5 * K + .15)) < 1.5) return null;   // not in the planted beds
       return [x, on === HIGH ? H_HIGH : H_GRASS, z];
-    }, 401);
+    }, 401, 2.5, undefined, bunch);
     for (const [x, z] of [[19.6 * K + 1, 2.2 * K - 2], [19.6 * K + 1.5, 2.2 * K + 2.2]]) S.lollipop(x, z, H_GRASS, .6, cols[0][0], cols[0][1], 140 + Math.round(x));   // on the meadow's shore
 
     const [sx, sz] = T(31.5, 36.6);
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); },
       wind: (x, z, from) => { for (const m of mills) if (m.at[0] > from && m.at[0] <= x && Math.abs(m.at[1] - z) < 4.5) m.blow(13); },
-      toys: { ...live, ...flies, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      toys: { ...live, ...flies, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:

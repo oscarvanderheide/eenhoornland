@@ -638,7 +638,7 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   const hit = pickAt(e.clientX, e.clientY);
-  if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
+  if (hit && hit.object.userData.tap) { hit.object.userData.tap(hit); return; }   // (the hit goes along: a field of flowers is one piece and has to know which flower)
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
   if (hit) target = goTo(hit.point.x, hit.point.z);
   else { const p = groundPoint(e.clientX, e.clientY); if (p) target = goTo(p.x, p.z); }
