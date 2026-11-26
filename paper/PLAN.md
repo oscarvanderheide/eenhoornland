@@ -10,6 +10,8 @@ Read this before any work under `paper/`. Status at the bottom.
 - This copy of the plan (on `paper`) is the current one; the copy on `main` stopped at the commit where the branch began.
 - Serve the worktree on its own port for tests: `python3 serve.py 8766`, then `SERVE=8766 node cdp.mjs tests/t-paper.mjs` (the main checkout's server on 8765 serves the pixel game's folder).
 - **Publishing (set up 2026-11-26 with Oscar's yes):** `.github/workflows/pages.yml`, the same file on `main` and on `paper`, builds the site on every push to either branch: the pixel game from `main` at the root (https://oscarvanderheide.github.io/eenhoornland/), this branch's `paper/` folder at `/paper/` (figure sheet: `/paper/figures.html`). So a push to `paper` puts it online; commit and push after the tests pass, as for the pixel game. Hidden files and folders are not published. Settings changed for this: Pages build type `workflow` (was `legacy`), and `paper` added to the branches the `github-pages` environment may deploy from. To undo: set the build type back to `legacy` with source `main` `/`. If the workflow file changes, change it on both branches.
+- **Everything the paper game loads must live under `paper/`.** The site takes only this branch's `paper/` folder; `/js/` on the site is `main`'s. An import of `../js/quest.js` would pass every local test and load the pixel game's copy when live. Modules carried over from the pixel game (quest, state, saves, audio, gamepad) are copied into `paper/` and changed there.
+- A push to `main` publishes only while branch `paper` exists and has `paper/index.html`: the workflow checks both and stops otherwise, leaving the site as it was.
 
 ## Decided
 
@@ -84,6 +86,9 @@ Smaller questions for the same piece:
 - **One session per island** from step 5, each with this file, the kit's style rules, its rows of the list and the old `js/` files as the spec. An island session never edits the kit; it asks the main session.
 - **A figure workshop session** in parallel from step 5: animals and outfits on the figure sheet.
 - **Oscar:** the gate at every blockout and every finished island. Tests show that it works, not that it is wonderful.
+- **Which model** (Oscar asked on 2026-11-26 whether a cheaper one could take some of it):
+  - a cheaper, faster model (Sonnet) for work that is well specified and judged from a screenshot: animals and props on the figure sheet once the style rules are frozen, dressing an island after its blockout is approved, tests, running the browser checks;
+  - the strongest model for what sets the look or is built on by everything else: the test piece, the kit, cameras, each island's blockout.
 
 ## The list
 
