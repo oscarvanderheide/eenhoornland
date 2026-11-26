@@ -5,10 +5,10 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
-// ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2). Also ?who=fenna and ?wear=kroon,ballon.
+// ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
 const ASK = new URLSearchParams(location.search);
 const DPR = ASK.get('dpr') ? Math.max(.5, Math.min(3, +ASK.get('dpr') || 1)) : Math.min(devicePixelRatio || 1, 2);
-const SHADOWS = ASK.get('shadows') !== '0', DOF = ASK.get('dof') !== '0', POST = ASK.get('post') !== '0';
+const SHADOWS = ASK.get('shadows') !== '0', DOF = ASK.get('dof') !== '0', POST = ASK.get('post') !== '0', BAKE = ASK.get('bake') !== '0';
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(DPR);
@@ -67,7 +67,13 @@ function printed(kind, seed) {
 const grassCv = printed('grass', 41), sandCv = printed('sand', 42);
 const grassMap = tex(grassCv, .3), grassBump = tex(grassCv, .3, false), sandMap = tex(sandCv, .3), sandBump = tex(sandCv, .3, false);
 /** matte paper in a colour; every material shares the same grain so the whole set looks made of one kind of stock */
+const papers = new Map();
 function paper(color, o = {}) {
+  // one material per kind of paper, shared: pieces of the same paper can then be drawn in one go (see bake). Never change one after making it
+  const key = [color, (o.map || paperMap).uuid, (o.bump || paperBump).uuid, o.bumpScale ?? 1.6, o.side ?? THREE.FrontSide, JSON.stringify(o.extra || 0)].join('|');
+  let m = papers.get(key); if (!m) papers.set(key, m = makePaper(color, o)); return m;
+}
+function makePaper(color, o) {
   return new THREE.MeshStandardMaterial({ color, map: o.map || paperMap, bumpMap: o.bump || paperBump, bumpScale: o.bumpScale ?? 1.6, roughness: .93, metalness: 0, side: o.side ?? THREE.FrontSide, ...(o.extra || {}) });
 }
 /** the cut edge of corrugated card: two paper skins and the fluting between them */
@@ -183,7 +189,7 @@ for (const [col, z, h, s] of hills) {
 // clouds and the sun hang on threads from the top of the theatre
 const thread = new THREE.MeshStandardMaterial({ color: '#efe8dc', roughness: 1 });
 function hung(obj, x, y, z) {
-  const g = new THREE.Group(); g.position.set(x, y, z);
+  const g = new THREE.Group(); g.position.set(x, y, z); g.userData.live = true;
   const t = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 20, 4), thread); t.position.y = 10; g.add(t, obj); scene.add(g); return g;
 }
 function cloudPts(w, seed) {
@@ -258,7 +264,7 @@ const seaRows = [];
       for (let i = 0; i <= Math.ceil(w * 3); i++) { const x = i / Math.ceil(w * 3) * w; pts.push([x, .5 + Math.sin((a + x) * 2.1 + k * 1.3) * .09 + Math.sin((a + x) * .7 + k) * .05]); }
       pts.push([w, 0]);
       const m = card(pts, .05, paper(blues[k % blues.length]), whiteEdge); m.position.set(a, -1.08, z); m.castShadow = false;
-      scene.add(m); seaRows.push({ m, z, base: a, k });
+      m.userData.live = true; scene.add(m); seaRows.push({ m, z, base: a, k });
     }
   }
 }
@@ -274,7 +280,7 @@ const trees = [];
 function circlePts(r, seed, n = 40) { const R = rng(seed), p = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (1 + (R() - .5) * .025); p.push([Math.cos(a) * rr, Math.sin(a) * rr]); } return p; }
 function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
   const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
-  const sway = new THREE.Group(); g.add(sway);
+  const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
   const stick = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, stickH, 8), paper('#7a5a3e')); stick.position.y = stickH / 2; stick.castShadow = true; sway.add(stick);
   // one disc of card on the stick, with smaller discs of other shades glued on, front and back
   const d = card(circlePts(r, seed), .06, paper(col), whiteEdge); d.position.y = stickH + r * .78; sway.add(d);
@@ -290,7 +296,7 @@ function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
 }
 function pine(x, z, y, h, col) {
   const g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
-  const sway = new THREE.Group(); g.add(sway);
+  const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .4, 8), paper('#7a5a3e')); trunk.position.y = .2; trunk.castShadow = true; sway.add(trunk);
   for (let i = 0; i < 3; i++) {
     const r = .55 - i * .13, hh = h * .45;
@@ -365,7 +371,7 @@ let door, doorOpen = 0, doorTarget = 0, lightOn = false;
   const doorHole = [[-.27, .02], [.27, .02], [.27, 1.25], [-.27, 1.25]];
   front.add(card(frontPts, T, wallMat, edgeMat, [doorHole.slice().reverse(), win(-.78, 1.05).reverse(), win(.78, 1.05).reverse()]));
   frame(front, -.78, 1.05); frame(front, .78, 1.05);
-  const dGroup = new THREE.Group(); dGroup.position.set(-.27, 0, .02); front.add(dGroup);
+  const dGroup = new THREE.Group(); dGroup.position.set(-.27, 0, .02); dGroup.userData.live = true; front.add(dGroup);
   door = card([[0, .02], [.54, .02], [.54, 1.23], [0, 1.23]], .05, paper('#3f6f77'), edgeMat); dGroup.add(door);
   const knob = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), paper('#e2b04a')); knob.position.set(.45, .62, .04); dGroup.add(knob);
   door = dGroup;
@@ -450,7 +456,7 @@ function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
   const mat = new THREE.MeshStandardMaterial({ alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 });
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = false;
   mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: .5 });
-  const g = new THREE.Group(), pose = new THREE.Group(); g.add(pose); pose.add(mesh); scene.add(g);
+  const g = new THREE.Group(), pose = new THREE.Group(); g.userData.live = true; g.add(pose); pose.add(mesh); scene.add(g);
   const fig = { name, g, pose, mesh, mat, views, kid, w, h, W, H, cyc: frames > WALK, view: 'side', x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, dirX: 1, dirZ: 0,
     wear: {}, poseName: null, eyes: 'open' };
   const poseOf = i => fig.poseName && fig.poseName !== 'sit' ? fig.poseName : fig.poseName === 'sit' && !i ? 'sit' : i ? 'walk' : 'stand';
@@ -494,7 +500,7 @@ const balloon = (() => {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(Wb, Hb), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, side: THREE.DoubleSide, roughness: .85, bumpMap: paperBump, bumpScale: .6 })); m.castShadow = true;
   m.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: t, alphaTest: .5 });
   const thread = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: '#6f625c' })); thread.frustumCulled = false;
-  const g = new THREE.Group(); g.add(m, thread); g.visible = false; scene.add(g);
+  const g = new THREE.Group(); g.userData.live = true; g.add(m, thread); g.visible = false; scene.add(g);
   return { g, m, thread, pos: new THREE.Vector3(), knot: (.5 - BALLOON.knot[1] / BALLOON.h) * Hb, on: false };
 })();
 function stepBalloon(dt) {
@@ -704,6 +710,77 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 
+/* ---------------- bake: everything that never moves is glued together, one mesh per kind of paper ----------------
+   A diorama is hundreds of little pieces of card, and a phone pays for every piece it draws separately. So once the set is
+   built, the pieces that stand still (everything outside a group marked userData.live: trees that sway, the door, the sea
+   rows, things on threads, figures) are copied into one mesh per material. The pieces themselves stay where they are, hidden:
+   a tap still finds them (a hidden mesh still answers a ray), and nothing else has to know. */
+const baked = { ms: 0, pieces: 0, meshes: 0 };
+function bake(root) {
+  const t0 = performance.now(), lots = new Map(), v = new THREE.Vector3(), nm = new THREE.Matrix3();
+  root.updateMatrixWorld(true);
+  const walk = o => {
+    if (o.userData.live || !o.visible) return;
+    if (o.isMesh && o.geometry.attributes.normal && o.geometry.attributes.uv) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      if (mats.every(m => m.isMeshStandardMaterial)) {
+        const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry, P = geo.attributes.position, N = geo.attributes.normal, U = geo.attributes.uv;
+        const groups = Array.isArray(o.material) && geo.groups.length ? geo.groups : [{ start: 0, count: P.count, materialIndex: 0 }];
+        nm.getNormalMatrix(o.matrixWorld);
+        for (const gr of groups) {
+          const m = mats[gr.materialIndex] || mats[0], key = m.uuid + (o.castShadow ? 'c' : '') + (o.receiveShadow ? 'r' : '');
+          let lot = lots.get(key); if (!lot) lots.set(key, lot = { m, cast: o.castShadow, recv: o.receiveShadow, p: [], n: [], u: [] });
+          for (let i = gr.start, e = Math.min(P.count, gr.start + gr.count); i < e; i++) {
+            v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); lot.p.push(v.x, v.y, v.z);
+            v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); lot.n.push(v.x, v.y, v.z);
+            lot.u.push(U.getX(i), U.getY(i));
+          }
+        }
+        if (geo !== o.geometry) geo.dispose();
+        o.visible = false; baked.pieces++;
+      }
+    }
+    for (const c of o.children) walk(c);
+  };
+  walk(root);
+  const out = new THREE.Group(); out.userData.live = true; out.name = 'baked';
+  for (const lot of lots.values()) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(lot.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(lot.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(lot.u, 2));
+    const m = new THREE.Mesh(g, lot.m); m.castShadow = lot.cast; m.receiveShadow = lot.recv; out.add(m); baked.meshes++;
+  }
+  root.add(out); baked.ms = performance.now() - t0;
+}
+/** the sea rows rock, each its own way, so they cannot be glued like the rest. Instead all rows of one colour become one mesh
+ *  in which every corner remembers which row it belongs to (aK), and the graphics chip does the rocking from the clock (uTick) */
+const seaTick = { value: 0 };
+function bakeSea(rows) {
+  const lots = new Map(), v = new THREE.Vector3(); scene.updateMatrixWorld(true);
+  for (const r of rows) {
+    const o = r.m, P = o.geometry.attributes.position, N = o.geometry.attributes.normal, U = o.geometry.attributes.uv;
+    for (const gr of o.geometry.groups) {
+      const m = o.material[gr.materialIndex]; let lot = lots.get(m.uuid); if (!lot) lots.set(m.uuid, lot = { m, p: [], n: [], u: [], k: [] });
+      for (let i = gr.start, e = Math.min(P.count, gr.start + gr.count); i < e; i++) {
+        v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); lot.p.push(v.x - (o.position.x - r.base), v.y, v.z);   // glued at rest; the rocking is added again on the chip
+        lot.n.push(N.getX(i), N.getY(i), N.getZ(i)); lot.u.push(U.getX(i), U.getY(i)); lot.k.push(r.k);
+      }
+    }
+    o.visible = false;
+  }
+  const out = new THREE.Group(); out.userData.live = true; out.name = 'sea';
+  for (const lot of lots.values()) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(lot.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(lot.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(lot.u, 2)); g.setAttribute('aK', new THREE.Float32BufferAttribute(lot.k, 1));
+    const mat = lot.m.clone();
+    mat.onBeforeCompile = sh => { sh.uniforms.uTick = seaTick; sh.vertexShader = 'attribute float aK; uniform float uTick;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.x += sin(uTick * .05 + aK * 1.7) * .12;'); };
+    mat.customProgramCacheKey = () => 'sea';
+    const m = new THREE.Mesh(g, mat); m.receiveShadow = true; m.frustumCulled = false; out.add(m);
+  }
+  scene.add(out); return out;
+}
+const seaBaked = BAKE ? bakeSea(seaRows) : null;
+if (BAKE) bake(scene);
+
 /* ---------------- the readout (?fps): how smoothly it runs here and how big she is on this screen ---------------- */
 const stat = { fps: 0, worst: 0, her: 0, calls: 0, tris: 0, n: 0, t0: 0, prev: 0, slow: 0, slows: [] };
 const statEl = ASK.has('fps') ? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'stat' })) : null;
@@ -718,15 +795,15 @@ function measure(now) {
   // her height on the screen in points: from her feet to the top of her head
   const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
   stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
-  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}`;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
 }
 
 /* ---------------- the loop ---------------- */
 const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3();
-let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0;
+let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0, still = false;   // still: the clock of the stop motion stands (for comparing screenshots)
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; time += dt;
-  acc += dt; let stepped = false; while (acc >= STEP) { acc -= STEP; tick++; stepped = true; }
+  acc += dt; let stepped = false; while (acc >= STEP) { acc -= STEP; if (!still) tick++; stepped = true; }
   wacc += dt; let wsteps = 0; while (wacc >= WSTEP) { wacc -= WSTEP; wsteps++; }
 
   // her input
@@ -771,7 +848,7 @@ function frame(now) {
         if (f.walking) { f.view = viewFor(f); if (f.poseName === 'sit') f.poseName = null; }
         if (f.kid) {   // a sister blinks now and then while she stands (eyes shut for two stop-motion ticks)
           if (tick >= (f.blinkAt || 0) + 2) f.blinkAt = tick + 36 + Math.floor(Math.random() * 36);
-          f.eyes = f.asleep || (!f.walking && tick >= f.blinkAt) ? 'shut' : 'open';
+          f.eyes = f.asleep || (!still && !f.walking && tick >= f.blinkAt) ? 'shut' : 'open';
         }
         f.setFrame(f.walking ? 1 + ph : 0, f.view);
         f.sitY = f.kid && f.poseName === 'sit' ? (1 - (kidPoints(f.kid, 'side', 'sit').seat[1] + 4) / f.h) * f.H : 0;   // sitting, she sits on the ground
@@ -797,7 +874,7 @@ function frame(now) {
   // confetti
   for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); b.m.material.dispose(); bits.splice(i, 1); } }
   // the sea rows rock gently, each its own way
-  if (stepped) for (const r of seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12;
+  if (stepped) { if (seaBaked) seaTick.value = tick; else for (const r of seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12; }
 
   // day and evening: the sun is pulled up out of view and the moon let down on its thread
   eve += (eveTarget - eve) * Math.min(1, dt * 1.6);
@@ -836,7 +913,8 @@ window.__p = {
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
-  stats() { return { fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST }; },
+  still(on = true) { still = on; if (on) tick = 0; },
+  stats() { return { fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
   /** dress her: __p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon']); pose her: __p.pose('sit' | 'hold' | 'up' | null); __p.sleep(true) shuts her eyes */
   wear(ids) { girl.redress(wearOf(ids || [])); return girl.wear; },
   pose(name) { girl.poseName = name || null; },
