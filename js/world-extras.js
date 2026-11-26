@@ -247,6 +247,8 @@ export function createExtras(ctx) {
     });
   }
   let greeted = false;                                                           // they know her: when she comes to the fence the nearest one looks up
+  /** the unicorn of this adventure, now at home in the meadow (the last of the herd) */
+  const newest = () => herd[herd.length - 1] || null;
 
   /* ---------------- the race arch next to the meadow: ride a unicorn against the others (act-race.js) ---------------- */
   // Nobody has to know a race exists: once there is a unicorn to ride, two others wait at the start line under the arch,
@@ -280,7 +282,7 @@ export function createExtras(ctx) {
   syncItems(); syncEgg(); syncGoals(); syncHerd(false);
 
   return {
-    tapCompanion, eggSpot, dropItem, shakeTree, dispose: off,
+    tapCompanion, eggSpot, dropItem, shakeTree, dispose: off, newest,
     info: () => ({ items: items.length, egg: eggPos && [eggPos.x, eggPos.z], star: star.pos && [star.pos.x, star.pos.z], starHops: star.hops, starMoving: !!star.hop, fruit: fruit.pos && [fruit.pos.x, fruit.pos.z], fruitInTree: !!fruit.pos && fruit.pos.y > 1, gate: [gate.x, gate.z], herd: herd.length, hatching: !!hatching }),
     items: () => items.map(it => ({ type: it.type, x: it.x, z: it.z })),
     /** active: the child can play (not paused, start screen gone) */

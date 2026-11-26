@@ -28,6 +28,12 @@ export default async function (t) {
     ok(await until(`__w.info().pos[1] > 102`, 5000), 'leaving the garden: back in the hall'); await t.sleep(1000); await t.ev(`__w.walkTo(70, 107)`); await until(`!!document.querySelector('.act-kasteel canvas')`); await t.sleep(2600); await shot('06-back-again');
     for (const i of [0, 1, 3, 4, 5]) { await tap(35 + i * 30, 100); await until(`__w.Q.quest.blooms.includes(${i}) || __w.Q.quest.stage === 'feest'`, 8000); await t.sleep(300); }
     ok(await t.ev(`__w.Q.quest.stage`) === 'feest' && await t.ev(`__w.Q.quest.herd.length`) === 4, 'six flowers awake: the rainbow is whole, that is the party'); await t.sleep(1500); await shot('07-rainbow'); await t.sleep(2500); await shot('08-party');
+    // her family comes for her: down the rainbow, a cuddle, and home together over the rainbow to the meadow in the village
+    await t.sleep(3000); await shot('08b-family'); await t.sleep(3000); await shot('08c-cuddle'); await t.sleep(3500); await shot('08d-over-the-rainbow');
+    ok(await until(`!document.querySelector('.act-kasteel canvas')`, 12000), 'after the walk over the rainbow the garden closes by itself'); await t.sleep(1500);
+    const PEN = await J('__w.MAP.PEN'), at = await J('__w.info().pos'); ok(at[1] < PEN.z0 && at[1] > PEN.z0 - 2 && at[0] > PEN.x0 && at[0] < PEN.x1, 'she is home: by the gate of the meadow in the village ' + at);
+    ok(await t.ev(`(c => !!c && Math.hypot(c.pos.x - __w.kid.pos.x, c.pos.z - __w.kid.pos.z) < 2.5)(__w.extras.newest())`), 'and her unicorn is right there, inside with her family'); await t.sleep(1200); await shot('08e-home');
+    await place(70.5, 108.5); await t.sleep(800); await t.ev(`__w.walkTo(70, 107)`); ok(await until(`!!document.querySelector('.act-kasteel canvas')`, 8000), 'the garden is still there to play in'); await t.sleep(2600);
     await tap(35, 100); await t.sleep(400); await tap(196, 40); await t.sleep(500); await shot('09-toy');
     await tap(15, 80); await t.sleep(1500); ok(await t.ev(`!document.querySelector('.act-kasteel canvas')`), 'the golden door in the garden leads back into the hall');
     // the hall: coins on the floor and a chest

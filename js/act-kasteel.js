@@ -2,7 +2,10 @@
 // Six closed flowers stand in the grass, one for every colour. Tap one and the unicorn trots over and touches it with her
 // horn: it opens, sings its note, and its colour rises into the sky. When all six are open the rainbow is whole: that is
 // the party (quest.js `bloom`, saved first, shown after). Nothing can go wrong, and what is open stays open.
-// After the party the garden is a toy: every flower is a note, the dragon on the wall blows hearts.
+// Then her family comes for her: a mama unicorn and the unicorns of earlier adventures slide down the rainbow, cuddle
+// her, and everybody (the girl too) walks home over the rainbow; the world goes on at the meadow in the village, where
+// she now lives and can be visited (state.extra.homeWalk, main.js -> world.homeArrive). So she is never just gone.
+// After that the garden is a toy: every flower is a note, the dragon on the wall blows hearts.
 // The golden door in the tower leads back into the castle hall (world-rooms.js), where the coins and the chest are now.
 import * as ART from './art.js';
 import * as Q from './quest.js';
@@ -50,6 +53,40 @@ export function open(root, api) {
   const dragon = { x: 196, y: 48, hop: 0 }, dragonArt = ART.dragon();
   const parts = [], flies = Array.from({ length: 9 }, (_, k) => ({ x: 20 + k * 22, y: 60 + (k * 37) % 40, p: k * 1.3 }));
   let room = 'tuin', fade = 0, time = 0, doors = 0, party = 0, whole = flowers.every(f => f.open), glow = whole ? 1 : 0;
+  /* ---------- her family (only right after the party): a mama and the unicorns of earlier adventures ---------- */
+  let home = -1, partied = false;
+  const family = [{ look: { body: '#FFF6FB', mane: look.mane, horn: '#F7C548' }, big: true }].concat(Q.quest.herd.slice(0, -1).slice(-3).map(u => ({ look: u, big: false })))
+    .map((f, k) => Object.assign(f, { k, x: -30, y: -30, face: 1, hop: 0, art: ART.uniSprite(f.look, 'idle', false, { baby: !f.big }), w1: ART.uniSprite(f.look, 'w1', false, { baby: !f.big }), w2: ART.uniSprite(f.look, 'w2', false, { baby: !f.big }) }));
+  const RR = R0 - 3 * BW, arc = a => [CX + Math.cos(a) * RR, GY + Math.sin(a) * RR];   // the middle of the rainbow: a = PI is its left foot, 1.5 PI the top, 2 PI the right foot
+  function stepHome(dt) {
+    const t = home += dt;
+    family.forEach((f, k) => {
+      const t0 = k * .55;
+      if (t < 2.6 + t0) {                                                          // whee, down the rainbow from the top to its left foot
+        const u = Math.max(0, Math.min(1, (t - t0) / 1.6)), [x, y] = arc(Math.PI * (1.5 - .5 * u * u));
+        f.x = x; f.y = Math.min(hero.y, y + 4); f.face = -1; f.move = u > 0 && u < 1; if (u > 0 && u < 1 && Math.random() < dt * 14) spark(f.x, f.y - 6, 1);
+        if (u >= 1) { const goal = hero.x - 30 - k * 24; f.y = hero.y; f.face = goal > f.x ? 1 : -1; f.x += Math.sign(goal - f.x) * Math.min(Math.abs(goal - f.x), dt * 70); f.move = Math.abs(goal - f.x) > .5; }
+      } else if (t < 6.2) {                                                        // a cuddle: hearts, everybody hops
+        f.face = 1; f.move = false; if (Math.floor(t * 2.2 + k) !== Math.floor((t - dt) * 2.2 + k)) { f.hop = 1; if (k === 0) { heart(f.x + 14, f.y - 34); hero.hop = 1; sfx.chime(k + 2); } }
+      } else {                                                                     // home together, over the rainbow: up from its left foot, over the top, away
+        const u = Math.min(1, (t - 6.2 - k * .35) / 3.4), [x, y] = arc(Math.PI * (1 + Math.max(0, u)));
+        if (u > 0) { f.x = x; f.y = y + 4; f.face = 1; f.move = true; }
+      }
+      if (f.hop > 0) f.hop = Math.max(0, f.hop - dt * 2.4);
+    });
+    if (t > 6.2) { const u = Math.min(1, (t - 7.6) / 3.4); if (u > 0) { const [x, y] = arc(Math.PI * (1 + u)); hero.x = hero.to = x; hero.y = y + 4; hero.face = 1; hero.step += dt; } else { hero.to = family[0].x; } }
+    if (t > 9.6) fadeOut = Math.min(1, fadeOut + dt * .7);
+    if (t > 11.2 && !closed) { closed = true; state.extra.homeWalk = Q.quest.cycle; api.save(); api.close(); }   // the world goes on at the meadow in the village
+  }
+  let fadeOut = 0, closed = false;
+  function drawFamily() {
+    if (home < 0) return;
+    for (const f of family) {
+      if (f.y < -20) continue; const lift = Math.round(Math.abs(Math.sin(f.hop * Math.PI)) * 7), fr = f.move ? (Math.floor(time * 7 + f.k) % 2 ? f.w1 : f.w2) : f.art;
+      ctx.fillStyle = 'rgba(30,60,50,.25)'; if (f.y >= hero.y - 1) ctx.fillRect(Math.round(f.x - 12), f.y - 1, 24, 2);
+      PX.drawSprite(ctx, fr, f.x, f.y - lift, 2, f.face < 0);
+    }
+  }
   const spark = (X, Y, n = 5, col = null) => { for (let k = 0; k < n; k++) parts.push({ x: X, y: Y, vx: (Math.random() - .5) * 46, vy: -18 - Math.random() * 34, life: .7 + Math.random() * .5, col: col || COLS[Math.floor(Math.random() * COLS.length)], g: 46 }); };
   const heart = (X, Y) => parts.push({ x: X, y: Y, vx: (Math.random() - .5) * 10, vy: -16, life: 1.3, art: PX.heart(), g: 0 });
 
@@ -155,6 +192,9 @@ export function open(root, api) {
     if (hero.hop > 0) hero.hop = Math.max(0, hero.hop - dt * (party > 0 ? 1.1 : 2)); if (dragon.hop > 0) dragon.hop = Math.max(0, dragon.hop - dt * 2);
     for (const f of flowers) { if (f.open && f.grow < 1) f.grow = Math.min(1, f.grow + dt * 1.6); if (f.wig > 0) f.wig = Math.max(0, f.wig - dt * 1.5); if (f.sing > 0) f.sing = Math.max(0, f.sing - dt * 2.2); }
     if (whole && glow < 1) glow = Math.min(1, glow + dt * .5);
+    if (party > 0) partied = true;
+    if (partied && party <= 0 && home < 0 && withUni && family.length) { home = 0; sfx.sparkle(); }   // after the party her family comes for her
+    if (home >= 0) stepHome(dt);
     if (party > 0) {                                                              // the rainbow is whole: stars rain down, everybody dances
       party -= dt; if (hero.hop <= 0) hero.hop = 1; if (Math.random() < dt * 22) parts.push({ x: Math.random() * LW, y: -4, vx: (Math.random() - .5) * 12, vy: 26 + Math.random() * 30, life: 3.2, col: COLS[Math.floor(Math.random() * COLS.length)], g: 0, big: Math.random() < .4 });
       if (Math.floor(party * 1.6) !== Math.floor((party + dt) * 1.6)) { const f = flowers[Math.floor(Math.random() * N)]; f.wig = 1; f.sing = 1; sfx.chime(f.i); dragon.hop = 1; if (withUni) heart(hero.x + 8, hero.y - 30); }
@@ -174,7 +214,9 @@ export function open(root, api) {
     PX.drawSprite(ctx, dragonArt, dragon.x, dragon.y - Math.round(Math.abs(Math.sin(dragon.hop * Math.PI)) * 7), 2, true);
     for (const f of flies) { f.x += Math.sin(time * .7 + f.p) * dt * 9; f.y += Math.cos(time * .9 + f.p * 2) * dt * 6; f.x = (f.x + LW) % LW; f.y = Math.max(34, Math.min(GY + 26, f.y)); const on = Math.sin(time * 2.4 + f.p * 3) > -.2; if (on) { px(ctx, '#FFF6B0', f.x, f.y, 2, 2); ctx.globalAlpha = .35; px(ctx, '#FFF6B0', f.x - 1, f.y - 1, 4, 4); ctx.globalAlpha = 1; } }
     for (const f of flowers) drawFlower(f);
+    drawFamily();
     drawHero();
+    if (fadeOut > 0) { ctx.fillStyle = `rgba(20,16,48,${fadeOut})`; ctx.fillRect(0, 0, LW, LH); }
     drawParts(dt); if (fade > 0) { ctx.fillStyle = `rgba(255,236,170,${fade})`; ctx.fillRect(0, 0, LW, LH); }
     if (glow > 0 && party > 0) { ctx.fillStyle = `rgba(255,240,200,${Math.max(0, (party - 6) * .5)})`; ctx.fillRect(0, 0, LW, LH); }
     // the gate swings open on the garden

@@ -1241,6 +1241,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     action: () => actionNow(),
     setNight(n, instant) { nightTarget = n ? 1 : 0; if (instant) { nightT = nightTarget; applyNight(nightT); } },
     wakeUp,
+    /** after the castle: everybody walked home over the rainbow, so the evening goes on by the meadow in the village. Her
+     *  unicorn stands just inside the gate with her family and nuzzles her over the fence: she lives here now (a tap and
+     *  she comes along for a day, like every unicorn in the meadow) */
+    homeArrive() {
+      const P = MAP.PEN, gx = (P.gate[0][0] + P.gate[1][0] + 1) / 2;
+      ctx.fade(() => {
+        setMount(null, true); placeAt(gx, P.z0 - .7, 0, -1); kid.face = 1;
+        const c = extras.newest(); if (c) { c.pos.set(gx + .3, 0, P.z0 + 1.1); c.path = []; c.wait = 8; c.face = -1; setTimeout(() => { c.hop = 1; sfx.sparkle(); bubble(c, '', PX.heart()); }, 900); setTimeout(() => { kid.hop = .6; bubble(kid, '', PX.heart()); }, 1800); }
+      });
+    },
     exitBuilding(id) { if (id === 'kasteel') { const g = MAP.ROOMS.hal.garden; placeAt(g[0] + .5, g[1] + 2.5); return; } const b = BUILDINGS.find(b => b.id === id); if (b) placeAt(b.door[0] + .5, b.door[1] + 1.5); },
     refreshUnicorn,
     /** walk to a tile, or to a building's door (and go in) */

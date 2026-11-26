@@ -62,7 +62,7 @@ async function enter(id) {
   sfx.door();
   try {
     const mod = await ACTS[id]();
-    const day0 = Q.quest.day; ui.openActivity(mod, () => { rebuildIfNewIsland(); if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); if (id === 'huisje' && Q.quest.day !== day0) { world.wakeUp(); quietHud(); } } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
+    const day0 = Q.quest.day; ui.openActivity(mod, () => { rebuildIfNewIsland(); if (world) { world.refreshUnicorn(); world.exitBuilding(id); world.pause(false); if (state.extra.homeWalk === Q.quest.cycle) { delete state.extra.homeWalk; save(); world.homeArrive(); } if (id === 'huisje' && Q.quest.day !== day0) { world.wakeUp(); quietHud(); } } syncNight(); if (wishInActivity || id === 'huisje') speak(Q.goalText()); });
   } catch (e) {
     console.error(e); speak('Dit huisje is nog in aanbouw!');
     if (world) { world.exitBuilding(id); world.pause(false); }
