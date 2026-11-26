@@ -25,7 +25,7 @@ for (const [k, f] of Object.entries(FIGS)) {
   const box = document.createElement('div'); box.className = 'fig';
   const big = cutout(f.w, f.h, f.draw, grain); big.className = 'big'; big.style.width = f.w * px * f.size / 1.2 * (k === 'grown' ? .95 : 1) + 'px';
   const steps = document.createElement('div'); steps.className = 'steps';
-  for (const fr of [4, 10]) { const c = cutout(f.w, f.h, (g) => f.draw(g, fr), grain); c.style.width = f.w * .42 * f.size + 'px'; steps.append(c); }
+  for (const [d, fr] of [[f.front, 0], [f.back, 0], [f.draw, 4]]) { if (!d) continue; const c = cutout(f.w, f.h, (g) => d(g, fr), grain); c.style.width = f.w * .36 * f.size + 'px'; steps.append(c); }
   const name = document.createElement('div'); name.className = 'name'; name.textContent = names[k];
   box.append(big, steps, name); sheet.append(box);
 }

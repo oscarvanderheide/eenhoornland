@@ -74,8 +74,8 @@ function kid(o) {
     const s = swing(f), hy = o.headY, r = o.head, cx = 102;
     const thigh = o.hem - 10, legR = 8, shoulder = o.neck + 12;
     // far leg and arm (in the shade)
-    piece(g, o.skin2, C(cx - 8, thigh, cx - 8 - s * 7, o.foot - 2, legR));
-    piece(g, o.shoe2, E(cx - 3 - s * 7, o.foot + 4, 12, 7.5));
+    piece(g, o.skin2, C(cx - 8, thigh, cx - 8 - s * 11, o.foot - 2, legR));
+    piece(g, o.shoe2, E(cx - 3 - s * 11, o.foot + 4, 12, 7.5));
     piece(g, o.skin2, C(cx - 12, shoulder, cx - 19 - s * 9, shoulder + o.arm, 6.5, 8));
     // the ponytail, tied high at the back of her head: it swings out and curls down (longer for Fenna), and bounces as she walks
     { const L = o.pony, k = s * 3, bx = cx - r * .55, by = hy - r * .62;
@@ -83,8 +83,8 @@ function kid(o) {
         [bx - 34 + k, by + L * .55], [bx - 28, by + 16], [bx - 12, by + 12]]));
       ink(g, o.hair2, S([[bx - 34, by - 4], [bx - 44 + k, by + 12], [bx - 44 + k, by + L * .5], [bx - 38 + k, by + L * .6], [bx - 38, by + 14]])); }
     // near leg
-    piece(g, o.skin, C(cx + 8, thigh, cx + 8 + s * 7, o.foot - 2, legR));
-    piece(g, o.shoe, E(cx + 13 + s * 7, o.foot + 4, 13, 7.5));
+    piece(g, o.skin, C(cx + 8, thigh, cx + 8 + s * 11, o.foot - 2, legR));
+    piece(g, o.shoe, E(cx + 13 + s * 11, o.foot + 4, 13, 7.5));
     // the dress, a little A, with a band at the hem and a white collar
     const w0 = 16, w1 = 29 + (o.hem - o.neck) * .07;
     piece(g, o.dress, S([[cx - w0, o.neck - 4], [cx + w0, o.neck - 4], [cx + w0 + 3, o.neck + 10], [cx + w1, o.hem - 2], [cx + w1 - 2, o.hem + 4], [cx, o.hem + 8], [cx - w1 + 2, o.hem + 4], [cx - w1, o.hem - 2], [cx - w0 - 3, o.neck + 10]]));
@@ -107,7 +107,49 @@ function kid(o) {
     if (g.colour) { g.save(); g.strokeStyle = '#8a3d4c'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.arc(cx + 20, hy + 18, 6, .35, Math.PI - .5); g.stroke(); g.restore(); }
   };
 }
+/** the same girl seen walking towards us (back = false) or away from us (back = true) */
+function kidFB(o, back) {
+  return (g, f) => {
+    const s = swing(f), hy = o.headY, r = o.head, cx = 100, k = s * 4;
+    const thigh = o.hem - 10, legR = 8, shoulder = o.neck + 12, w0 = 16, w1 = 29 + (o.hem - o.neck) * .07;
+    // seen from the front the ponytail peeks out beside her head; it swings as she walks
+    if (!back) piece(g, o.hair2, S([[cx - r * .3, hy - r * .9], [cx - r - 10 + k, hy - r * .7], [cx - r - 20 + k, hy - r * .2], [cx - r - 18 + k, hy + o.pony * .5], [cx - r - 8 + k, hy + o.pony * .7], [cx - r - 6, hy - r * .1]]));
+    // legs: the one that steps lifts its foot a little
+    for (const [sx, l] of [[-9, Math.max(0, s) * 9], [9, Math.max(0, -s) * 9]]) {
+      piece(g, back ? o.skin2 : o.skin, C(cx + sx, thigh, cx + sx, o.foot - 2 - l, legR));
+      piece(g, back ? o.shoe2 : o.shoe, back ? E(cx + sx, o.foot + 1 - l, 10, 7) : E(cx + sx, o.foot + 4 - l, 10.5, 8));
+    }
+    // arms at her sides, swinging forwards and back (seen as a little longer and shorter)
+    piece(g, o.skin2, C(cx - w0 - 2, shoulder, cx - w0 - 9, shoulder + o.arm - s * 5, 6.5, 8));
+    piece(g, o.skin2, C(cx + w0 + 2, shoulder, cx + w0 + 9, shoulder + o.arm + s * 5, 6.5, 8));
+    piece(g, o.dress, S([[cx - w0, o.neck - 4], [cx + w0, o.neck - 4], [cx + w0 + 3, o.neck + 10], [cx + w1, o.hem - 2], [cx + w1 - 2, o.hem + 4], [cx, o.hem + 8], [cx - w1 + 2, o.hem + 4], [cx - w1, o.hem - 2], [cx - w0 - 3, o.neck + 10]]));
+    piece(g, o.dress2, S([[cx - w1 + 3, o.hem - 9], [cx + w1 - 3, o.hem - 9], [cx + w1, o.hem - 1], [cx + w1 - 2, o.hem + 4], [cx, o.hem + 8], [cx - w1 + 2, o.hem + 4], [cx - w1, o.hem - 1]]), .6);
+    if (!back) piece(g, o.collar, S([[cx - 16, o.neck - 6], [cx + 16, o.neck - 6], [cx + 10, o.neck + 6], [cx, o.neck + 3], [cx - 10, o.neck + 6]]), .6);
+    else piece(g, o.dress2, U(E(cx - 6, o.neck + 16, 7, 4.5, .5), E(cx + 6, o.neck + 16, 7, 4.5, -.5)), .5);   // a little bow at the back of the dress
+    if (back) {
+      // the back of her head is all hair, the ponytail hangs down the middle
+      piece(g, o.skin2, U(E(cx - r + 2, hy + 6, 7, 9), E(cx + r - 2, hy + 6, 7, 9)));   // ears
+      piece(g, o.hair, E(cx, hy - 2, r + 2, r));
+      ink(g, o.hair2, S([[cx - 3, hy - r + 4], [cx + 3, hy - r + 4], [cx + 2, hy - r * .55], [cx - 2, hy - r * .55]]));
+      const by = hy - r * .6;
+      piece(g, o.hair, S([[cx - 11, by + 2], [cx + 11, by + 2], [cx + 15 + k, by + o.pony * .5 + 14], [cx + 9 + k, by + o.pony + 22], [cx + k, by + o.pony + 28], [cx - 9 + k, by + o.pony + 20], [cx - 15 + k, by + o.pony * .5 + 14]]));
+      ink(g, o.hair2, S([[cx - 3, by + 10], [cx + 3, by + 10], [cx + 3 + k, by + o.pony * .7 + 14], [cx - 3 + k, by + o.pony * .7 + 14]]));
+      piece(g, o.clip, U(E(cx - 10, by, 9, 6.5, -.3), E(cx + 10, by, 9, 6.5, .3)), .7); piece(g, o.clip, E(cx, by + 1, 5, 5), .9);
+      return;
+    }
+    // the face, straight on: hair behind at the sides, a fringe on top
+    piece(g, o.hair2, E(cx, hy - 3, r + 4, r - 2));
+    piece(g, o.skin, E(cx, hy, r, r - 1));
+    piece(g, o.hair, S([[cx - r - 3, hy + 20], [cx - r - 6, hy - 10], [cx - r + 6, hy - r + 4], [cx - 14, hy - r - 6], [cx + 14, hy - r - 6], [cx + r - 6, hy - r + 4], [cx + r + 6, hy - 10], [cx + r + 3, hy + 20],
+      [cx + r - 6, hy + 4], [cx + r - 10, hy - 12], [cx + 22, hy - 8], [cx + 12, hy - 18], [cx, hy - 9], [cx - 12, hy - 18], [cx - 22, hy - 8], [cx - r + 10, hy - 12], [cx - r + 6, hy + 4]]));
+    piece(g, o.clip, U(E(cx - r * .62 - 8, hy - r * .78, 8, 6, -.6), E(cx - r * .62 + 4, hy - r * .9, 8, 6, -.6)), .7); piece(g, o.clip, E(cx - r * .62 - 2, hy - r * .84, 4.5, 4.5), .9);
+    eye(g, cx - 14, hy + 8, 5); eye(g, cx + 14, hy + 8, 5);
+    ink(g, 'rgba(240,120,140,.45)', E(cx - 25, hy + 20, 7.5, 5)); ink(g, 'rgba(240,120,140,.45)', E(cx + 25, hy + 20, 7.5, 5));
+    if (g.colour) { g.save(); g.strokeStyle = '#8a3d4c'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.arc(cx, hy + 17, 6, .4, Math.PI - .4); g.stroke(); g.restore(); }
+  };
+}
 export const drawAnna = kid(KID.anna), drawFenna = kid(KID.fenna);
+export const drawAnnaFront = kidFB(KID.anna, false), drawAnnaBack = kidFB(KID.anna, true), drawFennaFront = kidFB(KID.fenna, false), drawFennaBack = kidFB(KID.fenna, true);
 
 /* ---------- the unicorns ---------- */
 const UNI = { body: '#FCF8F1', shade: '#E6DCEA', pink: '#F4A6C4', lilac: '#BBA6EA', mint: '#9ED9CF', horn: '#EBC35E', horn2: '#C9993A', hoof: '#C9A9DE', hoof2: '#AE8CC8', muzzle: '#F8DDE4' };
@@ -132,6 +174,47 @@ export function drawBaby(g, f) {
   piece(g, u.horn, S([[160, 56], [178, 22], [178, 22], [176, 58]]), .8);
   line(g, u.horn2, 2, [[164, 46], [176, 44]]); line(g, u.horn2, 2, [[168, 36], [177, 34]]);
   eye(g, 174, 90, 5.6); ink(g, 'rgba(240,120,150,.4)', E(172, 108, 8, 5.5));
+}
+/** the baby walking towards us: round chest, big face, two front legs stepping */
+export function drawBabyFront(g, f) {
+  const s = swing(f), u = UNI, cx = 110, l1 = Math.max(0, s) * 8, l2 = Math.max(0, -s) * 8;
+  piece(g, u.pink, E(cx + 50, 128, 12, 9, .5)); piece(g, u.lilac, E(cx + 54, 140, 9, 7, .2));   // the tail peeks out behind
+  piece(g, u.shade, C(cx - 26, 150, cx - 26, 174 - l2, 9.5)); piece(g, u.hoof2, E(cx - 26, 180 - l2, 10, 6));
+  piece(g, u.shade, C(cx + 26, 150, cx + 26, 174 - l1, 9.5)); piece(g, u.hoof2, E(cx + 26, 180 - l1, 10, 6));
+  piece(g, u.body, E(cx, 140, 44, 36));
+  piece(g, u.body, C(cx - 16, 156, cx - 16, 182 - l1, 11.5)); piece(g, u.hoof, E(cx - 16, 188 - l1, 12.5, 7));
+  piece(g, u.body, C(cx + 16, 156, cx + 16, 182 - l2, 11.5)); piece(g, u.hoof, E(cx + 16, 188 - l2, 12.5, 7));
+  // ears, the head, the muzzle
+  piece(g, u.body, S([[cx - 36, 70], [cx - 42, 36], [cx - 20, 58]])); ink(g, u.pink, S([[cx - 34, 64], [cx - 38, 44], [cx - 26, 58]]));
+  piece(g, u.body, S([[cx + 36, 70], [cx + 42, 36], [cx + 20, 58]])); ink(g, u.pink, S([[cx + 34, 64], [cx + 38, 44], [cx + 26, 58]]));
+  piece(g, u.body, E(cx, 94, 44, 40));
+  piece(g, u.muzzle, E(cx, 116, 24, 16), .5);
+  ink(g, '#D99AAE', U(E(cx - 8, 114, 2.6, 2), E(cx + 8, 114, 2.6, 2)));
+  // mane tufts on top, the horn in the middle
+  piece(g, u.lilac, E(cx - 26, 64, 13, 10, -.7), .7); piece(g, u.mint, E(cx + 24, 62, 12, 9, .6), .7);
+  piece(g, u.pink, E(cx - 10, 58, 17, 11, -.3), .7); piece(g, u.pink, E(cx + 10, 58, 14, 10, .3), .7);
+  piece(g, u.horn, S([[cx - 8, 56], [cx, 20], [cx, 20], [cx + 8, 56]]), .8);
+  line(g, u.horn2, 2, [[cx - 5, 46], [cx + 5, 44]]); line(g, u.horn2, 2, [[cx - 3, 36], [cx + 3, 34]]);
+  eye(g, cx - 18, 92, 5.4); eye(g, cx + 18, 92, 5.4);
+  ink(g, 'rgba(240,120,150,.4)', U(E(cx - 30, 106, 7, 5), E(cx + 30, 106, 7, 5)));
+  if (g.colour) { g.save(); g.strokeStyle = '#c9788f'; g.lineWidth = 2.2; g.lineCap = 'round'; g.beginPath(); g.arc(cx, 120, 6, .4, Math.PI - .4); g.stroke(); g.restore(); }
+}
+/** the baby walking away: her round bottom with the curly tail, the back of her head and mane, the horn tip */
+export function drawBabyBack(g, f) {
+  const s = swing(f), u = UNI, cx = 110, l1 = Math.max(0, s) * 8, l2 = Math.max(0, -s) * 8;
+  piece(g, u.shade, C(cx - 24, 150, cx - 24, 174 - l2, 9.5)); piece(g, u.hoof2, E(cx - 24, 180 - l2, 10, 6));
+  piece(g, u.shade, C(cx + 24, 150, cx + 24, 174 - l1, 9.5)); piece(g, u.hoof2, E(cx + 24, 180 - l1, 10, 6));
+  piece(g, u.horn, S([[cx - 6, 60], [cx, 26], [cx, 26], [cx + 6, 60]]), .8);
+  piece(g, u.body, S([[cx - 34, 70], [cx - 40, 38], [cx - 18, 58]])); piece(g, u.body, S([[cx + 34, 70], [cx + 40, 38], [cx + 18, 58]]));
+  piece(g, u.body, E(cx, 90, 38, 34));
+  // the mane runs down the back of her head
+  piece(g, u.mint, E(cx - 12, 84, 10, 22, .15), .7); piece(g, u.lilac, E(cx + 12, 84, 10, 22, -.15), .7); piece(g, u.pink, E(cx, 78, 12, 28), .7);
+  piece(g, u.body, E(cx, 142, 46, 38));
+  piece(g, u.body, C(cx - 18, 158, cx - 18, 182 - l1, 11.5)); piece(g, u.hoof, E(cx - 18, 188 - l1, 12.5, 7));
+  piece(g, u.body, C(cx + 18, 158, cx + 18, 182 - l2, 11.5)); piece(g, u.hoof, E(cx + 18, 188 - l2, 12.5, 7));
+  // the curly tail, swishing as she walks
+  const k = s * 5;
+  piece(g, u.mint, E(cx + 7 + k, 142, 9, 12, -.3), .7); piece(g, u.lilac, E(cx - 7 + k, 134, 10, 12, .3), .7); piece(g, u.pink, E(cx + k, 120, 13, 15), .7);
 }
 /** the grown unicorn: tall and slender, a long horn, a flowing mane and tail, wings folded on her side */
 export function drawGrown(g, f) {
@@ -171,9 +254,9 @@ export function drawGrown(g, f) {
 
 /** canvas sizes (drawing units) and how tall each stands in the world */
 export const FIGS = {
-  anna: { w: 200, h: 240, draw: drawAnna, frames: 1 + WALK, size: 1.2 },
-  fenna: { w: 200, h: 276, draw: drawFenna, frames: 1 + WALK, size: 1.38 },
-  baby: { w: 220, h: 200, draw: drawBaby, frames: 1 + WALK, size: .95 },
+  anna: { w: 200, h: 240, draw: drawAnna, front: drawAnnaFront, back: drawAnnaBack, frames: 1 + WALK, size: 1.2 },
+  fenna: { w: 200, h: 276, draw: drawFenna, front: drawFennaFront, back: drawFennaBack, frames: 1 + WALK, size: 1.38 },
+  baby: { w: 220, h: 200, draw: drawBaby, front: drawBabyFront, back: drawBabyBack, frames: 1 + WALK, size: .95 },
   grown: { w: 280, h: 284, draw: drawGrown, frames: 1 + WALK, size: 1.75 },
 };
 

@@ -17,7 +17,7 @@ function rng(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const STEP = 1 / 12;   // figures move like stop motion: their poses change twelve times a second
-const WSTEP = 1 / 24;  // ...but a walk has twelve drawings per two steps and runs at 24 a second, so it looks smooth
+const WSTEP = 1 / 15;  // ...but a walk has twelve drawings per two steps, 15 a second: two calm steps in 0.8 s
 
 /* ---------------- paper ---------------- */
 /** a tileable sheet of paper: soft clouds of value noise plus little fibres, near white (materials tint it) */
@@ -435,23 +435,30 @@ function drawDuck(g, f) {
 }
 
 const figures = [];
-function makeFigure(name, w, h, draw, frames, size) {
-  const maps = []; for (let f = 0; f < frames; f++) { const t = new THREE.CanvasTexture(cutout(w, h, g => draw(g, f), PAPER)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; maps.push(t); }
+/** a figure has a side view (facing right, the world flips it) and, if drawn, a front and a back view; each is a standing frame plus a walk */
+function makeFigure(name, { w, h, draw, front, back, frames, size }) {
+  const views = { side: draw, front, back }, all = {};
+  for (const [v, d] of Object.entries(views)) {
+    if (!d) continue; all[v] = [];
+    for (let f = 0; f < frames; f++) { const t = new THREE.CanvasTexture(cutout(w, h, g => d(g, f), PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; all[v].push(t); }
+  }
+  const maps = all.side;
   const H = size, W = size * w / h;
   const geo = new THREE.PlaneGeometry(W, H); geo.translate(0, H / 2, 0);
   const mat = new THREE.MeshStandardMaterial({ map: maps[0], alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 });
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = false;
   mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: maps[0], alphaTest: .5 });
   const g = new THREE.Group(), pose = new THREE.Group(); g.add(pose); pose.add(mesh); scene.add(g);
-  const fig = { name, g, pose, mesh, mat, maps, x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, setFrame(i) { if (this.frame === i) return; this.frame = i; mat.map = maps[i]; mesh.customDepthMaterial.map = maps[i]; } };
+  const fig = { name, g, pose, mesh, mat, maps, all, view: 'side', x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, dirX: 1, dirZ: 0,
+    setFrame(i, view = this.view) { if (!all[view]) view = 'side'; if (this.frame === i && this.view === view) return; this.frame = i; this.view = view; const m = all[view][i]; mat.map = m; mesh.customDepthMaterial.map = m; } };
   mesh.userData.fig = fig; figures.push(fig); return fig;
 }
-const fig = (name, k) => makeFigure(name, FIGS[k].w, FIGS[k].h, FIGS[k].draw, FIGS[k].frames, FIGS[k].size);
+const fig = (name, k) => makeFigure(name, FIGS[k]);
 const girl = fig('girl', 'anna');
 const uni = fig('unicorn', 'baby');
 const mama = fig('mama', 'grown');
-const sheep = makeFigure('sheep', 140, 150, drawSheep, 3, .95);
-const duck = makeFigure('duck', 125, 100, drawDuck, 2, .7);
+const sheep = makeFigure('sheep', { w: 140, h: 150, draw: drawSheep, frames: 3, size: .95 });
+const duck = makeFigure('duck', { w: 125, h: 100, draw: drawDuck, frames: 2, size: .7 });
 girl.x = .8; girl.z = 2.2; uni.x = -.4; uni.z = 2.6; uni.face = 1;
 mama.x = .6; mama.z = -1.2; mama.face = 1;
 solids.push({ x: mama.x, z: mama.z, r: .55, fig: mama });
@@ -525,11 +532,24 @@ function free(x, z, fromH, me = girl) {
   return true;
 }
 function move(f, dx, dz) {
+  const x0 = f.x, z0 = f.z, ok = tryMove(f, dx, dz);
+  if (ok) { const mx = f.x - x0, mz = f.z - z0, l = Math.hypot(mx, mz) || 1, k = .25; f.dirX += (mx / l - f.dirX) * k; f.dirZ += (mz / l - f.dirZ) * k; }
+  return ok;
+}
+function tryMove(f, dx, dz) {
   const fromH = heightAt(f.x, f.z) ?? 0;
   if (free(f.x + dx, f.z + dz, fromH, f)) { f.x += dx; f.z += dz; return true; }
   if (Math.abs(dx) > 1e-4 && free(f.x + dx, f.z, fromH, f)) { f.x += dx; return true; }
   if (Math.abs(dz) > 1e-4 && free(f.x, f.z + dz, fromH, f)) { f.z += dz; return true; }
   return false;
+}
+/** walking mostly towards the camera shows her front, mostly away her back, else her side (with a margin so it never flickers) */
+function viewFor(f) {
+  if (!f.all.front) return 'side';
+  const ax = Math.abs(f.dirX), az = Math.abs(f.dirZ);
+  if (az > ax * 1.5) return f.dirZ > 0 ? 'front' : 'back';
+  if (ax > az * 1.1) return 'side';
+  return f.view;
 }
 
 /* ---------------- input: tap to walk, hold to steer, arrows/WASD ---------------- */
@@ -549,7 +569,7 @@ function pickAt(cx, cy) {
 }
 const alphaCache = new Map();
 function solidAt(fig, uv) {
-  const cv = fig.maps[fig.frame].image; let d = alphaCache.get(cv);
+  const cv = fig.mat.map.image; let d = alphaCache.get(cv);
   if (!d) { d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height); alphaCache.set(cv, d); }
   const px = Math.round(uv.x * (cv.width - 1)), py = Math.round((1 - uv.y) * (cv.height - 1)), r = Math.round(cv.width * .08);
   for (let dy = -r; dy <= r; dy += r) for (let dx = -r; dx <= r; dx += r) {
@@ -657,7 +677,7 @@ function frame(now) {
     const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
     if (d < .08) target = null; else { ix = dx / d; iz = dz / d; }
   }
-  const speed = 2.5, il = Math.hypot(ix, iz);
+  const speed = 2.3, il = Math.hypot(ix, iz);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -686,7 +706,8 @@ function frame(now) {
       if (cyc) {
         // walking: the next of twelve drawings, a little bounce on each step, a gentle sway
         const ph = f.phase || 0, sw = Math.sin(ph / WALK * Math.PI * 2);
-        f.setFrame(f.walking ? 1 + ph : 0);
+        if (f.walking) f.view = viewFor(f);
+        f.setFrame(f.walking ? 1 + ph : 0, f.view);
         f.bob = f.walking ? (1 - Math.abs(sw)) * .045 : 0;
         f.tilt = f.walking ? sw * .03 : 0;
         if (!f.walking) f.phase = 0;
@@ -695,7 +716,7 @@ function frame(now) {
       // pose = position snapped to the frame, so even a hop moves in little steps
       f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0);
       f.pose.rotation.z = f.tilt * f.face;
-      f.mesh.scale.x = f.face;
+      f.mesh.scale.x = f.view === 'side' ? f.face : 1;
     }
     f.g.position.set(f.x, f.y, f.z);
     f.g.rotation.y = Math.atan2(camera.position.x - f.x, camera.position.z - f.z) * .85;
@@ -744,6 +765,7 @@ window.__p = {
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
+  view(name = 'girl') { return figures.find(f => f.name === name).view; },
   uniOk() { return heightAt(uni.x, uni.z) !== null; },
   hop(name) { return figures.find(f => f.name === name).hop; },
   info() { return { girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], door: doorTarget, eve, h: heightAt(girl.x, girl.z) }; },

@@ -22,6 +22,11 @@ export default async function (t) {
   ok(d.girl[2] > .4, `up the stairs onto the hill (y ${d.girl[2].toFixed(2)})`);
   await t.ev('__p.placeAt(3.5, 4.6)'); await t.ev('__p.walkTo(3.5, 7.0)'); await t.sleep(1500);
   const e = await t.ev('__p.info()'); ok(e.girl[1] > 6.2, `out on the jetty (z ${e.girl[1].toFixed(1)})`);
+  // she shows her front walking towards us, her back walking away, her side walking across
+  const views = [];
+  for (const [x0, z0, x1, z1] of [[-.5, -0.3, -.5, 3.2], [-.5, 3.2, -.5, -0.2], [-3, 2.4, 1.5, 2.4]]) { await t.ev(`__p.placeAt(${x0}, ${z0}); __p.walkTo(${x1}, ${z1})`); await t.sleep(700); views.push(await t.ev('__p.view()')); }
+  ok(views.join() === 'front,back,side', `front, back and side views (${views})`);
+  await t.ev('__p.placeAt(-.5, -0.3); __p.walkTo(-.5, 3.2)'); await t.sleep(700); await t.shot(pre + 'front.png');
   await t.ev('__p.placeAt(.2, 1.6)'); await t.sleep(1200);
   const f0 = await t.ev('__p.info()'); await t.click(...(process.env.PHONE ? [250, 560] : [760, 470])); await t.sleep(1500);
   const f1 = await t.ev('__p.info()'); ok(Math.hypot(f1.girl[0] - f0.girl[0], f1.girl[1] - f0.girl[1]) > .5, 'a real tap on the meadow walks her there');
