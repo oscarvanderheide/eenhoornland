@@ -151,10 +151,11 @@ const skyMat = new THREE.ShaderMaterial({
   vertexShader: `varying vec2 vUv; varying float vY; void main(){ vUv=uv; vY=(modelMatrix*vec4(position,1.)).y; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
   fragmentShader: `uniform sampler2D t; uniform float eve; varying vec2 vUv; varying float vY;
     void main(){
-      float h=clamp((vY-1.)/13.,0.,1.);
+      float h=clamp((vY+1.)/9.,0.,1.);
       vec3 dayLo=vec3(1.,.84,.68), dayHi=vec3(.42,.74,.78);
       vec3 eveLo=vec3(.98,.6,.48), eveHi=vec3(.22,.24,.45);
-      vec3 c=mix(mix(dayLo,dayHi,smoothstep(.0,.8,h)), mix(eveLo,eveHi,smoothstep(.0,.6,h)), eve);
+      vec3 dayMid=vec3(.97,.93,.80); vec3 day=mix(mix(dayLo,dayMid,smoothstep(.0,.35,h)),dayHi,smoothstep(.35,.9,h));
+      vec3 c=mix(day, mix(eveLo,eveHi,smoothstep(.0,.6,h)), eve);
       float p=texture2D(t,vUv*vec2(6.,2.)).r; c*=.86+.16*p;
       gl_FragColor=vec4(pow(c,vec3(2.2)),1.);
     }`,
@@ -169,7 +170,7 @@ function wavyTop(w, h, seed, amp, waves) {
   for (let i = 0; i <= 40; i++) { const x = -w / 2 + w * i / 40; pts.push([x, h + Math.sin(x / w * Math.PI * waves + p) * amp + Math.sin(x * 1.7 + p * 2) * amp * .3 + (R() - .5) * .04]); }
   pts.push([w / 2, 0]); return pts;
 }
-const hills = [['#86aeb0', -16, 1.9, 1], ['#a3c2bf', -24, 2.8, 2], ['#c2d6cc', -33, 3.8, 3]];
+const hills = [['#7fb0ad', -16, 1.3, 1], ['#9cc4bb', -24, 1.9, 2], ['#bcd6c6', -33, 2.6, 3]];
 for (const [col, z, h, s] of hills) {
   const m = card(wavyTop(70, h, s * 5, h * .35, 2 + s), .12, paper(col)); m.position.set(0, -1.2, z); m.castShadow = false; scene.add(m);
 }
@@ -188,12 +189,12 @@ function cloudPts(w, seed) {
   }
   pts.push([w / 2, 0]); return pts;
 }
-for (const [x, y, z, w, s] of [[-8, 6.5, -11, 3.2, 1], [6.5, 7.6, -13, 4, 2], [13, 5.4, -10, 2.4, 3]]) {
+for (const [x, y, z, w, s] of [[-7, 3.6, -11, 2.6, 1], [5.5, 4.4, -13, 3.4, 2], [12, 3.2, -10, 2.2, 3]]) {
   const c = card(cloudPts(w, s), .08, paper('#f7f1e6'), whiteEdge); c.castShadow = false; hung(c, x, y, z);
 }
 function sunPts(r, rays) { const p = []; for (let i = 0; i < rays * 2; i++) { const a = i / (rays * 2) * Math.PI * 2, rr = i % 2 ? r * .78 : r; p.push([Math.cos(a) * rr, Math.sin(a) * rr]); } return p; }
 const sunCard = card(sunPts(1.1, 14), .08, paper('#f2b94e', { extra: { emissive: '#f2a93e', emissiveIntensity: .35 } })); sunCard.castShadow = false;
-const sun = hung(sunCard, -10, 8.5, -14);
+const sun = hung(sunCard, -11, 4.6, -14);
 const moonShape = []; for (let i = 0; i <= 24; i++) { const a = -Math.PI / 2 + Math.PI * i / 24; moonShape.push([Math.cos(a) * .9, Math.sin(a) * .9]); }
 for (let i = 24; i >= 0; i--) { const a = -Math.PI / 2 + Math.PI * i / 24; moonShape.push([Math.cos(a) * .45 - .05, Math.sin(a) * .82]); }
 const moonCard = card(moonShape, .08, paper('#f3e2a0', { extra: { emissive: '#f3e2a0', emissiveIntensity: .6 } })); moonCard.castShadow = false;
@@ -493,7 +494,7 @@ function makeFigure(name, w, h, draw, frames, size) {
   mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: maps[0], alphaTest: .5 });
   const g = new THREE.Group(), pose = new THREE.Group(); g.add(pose); pose.add(mesh); scene.add(g);
   const fig = { name, g, pose, mesh, mat, maps, x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, setFrame(i) { if (this.frame === i) return; this.frame = i; mat.map = maps[i]; mesh.customDepthMaterial.map = maps[i]; } };
-  figures.push(fig); return fig;
+  mesh.userData.fig = fig; figures.push(fig); return fig;
 }
 const girl = makeFigure('girl', 130, 200, drawGirl, 3, 1.25);
 const uni = makeFigure('unicorn', 160, 165, drawUnicorn, 3, 1.15);
@@ -588,7 +589,19 @@ function pickAt(cx, cy) {
   const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const hits = ray.intersectObjects([...taps, ...groundMeshes], false);
-  return hits[0] || null;
+  // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
+  return hits.find(h => !h.object.userData.fig || solidAt(h.object.userData.fig, h.uv)) || null;
+}
+const alphaCache = new Map();
+function solidAt(fig, uv) {
+  const cv = fig.maps[fig.frame].image; let d = alphaCache.get(cv);
+  if (!d) { d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height); alphaCache.set(cv, d); }
+  const px = Math.round(uv.x * (cv.width - 1)), py = Math.round((1 - uv.y) * (cv.height - 1)), r = Math.round(cv.width * .08);
+  for (let dy = -r; dy <= r; dy += r) for (let dx = -r; dx <= r; dx += r) {
+    const x = clamp(px + dx, 0, cv.width - 1), y = clamp(py + dy, 0, cv.height - 1);
+    if (d.data[(y * cv.width + x) * 4 + 3] > 128) return true;
+  }
+  return false;
 }
 function groundPoint(cx, cy) {
   const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
@@ -661,7 +674,7 @@ function resize() {
   camera.fov = portrait ? 34 : 24; camera.updateProjectionMatrix();
   // fit the island's width (about 16) in view
   const vw = portrait ? 7.5 : 12.5, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * a;
-  camDist = clamp(vw / 2 / tanH, 11, 40); camH = camDist * (portrait ? .62 : .36);
+  camDist = clamp(vw / 2 / tanH, 11, 40); camH = camDist * (portrait ? .5 : .28);
   const pw = Math.floor(w * DPR), ph = Math.floor(h * DPR);
   if (rt) rt.dispose();
   rt = new THREE.WebGLRenderTarget(pw, ph, { type: halfOK ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4, depthTexture: new THREE.DepthTexture(pw, ph) });
@@ -699,7 +712,7 @@ function frame(now) {
   {
     const dx = girl.x - uni.x, dz = girl.z - uni.z, d = Math.hypot(dx, dz);
     uni.walking = false;
-    if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { uni.x = girl.x - girl.face * .9; uni.z = girl.z + .3; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
+    if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
   // the sheep looks at her when she comes close
   if (Math.hypot(girl.x - sheep.x, girl.z - sheep.z) < 2) sheep.face = girl.x < sheep.x ? -1 : 1;
@@ -740,8 +753,8 @@ function frame(now) {
   hemi.color.copy(C('#cfe6e4', '#6a6fa0', eve)); hemi.groundColor.copy(C('#8a6f58', '#4a3848', eve)); hemi.intensity = lerp(.85, 1.05, eve);
   fill.intensity = lerp(.45, .25, eve);
   scene.fog.color.copy(C('#efd2b4', '#5a5478', eve));
-  sun.position.y = lerp(8.5, 24, eve); moon.position.y = lerp(22, 8, eve);
-  for (const s of stars.children) s.position.y = lerp(28, 9 + (s.id % 5), eve);
+  sun.position.y = lerp(4.6, 24, eve); moon.position.y = lerp(22, 4.8, eve);
+  for (const s of stars.children) s.position.y = lerp(28, 3.5 + (s.id % 5) * .7, eve);
   const lit = lightOn ? 1 : 0;
   inLight.intensity = lerp(inLight.intensity, lit * lerp(1.6, 2.6, eve), Math.min(1, dt * 5));
   paneMat.emissiveIntensity = lerp(.08, .3, eve) + inLight.intensity / 2.2;
@@ -766,5 +779,8 @@ window.__p = {
   walkTo(x, z) { target = { x, z }; },
   tap(name) { const f = figures.find(f => f.name === name); if (f) tapFigure(f); else if (name === 'house') toggleHouse(); else if (name === 'tree') { trees[0].wob = 1; } },
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
+  screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+  uniOk() { return heightAt(uni.x, uni.z) !== null; },
+  hop(name) { return figures.find(f => f.name === name).hop; },
   info() { return { girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], door: doorTarget, eve, h: heightAt(girl.x, girl.z) }; },
 };
