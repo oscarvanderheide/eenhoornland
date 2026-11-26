@@ -340,3 +340,25 @@ export function dandelion(S, x, y, z, seed = 1) {
   S.tap(g, blow);
   return { state: () => ({ blown, full: back <= 0 }), step({ dt }) { if (back > 0) { back -= dt; if (back <= 0) { clock.visible = true; bud.visible = false; } } else if (S.girl.walking && Math.hypot(S.girl.x - wx, S.girl.z - wz) < .3) blow(); } };
 }
+
+/** The fruit stall: a wooden counter under a striped awning, a basket of apples on it. A tap: she walks up and takes an
+ *  apple. It is in her hands (one thing at a time), and whoever she taps next gets it, and munches */
+export function stall(S, x, z, y) {
+  const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g); const [wx, wz] = S.at([x, z]);
+  const add = (w, h, d, col, px, py, pz, rx = 0) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); m.rotation.x = rx; g.add(m); return m; };
+  add(1.5, .08, .7, '#d9a066', 0, .62, 0); add(1.4, .5, .05, '#c79a66', 0, .33, .3); for (const sx of [-.66, .66]) add(.07, .62, .6, '#b98a5a', sx, .31, 0);   // the counter
+  for (const sx of [-.7, .7]) { add(.05, 1.75, .05, '#8d6a48', sx, .875, -.32); add(.05, 1.45, .05, '#8d6a48', sx, .725, .36); }                                 // four posts
+  for (let i = 0; i < 6; i++) add(.26, .04, .98, i % 2 ? '#fbf5ea' : '#e98f8f', -.65 + i * .26, 1.62, .02, .3);                                                  // the awning, in stripes
+  for (let i = 0; i < 6; i++) add(.26, .16, .03, i % 2 ? '#fbf5ea' : '#e98f8f', -.65 + i * .26, 1.42, .5);                                                       // and its hanging edge
+  for (const [px, c] of [[-.45, '#e98f8f'], [-.27, '#f2c65c'], [-.36, '#d9706c']]) { const a = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), paper(c)); a.position.set(px, .73, c === '#d9706c' ? .12 : -.02); a.castShadow = true; g.add(a); }
+  S.wall(x, z, .8, .42);
+  const basket = S.figure('mand', THINGS.mand), apple = S.figure('appel', THINGS.appel), me = {}; basket.x = wx + .3; basket.z = wz + .1; basket.floatY = basket.y = y + .66; apple.g.visible = false;
+  let held = false, taken = 0, given = 0;
+  const down = () => { held = false; apple.g.visible = false; girl.poseName = null; };
+  S.offer(who => { if (!held) return false; down(); S.hands.free(me); given++; who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#e98f8f', '#f6efe2', '#d9706c'], 8, undefined, 1.6); return true; });
+  const take = () => { if (S.playing() || held) { basket.hopV = 1.4; return; } S.walkThen(wx + .3, wz + 1.05, () => { if (held) return; girl.view = 'back'; S.hands.take(me, down); held = true; taken++; basket.hopV = 1.6; sfx.hop(); }, 1.2); };
+  S.tap(g, take); basket.onTap = take;
+  return { state: () => ({ held, taken, given }), step() {
+    if (held) { apple.g.visible = !S.playing(); if (apple.g.visible) { girl.poseName = 'hold'; const h = S.hand(); apple.x = h.x + girl.face * .05; apple.z = h.z + .05; apple.floatY = apple.y = h.y - .07; } }
+  } };
+}

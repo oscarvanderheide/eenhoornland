@@ -232,6 +232,9 @@ export default async function (t) {
     await by('oma'); ok((await toy('oma')).frame < 2, 'grandma knits while she is near'); await t.ev(`__p.tap('oma')`); await t.sleep(400); ok((await toy('oma')).frame === 2 && (await toy('oma')).waves === 1, 'a tap: she waves'); await t.shot('tmp-shots/y-oma-land.png');
     await t.sleep(1800); await tapOn('bank'); ok(await until(`__p.toy('bank').mode === 'sit'`, 6), 'she sits down on the free half of the bench'); await t.sleep(500); ok((await toy('oma')).waves === 2, 'and grandma waves again'); await t.shot('tmp-shots/y-oma-sit-land.png');
     await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); await t.sleep(700);
+    // the fruit stall
+    await by('mand', -.4, 1.9); await t.ev(`__p.tap('mand')`); ok(await until(`__p.toy('kraam').held`, 6), 'a tap on the stall\'s basket: she takes an apple'); await t.sleep(300); await t.shot('tmp-shots/y-stall-land.png');
+    await t.ev(`__p.tap('oma')`); await t.sleep(300); const st = await toy('kraam'); ok(!st.held && st.given === 1, 'a tap on grandma: she gets the apple');
     // the accordion player
     await by('muzikant', 1.7, 1.0); ok(!(await toy('muzikant')).playing, 'the accordion player is silent by himself'); await t.ev(`__p.tap('muzikant')`); await t.sleep(1700); const m = await toy('muzikant'); ok(m.playing && m.notes > 0, 'a tap: he plays, and notes float up'); await t.shot('tmp-shots/y-muzikant-land.png');
     ok(await until(`!__p.toy('muzikant').playing`, 6), 'and stops again');
