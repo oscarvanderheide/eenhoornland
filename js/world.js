@@ -1000,15 +1000,16 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   const halfOK = renderer.extensions.has('EXT_color_buffer_half_float') || renderer.extensions.has('EXT_color_buffer_float');
   let rt = null;
   const post = new THREE.ShaderMaterial({
-    uniforms: { tColor: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2() }, near: { value: camera.near }, far: { value: camera.far }, focus: { value: 20 }, night: { value: 0 }, dof: { value: 6 } },
+    uniforms: { tColor: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2() }, near: { value: camera.near }, far: { value: camera.far }, focus: { value: 20 }, night: { value: 0 }, dof: { value: 6 }, sharpTop: { value: 0 }, sharpFade: { value: .05 } },
     vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
     fragmentShader: `
-      uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, focus, night, dof; varying vec2 vUv;
+      uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, focus, night, dof, sharpTop, sharpFade; varying vec2 vUv;
       float lin(float d){ float z=d*2.-1.; return 2.*near*far/(far+near-z*(far-near)); }
       vec3 srgb(vec3 c){ c=max(c,0.); return mix(c*12.92, 1.055*pow(c,vec3(1./2.4))-.055, step(vec3(.0031308),c)); }
       void main(){
         float d=lin(texture2D(tDepth,vUv).r); float df=d-focus;
         float coc = df>0. ? clamp((df-2.5)/11.,0.,1.) : clamp((-df-3.)/5.,0.,1.);
+        coc *= 1.-smoothstep(1.-sharpTop-sharpFade, 1.-sharpTop, vUv.y);   // behind the row of buttons at the top the world stays sharp
         float r=coc*dof; vec3 acc=vec3(0.); vec3 bl=vec3(0.);
         for(int i=0;i<16;i++){ float fi=float(i); float a=fi*2.39996; float rr=sqrt((fi+.5)/16.);
           vec2 o=vec2(cos(a),sin(a))*rr;
@@ -1039,7 +1040,14 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     rt = new THREE.WebGLRenderTarget(pw, ph, { type: halfOK ? THREE.HalfFloatType : THREE.UnsignedByteType, depthTexture: new THREE.DepthTexture(pw, ph) });
     rt.depthTexture.type = THREE.UnsignedIntType;
     post.uniforms.tColor.value = rt.texture; post.uniforms.tDepth.value = rt.depthTexture; post.uniforms.res.value.set(pw, ph); post.uniforms.dof.value = 5.5 * DPR;
+    sharpTop();
   }
+  /** the soft focus leaves the strip behind the top row of buttons alone (Oscar), fading in just below it */
+  function sharpTop() {
+    const el = document.querySelector('.hud.tr'), h = innerHeight; if (!el || !h) return;
+    const b = el.getBoundingClientRect().bottom; post.uniforms.sharpTop.value = b > 0 ? Math.min(.4, (b + 6) / h) : 0; post.uniforms.sharpFade.value = Math.min(.15, 70 / h);
+  }
+  setTimeout(sharpTop, 300);   // once the HUD has filled the row
   addEventListener('resize', resize, listen); resize();
 
   /* ---------------- day / night ---------------- */
