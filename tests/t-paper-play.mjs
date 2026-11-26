@@ -189,4 +189,34 @@ export default async function (t) {
     // whoever she taps next is given the bunch
     await t.ev(`__p.tap('unicorn')`); await t.sleep(300); const b = await toy('bos'); ok(b.held === 0 && b.gifts === 1 && (await t.ev('__p.info()')).pose === null, 'a tap on the unicorn: she gives it the flower');
   }
+
+  /* ---------------- the meadow: the brambles open for water; the kite, the balloon, the stones and the dandelions ---------------- */
+  if (!only || only === 'meadow') {
+    await open('?set=dorp', LAND); await t.sleep(1200);
+    const toy = n => t.ev(`__p.toy('${n}')`), d = await t.ev(`__p.places('dorp')`), w = await t.ev(`__p.places('wei')`), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
+    ok(!(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`)), 'the brambles shut the bridge: the meadow cannot be walked to');
+    await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2600); await t.shot('tmp-shots/y-thorns-land.png');
+    await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); await t.sleep(500); ok((await toy('braam')).wishing && !(await toy('braam')).open, 'a tap with empty hands: they shake and show the watering can'); await t.shot('tmp-shots/y-thorns-wish-land.png');
+    // fetch the can, fill it at the fountain, pour
+    const c0 = (await toy('boerderij')).can; await t.ev(`__p.placeAt(${c0[0] - 1.2}, ${c0[1] + 1})`); await t.sleep(2400); await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'she picks up the can');
+    await t.ev(`__p.placeAt(${d.fountain[0] + 2.2}, ${d.fountain[1]})`); await t.sleep(2400); await tapAt(d.fountain[0], .6, d.fountain[1] - 2.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'a tap on the fountain fills it');
+    await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]);
+    ok(await until(`__p.toy('braam').open`, 8), 'watered, the brambles bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-open-land.png');
+    ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and now the meadow can be walked to');
+    // the kite on the hill's top
+    await t.ev(`__p.placeAt(${w.top[0] + .8}, ${w.top[1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('vlieger')`); ok(await until(`__p.toy('vlieger').held`, 5), 'a tap on the kite: she takes its string');
+    ok(await until(`__p.toy('vlieger').alt > 2.2`, 6), 'on the windy top it goes up by itself'); await t.shot('tmp-shots/y-kite-land.png');
+    await t.ev(`__p.placeAt(${w.cross[0]}, ${w.cross[1]})`); ok(await until(`__p.toy('vlieger').alt < .8`, 9), 'down in the meadow, standing still, it sinks');
+    await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('vlieger').alt > 1.6`, 6), 'and running lifts it again'); await t.shot('tmp-shots/y-kite-run-land.png'); await t.ev(`__p.keys([])`);
+    await t.ev(`__p.tap('vlieger')`); await t.sleep(300); ok(!(await toy('vlieger')).held, 'a tap puts it down');
+    // a dandelion and the singing stones
+    const cl = await t.ev(`__p.places('wei').cross`); await t.ev(`__p.placeAt(${cl[0] - 6}, ${cl[1] + 2})`); await t.sleep(2200);
+    await t.ev(`__p.placeAt(${w.pool[0]}, ${w.pool[1] - .9})`); await t.sleep(2200); const s1 = (await toy('stenen')).sung; await t.ev(`__p.keys(['d'])`); await t.sleep(5200); await t.ev(`__p.keys([])`);
+    const s2 = (await toy('stenen')).sung; ok(s2 - s1 >= 3, `walking over the pool: the stones sing (${s2 - s1} notes)`); await t.shot('tmp-shots/y-stones-land.png');
+    // the balloon
+    await t.ev(`__p.placeAt(${w.balloon[0]}, ${w.balloon[1]})`); await t.sleep(2400); await tapOn('ballon'); ok(await until(`__p.toy('ballon').mode === 'up'`, 5), 'a tap on the balloon: she climbs in and it goes up');
+    ok(await until(`__p.toy('ballon').mode === 'top'`, 9), 'up to the top of its rope'); await t.sleep(2500); const cam = await t.ev('__p.cam()'); ok(cam.pos[1] > 40, `the camera has gone far back (${cam.pos[1].toFixed(0)} high)`); await t.shot('tmp-shots/y-balloon-top-land.png');
+    await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); ok(await until(`__p.toy('ballon').mode === null`, 9), 'a push: it comes down and she hops out');
+    await t.sleep(2500); const g = (await t.ev('__p.info()')); ok(g.h !== null && Math.abs(g.girl[2]) < .2, 'she stands on the grass again'); await t.shot('tmp-shots/y-balloon-down-land.png');
+  }
 }

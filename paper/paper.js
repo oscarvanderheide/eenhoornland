@@ -9,8 +9,9 @@ import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
 import bos from './set-bos.js';
 import huis from './set-huis.js';
-import { ORIGIN, NEAR, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis };
+import wei from './set-wei.js';
+import { ORIGIN, WORLDS, SPREAD } from './lands.js';
+const SETS = { eiland, dorp, bos, huis, wei };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -165,7 +166,7 @@ function buildSea() {
   seaRoot.traverse(o => { if (o.geometry) o.geometry.dispose(); }); seaRoot.clear(); seaRows = []; seaBaked = null;
   const asks = sets.map(s => s.seaAsk).filter(Boolean); if (!asks.length) return;
   const land = asks.flatMap(a => a.land), x0 = Math.min(...asks.map(a => a.x0)), x1 = Math.max(...asks.map(a => a.x1)), z0 = Math.min(...asks.map(a => a.z0)), z1 = Math.max(...asks.map(a => a.z1));
-  const deep = asks.length === 1 ? asks[0].deep : [x1 - x0 + 90, z1 - z0 + 80, (x0 + x1) / 2, (z0 + z1) / 2];
+  const deep = asks.length === 1 ? asks[0].deep : [x1 - x0 + 500, z1 - z0 + 400, (x0 + x1) / 2, (z0 + z1) / 2];   // (deep water far beyond the waves: from the balloon the sea has no end)
   const blues = ['#5f9fae', '#6fb0b8', '#4f8ea2', '#7fbcc0', '#5a97a8'], fine = Math.min(...asks.map(a => a.fine));   // how many cuts per step along a wave
   const bed = new THREE.Mesh(new THREE.PlaneGeometry(deep[0], deep[1]), paper('#3f6f80')); bed.rotation.x = -Math.PI / 2; bed.position.set(deep[2], -1.05, deep[3]); bed.receiveShadow = true; seaRoot.add(bed);
   let k = 0;
@@ -199,7 +200,7 @@ function buildSet(def) {
     sea: o => { s.seaAsk = { fine: o.fine ?? 3, land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
     floor: (h, pts, inset = 0) => { s.floors.push({ h, pts: pts.map(W), inset }); },
     floorBox: (h, x0, z0, x1, z1) => { s.floors.push({ h, box: [x0 + ox, z0 + oz, x1 + ox, z1 + oz] }); },
-    wall: (cx, cz, hx, hz) => { s.walls.push([cx + ox, cz + oz, hx, hz]); },
+    wall: (cx, cz, hx, hz) => { const w = [cx + ox, cz + oz, hx, hz]; s.walls.push(w); return w; },   // (gives the wall back: a gate opens by making it nothing wide)
     solid: o => { s.local.push(o); s.solids.push({ ...o, x: o.x + ox, z: o.z + oz }); return o; }, solids: s.local,   // S.solids: what stands here so far, in the set's own measure
     tap: (obj, fn) => tapTarget(obj, fn),
     // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
@@ -221,6 +222,7 @@ function buildSet(def) {
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
   s.places = Object.fromEntries(Object.entries(s.places || {}).map(([n, q]) => [n, W(q)])); s.spots = Object.fromEntries(Object.entries(s.spots).map(([n, [x, y, z]]) => [n, [x + ox, y, z + oz]]));
+  { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const f of s.floors) for (const [x, z] of f.box ? [[f.box[0], f.box[1]], [f.box[2], f.box[3]]] : f.pts) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); } s.box = [x0 - 1, z0 - 1, x1 + 1, z1 + 1]; }   // where its floors lie: a far set is passed over quickly
   s.shots = (s.shots || [SHOT0]).map(q => ({ ...SHOT_DEF, ...q, ax: (q.ax ?? SHOT_DEF.ax) + ox, az: (q.az ?? SHOT_DEF.az) + oz, ...(q.zone ? { zone: [q.zone[0] + ox, q.zone[1] + oz, q.zone[2] + ox, q.zone[3] + oz] } : {}) }));
   root.traverse(o => { if (o.isMesh && o.geometry.type === 'ExtrudeGeometry' && !o.userData.tap) s.ground.push(o); });   // card she can be sent to with a tap
   bake(root); s.farTrees = glueTrees(s); into = null; s.ms = performance.now() - t0;
@@ -254,10 +256,13 @@ function glueTrees(s) {
 let pinned = false;   // (a test may hold her on a set she does not stand on, to see that it makes no difference to the picture)
 function standOn(s) { set = s; for (const q of sets) if (q.farTrees) { q.farTrees.visible = q !== s; for (const t of q.trees) t.g.visible = q === s; } }
 /** throw away what exists and build the set called `name` with its neighbours; she starts on `name` */
+/** every gate of the world stands open (brambles in bloom): for a start somewhere beyond them, and for the tests */
+function openGates() { for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.open) q.open(); }
 function loadWorld(name) {
   const t0 = performance.now();
   for (const s of sets) dropSet(s);
-  sets = [name, ...(NEAR[name] || [])].map(n => buildSet(SETS[n])); standOn(sets[0]);
+  const group = WORLDS.find(w => w.includes(name)) || [name];
+  sets = [name, ...group.filter(n => n !== name && SETS[n])].map(n => buildSet(SETS[n])); standOn(sets[0]);
   buildSea();
   // the sun's shadow: a set says how wide a sheet covers it (a number: the sheet lies still over the set) or that the sheet follows the camera
   { const sh = set.shadow || 13, r = sh.follow || sh, [cx, cz] = set.shadowAt || [0, 0], k = Math.max(1, r / 13);
@@ -267,6 +272,7 @@ function loadWorld(name) {
   // the theatre stands behind everything that exists
   theatre.position.z = Math.min(...sets.map(s => s.back || 0)); { const k = Math.max(...sets.map(s => s.sky || 1)); sky.scale.set(k, 1, k); }
   [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni; uni.face = 1;
+  if (name !== group[0]) openGates();   // started beyond the village (a look at one island): the ways there are open
   // a new world is a cut: the camera is there at once
   shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
   girl.y = heightAt(girl.x, girl.z) ?? 0; uni.y = heightAt(uni.x, uni.z) ?? 0; target = null; hold = null;
@@ -349,11 +355,12 @@ function stepBalloon(dt) {
 /* ---------------- paper confetti ---------------- */
 const bits = [];
 const bitGeo = new THREE.PlaneGeometry(.09, .09);
-function confetti(x, y, z, cols, n = 10, shape = bitGeo, up = 2.2) {
+/** bits of paper thrown up from a spot. `float`: they hardly fall and drift off sideways (dandelion seeds) */
+function confetti(x, y, z, cols, n = 10, shape = bitGeo, up = 2.2, float = false) {
   for (let i = 0; i < n; i++) {
     const m = new THREE.Mesh(shape, paper(cols[i % cols.length], { side: THREE.DoubleSide })); m.position.set(x, y, z); m.castShadow = true; scene.add(m);
     const a = Math.random() * Math.PI * 2, s = .8 + Math.random() * 1.2;
-    bits.push({ m, vx: Math.cos(a) * s, vz: Math.sin(a) * s * .6, vy: up + Math.random() * 1.5, spin: (Math.random() - .5) * 12, life: 1.1 + Math.random() * .5 });
+    bits.push(float ? { m, vx: .9 + Math.random() * 1.1, vz: (Math.random() - .5) * .8, vy: up * (.4 + Math.random() * .6), g: .5, spin: (Math.random() - .5) * 5, life: 2.6 + Math.random() * 1.6 } : { m, vx: Math.cos(a) * s, vz: Math.sin(a) * s * .6, vy: up + Math.random() * 1.5, spin: (Math.random() - .5) * 12, life: 1.1 + Math.random() * .5 });
   }
 }
 // the very first confetti would make the graphics chip build its program while she watches: draw one bit out of sight at the start
@@ -397,6 +404,7 @@ const sfx = {
   munch() { [0, 110, 220].forEach(d => setTimeout(() => noise(.06, .06, 1500), d)); },
   flutter() { [0, 70, 140, 210].forEach(d => setTimeout(() => noise(.05, .035, 3200), d)); },
   gust() { noise(1.6, .028, 500); tone(240, 1.4, 'sine', .01, 1.8); },
+  note(f) { tone(f, 1.7, 'sine', .07); tone(f * 2, 1.1, 'sine', .018); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
@@ -553,13 +561,14 @@ function stepDoors(dt) {
  *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
 function floorAt(x, z) {
   let best = null;
-  for (const s of sets) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!best || f.h > best.h)) best = { h: f.h, set: s }; break; }
+  for (const s of sets) if (x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!best || f.h > best.h)) best = { h: f.h, set: s }; break; }
   return best;
 }
 const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
 function free(x, z, fromH, me = girl) {
   const h = heightAt(x, z); if (h === null || Math.abs(h - fromH) > .34) return false;
   for (const s of sets) {
+    if (x < s.box[0] || x > s.box[2] || z < s.box[1] || z > s.box[3]) continue;
     for (const o of s.solids) if (o.fig !== me && Math.hypot(x - o.x, z - o.z) < o.r + .18) return false;
     for (const [cx, cz, hx, hz] of s.walls) if (Math.abs(x - cx) < hx && Math.abs(z - cz) < hz) return false;
   }
@@ -897,7 +906,7 @@ function frame(now) {
     }
   }
   // confetti (its paper is shared with everything else: never thrown away)
-  for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); bits.splice(i, 1); } }
+  for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= (b.g ?? 7) * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); bits.splice(i, 1); } }
   // the sea rows rock gently, each its own way
   if (stepped) { if (seaBaked) seaTick.value = tick; else for (const r of seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12; }
 
@@ -918,9 +927,10 @@ function frame(now) {
 
   // camera: a still diorama shot that leans a little towards her
   { const next = shotFor(girl.x, girl.z); if (next !== shot) { shot = next; shotChanges++; }
-    const k = camCut ? 1 : 1 - Math.exp(-dt * 1.7); for (const n of SHOT_KEYS) cam[n] += (shot[n] - cam[n]) * k;
+    const want = playing && playing.shot ? { ...shot, ...playing.shot } : shot, k = camCut ? 1 : 1 - Math.exp(-dt * (playing && playing.shot ? .9 : 1.7)); for (const n of SHOT_KEYS) cam[n] += (want[n] - cam[n]) * k;   // (a toy may bring its own way of looking: the balloon pulls the camera far back)
     const vw = portrait ? cam.tall : cam.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
-    camDist = clamp(vw / 2 / tanH, 8, 60); camH = camDist * (portrait ? cam.riseTall : cam.rise);
+    camDist = clamp(vw / 2 / tanH, 8, 110); camH = camDist * (portrait ? cam.riseTall : cam.rise);
+    { const far = Math.max(0, camDist - 45); scene.fog.near = 30 + far * 1.6; scene.fog.far = 95 + far * 3; const cf = 140 + far * 3; if (Math.abs(camera.far - cf) > 1) { camera.far = cf; camera.updateProjectionMatrix(); post.uniforms.far.value = cf; } }   // from far back, the haze and the end of the picture move back too
     const [lx, lz] = playing && playing.look ? playing.look : [girl.x, girl.z];   // on a toy the camera looks at the toy, not at her going to and fro
     camLook.lerp(new THREE.Vector3(cam.ax + (lx - cam.ax) * cam.fx, girl.y * cam.fy + .5, cam.az + (lz - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
     camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
@@ -981,6 +991,8 @@ window.__p = {
     const at = ([x, z]) => { for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) if (seen.has(key(Math.round((x - sx) / step) + di + 5000, Math.round((z - sz) / step) + dj + 5000))) return true; return false; };
     return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
+  /** open every gate of the world */
+  open: () => openGates(),
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
   pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
   /** the named places of the set she stands on, or of the set called `name` */

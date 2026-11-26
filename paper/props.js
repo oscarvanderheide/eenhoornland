@@ -1,5 +1,6 @@
 // Things that stand on more than one set, built from the kit. Each takes the set's toolbox S and where to stand.
 import { THREE, lerp, paper, sheetOf, slab, card, edgeMat, grassMap, grassBump, sandMap, sandBump } from './kit.js';
+import { THINGS } from './things.js';
 
 /** the printed papers the ground is cut from */
 export const GROUND = {
@@ -115,8 +116,9 @@ export function fountain(S, x, y, z) {
   });
   S.solid({ x, z, r: .78 });
   const [wx, wz] = S.at([x, z]); let splashes = 0;
-  S.tap(g, () => { splashes++; S.sfx.splash(); S.confetti(wx, y + 1.2, wz, ['#8fd0e0', '#f6efe2', '#7fbcc0'], 18, undefined, 3); });
-  return { state: () => ({ splashes }), step({ tick, stepped }) { if (stepped) { const on = Math.floor(tick / 2) % 3; phases.forEach((p, i) => { p.visible = i === on; }); } } };
+  const api = { tapped: null, state: () => ({ splashes }), step({ tick, stepped }) { if (stepped) { const on = Math.floor(tick / 2) % 3; phases.forEach((p, i) => { p.visible = i === on; }); } } };
+  S.tap(g, () => { splashes++; S.sfx.splash(); S.confetti(wx, y + 1.2, wz, ['#8fd0e0', '#f6efe2', '#7fbcc0'], 18, undefined, 3); if (api.tapped) api.tapped(); });
+  return api;
 }
 /** a bench of painted wood. A tap: she walks round to the front, hops on and sits; any push on the stick, or a touch, and she is up */
 export function bench(S, x, y, z) {
@@ -210,14 +212,14 @@ const paneMat = new THREE.MeshStandardMaterial({ color: '#3b3a45', emissive: '#f
  *  With `doorName` (see S.door) it can be walked into: the door opens by itself when she comes close, walking
  *  into it is a cut to the door of that name on another set, and a tap on the house sends her in. The lamp is then on in
  *  the evening and while the door stands open. */
-export function cottage(S, x, y, z, doorName = null) {
+export function cottage(S, x, y, z, doorName = null, tint = {}) {
   const HOUSE = { x, z, w: 2.4, d: 1.8, h: 1.8 };
   const house = new THREE.Group(); house.position.set(x, y, z); S.root.add(house);
   const inLight = S.lamp(1, '#ffb866', 4, 1.4); inLight.position.set(x, y + 1.0, z);
   let door, doorOpen = 0, doorTarget = 0, lightOn = false;
   {
     const { w, d, h } = HOUSE, T = .07;
-    const wallMat = paper('#e4a596', { side: THREE.DoubleSide }), roofMat = paper('#4f8f8c'), trimMat = paper('#f4ecdc');
+    const wallMat = paper(tint.wall || '#e4a596', { side: THREE.DoubleSide }), roofMat = paper(tint.roof || '#4f8f8c'), trimMat = paper('#f4ecdc');
     const win = (cx, cy, ww = .42, hh = .46) => [[cx - ww / 2, cy - hh / 2], [cx + ww / 2, cy - hh / 2], [cx + ww / 2, cy + hh / 2], [cx - ww / 2, cy + hh / 2]];
     const frame = (wall, cx, cy, ww = .42, hh = .46, z = T / 2 + .005) => {
       // a white card frame with a cross, and a dark pane behind it that glows when the lamp is on
@@ -234,7 +236,7 @@ export function cottage(S, x, y, z, doorName = null) {
     front.add(card(frontPts, T, wallMat, edgeMat, [doorHole.slice().reverse(), win(-.78, 1.05).reverse(), win(.78, 1.05).reverse()]));
     frame(front, -.78, 1.05); frame(front, .78, 1.05);
     const dGroup = new THREE.Group(); dGroup.position.set(-.27, 0, .02); dGroup.userData.live = true; front.add(dGroup);
-    door = card([[0, .02], [.54, .02], [.54, 1.23], [0, 1.23]], .05, paper('#3f6f77'), edgeMat); dGroup.add(door);
+    door = card([[0, .02], [.54, .02], [.54, 1.23], [0, 1.23]], .05, paper(tint.door || '#3f6f77'), edgeMat); dGroup.add(door);
     const knob = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), paper('#e2b04a')); knob.position.set(.45, .62, .04); dGroup.add(knob);
     door = dGroup;
     const back = card(frontPts, T, wallMat, edgeMat, [win(-.5, .95).reverse()]); back.position.z = -d / 2; house.add(back);
@@ -284,4 +286,53 @@ export function cottage(S, x, y, z, doorName = null) {
       inLight.intensity = lerp(inLight.intensity, (lightOn ? 1 : 0) * lerp(1.6, 2.6, eve), Math.min(1, dt * 5));
       paneMat.emissiveIntensity = lerp(.08, .3, eve) + inLight.intensity / 2.2;
     } };
+}
+
+/** a thorny cut-out: a lumpy blob with spikes all round */
+function thorny(r, seed, col, spikes = 13) {
+  const R = rnd(seed), pts = []; for (let i = 0; i < spikes * 2; i++) { const a = i / (spikes * 2) * 6.283, rr = r * (i % 2 ? .62 + R() * .12 : 1 + R() * .18); pts.push([Math.cos(a) * rr * 1.15, r * .95 + Math.sin(a) * rr]); }
+  return card(pts, .03, paper(col, { side: THREE.DoubleSide }));
+}
+/** Brambles that shut a bridge: a dry, thorny tangle right across it. They are opened with water: a tap while she carries
+ *  a full watering can, she walks up and pours, and they turn green, bud, and bloom into roses that curl aside for good.
+ *  Without water a tap only shows what is wanted: a little card of the can pops up above them. Nothing is cut (Oscar: no
+ *  sword). `can` is the farm's can (farm.js: holding, full, pourThen, hint); the bridge runs east and west, `span` wide */
+export function bramble(S, x, y, z, span, can) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const clump = (parent, cz, r, seed, cols, roses) => { const c = new THREE.Group(); c.position.z = cz; parent.add(c);
+    [0, 1.05, 2.1].forEach((ry, k) => { const t = thorny(r * (1 - k * .08), seed + k, cols[k % cols.length]); t.rotation.y = ry; c.add(t); });
+    for (let k = 0; k < roses; k++) { const a = k * 2.4 + seed, rose = new THREE.Group(); rose.position.set(Math.cos(a) * r * .55, r * (.7 + .5 * Math.sin(k * 1.7 + seed)), .08 + Math.sin(a) * r * .5); [.11, .075, .04].forEach((rr, q) => { const d = disc(rr, ['#d9706c', '#e98f8f', '#f8dde4'][q]); d.position.z = q * .012; rose.add(d); }); c.add(rose); } };
+  const stage = [0, 1, 2].map(() => { const sg = new THREE.Group(); sg.userData.live = true; g.add(sg); return sg; });
+  for (const [cz, r, sd] of [[-span * .32, .62, 1], [0, .72, 5], [span * .32, .6, 9]]) { clump(stage[0], cz, r, sd, ['#6b5a4a', '#7d6a55', '#5c4d40'], 0); clump(stage[1], cz, r, sd, ['#6f9057', '#86a466', '#7f9d5e'], 1); }
+  for (const s of [-1, 1]) clump(stage[2], s * (span / 2 + .25), .58, 20 + s, ['#6f9057', '#86a466', '#7f9d5e'], 4);
+  stage.forEach(sg => S.glue(sg));
+  const wall = S.wall(x, z, .5, span / 2 + .15), [wx, wz] = S.at([x, z]), { girl, sfx } = S;
+  const wish = S.figure('wens', THINGS.gieter); wish.g.visible = false; wish.x = wx; wish.z = wz + .1; wish.act = () => wish.setFrame(1);
+  let at = 0, t = 0, show = 0, wob = 0; const set = n => { at = n; stage.forEach((sg, i) => { sg.visible = i === n; }); }; set(0);
+  S.tap(g, () => {
+    if (S.playing()) return;
+    if (at === 2) { wob = 1; sfx.rustle(); S.confetti(wx, y + .8, wz, ['#e98f8f', '#f8dde4', '#d9706c'], 8, undefined, 1.8); return; }
+    if (at === 1) return;
+    if (can.holding() && can.full()) { const side = girl.x < wx ? -1 : 1; S.walkThen(wx + side * 1.05, wz, () => { if (at === 0 && can.pourThen(() => { set(1); t = 0; sfx.hop(); })) girl.face = -side; }, 1.2); return; }
+    wob = 1; show = 2.4; wish.hopV = 2.2; sfx.rustle(); can.hint();   // dry and shut: it shakes, and shows what it wants
+  });
+  return { state: () => ({ stage: at, open: at === 2, wishing: show > 0 }), open() { set(2); wall[2] = 0; }, step({ dt, tick, stepped }) {
+    if (at === 1) { t += dt; if (t > 1.0) { set(2); wall[2] = 0; sfx.chime(); S.confetti(wx, y + 1.0, wz, ['#e98f8f', '#f8dde4', '#d9706c', '#86a466'], 22, undefined, 2.6); } }   // green, a breath, and then roses, and the way is open
+    if (show > 0) { show -= dt; wish.g.visible = show > 0; wish.floatY = wish.y = y + 1.75; }
+    if (stepped) { if (wob > .03) { wob *= .78; g.rotation.x = Math.sin(tick * 2.2) * .07 * wob; } else g.rotation.x = 0; }
+  } };
+}
+/** a dandelion clock: a tap (or a bump as she walks through) and its seeds drift off on the air; it is a bare stalk for a
+ *  while, and then it is a clock again */
+export function dandelion(S, x, y, z, seed = 1) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const h = .38 + (seed % 5) * .04, stem = new THREE.Mesh(new THREE.CylinderGeometry(.012, .014, h, 4), paper('#7f9d5e')); stem.position.y = h / 2; stem.castShadow = true; g.add(stem);
+  const leafs = card([[-.2, 0], [-.1, .07], [0, .02], [.1, .07], [.2, 0], [.1, -.03], [-.1, -.03]], .012, paper('#86a466')); leafs.rotation.x = -1.2; leafs.position.y = .03; g.add(leafs);
+  const clock = new THREE.Group(); clock.userData.live = true; clock.position.y = h + .08; g.add(clock);
+  { const pts = []; for (let i = 0; i < 36; i++) { const a = i / 36 * 6.283, r = i % 2 ? .1 : .135; pts.push([Math.cos(a) * r, Math.sin(a) * r]); } for (const ry of [0, 1.57]) { const c = card(pts, .012, paper('#fbf7ee', { side: THREE.DoubleSide })); c.rotation.y = ry; clock.add(c); } const core = disc(.05, '#efe6d4'); core.position.z = .012; clock.add(core); S.glue(clock); }
+  const bud = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 5), paper('#c9d79a')); bud.position.y = h + .02; bud.visible = false; g.add(bud); bud.userData.live = true;
+  const [wx, wz] = S.at([x, z]); let back = 0, blown = 0;
+  const blow = () => { if (back > 0) return; back = 28 + (seed % 7) * 3; blown++; clock.visible = false; bud.visible = true; S.sfx.flutter(); S.confetti(wx, y + h + .1, wz, ['#fbf7ee', '#f6efe2', '#fffdf8'], 14, undefined, 1.1, true); };
+  S.tap(g, blow);
+  return { state: () => ({ blown, full: back <= 0 }), step({ dt }) { if (back > 0) { back -= dt; if (back <= 0) { clock.visible = true; bud.visible = false; } } else if (S.girl.walking && Math.hypot(S.girl.x - wx, S.girl.z - wz) < .3) blow(); } };
 }

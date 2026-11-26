@@ -112,3 +112,72 @@ export function slide(S, x, y, z) {
   S.tap(g, start);
   return { start, toy, state: () => ({ mode }) };
 }
+
+/* ---------------- the kite ---------------- */
+import { P, C, piece, line } from './cut.js';
+/** the kite's card: a red and yellow diamond, a cross of sticks, a tail of three bows that swings (frames 0, 1, 2) */
+const KITE = { w: 120, h: 190, frames: 3, size: .95, draw(g, f) {
+  const sw = f === 1 ? -9 : f === 2 ? 9 : 0, bow = (x, y) => { piece(g, '#f2c65c', P([[x - 10, y - 6], [x, y], [x - 10, y + 6]]), .5); piece(g, '#e98f8f', P([[x + 10, y - 6], [x, y], [x + 10, y + 6]]), .5); };
+  const tail = [[60, 116], [60 + sw * .5, 140], [60 + sw, 160], [60 + sw * .6, 178]];
+  for (let i = 0; i < 3; i++) piece(g, '#8d6a48', C(...tail[i], ...tail[i + 1], 1.6), 0);
+  tail.slice(1).forEach(([x, y]) => bow(x, y));
+  piece(g, '#d9706c', P([[60, 10], [106, 62], [60, 120], [14, 62]])); piece(g, '#f2c65c', P([[60, 10], [106, 62], [60, 62]]), .4); piece(g, '#f2c65c', P([[60, 62], [60, 120], [14, 62]]), .4);
+  line(g, '#8d6a48', 2.4, [[60, 12], [60, 118]]); line(g, '#8d6a48', 2.4, [[16, 62], [104, 62]]);
+} };
+/** The kite: it lies in the grass until she takes it (a tap). Then it is on a string in her hand: when she runs it climbs
+ *  behind her, when she stands it sinks, and up on a hill the wind holds it high even when she stands still. A tap on the
+ *  kite and she winds it in and lays it down. Nothing else to it: running makes it fly */
+export function kite(S, x, y, z, windy = (wx, wz) => (S.heightAt(wx, wz) ?? 0) > .4) {
+  const { girl, sfx } = S, f = S.figure('vlieger', KITE), [hx, hz] = S.at([x, z]);
+  let at = [hx, hz], held = false, alt = 0, px = hx, pz = hz, speed = 0, lx = girl.x, lz = girl.z, t = 0, best = 0;
+  // the string: two thin strips of card (a drawn line is a hair wide and drowns in the soft focus)
+  const string = new THREE.Group(); string.visible = false; S.root.add(string); const strips = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.BoxGeometry(.022, .022, 1), paper('#fbf5ea')); m.userData.live = true; string.add(m); return m; });
+  const span = (m, a, b) => { m.position.copy(a).lerp(b, .5); m.position.x -= origin[0]; m.position.z -= origin[1]; m.scale.z = a.distanceTo(b); m.lookAt(b.x, b.y, b.z); };
+  const origin = S.at([0, 0]);
+  f.onTap = () => { if (S.playing()) return; if (held) { held = false; at = [girl.x + girl.face * .7, girl.z + .2]; alt = 0; sfx.thud(); } else S.walkThen(at[0] - .4, at[1] + .2, () => { held = true; px = at[0]; pz = at[1]; sfx.hop(); }, 1.0); };
+  f.act = tick => f.setFrame(held && alt > .5 ? 1 + (Math.floor(tick / 3) % 2) : 0);
+  return { f, state: () => ({ held, alt, best, at: [px, pz] }), step({ dt, time }) {
+    t += dt; const v = Math.hypot(girl.x - lx, girl.z - lz) / Math.max(dt, 1e-3); lx = girl.x; lz = girl.z; speed += (Math.min(v, 3) - speed) * Math.min(1, dt * 2.5);
+    if (!held) { f.x = at[0]; f.z = at[1]; f.floatY = undefined; f.lean = 1.2; string.visible = false; return; }   // lying in the grass
+    const wind = windy(girl.x, girl.z) ? 1 : 0, want = Math.min(3.6, .25 + speed * 1.15 + wind * 2.5);
+    alt += (want - alt) * Math.min(1, dt * (want > alt ? 1.3 : .55)); best = Math.max(best, alt);
+    // it hangs downwind of her: behind the way she runs, further back the higher it is
+    const bx = girl.x - girl.dirX * (.5 + alt * .55) + Math.sin(t * 1.3) * .12 * alt, bz = girl.z - girl.dirZ * (.3 + alt * .3) - .25;
+    px += (bx - px) * Math.min(1, dt * 2.2); pz += (bz - pz) * Math.min(1, dt * 2.2);
+    const ground = S.heightAt(girl.x, girl.z) ?? 0; f.x = px; f.z = pz; f.floatY = f.y = ground + .15 + alt; f.lean = alt < .4 ? 1.2 - alt * 3 : Math.sin(t * 1.7) * .16; f.face = 1;
+    const h = S.hand(), k = new THREE.Vector3(px, f.y + .45, pz), mid = h.clone().lerp(k, .5); mid.y -= .25 + alt * .12;
+    span(strips[0], h, mid); span(strips[1], mid, k); string.visible = true;
+  } };
+}
+
+/* ---------------- the balloon on a rope ---------------- */
+/** A balloon with a basket, tied to a peg. A tap and she climbs in; it goes up on its rope, high, and the camera goes back
+ *  and back until the islands lie below like little models. It hangs there as long as she likes (a push or a touch brings
+ *  it down; so does a good while of looking), comes down, and she hops out. The one place to see how big the world is */
+export function balloon(S, x, y, z) {
+  const { girl, sfx } = S, [wx, wz] = S.at([x, z]), TOP = 15;
+  const peg = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .3, 6), paper('#8d6a48')); peg.position.set(x + 1.1, y + .15, z + .3); peg.castShadow = true; S.root.add(peg);
+  const car = new THREE.Group(); car.userData.live = true; car.position.set(x, y, z); S.root.add(car);
+  const basket = new THREE.Mesh(new THREE.BoxGeometry(.95, .5, .8), paper('#c79a66')); basket.position.y = .32; basket.castShadow = basket.receiveShadow = true; car.add(basket);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(1.02, .07, .87), paper('#a97a4e')); rim.position.y = .58; car.add(rim);
+  for (const [sx, sz] of [[-.42, -.34], [.42, -.34], [-.42, .34], [.42, .34]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 1.5, 4), paper('#efe8dc')); r.position.set(sx * 1.15, 1.3, sz * 1.15); r.rotation.z = -sx * .28; r.rotation.x = sz * .28; car.add(r); }
+  const gores = ['#e98f8f', '#fbf5ea', '#f2c65c', '#fbf5ea', '#9ed9cf', '#fbf5ea', '#bba6ea', '#fbf5ea'];
+  gores.forEach((c, i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(1.45, 5, 12, i / 8 * 6.283, 6.283 / 8), paper(c)); s.scale.y = 1.18; s.position.y = 3.35; s.castShadow = true; car.add(s); });
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(.62, .46, .5, 12, 1, true), paper('#e98f8f', { side: THREE.DoubleSide })); skirt.position.y = 1.9; car.add(skirt);
+  S.glue(car);
+  const rope = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x + 1.1, y + .3, z + .3), new THREE.Vector3(x + .45, y + .2, z + .1)]), new THREE.LineBasicMaterial({ color: '#8d6a48' })); rope.frustumCulled = false; S.root.add(rope);
+  S.wall(x, z, .62, .52);
+  let mode = null, t = 0, h = 0, rides = 0;
+  const ease = k => k * k * (3 - 2 * k);
+  const toy = { rest: true, look: [wx, wz], shot: null, step(dt, inp) {
+    t += dt;
+    if (mode === 'in') { const k = Math.min(1, t / .4); girl.x = wx + (1 - k) * .9; girl.z = wz + .05 + (1 - k) * .5; girl.lift = .3 * k + Math.sin(k * Math.PI) * .45; girl.view = 'front'; girl.poseName = null; if (k >= 1) { mode = 'up'; t = 0; rides++; sfx.whoosh(); } return; }
+    if (mode === 'up') { h = TOP * ease(Math.min(1, t / 7)); if (t > 1) toy.shot = { span: 78, tall: 46, rise: .95, riseTall: 1.1, dof: .15, range: 7 }; if (t >= 7) { mode = 'top'; t = 0; } }
+    else if (mode === 'top') { h = TOP + Math.sin(t * .6) * .25; if (inp.act || inp.x || t > 14) { mode = 'down'; t = 0; toy.shot = null; } }
+    else if (mode === 'down') { h = TOP * (1 - ease(Math.min(1, t / 5.5))); if (t >= 5.5) { h = 0; mode = 'out'; t = 0; sfx.thud(); } }
+    else if (mode === 'out') { const k = Math.min(1, t / .4); girl.x = wx + k * .95; girl.z = wz + .05 + k * .55; girl.lift = .3 * (1 - k) + Math.sin(k * Math.PI) * .4; if (k >= 1) { girl.lift = 0; mode = null; S.stopPlay(); } return; }
+    girl.x = wx; girl.z = wz + .05; girl.lift = h + .3; girl.poseName = mode === 'top' ? 'up' : null; girl.view = 'front';
+  } };
+  S.tap(car, () => { if (S.playing()) return; S.walkThen(wx + .95, wz + .6, () => { if (S.playing()) return; mode = 'in'; t = 0; S.play(toy); }, 1.3); });
+  return { toy, state: () => ({ mode, h, rides }), step() { car.position.y = y + h; const pa = rope.geometry.attributes.position; pa.setXYZ(1, x + .45, y + .2 + h, z + .1); pa.needsUpdate = true; } };
+}

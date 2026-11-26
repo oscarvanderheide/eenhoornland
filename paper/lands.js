@@ -9,11 +9,14 @@ const K = SPREAD, wide = o => { for (const k of Object.keys(o)) { const v = o[k]
 /** how far the forest's shore lies from the village's: the length of the bridge between them. One number: change it and the
  *  forest, the bridge and the far shot all move with it */
 export const NORTH_GAP = 13;
-export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K - NORTH_GAP], huis: [-260, 0] };   // (the room inside her house stands far off to the side, beyond what any camera in the world can see)
+/** and how far the meadow's shore lies from the village's, over the east bridge */
+export const EAST_GAP = 12;
+export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K - NORTH_GAP], huis: [-260, 0], wei: [9.97 * K + EAST_GAP + 15.2, 2.4 * K - 2.55] };   // (the room inside her house stands far off to the side, beyond what any camera in the world can see)
 /** where the theatre's hills stand when the village and the forest exist: behind the forest's north shore (on the island they stand at -16 and further) */
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
-/** the sets that exist together with the one she stands on: its neighbours across a bridge */
-export const NEAR = { eiland: [], dorp: ['bos', 'huis'], bos: ['dorp', 'huis'], huis: ['dorp', 'bos'] };
+/** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
+ *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -35,4 +38,14 @@ export function bosLand() {
     under: [[0, .1, 15.6, 8.5, 211], [15.4, .4, 5.1, 5.7, 212]].map(([cx, cz, rx, rz, seed]) => blob(cx, cz, rx, rz, seed, 56, .04)),
     bridge: [4.8, 6.9],   // where the bridge from the village lands, in the forest's own measure
   });
+}
+
+/** the meadow, in its own measure (made at its real size: not spread again) */
+export function weiLand() {
+  return {
+    SAND: blob(0, 0, 15.6, 11.6, 401, 96, .04), GRASS: blob(0, -.1, 14.8, 10.8, 402, 96, .04),
+    SAND_E: blob(21.5, -2, 10.3, 10, 403, 72, .05), GRASS_E: blob(21.6, -2, 9.5, 9.2, 404, 72, .05),   // the east: the waterfall
+    HILL: blob(-5, -5.4, 5.2, 3.4, 405, 56, .05), TOP: blob(-6.4, -6.4, 2.6, 1.6, 406, 40, .05),       // the windy hill and its top
+    bridge: [-14.3, 2.55],   // where the bridge from the village lands
+  };
 }

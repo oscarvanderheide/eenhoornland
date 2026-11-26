@@ -67,7 +67,7 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
     if (row.stage !== 0 || row.grow) return;
     if (!C.held) { can.hopV = 2.6; sfx.peep(); return; }                             // no can: the can gives a hop
     if (!C.full) { can.hopV = 2.6; sfx.peep(); return; }                             // an empty can: it hops (she needs the well)
-    S.walkThen(row.at[0], row.at[1], () => { pour = { row, t: 0 }; C.full--; sfx.swish(3); }, 1.1);
+    S.walkThen(row.at[0], row.at[1], () => { pour = { t: 0, done: () => { row.grow = .01; watered++; } }; C.full--; sfx.swish(3); }, 1.1);
   }
   function pull(row) {
     if (row.left <= 0 || flying) return; row.left--; row.show(); pulled++; sfx.boing();
@@ -81,13 +81,17 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
   return {
     state: () => ({ held: C.held, full: C.full, rows: rows.map(r => ({ stage: r.stage, left: r.left })), pulled, watered, can: C.at }),
     places: { can: [C.at[0] - .35, C.at[1] + .1], well: theWell.at, row: rows[0].at },
+    // for other things that want water (the fountain fills the can too; the brambles on the bridge are watered open)
+    holding: () => C.held, full: () => C.full, hint() { can.hopV = 2.6; sfx.peep(); },
+    fill() { if (!C.held) return false; C.full = 2; sfx.chime(); return true; },
+    pourThen(done) { if (!C.held || !C.full || pour) return false; pour = { t: 0, done }; C.full--; sfx.swish(3); return true; },
     step({ dt, stepped }) {
       theWell.step(dt);
       // the can: in her hands, or where she left it
       if (C.held && !S.playing()) { girl.poseName = 'hold'; const h = S.hand(); can.x = h.x + girl.face * .08; can.z = h.z + .04; can.floatY = can.y = h.y - .2; can.face = girl.face; }
       else if (C.held) { can.x = girl.x + .5; can.z = girl.z + .3; can.floatY = undefined; can.face = 1; }   // she is on a toy: the can waits beside it
       else { can.x = C.at[0]; can.z = C.at[1]; can.floatY = undefined; can.face = 1; }
-      if (pour) { pour.t += dt; if (stepped) S.confetti(can.x + girl.face * .3, can.y + .25, can.z, ['#8fd0e0', '#f6efe2'], 2, undefined, .4); if (pour.t > 1.0) { pour.row.grow = .01; watered++; pour = null; } }
+      if (pour) { pour.t += dt; if (stepped) S.confetti(can.x + girl.face * .3, can.y + .25, can.z, ['#8fd0e0', '#f6efe2'], 2, undefined, .4); if (pour.t > 1.0) { const done = pour.done; pour = null; done(); } }
       for (const r of rows) {
         if (r.grow) { r.grow += dt; const st = r.grow > 1.7 ? 2 : r.grow > .7 ? 1 : 0; if (st !== r.stage) { r.stage = st; r.left = 5; r.show(); sfx.hop(); } if (r.grow > 1.7) r.grow = 0; }
         if (r.back > 0) { r.back -= dt; if (r.back <= 0) { r.stage = 0; r.left = 5; r.show(); } }

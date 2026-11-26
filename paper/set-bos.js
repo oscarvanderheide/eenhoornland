@@ -100,7 +100,7 @@ export default {
       step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); },
       toys: { ...live, ...flies, molen: mill, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
-      shadow: { follow: 20 }, back: BACK, sky: 1.65,
+      shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
         { name: 'bos', span: 13, rise: .3 },
