@@ -123,6 +123,31 @@ export function lantern(S, x, y, z, n) {
   S.tap(g, () => { lit = !lit; S.sfx.click(); });
   return { state: () => ({ lit }), step({ dt, eve }) { const want = lit ? 1 : 0; mat.emissiveIntensity += (want * 1.6 - mat.emissiveIntensity) * Math.min(1, dt * 8); light.intensity = want * (1.0 + 1.6 * eve); } };
 }
+/** a cabin of logs: round logs laid on each other, crossing at the corners, a plank door, a round window, a roof of green
+ *  card and a stone chimney. (A tap knocks on the door; what is inside comes later) */
+export function cabin(S, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const W = 2.6, D = 2.0, r = .13, rows = 6, cols = ['#b9875a', '#a97a4e', '#c1905f'];
+  const log = (len, px, py, pz, alongZ, k) => { const m = m3(new THREE.CylinderGeometry(r, r, len, 8), cols[k % 3]); m.rotation[alongZ ? 'x' : 'z'] = Math.PI / 2; m.position.set(px, py, pz); g.add(m); };
+  for (let k = 0; k < rows; k++) {
+    const py = r + k * r * 1.9;
+    log(W + .5, 0, py, -D / 2, false, k);                                                    // the back
+    if (py > 1.25) log(W + .5, 0, py, D / 2, false, k + 1); else for (const s of [-1, 1]) log(W / 2 - .12, s * (W / 4 + .31), py, D / 2, false, k + 1);   // the front, with room for the door
+    for (const s of [-1, 1]) log(D + .5, s * W / 2, py + r * .95, 0, true, k + 2);          // the sides, half a log higher, so they cross
+  }
+  const top = r + rows * r * 1.9;
+  for (const s of [-1, 1]) { const gable = card([[-W / 2 - .1, 0], [W / 2 + .1, 0], [0, .95]], .08, paper('#a97a4e')); gable.position.set(0, top, s * D / 2); g.add(gable); }
+  const slope = Math.hypot(W / 2 + .35, .95 + .1);
+  for (const s of [-1, 1]) { const roof = m3(new THREE.BoxGeometry(slope, .07, D + .7), '#5f8665'); roof.position.set(s * (W / 4 + .09), top + .95 / 2 + .06, 0); roof.rotation.z = -s * Math.atan2(1.05, W / 2 + .35); g.add(roof); }
+  const door = card([[-.3, 0], [.3, 0], [.3, 1.05], [0, 1.2], [-.3, 1.05]], .05, paper('#8d5a4a')); door.position.set(0, .02, D / 2 - .04); g.add(door);
+  const knob = m3(new THREE.SphereGeometry(.035, 8, 6), '#e2b04a'); knob.position.set(.18, .55, D / 2 + .02); g.add(knob);
+  const win = m3(new THREE.CylinderGeometry(.2, .2, .04, 14), '#f6dfa6', { extra: { emissive: '#f2b866', emissiveIntensity: .25 } }); win.rotation.x = Math.PI / 2; win.position.set(-.82, 1.0, D / 2 + .13); g.add(win);
+  const chim = m3(new THREE.BoxGeometry(.36, 1.0, .36), '#bdb6c9'); chim.position.set(.75, top + .7, -.4); g.add(chim);
+  S.wall(x, z, W / 2 + .3, D / 2 + .25);
+  const [wx, wz] = S.at([x, z]); let knocks = 0;
+  S.tap(g, () => { knocks++; S.sfx.thud(); setTimeout(() => S.sfx.thud(), 160); S.confetti(wx + .75, y + top + 1.5, wz - .4, ['#efe8dc', '#d9d2c4', '#f7f1e6'], 7, undefined, 1.2); });   // a knock, and a puff from the chimney
+  return { state: () => ({ knocks }) };
+}
 /** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and so does she when she runs past;
  *  it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */
 export function pinwheel(S, x, y, z, a = '#f4a6c4', b = '#f2c65c', h = .8) {
@@ -134,7 +159,7 @@ export function pinwheel(S, x, y, z, a = '#f4a6c4', b = '#f2c65c', h = .8) {
   const [wx, wz] = S.at([x, z]); let om = 0, spins = 0;
   const blow = (v = 16) => { if (om < v * .5) { S.sfx.whirr(); spins++; } om = Math.max(om, v); };
   S.tap(g, () => blow());
-  return { blow, state: () => ({ om, spins }), step({ dt, stepped }) {
+  return { blow, at: [wx, wz], state: () => ({ om, spins }), step({ dt, stepped }) {
     if (S.girl.walking && om < 5 && Math.hypot(S.girl.x - wx, S.girl.z - wz) < .95) blow(9);   // the wind of her passing
     om *= Math.exp(-.75 * dt); if (om < .25) om = 0;
     if (stepped && om) rotor.rotation.z -= om / 12;

@@ -9,7 +9,7 @@ import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edg
 import { cottage, shore, flowerBed, meadow, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
 import { swing, slide } from './toys.js';
 import { dog, ball } from './dog.js';
-import { hen, chick, pig, duck } from './critters.js';
+import { hen, chick, pig, duck, butterfly } from './critters.js';
 import { farm, well, scarecrow } from './farm.js';
 import { dorpLand, bosLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
@@ -121,6 +121,7 @@ export default {
     const live = { kip: hen(S, F[0] + 1.3, H_GRASS, F[1] + 2.0), kuiken1: chick(S, F[0] + .6, F[1] + 2.6, 'kuiken1'), kuiken2: chick(S, F[0] + 2.0, F[1] + 2.7, 'kuiken2'), varken: pig(S, F[0] + 5.4, F[1] + .7),
       eend1: duck(S, ...pondSpots[0], 'eend1', pondSpots), eend2: duck(S, ...pondSpots[1], 'eend2', [pondSpots[1], pondSpots[2], pondSpots[3], pondSpots[0]]) };
 
+    const flies = { vlinder1: butterfly(S, .3 * K - 3.6, -5.5 * K + .3, 'v1'), vlinder2: butterfly(S, .3 * K + 3.7, -5.5 * K + .2, 'v2', '#9ed9cf', '#f6efe2'), vlinder3: butterfly(S, F[0] - 2.4, F[1] + 1.6, 'v3', '#f2c65c', '#e98f8f') };
     const theFarm = farm(S, { can: [F[0] + 1.7, F[1] - 1.3], well: theWell, rows: [0, 1, 2].map(i => [F[0] - 4.6, F[1] - .9 + i * 1.0]), y: H_GRASS, eaters: [() => live.varken.f] });
     mills.push(pinwheel(S, F[0] - 2.6, H_GRASS, F[1] + 2.4, '#f2c65c', '#e98f8f'));
 
@@ -166,8 +167,9 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); },
-      toys: { ...live, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); },
+      wind: (x, z, from) => { for (const m of mills) if (m.at[0] > from && m.at[0] <= x && Math.abs(m.at[1] - z) < 4.5) m.blow(13); },
+      toys: { ...live, ...flies, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:

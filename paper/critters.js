@@ -45,10 +45,11 @@ export function duck(S, x, z, name, spots) {
 }
 /** the hedgehog is shy: when she comes close it curls up. A tap on the ball and it rolls a little way, then peeps out again */
 export function hedgehog(S, x, z) {
-  const { girl, sfx } = S, f = make(S, 'egel', x, z); let roll = 0, dir = 1, calm = 0;
+  const { girl, sfx } = S, f = make(S, 'egel', x, z), g = guest(S, f, 3.4); let roll = 0, dir = 1, calm = 0, busy = false;
   f.onTap = () => { roll = .9; dir = girl.x < f.x ? 1 : -1; sfx.peep(); S.confetti(f.x, f.y + .2, f.z, ['#8fb06c', '#a3bf76', '#c79a66'], 7, undefined, 1.6); };
-  f.act = tick => { const shy = near(f, girl, 1.5) && calm <= 0; f.setFrame(roll > 0 || shy ? 3 : 0); f.tilt = roll > 0 ? tick * .9 : 0; };
-  return { f, state: () => ({ frame: f.frame, at: [f.x, f.z] }), step({ dt }) {
+  f.act = tick => { const shy = near(f, girl, 1.5) && calm <= 0 && !busy; f.setFrame(roll > 0 || shy ? 3 : f.walking ? 1 + (Math.floor(tick / 2) % 2) : 0); f.tilt = roll > 0 ? tick * .9 : 0; };
+  return { f, guest: g, state: () => ({ frame: f.frame, at: [f.x, f.z], there: g.there() }), step({ dt }) {
+    busy = g.mind(dt); if (busy) { if (g.there()) look(f, girl); return; }
     if (roll > 0) { roll -= dt; S.move(f, dir * 1.6 * dt, 0); if (roll <= 0) calm = 3; }
     else if (calm > 0) { calm -= dt; look(f, girl); }   // after its roll it trusts her for a while, and looks
   } };
@@ -63,13 +64,47 @@ export function owl(S, x, z, up) {
 }
 /** the squirrel sits at the foot of the oak. A tap: up the trunk it runs, and comes down with an acorn */
 export function squirrel(S, x, z, high) {
-  const { sfx } = S, f = make(S, 'eekhoorn', x, z); let t = -1; f.face = -1;
+  const { sfx, girl } = S, f = make(S, 'eekhoorn', x, z), g = guest(S, f, 4.6); let t = -1, busy = false; f.face = -1;
   f.onTap = () => { if (t >= 0) return; t = 0; sfx.peep(); };
-  f.act = tick => f.setFrame(t >= 0 && t < 1.7 ? 1 + (Math.floor(tick / 2) % 2) : t >= 1.7 ? 3 : 0);
-  return { f, state: () => ({ frame: f.frame, lift: f.lift || 0, busy: t >= 0 }), step({ dt }) {
+  f.act = tick => f.setFrame(busy ? (f.walking ? 1 + (Math.floor(tick / 2) % 2) : 3) : t >= 0 && t < 1.7 ? 1 + (Math.floor(tick / 2) % 2) : t >= 1.7 ? 3 : 0);
+  return { f, guest: g, state: () => ({ frame: f.frame, lift: f.lift || 0, busy: t >= 0, there: g.there() }), step({ dt }) {
+    busy = g.mind(dt); if (busy) { t = -1; f.lift = 0; if (g.there()) look(f, girl); return; }
     if (t < 0) return; t += dt;
     f.lift = t < .7 ? high * t / .7 : t < 1.0 ? high : t < 1.7 ? high * (1.7 - t) / .7 : 0;   // up, a rummage in the leaves, down again
     if (t > 1.7 && t - dt <= 1.7) { sfx.hop(); S.confetti(f.x, f.y + .4, f.z, ['#8d6a48', '#c79a66', '#7a5a3e'], 6, undefined, 1.5); }
     if (t > 4) { t = -1; f.lift = 0; }
+  } };
+}
+
+/** makes an animal one that can be asked to a picnic: it runs to its place when asked, sits there, and goes home when the
+ *  picnic is over. `mind(dt)` tells the animal's own step whether it is busy being a guest */
+function guest(S, f, speed) {
+  const home = [f.x, f.z]; let to = null, stuck = 0;
+  const go = (p, dt) => { const dx = p[0] - f.x, dz = p[1] - f.z, d = Math.hypot(dx, dz); if (d < .2) { f.walking = false; return true; }
+    const s = Math.min(d, speed * dt), x0 = f.x, z0 = f.z; f.walking = S.move(f, dx / d * s, dz / d * s) && Math.hypot(f.x - x0, f.z - z0) > s * .3; if (Math.abs(dx) > .1) f.face = Math.sign(dx);
+    stuck = f.walking ? 0 : stuck + dt; if (stuck > .6) { f.x += dx / d * s; f.z += dz / d * s; f.walking = true; }   // a tree in the way: it squeezes through
+    return false; };
+  return { invite(p) { to = p; }, leave() { to = home; }, there: () => to && to !== home && Math.hypot(to[0] - f.x, to[1] - f.z) < .25,
+    mind(dt) { if (!to) return false; const at = go(to, dt); if (at && to === home) { to = null; return false; } return true; } };
+}
+/** a paper butterfly: it flutters about near where it lives. When she stands still close by it comes and sits on her head,
+ *  and flies off again when she walks on */
+export function butterfly(S, x, z, name, col = '#f4a6c4', col2 = '#f2c65c') {
+  const { girl } = S, g = new THREE.Group(); g.userData.live = true; S.root.add(g);
+  const wings = new THREE.Group(); g.add(wings);
+  for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.CircleGeometry(.09, 8), paper(col, { side: THREE.DoubleSide })); w.scale.set(1, 1.25, 1); w.position.set(s * .08, .03, 0); w.castShadow = true; wings.add(w);
+    const w2 = new THREE.Mesh(new THREE.CircleGeometry(.055, 8), paper(col2, { side: THREE.DoubleSide })); w2.position.set(s * .07, -.07, .004); w2.castShadow = true; wings.add(w2); }
+  S.glue(wings);
+  const origin = S.at([0, 0]), home = S.at([x, z]); let px = home[0], pz = home[1], py = .7, tx = px, tz = pz, ty = .7, wait = 0, calm = 0, on = false, landings = 0;
+  return { state: () => ({ sitting: on, landings, at: [px, pz] }), step({ dt, tick, stepped, time }) {
+    const near = Math.hypot(girl.x - px, girl.z - pz), base = S.heightAt(px, pz) ?? 0;
+    calm = !girl.walking && !S.playing() && Math.hypot(girl.x - home[0], girl.z - home[1]) < 3.2 ? calm + dt : 0;
+    if (calm > 2.2 && !on && near < 4) { const h = S.head(); tx = h.x; tz = h.z + .02; ty = h.y - base + .06; if (Math.hypot(tx - px, tz - pz) < .12) { on = true; landings++; S.sfx.peep(); } }
+    else if (on && calm === 0) { on = false; wait = 0; S.sfx.flutter(); }
+    else if (!on) { wait -= dt; if (wait <= 0) { wait = 1.2 + Math.random() * 1.8; const a = Math.random() * 6.283, r = .4 + Math.random() * 1.5; tx = home[0] + Math.cos(a) * r; tz = home[1] + Math.sin(a) * r * .7; ty = .45 + Math.random() * .6; } }
+    if (on) { const h = S.head(); px = h.x; pz = h.z + .02; py = h.y - base + .06; }
+    else { const k = Math.min(1, dt * (calm > 2.2 ? 2.4 : 1.1)); px += (tx - px) * k; pz += (tz - pz) * k; py += (ty - py) * k; py += Math.sin((time || 0) * 5 + x) * .004; }
+    g.position.set(px - origin[0], base + py, pz - origin[1]);
+    if (stepped) wings.scale.x = on ? (tick % 6 < 1 ? .5 : 1) : (tick % 2 ? .28 : 1);   // wings shut and open, in steps
   } };
 }

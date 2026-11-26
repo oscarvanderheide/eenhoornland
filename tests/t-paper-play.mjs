@@ -156,4 +156,23 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${pl.crow[0] + 4.5}, ${pl.crow[1] + 1.5})`); await t.sleep(4200); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'from a way off the birds sit on the scarecrow');
     await t.ev(`__p.placeAt(${pl.crow[0]}, ${pl.crow[1]})`); await t.sleep(1500); ok((await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: up they fly'); await t.shot('tmp-shots/y-farm-crow-land.png');
   }
+
+  if (!only || only === 'forest') {
+    await open('?set=bos', LAND); await t.sleep(1500);
+    const pl = await t.ev('__p.places()'), toy = n => t.ev(`__p.toy('${n}')`), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
+    // the picnic: a real tap on the cloth; she sits; the hedgehog and the squirrel come over
+    await t.ev(`__p.placeAt(${pl.picnic[0] + 1.6}, ${pl.picnic[1] + 1.4})`); await t.sleep(2800);
+    await tapAt(pl.picnic[0] - .3, .1, pl.picnic[1] - 1.5); ok(await until(`__p.toy('picknick').mode === 'sit'`, 6), 'a tap on the picnic cloth: she walks over and sits down on it');
+    ok(await until(`__p.toy('picknick').cheered`, 22), 'the hedgehog and the squirrel come and sit with her'); await t.shot('tmp-shots/y-picnic-land.png');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('picknick').mode === null`, 3), 'a push and she is up');
+    await t.sleep(2500); ok(!(await toy('egel')).there && !(await toy('eekhoorn')).there, 'and her guests go home');
+    // the wind: a gust crosses, and the windmill in the clearing spins
+    const m0 = (await toy('molen')).spins, w0 = (await t.ev('__p.wind()')).n; await t.ev('__p.wind(true)');
+    ok(await until(`__p.wind().on`, 2), 'a gust of wind comes'); await t.sleep(2300); await t.shot('tmp-shots/y-gust-land.png');
+    await until(`!__p.wind().on`, 8); ok((await t.ev('__p.wind()')).n === w0 + 1, 'and is gone again'); console.log(`     (the clearing's windmill spun ${(await toy('molen')).spins - m0} time(s) in it)`);
+    // a butterfly: she stands still by its flowers and it comes to sit on her head
+    const b = (await toy('vlinder1')).at; await t.ev(`__p.placeAt(${b[0] + .8}, ${b[1] + .9})`); ok(await until(`__p.toy('vlinder1').sitting`, 9), 'she stands still near a butterfly: it lands on her head'); await t.shot('tmp-shots/y-butterfly-land.png');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(600); await t.ev('__p.keys([])'); ok(!(await toy('vlinder1')).sitting, 'she walks on and it flies off');
+    await t.ev(`__p.tap('hut')`);
+  }
 }

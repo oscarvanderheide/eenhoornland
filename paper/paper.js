@@ -213,6 +213,7 @@ function buildSet(def) {
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
+    head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
     glue: group => bake(group),   // a thing that moves as a whole (a windmill's sails): glue its pieces into one, so it is one draw
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
   };
@@ -394,10 +395,37 @@ const sfx = {
   yip() { tone(700, .12, 'triangle', .07, 1.5); },
   munch() { [0, 110, 220].forEach(d => setTimeout(() => noise(.06, .06, 1500), d)); },
   flutter() { [0, 70, 140, 210].forEach(d => setTimeout(() => noise(.05, .035, 3200), d)); },
+  gust() { noise(1.6, .05, 500); tone(240, 1.4, 'sine', .018, 1.8); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
+
+/* ---------------- gusts of wind ----------------
+   Now and then a gust crosses the picture from the left: a few dark curls of paper, turning as they go. Where it passes,
+   the crowns of trees sway, and whatever a set says the wind does (set.wind(x, z): its toy windmills spin). Only out of
+   doors, on sets with a sea round them. (Oscar's idea, 2026-11-26.) */
+const gust = { g: new THREE.Group(), curls: [], t: -1, next: 9, x: 0, z: 0, n: 0 };
+gust.g.userData.live = true; gust.g.visible = false; scene.add(gust.g);
+{ const mat = new THREE.MeshStandardMaterial({ color: '#3f3a48', roughness: 1, side: THREE.DoubleSide });
+  for (let c = 0; c < 4; c++) {   // a curl: a ribbon wound into a spiral, with a long tail behind it
+    const pos = [], w = .075, turns = 1.6 + c * .2, R0 = .5 + (c % 2) * .2, N = 46;
+    const at = i => { const u = i / N; if (u < .35) { const k = u / .35; return [-1.7 + k * (1.7 - R0), -R0 * .0 + Math.sin(k * 3) * .06]; } const k = (u - .35) / .65, a = -Math.PI / 2 + k * turns * 6.283, r = R0 * (1 - .78 * k); return [Math.cos(a) * r, R0 + Math.sin(a) * r]; };
+    // a ribbon along the line: at every point a little to both sides of it (across the line from the point before to the point after), so the edges are smooth
+    const L = [], Rr = []; for (let i = 0; i <= N; i++) { const [xa, ya] = at(Math.max(0, i - 1)), [xb, yb] = at(Math.min(N, i + 1)), [x, y] = at(i), l = Math.hypot(xb - xa, yb - ya) || 1, h = w * (.35 + .65 * Math.min(1, i / 10)) * (i > N - 6 ? (N - i + 1) / 6 : 1); L.push([x - (yb - ya) / l * h, y + (xb - xa) / l * h]); Rr.push([x + (yb - ya) / l * h, y - (xb - xa) / l * h]); }
+    for (let i = 0; i < N; i++) pos.push(L[i][0], L[i][1], 0, Rr[i][0], Rr[i][1], 0, Rr[i + 1][0], Rr[i + 1][1], 0, L[i][0], L[i][1], 0, Rr[i + 1][0], Rr[i + 1][1], 0, L[i + 1][0], L[i + 1][1], 0);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat); m.position.set(-c * 2.3 - (c % 2) * .7, 1.4 + ((c * 7) % 4) * .34, ((c * 5) % 3 - 1) * 1.1 - .6); m.scale.setScalar(.9 + (c % 3) * .2); gust.g.add(m); gust.curls.push(m);
+  } }
+function stepWind(dt, stepped) {
+  if (!set.seaAsk) { gust.g.visible = false; gust.t = -1; return; }
+  if (gust.t < 0) { gust.next -= dt; if (gust.next > 0) return; gust.t = 0; gust.n++; gust.x = camLook.x - 26; gust.z = camLook.z - 5 + Math.random() * 6; gust.next = 24 + Math.random() * 22; sfx.gust(); }
+  const before = gust.x; gust.t += dt; gust.x += 8.5 * dt; gust.g.visible = true; gust.g.position.set(gust.x, 0, gust.z);
+  const k = Math.min(1, gust.t / .6, Math.max(0, (6.4 - gust.t) / .8)); gust.g.scale.setScalar(Math.max(.01, k));
+  if (stepped) gust.curls.forEach((m, i) => { m.rotation.z = Math.sin(tick * .5 + i) * .25; });
+  for (const q of sets) { for (const t of q.trees) { const tx = t.x + q.ox; if (tx > before - 2 && tx <= gust.x - 2 && Math.abs(t.z + q.oz - gust.z) < 4.5) t.wob = Math.max(t.wob, .75); } if (q.wind) q.wind(gust.x - 2, gust.z, before - 2); }
+  if (gust.t > 6.4) { gust.t = -1; gust.g.visible = false; }
+}
 
 /* the water: a soft wash of waves that grows as she comes near the sea or the pond, and is gone indoors */
 let wash = null, washT = 0;
@@ -781,7 +809,7 @@ function frame(now) {
   }
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
   if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
-  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt);
+  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -946,7 +974,7 @@ window.__p = {
   /** a place in the world as a spot on the screen */
   point(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   /** how spread out the sets are (lands.js), and how loud the water is right now (0 to 1) */
-  spread: SPREAD, water() { return wash ? wash.near : null; },
+  spread: SPREAD, water() { return wash ? wash.near : null; }, wind(now) { if (now) gust.next = 0; return { n: gust.n, on: gust.t >= 0, x: gust.x, z: gust.z }; },
   /** where the camera looks and stands */
   cam() { return { look: camLook.toArray(), pos: camPos.toArray() }; },
   /** what she is playing on (a toy's own state), or null */

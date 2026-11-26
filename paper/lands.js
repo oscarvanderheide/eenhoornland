@@ -9,9 +9,9 @@ const K = SPREAD, wide = o => { for (const k of Object.keys(o)) { const v = o[k]
 /** how far the forest's shore lies from the village's: the length of the bridge between them. One number: change it and the
  *  forest, the bridge and the far shot all move with it */
 export const NORTH_GAP = 13;
-export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -10.9 * K - NORTH_GAP], huis: [-260, 0] };   // (the room inside her house stands far off to the side, beyond what any camera in the world can see)
+export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K - NORTH_GAP], huis: [-260, 0] };   // (the room inside her house stands far off to the side, beyond what any camera in the world can see)
 /** where the theatre's hills stand when the village and the forest exist: behind the forest's north shore (on the island they stand at -16 and further) */
-export const BACK = ORIGIN.bos[1] - 6.6 * K - 5 + 16;
+export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** the sets that exist together with the one she stands on: its neighbours across a bridge */
 export const NEAR = { eiland: [], dorp: ['bos', 'huis'], bos: ['dorp', 'huis'], huis: ['dorp', 'bos'] };
 
@@ -30,9 +30,9 @@ export function dorpLand() {
 }
 export function bosLand() {
   return wide({
-    SAND: blob(0, 0, 13.2, 6.6, 201, 88, .04), GRASS: blob(0, -.1, 12.4, 5.9, 202, 88, .04),
-    SAND_E: blob(13.6, .3, 4.6, 5.0, 203, 56, .05), GRASS_E: blob(13.7, .3, 3.9, 4.3, 204, 56, .05),   // the east: the treehouse glade
-    under: [[0, .1, 13.6, 6.9, 211], [13.6, .4, 4.9, 5.3, 212]].map(([cx, cz, rx, rz, seed]) => blob(cx, cz, rx, rz, seed, 56, .04)),
-    bridge: [4.8, 5.3],   // where the bridge from the village lands, in the forest's own measure
+    SAND: blob(0, 0, 15.2, 8.2, 201, 88, .04), GRASS: blob(0, -.1, 14.4, 7.5, 202, 88, .04),   // (bigger than the pixel game's forest: Oscar asked for more forest)
+    SAND_E: blob(15.4, .3, 4.8, 5.4, 203, 56, .05), GRASS_E: blob(15.5, .3, 4.1, 4.7, 204, 56, .05),   // the east: the treehouse glade
+    under: [[0, .1, 15.6, 8.5, 211], [15.4, .4, 5.1, 5.7, 212]].map(([cx, cz, rx, rz, seed]) => blob(cx, cz, rx, rz, seed, 56, .04)),
+    bridge: [4.8, 6.9],   // where the bridge from the village lands, in the forest's own measure
   });
 }

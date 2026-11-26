@@ -2,8 +2,9 @@
 // cave's rock and the rest in grey card. Reached from the village over the north bridge, through the gate (paper.js).
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { shore, meadow, pinwheel, GROUND } from './props.js';
-import { hedgehog, owl, squirrel } from './critters.js';
+import { shore, meadow, pinwheel, cabin, GROUND } from './props.js';
+import { hedgehog, owl, squirrel, butterfly } from './critters.js';
+import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (0.6 of a step per tile, the middle of the forest is 0, 0) */
@@ -25,7 +26,7 @@ export default {
     shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]], under);
     // the bridge from the village is the village's (set-dorp.js): it lands on this shore at bosLand().bridge
 
-    S.sea({ land: [SAND, SAND_E], x0: -58, x1: 60, z0: -22, z1: 16, deep: [230, 170, 0, 0], fine: 1.8 });
+    S.sea({ land: [SAND, SAND_E], x0: -58, x1: 62, z0: -25, z1: 19, deep: [230, 180, 0, 0], fine: 1.8 });
 
     /* ---------------- the cave's rock: three slabs of pale stone and a dark mouth ---------------- */
     const [rx, rz] = T(36, 6.3), ROCK = blob(rx, rz, 2.7, 1.15, 221, 40, .06);
@@ -54,7 +55,7 @@ export default {
     { const [tx0, tz0] = T(56.5, 13); lay(blob(tx0 - .2, tz0 + 2.0, 3.0, 1.9, 236, 40, .06), GROUND.grass); stones(kk([[8.9, -1.0], [9.4, -.8], [9.9, -.55], [10.4, -.3], [10.9, -.05], [11.4, .25], [11.9, .5]]), 255); }   // the glade under the big oak, and the way to it
 
     /* ---------------- things, in grey: the atelier, the bushes somebody hides in, the big oak with the treehouse ---------------- */
-    put(box(2.4, 1.8, 1.8, 'path'), ax, .9, az); put(card([[-1.38, 0], [1.38, 0], [0, .85]], 2.2, P('dark'), edgeMat), ax, 1.8, az); S.wall(ax, az, 1.35, 1.02);
+    const theCabin = cabin(S, ax, H_GRASS, az);   // a cabin of logs where the pixel game had the atelier (Oscar: a log cabin, not a normal house)
     const bushes = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]].map(([tx, tz]) => T(tx + .5, tz + .5));
     for (const [x, z] of bushes) { put(new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 8), P('bush')), x, .28, z).castShadow = true; S.solid({ x, z, r: .36 }); }
     const [tx, tz] = T(56.5, 13); put(cyl(.45, 3.2, 'dark', 12), tx, 1.6, tz); put(box(2.2, .12, 1.8), tx, 2.6, tz); put(box(1.8, 1.0, 1.4, 'path'), tx, 3.15, tz); S.solid({ x: tx, z: tz, r: .55 });
@@ -62,8 +63,8 @@ export default {
 
     /* ---------------- trees: a forest's worth ---------------- */
     const greens = [['#7fa676', '#a3c08c'], ['#93b071', '#b3c98d'], ['#6f9670', '#8fb089']], R = rng(271); let n = 0;
-    for (let i = 0; i < 2600 && n < 66; i++) {
-      const x = (-13 + R() * 30) * K, z = (-6 + R() * 12) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
+    for (let i = 0; i < 3600 && n < 84; i++) {
+      const x = (-15 + R() * 35) * K, z = (-7.6 + R() * 15.2) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
       const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .5 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .7 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
       if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.3 && z > BR[1] - 3.4 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
@@ -73,8 +74,8 @@ export default {
     }
 
     // the forest floor: tufts (darker than the village's) and a few flowers, thicker in the clearings
-    meadow(S, 260, R2 => {
-      const x = (-13 + R2() * 31) * K, z = (-6 + R2() * 12) * K, on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
+    meadow(S, 340, R2 => {
+      const x = (-15 + R2() * 35) * K, z = (-7.6 + R2() * 15.2) * K, on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .3 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .25 || Math.abs(x - ax) < 1.5 && Math.abs(z - az) < 1.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
       return [x, H_GRASS + (laid.some(o => inPoly(o, x, z)) ? .018 : 0), z];
     }, 402, 1.6, ['#7a9a5c', '#8fae6e', '#6f9057']);
@@ -82,10 +83,14 @@ export default {
 
     // who lives here (critters.js): the shy hedgehog in the nook, the owl asleep on the cave's ledge, the squirrel at the oak
     const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.2) };
+    // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
+    const thePicnic = picnic(S, cx - .7, H_GRASS + .015, cz + .2, [live.egel, live.eekhoorn]);
+    const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); },
-      toys: { ...live, molen: mill },
+      step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); for (const b of Object.values(flies)) b.step(e); },
+      wind: (x, z, from) => { const [mx, mz] = S.at([cx + 2.2, cz + 1.4]); if (mx > from && mx <= x && Math.abs(mz - z) < 4.5) mill.blow(13); },
+      toys: { ...live, ...flies, molen: mill, picknick: thePicnic, hut: theCabin },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,
       shots: [
@@ -93,7 +98,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], clearing: [cx, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], picnic: [cx - .8, cz + 1.4], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };
