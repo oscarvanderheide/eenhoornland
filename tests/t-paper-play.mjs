@@ -5,7 +5,7 @@ export default async function (t) {
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
   const open = async (q, m) => { await t.send('Emulation.setDeviceMetricsOverride', m); await t.go(`http://127.0.0.1:${port}/paper/${q}`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); };
   const DESK = { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false }, LAND = { width: 750, height: 313, deviceScaleFactor: 2, mobile: true };
-  const until = async (expr, secs) => { for (let i = 0; i < secs * 20; i++) { if (await t.ev(expr)) return true; await t.sleep(50); } return false; };
+  const until = async (expr, secs) => { for (let i = 0; i < secs * 20; i++) { const v = await t.ev(expr); if (typeof v === 'string' && v.startsWith('ERR')) { console.log('FAIL the page threw: ' + v); return false; } if (v) return true; await t.sleep(50); } return false; };   // (an error is never a yes)
   const mouse = (type, x, y) => t.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1, pointerType: 'mouse' });
   const tapOn = async name => { const [x, y] = await t.ev(`__p.screen('${name}')`); await t.click(x, y); };
 
@@ -234,6 +234,7 @@ export default async function (t) {
     await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); await t.sleep(700);
     // the fruit stall
     await by('mand', -.4, 1.9); await t.ev(`__p.tap('mand')`); ok(await until(`__p.toy('kraam').held`, 6), 'a tap on the stall\'s basket: she takes an apple'); await t.sleep(300); await t.shot('tmp-shots/y-stall-land.png');
+    await t.ev(`__p.tap('mand')`); await t.sleep(300); ok((await toy('kraam')).held && (await toy('kraam')).given === 0, 'a tap on the basket with an apple in her hands: the basket is not given the apple');
     await t.ev(`__p.tap('oma')`); await t.sleep(300); const st = await toy('kraam'); ok(!st.held && st.given === 1, 'a tap on grandma: she gets the apple');
     // the accordion player
     await by('muzikant', 1.7, 1.0); ok(!(await toy('muzikant')).playing, 'the accordion player is silent by himself'); await t.ev(`__p.tap('muzikant')`); await t.sleep(1700); const m = await toy('muzikant'); ok(m.playing && m.notes > 0, 'a tap: he plays, and notes float up'); await t.shot('tmp-shots/y-muzikant-land.png');
@@ -264,15 +265,15 @@ export default async function (t) {
   /* ---------------- the seesaw: she and the unicorn; kicking off just as she lands throws the unicorn higher ---------------- */
   if (!only || only === 'seesaw') {
     await open('?set=dorp', LAND); await t.sleep(1200);
-    const toy = () => t.ev(`__p.toy('wip')`), sp = await t.ev(`__p.dbg.set.spots.wip`), key = async () => { await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); };
+    const toy = () => t.ev(`__p.toy('wip')`), sp = await t.ev(`__p.dbg.set.spots.wip`), key = async () => { await t.ev(`__p.keys(['d'])`); await t.sleep(70); await t.ev(`__p.keys([])`); }, space = async () => { await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); };
     await t.ev(`__p.placeAt(${sp[0] - 1}, ${sp[2] + 2})`); await t.sleep(2600); await t.shot('tmp-shots/y-wip-land.png');
     await tapOn('wip'); ok(await until(`__p.toy('wip').mode === 'ride'`, 6), 'a tap on the seesaw: she sits on her end and the unicorn hops onto the other'); await t.sleep(300);
-    ok((await toy()).psi === 1, 'it rests with her end down'); await key(); ok(await until(`__p.toy('wip').psi < 0`, 2), 'a touch: she kicks off and goes up'); await t.shot('tmp-shots/y-wip-up-land.png');
+    ok((await toy()).psi === 1, 'it rests with her end down'); await key(); ok(await until(`__p.toy('wip').psi < 0`, 2), 'a push to the side: she kicks off and goes up'); await t.shot('tmp-shots/y-wip-up-land.png');
     ok(await until(`__p.toy('wip').psi === 1`, 4), 'the unicorn kicks off in its turn and she comes down again'); ok(await until(`__p.toy('wip').uair > .2`, 1), 'her end lands: the unicorn is thrown up');
     // kick off just as she lands, four times: the streak grows and the unicorn turns a somersault
     for (let k = 0; k < 4; k++) { await key(); await until(`__p.toy('wip').psi < 0`, 2); await until(`__p.toy('wip').psi === 1`, 4); }
     await t.sleep(250); const s1 = await toy(); ok(s1.best >= 3 && s1.flips >= 1, `kicking off just as she lands: higher each time, and a somersault (streak ${s1.best}, ${s1.flips} flips)`); await t.shot('tmp-shots/y-wip-flip-land.png');
-    await t.sleep(1500); await t.ev(`__p.keys(['a'])`); ok(await until(`__p.toy('wip').mode === null`, 4), 'a push to the side: off they hop'); await t.ev(`__p.keys([])`); await t.sleep(600);
+    await t.sleep(1500); await space(); ok(await until(`__p.toy('wip').mode === null`, 4), 'a touch on her: off they hop'); await t.sleep(600);
     const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
   }
 

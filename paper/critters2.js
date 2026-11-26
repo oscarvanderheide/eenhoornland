@@ -55,14 +55,16 @@ export function otter(S, x, z, spots) {
  *  on the near side. A tap on it in the air: it turns a flip. One body turned about one point of the card (see animals2.js) */
 export function dolphin(S, B, water = -.55) {
   const { girl, sfx } = S, f = make(S, 'dolfijn', B.x0, B.z0), [ax, az] = S.at([B.x0, B.z0]), [bx, bz] = S.at([B.x1, B.z1]); f.g.visible = false;
-  const PIV = (1 - 112 / 240) * f.H, DUR = 1.6, PEAK = 3.5; let t = -1, way = null, leaps = 0, done = false, flip = 0, flips = 0;
+  const PIV = (1 - 112 / 240) * f.H, DUR = 1.6, PEAK = 3.5; let t = -1, way = null, leaps = 0, done = false, flip = 0, flips = 0, lx = girl.x, vx = 0;
   const splash = (x, z) => { sfx.splash(); S.confetti(x, water + .3, z, WATER, 16, undefined, 3); };
   f.onTap = () => { if (t >= 0 && !flip) { flip = 1; flips++; sfx.hop(); } };
   f.act = () => { const k = t / DUR; f.setFrame(k < .34 ? 0 : k < .66 ? 1 : 2); f.tilt = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
   return { f, state: () => ({ leaps, flips, up: t >= 0, at: [f.x, f.y, f.z] }), step({ dt }) {
+    if (Math.abs(girl.x - lx) > .6) vx = 0; else vx += ((girl.x - lx) / Math.max(dt, 1e-3) - vx) * Math.min(1, dt * 8); lx = girl.x;   // which way she is really going, and how fast
     const over = girl.x > ax + 5 && girl.x < bx - 5 && girl.z > az - .3 && girl.z < bz + .3;
     if (!(girl.x > ax - 1 && girl.x < bx + 1 && girl.z > az - 1 && girl.z < bz + 1)) done = false;   // off the bridge: the next crossing has a dolphin of its own
-    if (over && !done && t < 0 && girl.walking) { done = true; t = 0; leaps++; flip = 0; const d = girl.dirX >= 0 ? 1 : -1, mx = girl.x + d * 2.8; way = [mx - 1.3, az - 2.6, mx + 1.3, bz + 2.6]; f.g.visible = true; f.face = 1; splash(way[0], way[1]); }
+    if (over && !done && t < 0 && Math.abs(vx) > 1) { done = true; t = 0; leaps++; flip = 0; const mx = girl.x + Math.sign(vx) * 3.1;   // (her walk covers about that in half a leap: it is over the deck when she gets there)
+      way = [mx - 1.3, az - 2.6, mx + 1.3, bz + 2.6]; f.g.visible = true; f.face = 1; splash(way[0], way[1]); }
     if (t < 0) return;
     t += dt; const k = Math.min(1, t / DUR);
     f.x = way[0] + (way[2] - way[0]) * k; f.z = way[1] + (way[3] - way[1]) * k; f.floatY = f.y = water - .5 + 4 * PEAK * k * (1 - k) - PIV;

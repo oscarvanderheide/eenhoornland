@@ -10,6 +10,8 @@ import dorp from './set-dorp.js';
 import bos from './set-bos.js';
 import huis from './set-huis.js';
 import wei from './set-wei.js';
+import { THINGS } from './things.js';
+import { PROPS } from './people.js';
 import strand from './set-strand.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
 const SETS = { eiland, dorp, bos, huis, wei, strand };
@@ -207,7 +209,7 @@ function buildSet(def) {
     tap: (obj, fn) => tapTarget(obj, fn),
     // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
     lamp: (i, color, distance, decay) => (s.lamps[i] = { color, distance, decay, intensity: 0, position: new THREE.Vector3() }),
-    figure: (name, spec) => { const f = makeFigure(name, spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
+    figure: (name, spec) => { const f = makeFigure(name, spec); f.thing = !!spec.thing || LIFELESS.has(spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
     // a door: walking into `zone` in the direction `dir` is a cut to the door of the same name on another set, where she then
     // stands at its `stand`. S.through(name) takes her through at once (a tap on the house)
     door: (name, zone, stand, dir) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir }); },
@@ -488,6 +490,8 @@ function stepWater(dt) {
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
+/** the cards that are things, not somebody: nobody gives them a flower (the scarecrow and its birds do count as somebody) */
+const LIFELESS = new Set([...Object.entries(THINGS).filter(([n]) => n !== 'vogelverschrikker' && n !== 'vogel').map(([, v]) => v), ...Object.values(PROPS)]);
 /* Her hands: she carries one thing at a time. Whatever she takes says so (and how to put itself down); taking the next
    thing puts the first one down. A flower is the gentle one: with her hands full it goes straight into her hair. */
 let inHand = null;
@@ -498,7 +502,7 @@ const hands = {
 };
 const offers = [];   // what she is holding that can be given: each is asked when somebody else is tapped, and says true if it was given
 function tapFigure(f) {
-  if (f !== girl && offers.some(o => o(f))) return;
+  if (f !== girl && !f.thing && offers.some(o => o(f))) return;   // (what she holds is given to the living only: not to the kite, the can or a basket)
   if (f === uni) { uni.hopV = 3; sfx.neigh(); confetti(uni.x, .9, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 12, starGeo, 2.4); }
   else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
   else if (f.onTap) f.onTap();
