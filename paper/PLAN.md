@@ -53,7 +53,25 @@ Oscar asked whether what lives should be paper. The rule now:
 - **Air** (confetti, water drops, wind curls) is loose flat paper.
 - When unsure: would a child pick it up? Then it is a card.
 
-Still breaking the rule on 2026-11-26: the watering can, the pulled carrot, the hen's eggs, the scarecrow and its birds (their cards are drawn and the code is written, see the log); the picnic basket and apples.
+Calls made on the night of 26 to 27 November, by that rule:
+
+| Thing | It is | Why |
+|---|---|---|
+| The people, the sheep, the otter, the dolphin, the gull, the crab, the turtle, the seal | cards | they live |
+| The gardener's wheelbarrow, the fisherman's crate and rod, grandma's knitting | part of their card | it is what they are doing: one drawing, so it moves with them |
+| The painter's easel | a card of its own | its picture changes, and a card can show a new drawing |
+| The bun, the apple she takes, the stall's basket, the paper aeroplane, the kite | cards | she holds or throws them |
+| The apples lying on the stall's counter | folded (little balls) | they are part of the stall; the one she takes becomes a card |
+| The balloon and its basket, the seesaw, the stall, the lighthouse, the pier, palms, parasols | folded | she climbs in, sits on, walks round or under them |
+| The sandcastle, its bucket and spade | folded | she builds it; it is a place, not a thing she carries |
+| The kite's string | two thin strips of card | a drawn line was a hair wide and drowned in the soft focus |
+| The brambles and their roses | folded, spiky cut card | a hedge is in her way: it is part of the world |
+| Coconuts, shells, pebbles | folded | they lie there; if she may pick one up one day, that one becomes a card |
+| The lighthouse's beams, wool flying off a sheep, dandelion seeds | loose flat paper and light | air |
+
+One more thing follows from the rule: **what she holds is given to the living only.** A flower is not handed to the kite, an apple not to the basket (cards that are things are marked `thing`).
+
+Still breaking the rule: the picnic basket and apples in the forest.
 
 ## How it is built
 
@@ -258,6 +276,7 @@ What was asked: go on with the rest of the world, more to interact with, people 
 - **Trees can hide her** on the meadow and the beach where I did not clear a view (the tree-folding is still switched off, as asked).
 - **From the balloon the sea has an edge** on the far right: the waves stop and flat deep water goes on.
 - **The bridge to the beach has no dolphin**, the bakery, the cave and the cabin have no inside, the lighthouse cannot be climbed.
+- **The seesaw's kick is a push to the side** (stick, key, or a finger held beside her), by the one rule of the toys; a touch on her gets off. A finger simply held keeps it going gently; a push in time with the landing builds the streak. Whether small hands find that, only playing will tell.
 - **Two things share one rule that may surprise**: with the can or the kite in her hands a picked flower goes into her hair; taking an apple or a bun puts the can down where she stands.
 - **Older tests** (`t-paper-dorp.mjs`, `t-paper-cross.mjs`, and the swing, slide, house, dog, animals parts of `t-paper-play.mjs`) were not run tonight and may carry places from before the world grew.
 
