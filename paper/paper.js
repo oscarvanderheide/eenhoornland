@@ -6,7 +6,8 @@ import { THREE, rng, lerp, clamp, paperCanvas, PAPER, tex, paperBump, paper, she
 import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
 import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
-const SETS = { eiland, dorp };
+import bos from './set-bos.js';
+const SETS = { eiland, dorp, bos };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -69,7 +70,7 @@ for (const [col, z, h, s] of hills) {
 const thread = new THREE.MeshStandardMaterial({ color: '#efe8dc', roughness: 1 }), hungs = [];
 function hung(obj, x, y, z) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.userData.live = true;
-  const t = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 20, 4), thread); t.position.y = 10; g.add(t, obj); scene.add(g); hungs.push(g); return g;
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 20, 4), thread); t.position.y = 10; g.add(t, obj); theatre.add(g); hungs.push(g); return g;   // in the theatre: where a set pushes the hills back, the clouds go along
 }
 for (const [x, y, z, w, s] of [[-7, 3.6, -11, 2.6, 1], [5.5, 4.4, -13, 3.4, 2], [12, 3.2, -10, 2.2, 3]]) {
   const c = card(cloudPts(w, s), .08, paper('#f7f1e6'), whiteEdge); c.castShadow = false; hung(c, x, y, z);
@@ -80,7 +81,7 @@ const moonShape = []; for (let i = 0; i <= 24; i++) { const a = -Math.PI / 2 + M
 for (let i = 24; i >= 0; i--) { const a = -Math.PI / 2 + Math.PI * i / 24; moonShape.push([Math.cos(a) * .45 - .05, Math.sin(a) * .82]); }
 const moonCard = card(moonShape, .08, paper('#f3e2a0', { extra: { emissive: '#f3e2a0', emissiveIntensity: .6 } })); moonCard.castShadow = false;
 const moon = hung(moonCard, 9, 22, -14);
-const stars = new THREE.Group(); scene.add(stars);
+const stars = new THREE.Group(); theatre.add(stars);
 { const R = rng(9); for (let i = 0; i < 16; i++) { const s = card(sunPts(.18 + R() * .12, 5), .04, paper('#f6e7ad', { extra: { emissive: '#f6e7ad', emissiveIntensity: .8 } })); s.castShadow = false; const g = hung(s, -20 + R() * 40, 24 + R() * 6, -16 - R() * 6); stars.add(g); } }
 
 /* ---------------- the set: the one place that exists right now ----------------
@@ -121,7 +122,7 @@ function tapTarget(obj, fn, list = set.taps, spots = set.tapSpots) { obj.travers
 function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
   const g = new THREE.Group(); g.position.set(x, y, z); set.root.add(g);
   const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, stickH, 8), paper('#7a5a3e')); stick.position.y = stickH / 2; stick.castShadow = true; sway.add(stick);
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, stickH, 8), paper('#7a5a3e')); stick.position.y = stickH / 2; stick.castShadow = stick.receiveShadow = true; sway.add(stick);   // (the same shadow flags and side as its crown: the whole tree is then one draw)
   // one disc of card on the stick, with smaller discs of other shades glued on, front and back
   const d = card(circlePts(r, seed), .06, paper(col), whiteEdge); d.position.y = stickH + r * .78; sway.add(d);
   for (const side of [1, -1]) {
@@ -137,7 +138,7 @@ function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
 function pine(x, z, y, h, col) {
   const g = new THREE.Group(); g.position.set(x, y, z); set.root.add(g);
   const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .4, 8), paper('#7a5a3e')); trunk.position.y = .2; trunk.castShadow = true; sway.add(trunk);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .4, 8), paper('#7a5a3e', { side: THREE.DoubleSide })); trunk.position.y = .2; trunk.castShadow = trunk.receiveShadow = true; sway.add(trunk);
   for (let i = 0; i < 3; i++) {
     const r = .55 - i * .13, hh = h * .45;
     const c = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 14, 1, true), paper(col, { side: THREE.DoubleSide }));
@@ -171,7 +172,7 @@ function sea({ land, x0 = -30, x1 = 30, z0 = -9, z1 = 17, deep = [120, 80, 0, 0]
     }
   }
 }
-function loadSet(def) {
+function loadSet(def, at = null, dir = [0, 1]) {
   const t0 = performance.now();
   if (set) dropSet();
   const root = new THREE.Group(); root.name = def.name; scene.add(root);
@@ -194,10 +195,11 @@ function loadSet(def) {
   { const r = set.shadow || 13, [cx, cz] = set.shadowAt || [0, 0], k = Math.max(1, r / 13);
     Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, far: 40 * k }); key.shadow.camera.updateProjectionMatrix();
     key.target.position.set(cx, 0, cz); key.position.set(cx - 7 * k, 11 * k, cz + 8 * k); }
-  [girl.x, girl.z] = set.start;
+  theatre.position.z = set.back || 0; sky.scale.set(set.sky || 1, 1, set.sky || 1);
+  [girl.x, girl.z] = at || set.start;   // `at`: she comes through a gate and stands where she stood, seen from this set
   // a new set is a cut: the camera is there at once
   set.shots = (set.shots || [SHOT0]).map(s => ({ ...SHOT_DEF, ...s })); shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
-  [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni || [set.start[0] - 1.2, set.start[1] + .4]; uni.face = 1;
+  [uni.x, uni.z] = at ? [at[0] - dir[0] * .9, at[1] - dir[1] * .9] : set.uni || [set.start[0] - 1.2, set.start[1] + .4]; uni.face = 1;
   girl.y = heightAt(girl.x, girl.z) ?? 0; uni.y = heightAt(uni.x, uni.z) ?? 0; target = null; hold = null;
   set.ms = performance.now() - t0;
   return set;
@@ -399,7 +401,7 @@ function groundPoint(cx, cy) {
   return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -girl.y), new THREE.Vector3());   // nothing when the finger is on the sky
 }
 canvas.addEventListener('pointerdown', e => {
-  audio(); canvas.setPointerCapture(e.pointerId);
+  audio(); if (gate) return; canvas.setPointerCapture(e.pointerId);
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
@@ -550,6 +552,31 @@ function bakeSea(rows, root) {
 bake(theatre); for (const g of hungs) bake(g);
 loadSet(SETS[ASK.get('set')] || eiland);
 
+/* ---------------- the gate: from one set to the next behind a paper curtain ----------------
+   A set says where its gates are: { to, zone, shift, dir }. When she walks into a gate's zone (the far half of a bridge) she
+   keeps walking by herself, a sheet of paper slides across the stage in stop-motion steps, behind it this set is thrown away
+   and the next one built, and the sheet slides on. She stands where she stood, seen from the new set (shift), and walks on a
+   little before the stick is hers again. Both sets show the same bridge and each other's real shore, and both look at the
+   bridge with the same far shot, so what she sees after the sheet is what she saw before it, from the other side. */
+const CLOSE = .42, OPEN = .42;
+let gate = null; const gateStat = { n: 0, build: 0, first: 0 };
+const wipeEl = document.body.appendChild(document.createElement('div'));
+{ const pts = [];   // a sheet of pale paper wider than the screen, its two long edges cut wavy
+  for (let i = 0; i <= 20; i++) pts.push(`${(3.5 + Math.sin(i * 1.3) * 1.5 + (i % 2) * .7).toFixed(2)}% ${i * 5}%`);
+  for (let i = 20; i >= 0; i--) pts.push(`${(96.5 + Math.sin(i * 1.1 + 2) * 1.5 - (i % 2) * .7).toFixed(2)}% ${i * 5}%`);
+  wipeEl.style.cssText = `position:fixed;top:0;left:0;width:150vw;height:100%;pointer-events:none;z-index:5;transform:translateX(-155vw);background:#f3e6cc url(${PAPER.toDataURL()});background-blend-mode:multiply;clip-path:polygon(${pts.join(',')})`; }
+const slide = (from, to, secs) => wipeEl.animate([{ transform: `translateX(${from}vw)` }, { transform: `translateX(${to}vw)` }], { duration: secs * 1000, easing: 'steps(6, end)', fill: 'forwards' });
+function startGate(g) { gate = { g, t: 0, phase: 'close' }; target = null; hold = null; slide(-155, -25, CLOSE); sfx.rustle(); }
+function stepGate(dt) {
+  if (!gate) { const g = set.gates && set.gates.find(g => inZone(g, girl.x, girl.z)); if (g) startGate(g); return; }
+  gate.t += dt;
+  if (gate.phase === 'close' && gate.t >= CLOSE + .06) {   // the sheet covers everything: change the set
+    const g = gate.g, t0 = performance.now(); loadSet(SETS[g.to], [girl.x + g.shift[0], girl.z + g.shift[1]], g.dir);
+    gateStat.build = performance.now() - t0; gateStat.n++; gate.phase = 'first'; gate.t0 = performance.now();
+  } else if (gate.phase === 'first') { gateStat.first = performance.now() - gate.t0; gate.phase = 'open'; gate.t = 0; slide(-25, 105, OPEN); sfx.rustle(); }   // the first picture of the new set has been drawn (the slow one)
+  else if (gate.phase === 'open' && gate.t >= OPEN) gate = null;
+}
+
 /* ---------------- the readout (?fps): how smoothly it runs here and how big she is on this screen ---------------- */
 const stat = { fps: 0, worst: 0, her: 0, calls: 0, tris: 0, n: 0, t0: 0, prev: 0, slow: 0, slows: [] };
 const statEl = ASK.has('fps') ? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'stat' })) : null;
@@ -564,7 +591,7 @@ function measure(now) {
   // her height on the screen in points: from her feet to the top of her head
   const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
   stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
-  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${innerWidth}×${innerHeight} at ×${+DPR.toFixed(2)}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${gateStat.n ? `gate: built in ${gateStat.build.toFixed(0)} ms, first picture ${gateStat.first.toFixed(0)} ms\n` : ''}${innerWidth}×${innerHeight} at ×${+DPR.toFixed(2)}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
 }
 
 /* ---------------- the loop ---------------- */
@@ -585,6 +612,7 @@ function frame(now) {
     const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
     if (d < .08) target = null; else { ix = dx / d; iz = dz / d; }
   }
+  stepGate(dt); if (gate) { [ix, iz] = gate.g.dir; target = null; }   // through a gate she walks on by herself
   const speed = 2.3, il = Math.hypot(ix, iz);
   girl.walking = false;
   if (il > 0) {
@@ -707,6 +735,8 @@ window.__p = {
     return { cells: seen.size, places: Object.fromEntries(Object.entries(set.places || {}).map(([n, p]) => [n, at(p)])) };
   },
   places() { return set.places || {}; },
+  /** the last walk through a gate: how long the build took and the first picture after it; active while the sheet is on its way */
+  gate() { return { ...gateStat, active: !!gate }; },
   /** does a finger at this spot on the screen land on something that answers a tap (without the finger's-width margin)? */
   direct(x, y) { const h = pickAt(x, y); return !!(h && h.object.userData.tap); },
   /** whose tap a finger at this spot would get through the margin alone: a figure's name, 'thing', or null */

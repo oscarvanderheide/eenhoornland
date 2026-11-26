@@ -5,8 +5,9 @@
 // every path, square and patch is cut by hand, never a row of tiles. The numbers are copied, never imported
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
-import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump, sandMap, sandBump } from './kit.js';
-import { cottage } from './props.js';
+import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { cottage, shore, GROUND } from './props.js';
+import { dorpLand, bosLand, move, SHIFT } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile) */
 const T = (x, z) => [(x - 31) * .6, (z - 42) * .6];
@@ -23,22 +24,14 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
     /* ---------------- the land: a beach, the green, and a terrace in the north where her house stands ---------------- */
-    const SAND = blob(0, 0, 10.4, 8.5, 71, 80, .04), GRASS = blob(0, -.1, 9.5, 7.7, 72, 80, .04);
-    const SAND_S = blob(-1.2, 9.7, 6.3, 3.0, 73, 56, .05);                                              // the south: the pig's mud
-    const SAND_W = blob(-10.4, .3, 5.0, 4.0, 74, 56, .05), GRASS_W = blob(-10.3, .3, 4.3, 3.4, 75, 56, .05);   // the west: the duck pond
-    // the terrace: a card with round corners (a blob would leave the street no room along its front)
-    const HIGH = (() => { const R = rng(76), cx = -.1, cz = -5.05, hx = 4.5, hz = 2.15, r = 1.6, out = [];
-      for (const [qx, qz, a0] of [[1, 1, 0], [-1, 1, 1], [-1, -1, 2], [1, -1, 3]]) for (let i = 0; i <= 10; i++) { const a = (a0 + i / 10) * Math.PI / 2, j = (R() - .5) * .03; out.push([cx + qx * (hx - r) + Math.cos(a) * (r + j), cz + qz * (hz - r) + Math.sin(a) * (r + j)]); }
-      return out; })();
-    const BOS = blob(5.6, -14.6, 6, 3.4, 77, 48, .05), WEI = blob(19.6, 2.2, 4.2, 5, 78, 48, .05);        // the near shores of the forest and the meadow, across the bridges
+    const { SAND, GRASS, SAND_S, SAND_W, GRASS_W, HIGH, under } = dorpLand();
+    const WEI = blob(19.6, 2.2, 4.2, 5, 78, 48, .05);        // the near shore of the meadow, across the east bridge (a stand-in)
+    // the forest across the north bridge: its real outline (lands.js), only to be seen. The gate on the bridge takes her there
+    const [bx, bz] = SHIFT['bos>dorp'], B = bosLand(), FAR = [B.SAND, B.GRASS, B.SAND_E, B.GRASS_E].map(o => move(o, bx, bz));
     // the ground is the island's real printed paper (it costs what it will cost); what stands on it is still grey
-    const sandP = paper('#ecd3a0', { map: sandMap, bump: sandBump }), grassP = paper('#a3bf76', { map: grassMap, bump: grassBump }), highP = paper('#bccb84', { map: grassMap, bump: grassBump });
-    for (const s of [SAND, SAND_S, SAND_W]) root.add(slab(s, H_SAND, .55, sandP, edgeMat));
-    for (const g of [GRASS, GRASS_W]) root.add(slab(g, H_GRASS, .32, grassP, edgeMat));
-    root.add(slab(HIGH, H_HIGH, .48, highP, edgeMat));
-    for (const s of [BOS, WEI]) root.add(slab(s, H_GRASS, .87, grassP, edgeMat));
-    for (const [cx, cz, rx, rz, seed] of [[0, .1, 10.8, 8.8, 81], [-1.2, 9.8, 6.6, 3.3, 82], [-10.4, .4, 5.3, 4.3, 83], [5.6, -14.5, 6.3, 3.7, 84], [19.6, 2.3, 4.5, 5.3, 85]])
-      root.add(slab(blob(cx, cz, rx, rz, seed, 56, .04), H_SAND - .5, .5, P('dark'), edgeMat));
+    const sandP = GROUND.sand, grassP = GROUND.grass, highP = GROUND.high;
+    shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]], [...under, blob(19.6, 2.3, 4.5, 5.3, 85, 56, .04)]);
+    shore(S, [[FAR[0], H_SAND, .55, sandP], [FAR[1], H_GRASS, .32, GROUND.wood], [FAR[2], H_SAND, .55, sandP], [FAR[3], H_GRASS, .32, GROUND.wood]], B.under.map(o => move(o, bx, bz)));
 
     // stairs down from the terrace: in front of her door (south), and at its east end where the street goes on to the bridge
     const edge = (poly, at, axis) => { let best = -99; for (let v = -12; v <= 12; v += .01) if (axis === 'z' ? inPoly(poly, at, v) : inPoly(poly, v, at)) best = v; return best; };
@@ -54,23 +47,23 @@ export default {
     steps('s', .3, .55); steps('e', -3.4, .55);
 
     // the bridges: planks on posts. North to the forest, east to the meadow
-    const NORTH = { x0: 5.4, x1: 6.6, z0: -11.8, z1: -5.5 }, EAST = { x0: 8.3, x1: 16.2, z0: 1.8, z1: 3.0 }, DECK = -.12;
+    const NORTH = { x0: 5.4, x1: 6.6, z0: -12.4, z1: -5.5 }, EAST = { x0: 8.3, x1: 16.2, z0: 1.8, z1: 3.0 }, DECK = -.12;
     for (let z = NORTH.z0; z < NORTH.z1; z += .32) root.add(slab(rect(NORTH.x0 - .05, z, NORTH.x1 + .05, z + .28), DECK, .06, P('thing'), edgeMat));
     for (let x = EAST.x0; x < EAST.x1; x += .32) root.add(slab(rect(x, EAST.z0 - .05, x + .28, EAST.z1 + .05), DECK, .06, P('thing'), edgeMat));
-    for (const z of [-10.6, -9, -7.4]) for (const x of [NORTH.x0, NORTH.x1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
+    for (const z of [-11.6, -10.2, -8.8, -7.4]) for (const x of [NORTH.x0, NORTH.x1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
     for (const x of [10.4, 12, 13.6, 15.2]) for (const z of [EAST.z0, EAST.z1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
 
     // the pond: a sheet of water lying in the green; nobody walks on it
     const [pcx, pcz] = T(14.5, 42.5), POND = blob(pcx, pcz, 1.44, 1.2, 86, 40, .05);
     root.add(slab(POND, H_GRASS + .02, .02, P('water'), whiteEdge));
 
-    S.sea({ land: [SAND, SAND_S, SAND_W, BOS, WEI], x0: -40, x1: 40, z0: -19.5, z1: 21, deep: [170, 120, 0, 0] });
+    S.sea({ land: [SAND, SAND_S, SAND_W, FAR[0], FAR[2], WEI], x0: -40, x1: 40, z0: -27, z1: 21, deep: [170, 130, 0, -3] });
 
     // where she can stand: the first floor that holds the spot counts
     for (const s of stairs) S.floorBox(s.h, ...s.b);
     S.floor(null, POND);
     S.floor(H_HIGH, HIGH);
-    S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_W); S.floor(H_GRASS, BOS); S.floor(H_GRASS, WEI);
+    S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_W); S.floor(H_GRASS, WEI);
     S.floorBox(DECK, NORTH.x0, NORTH.z0, NORTH.x1, NORTH.z1); S.floorBox(DECK, EAST.x0, EAST.z0, EAST.x1, EAST.z1);
     for (const s of [SAND, SAND_S, SAND_W]) S.floor(H_SAND, s, .22);
 
@@ -145,12 +138,15 @@ export default {
       if (pineTree) S.pine(x, z, y, 1.3 + R() * .6, ['#6f9670', '#7fa676', '#5f8665'][n % 3]); else S.lollipop(x, z, y, r, c[0], c[1], 100 + n, .9 + R() * .55);
       n++;
     }
-    for (const [x, z] of [[4.2, -14.6], [7.6, -15.2], [20.5, .2], [21, 4.4]]) S.lollipop(x, z, H_GRASS, .6, cols[0][0], cols[0][1], 140 + Math.round(x));   // on the far shores
+    for (const [x, z] of [[20.5, .2], [21, 4.4]]) S.lollipop(x, z, H_GRASS, .6, cols[0][0], cols[0][1], 140 + Math.round(x));   // on the meadow's shore
+    { const R3 = rng(93); let m = 0; for (let i = 0; i < 300 && m < 14; i++) { const x = bx - 9 + R3() * 18, z = bz - 4 + R3() * 8; if (!inPoly(FAR[1], x, z) || edgeDist(FAR[1], x, z) < .6 || Math.abs(x - 6) < 1.3) continue; S.pine(x, z, H_GRASS, 1.4 + R3() * .7, ['#5f8665', '#6f9670', '#547a5c'][m % 3]); m++; } }   // the forest's edge, seen from here
 
     const [sx, sz] = T(31.5, 36.6);
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
-      shadow: 22,
+      shadow: 22, back: -14, sky: 1.3,     // the theatre's hills stand further back here: the forest's shore lies where they stand on the island
+      // the bridge to the forest is a gate: past its middle the paper curtain crosses and the forest stands there instead
+      gates: [{ to: 'bos', zone: [5.2, -12.6, 6.8, -9.4], shift: SHIFT['dorp>bos'], dir: [0, -1] }],
       step: e => HOUSE.step(e),
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
@@ -168,7 +164,7 @@ export default {
       ],
       spots: { door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
-      places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: T(20.5, 42.6), slide: T(22.5, 43.6), pond: T(14.5, 45.4), bench: T(28, 40.6), garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6, -9], east: [10.2, 2.4], bos: [5.6, -13.4] },
+      places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: T(20.5, 42.6), slide: T(22.5, 43.6), pond: T(14.5, 45.4), bench: T(28, 40.6), garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6, -9], east: [10.2, 2.4] },
     };
   },
 };
