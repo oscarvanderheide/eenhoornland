@@ -21,6 +21,37 @@ export default async function (t) {
   await t.ev(`__p.placeAt(${places.start[0]}, ${places.start[1]}); __p.walkTo(${places.start[0]}, -1.5)`); await t.sleep(3500);
   const w = await t.ev('__p.info()'); ok(Math.abs(w.girl[1] + 1.5) < .3 && Math.abs(w.h) < .01, `she walks down the stairs from her door to the square (${w.girl.map(v => v.toFixed(1))})`);
 
+  // the camera: walking over the border of a shot changes it exactly once, and she never turns back on the screen while it glides
+  const sh0 = await t.ev('__p.shots()');
+  console.log('     she is, in points on this screen: ' + sh0.list.map(s => `${s.name} ${s.her.toFixed(0)}`).join(', '));
+  const cross = async (what, from, press, want, secs, expect) => {
+    await t.ev(`__p.placeAt(${from[0]}, ${from[1]})`); await t.sleep(2600);
+    const before = await t.ev('__p.shots()');
+    await t.ev(`__p.track(${JSON.stringify(want)})`); await press(true); await t.sleep(secs * 1000); await press(false);
+    const tr = await t.ev('__p.tracked()'), sh = await t.ev('__p.shots()'); await t.ev('__p.track(null)');
+    ok(sh.on === expect && sh.changes - before.changes === 1 && tr.min > 0 && tr.n > 20, `${what}: ${before.on} -> ${sh.on}, ${sh.changes - before.changes} change, slowest step along her way ${tr.min.toFixed(2)} a second (${tr.sx.toFixed(1)} right, ${tr.sz.toFixed(1)} down on the screen)`);
+  };
+  const key = k => on => t.ev(`__p.keys(${on ? JSON.stringify([k]) : '[]'})`);
+  await cross('left into the playground', [-.6, -.4], key('a'), [-1, 0], 1.7, 'speeltuin');
+  await cross('right out of it again', [-4.6, .3], key('d'), [1, 0], 1.7, 'dorp');
+  await cross('right onto the east bridge', [7.0, 2.4], key('d'), [1, 0], 1.3, 'brug-oost');
+  await cross('left off it again', [10.2, 2.4], key('a'), [-1, 0], 1.6, 'dorp');
+  await cross('down from her door', [places.start[0], places.start[1]], key('s'), [0, 1], 1.0, 'dorp');
+  await cross('up to her door', [places.start[0], -1.7], key('w'), [0, -1], 1.1, 'thuis');
+  await cross('up onto the north bridge', [6, -5], key('w'), [0, -1], 1.5, 'brug-noord');
+  await cross('down off it again', [6, -8.5], key('s'), [0, 1], 1.6, 'dorp');
+  // the same with a finger held still on the glass, to her right
+  const finger = on => t.send('Input.dispatchMouseEvent', { type: on ? 'mousePressed' : 'mouseReleased', x: 1000, y: 430, button: 'left', clickCount: 1, pointerType: 'mouse' });
+  await cross('a finger held to her right, onto the east bridge', [7.0, 2.4], finger, [1, 0], 1.15, 'brug-oost');
+  await t.sleep(2500); await t.shot('tmp-shots/d-shot-brug-oost-desk.png');
+  for (const [n, at] of [['thuis', places.start], ['speeltuin', places.swing], ['vijver', places.pond], ['wei', places.pen], ['brug-noord', places.north], ['modder', places.mud], ['dorp', places.fountain]]) { await t.ev(`__p.placeAt(${at[0]}, ${at[1]})`); await t.sleep(3200); ok((await t.ev('__p.shots()')).on === n, `the shot at ${n} is on there`); await t.shot(`tmp-shots/d-shot-${n}-desk.png`); }
+
+  // a finger that just misses a small thing still counts: far back on the bridge the unicorn is small
+  await t.ev('__p.placeAt(10.2, 2.4)'); await t.sleep(3200);
+  const u = await t.ev(`__p.screen('unicorn')`), h0 = await t.ev(`__p.hop('unicorn')`);
+  await t.click(u[0] + 14, u[1] - 4); await t.sleep(250);
+  ok(h0 === 0 && await t.ev(`__p.hop('unicorn')`) > .05, 'a tap 14 points beside the small unicorn on the bridge still makes it hop');
+
   // thrown away means gone: back and forth, and nothing piles up
   await open('', DESK); for (let i = 0; i < 20 && (await t.ev('__p.doll().warm')) > 0; i++) await t.sleep(300);
   const first = await t.ev('__p.count()');
@@ -38,5 +69,8 @@ export default async function (t) {
   await open('?set=dorp&fps', LAND); await t.sleep(2600);
   const p = await t.ev('__p.stats()'); ok(p.fps > 5, `on the phone lying down she is ${p.her.toFixed(0)} points tall, ${p.calls} draws`);
   await t.shot('tmp-shots/d-start-land.png');
-  for (const n of ['fountain', 'east']) { await t.ev(`__p.placeAt(${places[n][0]}, ${places[n][1]})`); await t.sleep(2200); await t.shot(`tmp-shots/d-${n}-land.png`); }
+  const shp = await t.ev('__p.shots()'), small = shp.list.filter(s => s.play && s.her < 40), tiny = shp.list.filter(s => s.her < 22);
+  console.log('     she is, in points on the phone: ' + shp.list.map(s => `${s.name} ${s.her.toFixed(0)}${s.play ? '' : ' (walk through)'}`).join(', '));
+  ok(!small.length && !tiny.length, 'on the phone she is at least 40 points tall wherever there are things to tap, and 22 where she only walks through' + (small.length || tiny.length ? ' NOT: ' + [...small, ...tiny].map(s => s.name).join(', ') : ''));
+  for (const [n, at] of [['thuis', places.start], ['speeltuin', places.swing], ['vijver', places.pond], ['wei', places.pen], ['brug-oost', places.east], ['brug-noord', places.north], ['modder', places.mud], ['dorp', places.fountain]]) { await t.ev(`__p.placeAt(${at[0]}, ${at[1]})`); await t.sleep(3200); await t.shot(`tmp-shots/d-shot-${n}-land.png`); }
 }

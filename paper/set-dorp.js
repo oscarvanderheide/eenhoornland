@@ -145,7 +145,18 @@ export default {
       step: e => HOUSE.step(e),
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
-      shots: [{ name: 'dorp', fx: 1, fy: .5, fz: 1, lag: 1, span: 14, tall: 8 }],
+      // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
+      // turned, 'up' on the stick would walk her into the railing
+      shots: [
+        { name: 'thuis', zone: [-2.4, -4.7, 3.0, -2.95], span: 9.5, tall: 6.5, rise: .2 },                      // at her front door: close and low, the morning
+        { name: 'speeltuin', zone: [-8.1, -1.5, -2.5, 2.0], span: 12, rise: .3, yaw: .3 },                      // the playground, seen a little from the east
+        { name: 'vijver', zone: [-14, -3.2, -8.6, 3.8], span: 10.5, rise: .38, yaw: .22 },                      // the pond: closer, looking down on the water
+        { name: 'wei', zone: [1.3, 3.4, 7.2, 6.3], span: 12, rise: .36 },                                       // in the unicorns' meadow
+        { name: 'brug-oost', zone: [9.0, .9, 17, 3.9], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },    // the bridge to the meadow: far back, she is small
+        { name: 'brug-noord', zone: [4.9, -12.2, 7.1, -6.4], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge to the forest: far back and high
+        { name: 'modder', zone: [-8, 7.6, 6, 13], span: 11, rise: .3 },                                         // the pig's corner in the south
+        { name: 'dorp', span: 14 },                                                                              // everywhere else
+      ],
       spots: { door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
       places: { start: [sx, sz], fountain: T(32, 43.2), stall: T(37, 41.8), swing: T(20.5, 42.6), slide: T(22.5, 43.6), pond: T(14.5, 45.4), bench: T(28, 40.6), garden: T(24.5, 49.5), pen: T(38, 49.5), arch: T(44.5, 46.6), sword: T(24.5, 48.6), pole: T(43.5, 35.5), mud: T(27.5, 57.6), north: [6, -9], east: [10.2, 2.4], bos: [5.6, -13.4] },

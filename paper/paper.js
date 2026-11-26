@@ -84,13 +84,34 @@ const stars = new THREE.Group(); scene.add(stars);
    floors (where she can stand, the first that holds the spot counts), walls and solids (what she walks round), taps,
    trees, who lives there, its sea. The toolbox S is all a set file needs besides the kit. */
 let set = null;
-// how the camera looks at a set. fx, fz: how far it follows her (1 = she stays in the middle); lag: how much of that the camera
-// itself moves sideways (under 1 it turns a little instead); span: how many steps wide the picture is at her distance (tall:
-// the same with the screen upright). These numbers are the test island's, and the look it was approved with
-const SHOT0 = { name: 'eiland', fx: .7, fy: .5, fz: .6, lag: .8, span: 12.5, tall: 7.5 };
-let shot = SHOT0;
+/* The camera director. A set gives a list of shots; each is a way of looking at her, and all but the last have a zone (a box
+   on the floor, [x0, z0, x1, z1]). While she stands in a shot's zone that shot is on; she must walk `pad` beyond its edge to
+   leave it again, so a shot never flickers at its border. The last shot is the one for everywhere else. Going from one shot
+   to the next every number glides, never jumps: only a door cuts. What a shot says:
+     ax, az, fx, fz  the camera looks at a point between (ax, az) and her: fx = fz = 1 keeps her in the middle, less leans
+     lag             how much of that the camera itself moves sideways (under 1 it turns a little instead)
+     span, tall      how many steps wide the picture is at her distance, lying down and upright: a big span makes her small
+     rise, riseTall  how high the camera stands for every step it stands back (lying down, upright)
+     yaw             turned round her, in radians: plus looks from the east. Keep it small: 'up' on the stick is always away
+                     from the camera, so a wide turn would bend her path while the shot changes
+     dof, range      how strong the soft focus is, and how deep the sharp part (2 = twice as deep)
+     play            false for a shot she only walks through (a bridge): she may be too small there to tap things */
+const SHOT_KEYS = ['ax', 'az', 'fx', 'fy', 'fz', 'lag', 'span', 'tall', 'rise', 'riseTall', 'yaw', 'dof', 'range'];
+const SHOT_DEF = { ax: 0, az: 0, fx: 1, fy: .5, fz: 1, lag: 1, span: 14, tall: 8, rise: .28, riseTall: .5, yaw: 0, dof: 1, range: 1, pad: .8, play: true };
+const SHOT0 = { ...SHOT_DEF, name: 'eiland', fx: .7, fz: .6, lag: .8, span: 12.5, tall: 7.5 };   // the test island's, and the look it was approved with
+let shot = SHOT0, camYaw = 0, shotChanges = 0;
+const cam = { ...SHOT0 };   // what the camera is doing right now: on its way to `shot`
+const inZone = (s, x, z, pad = 0) => !s.zone || (x > s.zone[0] - pad && x < s.zone[2] + pad && z > s.zone[1] - pad && z < s.zone[3] + pad);
+function shotFor(x, z) {
+  if (shot.zone && set.shots.includes(shot) && inZone(shot, x, z, shot.pad)) return shot;
+  return set.shots.find(s => inZone(s, x, z));
+}
+// the stick and her drawings think in the screen's left-right and near-far; the floor's east and south are turned by the camera's yaw
+const toFloor = (sx, sz) => [sx * Math.cos(camYaw) + sz * Math.sin(camYaw), -sx * Math.sin(camYaw) + sz * Math.cos(camYaw)];
+const toScreen = (wx, wz) => [wx * Math.cos(camYaw) - wz * Math.sin(camYaw), wx * Math.sin(camYaw) + wz * Math.cos(camYaw)];
 const baseTaps = [];        // meshes that answer a tap on every set (she and her unicorn)
-function tapTarget(obj, fn, list = set.taps) { obj.traverse(o => { if (o.isMesh) { o.userData.tap = fn; list.push(o); } }); }
+const baseSpots = [];       // ...and the things themselves, to find the one nearest a finger that just missed
+function tapTarget(obj, fn, list = set.taps, spots = set.tapSpots) { obj.traverse(o => { if (o.isMesh) { o.userData.tap = fn; list.push(o); } }); spots.push({ obj, fn }); }
 
 // lollipop trees: two slotted card discs on a stick, a smaller disc of another shade glued on each face
 function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
@@ -150,7 +171,7 @@ function loadSet(def) {
   const t0 = performance.now();
   if (set) dropSet();
   const root = new THREE.Group(); root.name = def.name; scene.add(root);
-  set = { name: def.name, root, floors: [], walls: [], solids: [], taps: [], trees: [], ground: [], figs: [], seaRows: [], sea: null, names: {}, spots: {} };
+  set = { name: def.name, root, floors: [], walls: [], solids: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], seaRows: [], sea: null, names: {}, spots: {} };
   const S = {
     THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine, sea,
     floor: (h, pts, inset = 0) => { set.floors.push({ h, pts, inset }); },
@@ -169,7 +190,9 @@ function loadSet(def) {
   { const r = set.shadow || 13, [cx, cz] = set.shadowAt || [0, 0], k = Math.max(1, r / 13);
     Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, far: 40 * k }); key.shadow.camera.updateProjectionMatrix();
     key.target.position.set(cx, 0, cz); key.position.set(cx - 7 * k, 11 * k, cz + 8 * k); }
-  shot = (set.shots || [SHOT0])[0]; resize();
+  [girl.x, girl.z] = set.start;
+  // a new set is a cut: the camera is there at once
+  set.shots = (set.shots || [SHOT0]).map(s => ({ ...SHOT_DEF, ...s })); shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
   [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni || [set.start[0] - 1.2, set.start[1] + .4]; uni.face = 1;
   girl.y = heightAt(girl.x, girl.z) ?? 0; uni.y = heightAt(uni.x, uni.z) ?? 0; target = null; hold = null;
   set.ms = performance.now() - t0;
@@ -221,7 +244,7 @@ function makeFigure(name, { w, h, draw, front, back, frames, size, kid }, parent
 const fig = (name, k) => makeFigure(name, FIGS[k]);
 const girl = fig('girl', ASK.get('who') === 'fenna' ? 'fenna' : 'anna');
 const uni = fig('unicorn', 'baby');
-for (const f of [girl, uni]) tapTarget(f.g, () => tapFigure(f), baseTaps);
+for (const f of [girl, uni]) tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots);
 /** things to wear by their stall ids, sorted into their slots */
 const wearOf = ids => { const o = {}; for (const id of ids) for (const [slot, list] of Object.entries(WEAR)) if (list.includes(id)) o[slot] = id; return o; };
 if (ASK.get('wear')) girl.redress(wearOf(ASK.get('wear').split(',')));
@@ -321,8 +344,8 @@ function tryMove(f, dx, dz) {
 /** walking mostly towards the camera shows her front, mostly away her back, else her side (with a margin so it never flickers) */
 function viewFor(f) {
   if (!f.views.front) return 'side';
-  const ax = Math.abs(f.dirX), az = Math.abs(f.dirZ);
-  if (az > ax * 1.5) return f.dirZ > 0 ? 'front' : 'back';
+  const [dx, dz] = toScreen(f.dirX, f.dirZ), ax = Math.abs(dx), az = Math.abs(dz);
+  if (az > ax * 1.5) return dz > 0 ? 'front' : 'back';
   if (ax > az * 1.1) return 'side';
   return f.view;
 }
@@ -340,6 +363,18 @@ function pickAt(cx, cy) {
   const hits = ray.intersectObjects([...baseTaps, ...set.taps, ...set.ground], false);
   // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
   return hits.find(h => !h.object.userData.fig || solidAt(h.object.userData.fig, h.uv)) || null;
+}
+/** a finger that hit nothing: was it within a finger's width of something that answers a tap? Measured on the screen, so a
+ *  thing that is small because the camera stands far back is as easy to hit as a big one (everything is at least 48 points across) */
+function nearTap(cx, cy, reach = 24) {
+  const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = reach;
+  for (const s of [...baseSpots, ...set.tapSpots]) {
+    const f = s.obj.children[0]?.children[0]?.userData.fig;
+    if (f) v.set(f.x, f.y + f.H * .45, f.z); else v.copy(s.c || (s.c = new THREE.Box3().setFromObject(s.obj).getCenter(new THREE.Vector3())));
+    v.project(camera); if (v.z > 1) continue;
+    const d = Math.hypot(r.left + (v.x + 1) / 2 * r.width - cx, r.top + (1 - v.y) / 2 * r.height - cy); if (d < bd) { bd = d; best = s; }
+  }
+  return best;
 }
 const alphaCache = new WeakMap();
 function solidAt(fig, uv) {
@@ -361,6 +396,7 @@ canvas.addEventListener('pointerdown', e => {
   audio(); canvas.setPointerCapture(e.pointerId);
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
+  const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
   if (hit) target = { x: hit.point.x, z: hit.point.z };
   else { const p = groundPoint(e.clientX, e.clientY); if (p) target = { x: p.x, z: p.z }; }
   hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
@@ -379,16 +415,16 @@ const C = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
 const halfOK = renderer.extensions.has('EXT_color_buffer_half_float') || renderer.extensions.has('EXT_color_buffer_float');
 let rt = null;
 const post = new THREE.ShaderMaterial({
-  uniforms: { tColor: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2() }, near: { value: camera.near }, far: { value: camera.far }, focus: { value: 14 }, dof: { value: 8 }, seed: { value: 0 }, eve: { value: 0 } },
+  uniforms: { tColor: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2() }, near: { value: camera.near }, far: { value: camera.far }, focus: { value: 14 }, dof: { value: 8 }, range: { value: 1 }, seed: { value: 0 }, eve: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
   defines: { TAPS: DOF ? 24 : 1 },
   fragmentShader: `
-    uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, focus, dof, seed, eve; varying vec2 vUv;
+    uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, focus, dof, range, seed, eve; varying vec2 vUv;
     float lin(float d){ float z=d*2.-1.; return 2.*near*far/(far+near-z*(far-near)); }
     vec3 aces(vec3 x){ return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.); }
     vec3 srgb(vec3 c){ c=max(c,0.); return mix(c*12.92, 1.055*pow(c,vec3(1./2.4))-.055, step(vec3(.0031308),c)); }
     float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233))+seed)*43758.5453); }
-    float cocAt(vec2 uv){ float d=lin(texture2D(tDepth,uv).r); float df=d-focus; return df>0. ? clamp((df-1.2)/7.,0.,1.) : clamp((-df-1.)/3.5,0.,1.); }
+    float cocAt(vec2 uv){ float d=lin(texture2D(tDepth,uv).r); float df=(d-focus)/range; return df>0. ? clamp((df-1.2)/7.,0.,1.) : clamp((-df-1.)/3.5,0.,1.); }
     void main(){
       float coc=cocAt(vUv);
       float r=coc*dof; vec3 acc=vec3(0.); float wsum=0.; vec3 bl=vec3(0.);
@@ -417,21 +453,18 @@ const post = new THREE.ShaderMaterial({
 const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 { const tri = new THREE.BufferGeometry(); tri.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3)); tri.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 2, 0, 0, 2], 2)); const q = new THREE.Mesh(tri, post); q.frustumCulled = false; postScene.add(q); }
 
-let camDist = 15, camH = 6.2, portrait = false;
+let camDist = 15, camH = 6.2, portrait = false, dofBase = 9, camCut = true;
 function resize() {
   const w = innerWidth, h = innerHeight; if (!w || !h) return;   // a window with no size yet (a page opened in the background): wait for the real size, or the camera ends up nowhere
   renderer.setSize(w, h, false);
   const a = w / h; camera.aspect = a; portrait = a < 1;
   camera.fov = portrait ? 34 : 24; camera.updateProjectionMatrix();
-  // fit the island's width (about 16) in view
-  const vw = portrait ? shot.tall : shot.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * a;
-  camDist = clamp(vw / 2 / tanH, 11, 40); camH = camDist * (portrait ? .5 : .28);
   const pw = Math.floor(w * DPR), ph = Math.floor(h * DPR);
   if (rt) rt.dispose();
   rt = new THREE.WebGLRenderTarget(pw, ph, { type: halfOK ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4, depthTexture: new THREE.DepthTexture(pw, ph) });
   rt.depthTexture.type = THREE.UnsignedIntType;
   rt.texture.generateMipmaps = true; rt.texture.minFilter = THREE.LinearMipmapLinearFilter;
-  post.uniforms.tColor.value = rt.texture; post.uniforms.tDepth.value = rt.depthTexture; post.uniforms.res.value.set(pw, ph); post.uniforms.dof.value = (portrait ? 6 : 9) * DPR * Math.min(1.4, w / 1100 + .4);
+  post.uniforms.tColor.value = rt.texture; post.uniforms.tDepth.value = rt.depthTexture; post.uniforms.res.value.set(pw, ph); dofBase = (portrait ? 6 : 9) * DPR * Math.min(1.4, w / 1100 + .4);
 }
 addEventListener('resize', resize); resize();
 
@@ -525,11 +558,11 @@ function measure(now) {
   // her height on the screen in points: from her feet to the top of her head
   const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
   stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
-  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
 }
 
 /* ---------------- the loop ---------------- */
-const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3();
+const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3(); let tracking = null;
 let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0, still = false;   // still: the clock of the stop motion stands (for comparing screenshots)
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; time += dt;
@@ -540,7 +573,7 @@ function frame(now) {
   let ix = 0, iz = 0;
   if (keys.has('arrowleft') || keys.has('a')) ix -= 1; if (keys.has('arrowright') || keys.has('d')) ix += 1;
   if (keys.has('arrowup') || keys.has('w')) iz -= 1; if (keys.has('arrowdown') || keys.has('s')) iz += 1;
-  if (ix || iz) target = null;
+  if (ix || iz) { target = null; [ix, iz] = toFloor(ix, iz); }   // the stick: left is left on the screen, up is away from the camera, whatever the shot
   if (hold && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
   if (target && !ix && !iz) {
     const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
@@ -551,7 +584,7 @@ function frame(now) {
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
     if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) target = null;
-    if (Math.abs(ix) > .2) girl.face = Math.sign(ix);
+    { const [sx] = toScreen(ix, iz); if (Math.abs(sx) > .2 * il) girl.face = Math.sign(sx); }
   }
   // the unicorn walks after her
   {
@@ -613,12 +646,19 @@ function frame(now) {
   if (set.step) set.step({ dt, tick, stepped, eve, time });   // the set's own doors, lamps and animals
 
   // camera: a still diorama shot that leans a little towards her
-  camLook.lerp(new THREE.Vector3(girl.x * shot.fx, girl.y * shot.fy + .5, girl.z * shot.fz), Math.min(1, dt * 2));
-  camPos.set(camLook.x * shot.lag, camLook.y + camH, camLook.z + camDist);
-  camera.position.copy(camPos); camera.lookAt(camLook);
+  { const next = shotFor(girl.x, girl.z); if (next !== shot) { shot = next; shotChanges++; }
+    const k = camCut ? 1 : 1 - Math.exp(-dt * 1.7); for (const n of SHOT_KEYS) cam[n] += (shot[n] - cam[n]) * k;
+    const vw = portrait ? cam.tall : cam.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    camDist = clamp(vw / 2 / tanH, 8, 60); camH = camDist * (portrait ? cam.riseTall : cam.rise);
+    camLook.lerp(new THREE.Vector3(cam.ax + (girl.x - cam.ax) * cam.fx, girl.y * cam.fy + .5, cam.az + (girl.z - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
+    camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
+    camera.position.copy(camPos); camera.lookAt(camLook);
+    camYaw = Math.atan2(camPos.x - camLook.x, camPos.z - camLook.z);
+    post.uniforms.dof.value = dofBase * cam.dof; post.uniforms.range.value = cam.range; }
   post.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(girl.x, girl.y + .5, girl.z));
   if (stepped) post.uniforms.seed.value = (tick % 12) * 1.37;
 
+  if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; }
   renderer.info.reset();
   if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
@@ -661,4 +701,14 @@ window.__p = {
     return { cells: seen.size, places: Object.fromEntries(Object.entries(set.places || {}).map(([n, p]) => [n, at(p)])) };
   },
   places() { return set.places || {}; },
+  /** the set's shots: which is on, how often it changed, and how tall she is in each on this screen (in points) */
+  shots() {
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), top = (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H;
+    return { on: shot.name, changes: shotChanges, yaw: camYaw, list: set.shots.map(s => { const d = clamp((portrait ? s.tall : s.span) / 2 / (tan * camera.aspect), 8, 60), rise = portrait ? s.riseTall : s.rise; return { name: s.name, play: s.play, zone: s.zone || null, her: top / (2 * d * Math.hypot(1, rise) * tan) * innerHeight }; }) };
+  },
+  /** hold keys down as a child would ('a', 'd', 'w', 's'), or none */
+  keys(list = []) { keys.clear(); for (const k of list) keys.add(k); },
+  /** follow her for a while: how far she went on the screen's left-right and up-down, and the smallest step along `want` ([right, down]) in any frame: under zero means she turned back */
+  track(want) { tracking = want ? { want, min: 1e9, sx: 0, sz: 0, x: girl.x, z: girl.z, n: 0 } : null; },
+  tracked() { return tracking && { min: tracking.min === 1e9 ? 0 : tracking.min, sx: tracking.sx, sz: tracking.sz, n: tracking.n }; },
 };
