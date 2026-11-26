@@ -506,7 +506,7 @@ function tapFigure(f) {
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
 let playing = null, playAct = false;
 function play(toy) { playing = toy; target = null; playAct = false; }
-function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; }
+function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; uni.busy = false; uni.lift = 0; uni.lean = 0; }
 /** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
 function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = goTo(x, z, { then, near }); }
 
@@ -869,7 +869,8 @@ function frame(now) {
   {
     const dx = girl.x - uni.x, dz = girl.z - uni.z, d = Math.hypot(dx, dz);
     uni.walking = false;
-    if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
+    if (uni.busy) { /* a toy has the unicorn (the seesaw): it stays where the toy puts it */ }
+    else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
   // figures: smooth positions, poses that step like stop motion

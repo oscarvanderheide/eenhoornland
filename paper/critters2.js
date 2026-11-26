@@ -58,7 +58,7 @@ export function dolphin(S, B, water = -.55) {
   const PIV = (1 - 112 / 240) * f.H, DUR = 1.6, PEAK = 3.5; let t = -1, way = null, leaps = 0, done = false, flip = 0, flips = 0;
   const splash = (x, z) => { sfx.splash(); S.confetti(x, water + .3, z, WATER, 16, undefined, 3); };
   f.onTap = () => { if (t >= 0 && !flip) { flip = 1; flips++; sfx.hop(); } };
-  f.act = () => { const k = t / DUR; f.setFrame(k < .34 ? 0 : k < .66 ? 1 : 2); };
+  f.act = () => { const k = t / DUR; f.setFrame(k < .34 ? 0 : k < .66 ? 1 : 2); f.tilt = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
   return { f, state: () => ({ leaps, flips, up: t >= 0, at: [f.x, f.y, f.z] }), step({ dt }) {
     const over = girl.x > ax + 5 && girl.x < bx - 5 && girl.z > az - .3 && girl.z < bz + .3;
     if (!(girl.x > ax - 1 && girl.x < bx + 1 && girl.z > az - 1 && girl.z < bz + 1)) done = false;   // off the bridge: the next crossing has a dolphin of its own
@@ -66,7 +66,7 @@ export function dolphin(S, B, water = -.55) {
     if (t < 0) return;
     t += dt; const k = Math.min(1, t / DUR);
     f.x = way[0] + (way[2] - way[0]) * k; f.z = way[1] + (way[3] - way[1]) * k; f.floatY = f.y = water - .5 + 4 * PEAK * k * (1 - k) - PIV;
-    if (flip) { flip = Math.max(0, flip - dt * 1.6); f.tilt = (1 - flip) * Math.PI * 2 * (flip > 0 ? 1 : 0); } else f.tilt = 0;
+    if (flip) flip = Math.max(0, flip - dt * 1.6);
     if (k >= 1) { t = -1; f.g.visible = false; f.tilt = 0; splash(way[2], way[3]); }
   } };
 }

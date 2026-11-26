@@ -257,4 +257,19 @@ export default async function (t) {
     ok(await until(`__p.toy('otter').dives === 1 && !__p.toy('otter').mode`, 6), 'then it dives'); const o1 = (await toy('otter')).at; ok(Math.hypot(o1[0] - o0[0], o1[1] - o0[1]) > 2, 'and comes up somewhere else in the pool');
     const r = await t.ev('__p.reach()'), lost = Object.entries(r.places).filter(([, v]) => !v).map(([n]) => n); ok(!lost.length, 'every named place can still be walked to' + (lost.length ? ' NOT: ' + lost.join(', ') : ''));
   }
+
+  /* ---------------- the seesaw: she and the unicorn; kicking off just as she lands throws the unicorn higher ---------------- */
+  if (!only || only === 'seesaw') {
+    await open('?set=dorp', LAND); await t.sleep(1200);
+    const toy = () => t.ev(`__p.toy('wip')`), sp = await t.ev(`__p.dbg.set.spots.wip`), key = async () => { await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); };
+    await t.ev(`__p.placeAt(${sp[0] - 1}, ${sp[2] + 2})`); await t.sleep(2600); await t.shot('tmp-shots/y-wip-land.png');
+    await tapOn('wip'); ok(await until(`__p.toy('wip').mode === 'ride'`, 6), 'a tap on the seesaw: she sits on her end and the unicorn hops onto the other'); await t.sleep(300);
+    ok((await toy()).psi === 1, 'it rests with her end down'); await key(); ok(await until(`__p.toy('wip').psi < 0`, 2), 'a touch: she kicks off and goes up'); await t.shot('tmp-shots/y-wip-up-land.png');
+    ok(await until(`__p.toy('wip').psi === 1`, 4), 'the unicorn kicks off in its turn and she comes down again'); ok(await until(`__p.toy('wip').uair > .2`, 1), 'her end lands: the unicorn is thrown up');
+    // kick off just as she lands, four times: the streak grows and the unicorn turns a somersault
+    for (let k = 0; k < 4; k++) { await key(); await until(`__p.toy('wip').psi < 0`, 2); await until(`__p.toy('wip').psi === 1`, 4); }
+    await t.sleep(250); const s1 = await toy(); ok(s1.best >= 3 && s1.flips >= 1, `kicking off just as she lands: higher each time, and a somersault (streak ${s1.best}, ${s1.flips} flips)`); await t.shot('tmp-shots/y-wip-flip-land.png');
+    await t.sleep(1500); await t.ev(`__p.keys(['a'])`); ok(await until(`__p.toy('wip').mode === null`, 4), 'a push to the side: off they hop'); await t.ev(`__p.keys([])`); await t.sleep(600);
+    const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
+  }
 }

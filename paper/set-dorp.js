@@ -7,7 +7,7 @@
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, GROUND } from './props.js';
-import { swing, slide } from './toys.js';
+import { swing, slide, seesaw } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
 import { farm, well, scarecrow } from './farm.js';
@@ -114,7 +114,7 @@ export default {
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const SW = [-6.4 * K, -.4 * K], SL = [-4.9 * K, 1.05 * K];
-    const theSwing = swing(S, SW[0], H_GRASS + .015, SW[1]), theSlide = slide(S, SL[0], H_GRASS + .015, SL[1]);
+    const theSwing = swing(S, SW[0], H_GRASS + .015, SW[1]), theSlide = slide(S, SL[0], H_GRASS + .015, SL[1]), theSeesaw = seesaw(S, -5.3 * K - 2.4, H_GRASS + .015, .3 * K + 2.0);
     // the ball, and the dog who lives on the fountain square and fetches it (dog.js)
     const theBall = ball(S, -3.9 * K, H_GRASS + .015, -.5 * K), theDog = dog(S, SQ[0] - 1.5, SQ[1] + 1.2, theBall);   // on the square, in the open
     // who else lives here (critters.js): the hen and her chicks by the carrot patch, the pig in its mud, two ducks on the pond
@@ -176,8 +176,8 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); },
-      toys: { ...live, ...flies, ...folk, dolfijn: flipper, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      step: e => { HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); },
+      toys: { ...live, ...flies, ...folk, dolfijn: flipper, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, wip: theSeesaw, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
@@ -192,7 +192,7 @@ export default {
         { name: 'boerderij', zone: [F[0] - 9.6, F[1] - 3.7, F[0] + 9.6, F[1] + 4.8], span: 12.5, rise: .34 },              // the farm in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
-      spots: { bank: [SQ[0] + 1.9, .42, SQ[1] - 2.87], swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
+      spots: { wip: [-5.3 * K - 2.4, .6, .3 * K + 2.0], bank: [SQ[0] + 1.9, .42, SQ[1] - 2.87], swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
       places: { start: [sx, sz], fountain: [SQ[0], SQ[1] + 2.0], stall: T(37, 41.8), swing: [SW[0], SW[1] + .95], slide: [SL[0] - .4, SL[1] + .15], pond: [pcx, pcz + 2.6], bench: [SQ[0] + 2.3, SQ[1] - 2.2], pen: [3.4 * K + .4, 4.3 * K], arch: T(44.5, 46.6), pole: T(43.5, 35.5), mud: [F[0] + 5.4, F[1] - .9], well: [F[0] + .3, F[1] - .8], rows: [F[0] - 4.6, F[1] - .35], crow: [F[0] - 7.6, F[1] + 1.0], north: [6 * K, NORTH.z1 - 3.5], east: [EAST.x0 + 1.9, 2.4 * K], thorns: [EAST.x0 + 2.5, 2.4 * K] },
     };

@@ -182,3 +182,47 @@ export function balloon(S, x, y, z) {
   S.tap(car, () => { if (S.playing()) return; S.walkThen(wx + .95, wz + .6, () => { if (S.playing()) return; mode = 'in'; t = 0; S.play(toy); }, 1.3); });
   return { toy, state: () => ({ mode, h, rides }), step() { car.position.y = y + h; const pa = rope.geometry.attributes.position; pa.setXYZ(1, x + .45, y + .2 + h, z + .1); pa.needsUpdate = true; } };
 }
+
+/* ---------------- the seesaw ---------------- */
+/** A plank on a stand, for two: she sits on the near end and the unicorn hops onto the other. A touch on her and she kicks
+ *  off the ground: up she goes, the unicorn's end comes down with a bump (and she leaves her seat for a moment), the unicorn
+ *  kicks off in its turn and down she comes. Her end hitting the ground throws the unicorn up; kick off again just as she
+ *  lands and it goes higher each time, until it turns a somersault in the air. A push to the side when she is down: off.
+ *  The plank is a real little sum: where it is and how fast it turns, her side a little heavier (so it rests her end down). */
+export function seesaw(S, x, y, z) {
+  const { girl, uni, sfx } = S, A = 1.45, P = .5, TMAX = Math.asin(P / A) * .94, G = 1.5, KICK = 3.0, GOOD = 3.7, UKICK = 2.0, [wx, wz] = S.at([x, z]);
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  for (const fz of [-.24, .24]) for (const s of [-1, 1]) beam(g, s * .3, 0, 0, P, fz, .08, COL.post);
+  box(g, .1, .1, .6, 0, P, 0, COL.bar);
+  const pivot = new THREE.Group(); pivot.position.set(0, P, 0); pivot.userData.live = true; g.add(pivot);
+  box(pivot, A * 2 + .3, .06, .34, 0, .07, 0, COL.chute);
+  for (const s of [-1, 1]) { box(pivot, .44, .04, .37, s * (A - .05), .12, 0, COL.seat); box(pivot, .04, .26, .04, s * (A - .5), .23, 0, COL.post); box(pivot, .04, .04, .3, s * (A - .5), .36, 0, COL.post); }
+  S.wall(x, z, A + .2, .26); S.solid({ x, z, r: .2 });
+  let psi = 1, om = 0, mode = null, t = 0, buf = 0, land = 9, streak = 0, best = 0, air = 0, airV = 0, uair = 0, uairV = 0, uT = 0, uwait = 0, flip = 0, flips = 0, kicks = 0, from = null;
+  const endY = s => P + .12 + s * A * Math.sin(psi * TMAX);   // how high an end's seat is (s -1: hers, +1: the unicorn's)
+  const seat = () => { girl.x = wx - (A - .05) * Math.cos(psi * TMAX); girl.z = wz + .02; girl.lift = endY(-1) + air; girl.face = 1; girl.view = 'side'; girl.poseName = air > .06 ? 'up' : 'sit'; };
+  const useat = k => { const tx = wx + (A - .05) * Math.cos(psi * TMAX), ty = endY(1) - .12 + uair; uni.busy = true; uni.walking = false; uni.face = -1; uni.x = from[0] + (tx - from[0]) * k; uni.z = from[1] + (wz + .02 - from[1]) * k; uni.lift = ty * k + Math.sin(k * Math.PI) * .5; uni.lean = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
+  const toy = { look: [wx, wz + .3], step(dt, inp) {
+    t += dt; pivot.rotation.z = psi * TMAX;
+    if (mode === 'on') { const k = Math.min(1, t / .35); seat(); girl.z = wz + .02 + (1 - k) * .7; girl.lift = endY(-1) * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .6 ? 'sit' : null; useat(k); if (k >= 1) { mode = 'ride'; sfx.hop(); land = 9; streak = 0; } return; }
+    if (mode === 'off') { const k = Math.min(1, t / .3); girl.z = wz + .02 + k * .75; girl.lift = endY(-1) * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null; uni.lift = (endY(1) - .12) * (1 - k) + Math.sin(k * Math.PI) * .4; uni.z = wz + .02 + k * .7; if (k >= 1) { mode = null; S.stopPlay(); } return; }
+    // riding
+    buf = Math.max(0, buf - dt); if (inp.act) buf = .28;
+    if (psi >= 1) {   // her end is on the ground
+      land += dt;
+      if (buf > 0) { const good = land < .3; streak = good ? Math.min(4, streak + 1) : 0; best = Math.max(best, streak); om = -(good ? GOOD : KICK); psi = .999; buf = 0; kicks++; sfx.hop(); S.confetti(girl.x, y + .1, girl.z + .1, ['#ecd3a0', '#f7ecd0', '#e2c58a'], good ? 9 : 4, undefined, 1.4); }
+      else if (inp.x && land > .3 && uair <= 0) { mode = 'off'; t = 0; return; }
+    }
+    if (psi <= -1) { uwait -= dt; if (uwait <= 0) { om = UKICK; psi = -.999; } }   // the unicorn's end is down: a beat, and it kicks off
+    else if (psi < 1) {
+      om += G * dt; psi += om * dt;
+      if (psi <= -1) { const v = -om; psi = -1; om = 0; uwait = .16; sfx.thud(); airV = v * .5 + streak * .3; }                    // bump: she leaves her seat
+      else if (psi >= 1) { const v = om; psi = 1; om = 0; land = 0; sfx.thud(); uairV = 1.2 + v * .35 + streak * .75; uT = 2 * uairV / 9.8; if (streak >= 3) { flip = 1; flips++; sfx.neigh(); S.confetti(uni.x, y + 1.6, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, S.starGeo, 2.6); } }   // her end lands: the unicorn is thrown up
+    }
+    if (air > 0 || airV > 0) { air += airV * dt; airV -= 9.8 * dt; if (air <= 0) { air = 0; airV = 0; } }
+    if (uair > 0 || uairV > 0) { uair += uairV * dt; uairV -= 9.8 * dt; if (uair <= 0) { uair = 0; uairV = 0; flip = 0; } else if (flip > 0) flip = Math.max(.001, flip - dt / Math.max(.3, uT)); }
+    pivot.rotation.z = psi * TMAX; seat(); useat(1);
+  } };
+  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx - A + .05, wz + .72, () => { if (S.playing()) return; mode = 'on'; t = 0; psi = 1; om = 0; air = airV = uair = uairV = 0; from = [uni.x, uni.z]; S.play(toy); }, 1.1); });
+  return { toy, state: () => ({ mode, psi, streak, best, kicks, flips, air, uair }), step() { if (!mode) pivot.rotation.z = psi * TMAX; } };
+}
