@@ -6,7 +6,7 @@ export const GROUND = {
   sand: paper('#ecd3a0', { map: sandMap, bump: sandBump }), grass: paper('#a3bf76', { map: grassMap, bump: grassBump }),
   high: paper('#bccb84', { map: grassMap, bump: grassBump }), wood: paper('#8fb06c', { map: grassMap, bump: grassBump }), dark: paper('#8f8a80'),
 };
-/** land she cannot walk on, seen across the water: the given outlines as slabs. `tops` is [[outline, height, depth, paper], ...] */
+/** a set's land: the given outlines as slabs of card, and darker cards under them. `tops` is [[outline, height, depth, paper], ...] */
 export function shore(S, tops, under = []) {
   for (const [pts, h, d, p] of tops) S.root.add(slab(pts, h, d, p, edgeMat));
   for (const pts of under) S.root.add(slab(pts, -.82, .5, GROUND.dark, edgeMat));
@@ -16,12 +16,11 @@ export function shore(S, tops, under = []) {
 const paneMat = new THREE.MeshStandardMaterial({ color: '#3b3a45', emissive: '#ffbf6e', emissiveIntensity: 0, roughness: .6 });
 
 /** her house: folded card, a door that opens, a lamp inside (it uses the set's second lamp). A tap opens or shuts the door
- *  and puts the light on or off. Gives back its size, toggle(), open (0 or 1) and step() for the set to call every frame.
- *  `far`: it stands on a far shore, only to be seen: no lamp, no tap, no wall. */
-export function cottage(S, x, y, z, far = false) {
+ *  and puts the light on or off. Gives back its size, toggle(), open (0 or 1) and step() for the set to call every frame. */
+export function cottage(S, x, y, z) {
   const HOUSE = { x, z, w: 2.4, d: 1.8, h: 1.8 };
   const house = new THREE.Group(); house.position.set(x, y, z); S.root.add(house);
-  const inLight = far ? { intensity: 0 } : S.lamp(1, '#ffb866', 4, 1.4); if (!far) inLight.position.set(x, y + 1.0, z);
+  const inLight = S.lamp(1, '#ffb866', 4, 1.4); inLight.position.set(x, y + 1.0, z);
   let door, doorOpen = 0, doorTarget = 0, lightOn = false;
   {
     const { w, d, h } = HOUSE, T = .07;
@@ -81,7 +80,6 @@ export function cottage(S, x, y, z, far = false) {
     const step = slab([[-.4, d / 2], [.4, d / 2], [.4, d / 2 + .28], [-.4, d / 2 + .28]], .08, .08, paper('#d9c6a2'), edgeMat); house.add(step);
   }
   const toggle = () => { doorTarget = doorTarget ? 0 : 1; lightOn = !!doorTarget; S.sfx.door(doorTarget); };
-  if (far) return HOUSE;
   S.tap(house, toggle);
   S.wall(x, z, HOUSE.w / 2 + .15, HOUSE.d / 2 + .12);
   return { ...HOUSE, toggle, get open() { return doorTarget; },

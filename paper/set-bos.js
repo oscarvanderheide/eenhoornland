@@ -2,13 +2,13 @@
 // cave's rock and the rest in grey card. Reached from the village over the north bridge, through the gate (paper.js).
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { cottage, shore, GROUND } from './props.js';
-import { bosLand, dorpLand, move, SHIFT } from './lands.js';
+import { shore, GROUND } from './props.js';
+import { bosLand, BACK } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (0.6 of a step per tile, the middle of the forest is 0, 0) */
 const T = (x, z) => [(x - 33) * .6, (z - 14) * .6];
 const GREY = { path: '#e6e1d6', thing: '#b4afa4', dark: '#8f8a80', rock: '#bdb6c9', rock2: '#cbc5d6', mouth: '#4a4458', bush: '#a9b59c' };
-const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
+const H_SAND = -.32, H_GRASS = 0;
 
 export default {
   name: 'bos',
@@ -19,20 +19,12 @@ export default {
     const cyl = (r, h, c = 'thing', n = 10) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, n), P(c)); m.castShadow = m.receiveShadow = true; return m; };
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 
-    /* ---------------- the land, and the village's shore across the bridge (its real outline, only to be seen) ---------------- */
-    const { SAND, GRASS, SAND_E, GRASS_E, under } = bosLand();
+    /* ---------------- the land ---------------- */
+    const { SAND, GRASS, SAND_E, GRASS_E, under, bridge: BR } = bosLand();
     shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.wood], [GRASS_E, H_GRASS, .32, GROUND.wood]], under);
-    const [dx, dz] = SHIFT['dorp>bos'], D = dorpLand(), far = o => move(o, dx, dz);
-    shore(S, [[far(D.SAND), H_SAND, .55, GROUND.sand], [far(D.SAND_W), H_SAND, .55, GROUND.sand], [far(D.GRASS), H_GRASS, .32, GROUND.grass], [far(D.GRASS_W), H_GRASS, .32, GROUND.grass], [far(D.HIGH), .48, .48, GROUND.high]], D.under.map(far));
-    cottage(S, D.house[0] + dx, .48, D.house[1] + dz, true);
-    for (const [x, z, c, c2, i] of [[-5.6, 13.4, '#93b071', '#b3c98d', 1], [-3.4, 11.9, '#d8b35a', '#e8cd85', 2], [2.6, 12.1, '#d9806c', '#e9a48f', 3], [6.9, 14.2, '#7fa676', '#a3c08c', 4], [-8.2, 15.5, '#d9806c', '#e9a48f', 5], [1.4, 15.8, '#93b071', '#b3c98d', 6]]) S.lollipop(x, z, inPoly(far(D.HIGH), x, z) ? .48 : H_GRASS, .6, c, c2, 300 + i);
+    // the bridge from the village is the village's (set-dorp.js): it lands on this shore at bosLand().bridge
 
-    // the bridge: the same planks as on the village's side
-    const BRIDGE = { x0: 4.2, x1: 5.4, z0: 4.6, z1: 11.5 };
-    for (let z = BRIDGE.z0; z < BRIDGE.z1; z += .32) root.add(slab(rect(BRIDGE.x0 - .05, z, BRIDGE.x1 + .05, z + .28), DECK, .06, P('thing'), edgeMat));
-    for (const z of [5.4, 6.8, 8.2, 9.6]) for (const x of [BRIDGE.x0, BRIDGE.x1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
-
-    S.sea({ land: [SAND, SAND_E, far(D.SAND), far(D.SAND_W)], x0: -40, x1: 40, z0: -13, z1: 27, deep: [170, 130, 0, 7] });
+    S.sea({ land: [SAND, SAND_E], x0: -40, x1: 40, z0: -13, z1: 12, deep: [170, 120, 0, 0] });
 
     /* ---------------- the cave's rock: three slabs of pale stone and a dark mouth ---------------- */
     const [rx, rz] = T(36, 6.3), ROCK = blob(rx, rz, 2.7, 1.15, 221, 40, .06);
@@ -44,7 +36,6 @@ export default {
     // where she can stand
     S.floor(null, ROCK);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_E);
-    S.floorBox(DECK, BRIDGE.x0, BRIDGE.z0, BRIDGE.x1, BRIDGE.z1);
     S.floor(H_SAND, SAND, .22); S.floor(H_SAND, SAND_E, .22);
 
     /* ---------------- clearings and paths, cut by hand ---------------- */
@@ -55,7 +46,7 @@ export default {
     lay(blob(cx, cz, 2.6, 1.85, 231, 44, .06), GROUND.grass);                          // the clearing
     lay(blob(ox, oz, 2.1, 1.8, 232, 40, .06), GROUND.grass);                           // the orchard
     lay(blob(nx, nz, 1.5, 1.35, 233, 36, .06), GROUND.grass);                          // the nook
-    lay(ribbon([[4.8, 5.0], [4.4, 3.7], [3.1, 2.3], [1.3, 1.1], [-.6, -.1], [-1.5, -.7]], .85, 234), 'path');     // from the bridge into the clearing
+    lay(ribbon([[BR[0], BR[1] - .3], [4.4, 3.7], [3.1, 2.3], [1.3, 1.1], [-.6, -.1], [-1.5, -.7]], .85, 234), 'path');     // from the bridge into the clearing
     lay(ribbon([[-.5, -1.5], [.7, -2.2], [1.5, -2.9], [rx, mouthZ + .35]], .8, 235), 'path');                        // on to the mouth of the cave
     stones([[-3.6, -1.6], [-4.2, -2.0], [-4.8, -2.3], [-5.3, -2.5]], 240);                                           // to the atelier
     stones([[4.3, 1.7], [5.0, 1.1], [5.7, .5], [6.3, -.1]], 250);                                                    // to the orchard
@@ -73,7 +64,7 @@ export default {
       const x = -13 + R() * 30, z = -6 + R() * 12, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
       const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .5 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .7 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
-      if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - 4.8) < 1.1 && z > 3.2 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
+      if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.1 && z > 3.2 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.15)) continue;
       if (pineTree) S.pine(x, z, H_GRASS, 1.4 + R() * .8, ['#5f8665', '#6f9670', '#547a5c', '#7fa676'][n % 4]); else S.lollipop(x, z, H_GRASS, .45 + R() * .3, c[0], c[1], 400 + n, 1 + R() * .6);
       n++;
@@ -81,15 +72,13 @@ export default {
 
     return {
       start: [4.6, 3.7], uni: [5.2, 4.3],
-      shadow: 22, shadowAt: [1, 3],
-      gates: [{ to: 'dorp', zone: [4.0, 8.6, 5.6, 12], shift: SHIFT['bos>dorp'], dir: [0, 1] }],
+      shadow: { follow: 20 }, back: BACK, sky: 1.4,
       shots: [
-        { name: 'brug', zone: [3.7, 5.0, 5.9, 12], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge: the same far, high shot as on the village's side
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [4.6, 3.7], bridge: [4.8, 7], clearing: [cx, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [4.6, 3.7], clearing: [cx, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

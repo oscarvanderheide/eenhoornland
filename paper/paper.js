@@ -1,12 +1,14 @@
 // The stage of the paper game: the light, the lens, the theatre behind (sky, hills, clouds on threads), the two who are
-// always there (she and her unicorn), and the rules of walking and tapping. What stands on the stage is a set (set-*.js):
-// only one exists at a time, built by loadSet and thrown away by dropSet. Everything is made of the kit (kit.js).
+// always there (she and her unicorn), and the rules of walking and tapping. What stands on the stage are sets (set-*.js):
+// the one she is on and its neighbours across a bridge, each at its own place in one world (lands.js), built by loadWorld
+// and thrown away by dropSet. Everything is made of the kit (kit.js).
 // Everything is drawn in code: the paper is noise + fibres, the figures are cut-paper shapes on canvases.
 import { THREE, rng, lerp, clamp, paperCanvas, PAPER, tex, paperBump, paper, sheetOf, card, whiteEdge, inPoly, edgeDist, wavyTop, cloudPts, sunPts, circlePts, WATER_Y } from './kit.js';
 import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
 import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
 import bos from './set-bos.js';
+import { ORIGIN, NEAR } from './lands.js';
 const SETS = { eiland, dorp, bos };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
@@ -38,7 +40,7 @@ key.shadow.bias = -.0006; key.shadow.normalBias = .025;
 scene.add(key, key.target);
 const fill = new THREE.DirectionalLight('#9fc4d8', .45); fill.position.set(8, 4, -6); scene.add(fill);
 // two lamps a set may place (a street lamp, a lit room). They are always there, dark when unused: adding or taking away
-// a light makes the graphics chip rebuild every paper, which would be a hitch at every gate
+// a light makes the graphics chip rebuild every paper, which would be a hitch whenever a set comes or goes
 const lamps = [new THREE.PointLight('#ffc77a', 0, 5, 2), new THREE.PointLight('#ffb866', 0, 4, 1.4)]; scene.add(...lamps);
 
 /* ---------------- backdrop: painted sky, card hills, clouds on strings ---------------- */
@@ -84,11 +86,15 @@ const moon = hung(moonCard, 9, 22, -14);
 const stars = new THREE.Group(); theatre.add(stars);
 { const R = rng(9); for (let i = 0; i < 16; i++) { const s = card(sunPts(.18 + R() * .12, 5), .04, paper('#f6e7ad', { extra: { emissive: '#f6e7ad', emissiveIntensity: .8 } })); s.castShadow = false; const g = hung(s, -20 + R() * 40, 24 + R() * 6, -16 - R() * 6); stars.add(g); } }
 
-/* ---------------- the set: the one place that exists right now ----------------
-   A set is built by its file's build(S) under one group (set.root) and thrown away whole. What a set tells the stage:
-   floors (where she can stand, the first that holds the spot counts), walls and solids (what she walks round), taps,
-   trees, who lives there, its sea. The toolbox S is all a set file needs besides the kit. */
-let set = null;
+/* ---------------- sets: the places that exist right now ----------------
+   A set is built by its file's build(S) under one group and thrown away whole. What a set tells the stage: floors (where
+   she can stand), walls and solids (what she walks round), taps, trees, who lives there, the sea round it, its shots.
+   The toolbox S is all a set file needs besides the kit. A set file thinks in its own measure, with its own middle at
+   0, 0; the stage puts it at its place in the world (ORIGIN in lands.js) and moves everything it registers there.
+   The set she stands on and its neighbours (NEAR) exist together, in one world: a bridge between two islands is a real
+   bridge, owned by one of the two sets, and walking over it changes nothing but which set she is on. */
+let sets = [], set = null, into = null;   // every set that exists; the one she stands on; the one being built just now
+const world = { ms: 0 };
 /* The camera director. A set gives a list of shots; each is a way of looking at her, and all but the last have a zone (a box
    on the floor, [x0, z0, x1, z1]). While she stands in a shot's zone that shot is on; she must walk `pad` beyond its edge to
    leave it again, so a shot never flickers at its border. The last shot is the one for everywhere else. Going from one shot
@@ -108,19 +114,20 @@ let shot = SHOT0, camYaw = 0, shotChanges = 0;
 const cam = { ...SHOT0 };   // what the camera is doing right now: on its way to `shot`
 const inZone = (s, x, z, pad = 0) => !s.zone || (x > s.zone[0] - pad && x < s.zone[2] + pad && z > s.zone[1] - pad && z < s.zone[3] + pad);
 function shotFor(x, z) {
-  if (shot.zone && set.shots.includes(shot) && inZone(shot, x, z, shot.pad)) return shot;
-  return set.shots.find(s => inZone(s, x, z));
+  if (shot.zone && inZone(shot, x, z, shot.pad) && sets.some(s => s.shots.includes(shot))) return shot;
+  for (const s of sets) { const hit = s.shots.find(q => q.zone && inZone(q, x, z)); if (hit) return hit; }
+  return set.shots[set.shots.length - 1];   // everywhere else: the last shot of the set she stands on
 }
 // the stick and her drawings think in the screen's left-right and near-far; the floor's east and south are turned by the camera's yaw
 const toFloor = (sx, sz) => [sx * Math.cos(camYaw) + sz * Math.sin(camYaw), -sx * Math.sin(camYaw) + sz * Math.cos(camYaw)];
 const toScreen = (wx, wz) => [wx * Math.cos(camYaw) - wz * Math.sin(camYaw), wx * Math.sin(camYaw) + wz * Math.cos(camYaw)];
 const baseTaps = [];        // meshes that answer a tap on every set (she and her unicorn)
 const baseSpots = [];       // ...and the things themselves, to find the one nearest a finger that just missed
-function tapTarget(obj, fn, list = set.taps, spots = set.tapSpots) { obj.traverse(o => { if (o.isMesh) { o.userData.tap = fn; list.push(o); } }); spots.push({ obj, fn }); }
+function tapTarget(obj, fn, list = into.taps, spots = into.tapSpots) { obj.traverse(o => { if (o.isMesh) { o.userData.tap = fn; list.push(o); } }); spots.push({ obj, fn }); }
 
 // lollipop trees: two slotted card discs on a stick, a smaller disc of another shade glued on each face
 function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
-  const g = new THREE.Group(); g.position.set(x, y, z); set.root.add(g);
+  const g = new THREE.Group(); g.position.set(x, y, z); into.root.add(g);
   const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
   const stick = new THREE.Mesh(new THREE.CylinderGeometry(.045, .055, stickH, 8), paper('#7a5a3e')); stick.position.y = stickH / 2; stick.castShadow = stick.receiveShadow = true; sway.add(stick);   // (the same shadow flags and side as its crown: the whole tree is then one draw)
   // one disc of card on the stick, with smaller discs of other shades glued on, front and back
@@ -129,14 +136,14 @@ function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
     const d2 = card(circlePts(r * .64, seed + side * 3), .03, paper(col2), whiteEdge); d2.position.set(.07 * side, stickH + r * .9, .05 * side); sway.add(d2);
     const d3 = card(circlePts(r * .3, seed + side * 5), .03, paper(col), whiteEdge); d3.position.set(.12 * side, stickH + r * 1.02, .075 * side); sway.add(d3);
   }
-  sway.rotation.y = (seed % 3 - 1) * .18; bake(sway);
-  set.solids.push({ x, z, r: .3 });
-  const t = { g, sway, wob: 0, x, z }; set.trees.push(t);
+  bake(sway);
+  into.local.push({ x, z, r: .3 }); into.solids.push({ x: x + into.ox, z: z + into.oz, r: .3 });
+  const t = { g, sway, wob: 0, x, z }; into.trees.push(t);
   tapTarget(g, () => { t.wob = 1; sfx.rustle(); });
   return t;
 }
 function pine(x, z, y, h, col) {
-  const g = new THREE.Group(); g.position.set(x, y, z); set.root.add(g);
+  const g = new THREE.Group(); g.position.set(x, y, z); into.root.add(g);
   const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.05, .06, .4, 8), paper('#7a5a3e', { side: THREE.DoubleSide })); trunk.position.y = .2; trunk.castShadow = trunk.receiveShadow = true; sway.add(trunk);
   for (let i = 0; i < 3; i++) {
@@ -144,15 +151,22 @@ function pine(x, z, y, h, col) {
     const c = new THREE.Mesh(new THREE.ConeGeometry(r, hh, 14, 1, true), paper(col, { side: THREE.DoubleSide }));
     c.position.y = .35 + i * h * .22 + hh / 2; c.castShadow = c.receiveShadow = true; sway.add(c);
   }
-  bake(sway); set.solids.push({ x, z, r: .32 });
-  const t = { g, sway, wob: 0, x, z }; set.trees.push(t);
+  bake(sway); into.local.push({ x, z, r: .32 }); into.solids.push({ x: x + into.ox, z: z + into.oz, r: .32 });
+  const t = { g, sway, wob: 0, x, z }; into.trees.push(t);
   tapTarget(g, () => { t.wob = 1; sfx.rustle(); });
   return t;
 }
-/** the sea round a set: rows of wavy card, like a toy theatre. `land` is the outlines the rows are cut around */
-function sea({ land, x0 = -30, x1 = 30, z0 = -9, z1 = 17, deep = [120, 80, 0, 0] }) {
+/** the sea: rows of wavy card, like a toy theatre, one sea for everything that exists. Every set says what water it wants
+ *  round it (S.sea: the outlines its rows are cut around, how far it reaches); the stage makes one sea of all of that */
+const seaRoot = new THREE.Group(); seaRoot.name = 'sea'; scene.add(seaRoot);
+let seaRows = [], seaBaked = null;
+function buildSea() {
+  seaRoot.traverse(o => { if (o.geometry) o.geometry.dispose(); }); seaRoot.clear(); seaRows = []; seaBaked = null;
+  const asks = sets.map(s => s.seaAsk).filter(Boolean); if (!asks.length) return;
+  const land = asks.flatMap(a => a.land), x0 = Math.min(...asks.map(a => a.x0)), x1 = Math.max(...asks.map(a => a.x1)), z0 = Math.min(...asks.map(a => a.z0)), z1 = Math.max(...asks.map(a => a.z1));
+  const deep = asks.length === 1 ? asks[0].deep : [x1 - x0 + 90, z1 - z0 + 80, (x0 + x1) / 2, (z0 + z1) / 2];
   const blues = ['#5f9fae', '#6fb0b8', '#4f8ea2', '#7fbcc0', '#5a97a8'];
-  const bed = new THREE.Mesh(new THREE.PlaneGeometry(deep[0], deep[1]), paper('#3f6f80')); bed.rotation.x = -Math.PI / 2; bed.position.set(deep[2], -1.05, deep[3]); bed.receiveShadow = true; set.root.add(bed);
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(deep[0], deep[1]), paper('#3f6f80')); bed.rotation.x = -Math.PI / 2; bed.position.set(deep[2], -1.05, deep[3]); bed.receiveShadow = true; seaRoot.add(bed);
   let k = 0;
   for (let z = z0; z <= z1; z += .75, k++) {
     // where land is, the row is cut around it: one stretch of water between every two stretches of land
@@ -168,49 +182,89 @@ function sea({ land, x0 = -30, x1 = 30, z0 = -9, z1 = 17, deep = [120, 80, 0, 0]
       for (let i = 0; i <= Math.ceil(w * 3); i++) { const x = i / Math.ceil(w * 3) * w; pts.push([x, .5 + Math.sin((a + x) * 2.1 + k * 1.3) * .09 + Math.sin((a + x) * .7 + k) * .05]); }
       pts.push([w, 0]);
       const m = card(pts, .05, paper(blues[k % blues.length]), whiteEdge); m.position.set(a, -1.08, z); m.castShadow = false;
-      m.userData.live = true; set.root.add(m); set.seaRows.push({ m, z, base: a, k });
+      m.userData.live = true; seaRoot.add(m); seaRows.push({ m, z, base: a, k });
     }
   }
+  if (BAKE) seaBaked = bakeSea(seaRows, seaRoot);
 }
-function loadSet(def, at = null, dir = [0, 1]) {
-  const t0 = performance.now();
-  if (set) dropSet();
-  const root = new THREE.Group(); root.name = def.name; scene.add(root);
-  set = { name: def.name, root, floors: [], walls: [], solids: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], seaRows: [], sea: null, names: {}, spots: {} };
+/** build one set at its place in the world */
+function buildSet(def) {
+  const t0 = performance.now(), [ox, oz] = ORIGIN[def.name] || [0, 0], W = ([x, z]) => [x + ox, z + oz];
+  const root = new THREE.Group(); root.name = def.name; root.position.set(ox, 0, oz); scene.add(root);
+  const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], names: {}, spots: {} };
   const S = {
-    THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine, sea,
-    floor: (h, pts, inset = 0) => { set.floors.push({ h, pts, inset }); },
-    floorBox: (h, x0, z0, x1, z1) => { set.floors.push({ h, box: [x0, z0, x1, z1] }); },
-    wall: (cx, cz, hx, hz) => { set.walls.push([cx, cz, hx, hz]); },
-    solid: s => (set.solids.push(s), s), solids: set.solids,
+    THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine,
+    at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
+    sea: o => { s.seaAsk = { land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
+    floor: (h, pts, inset = 0) => { s.floors.push({ h, pts: pts.map(W), inset }); },
+    floorBox: (h, x0, z0, x1, z1) => { s.floors.push({ h, box: [x0 + ox, z0 + oz, x1 + ox, z1 + oz] }); },
+    wall: (cx, cz, hx, hz) => { s.walls.push([cx + ox, cz + oz, hx, hz]); },
+    solid: o => { s.local.push(o); s.solids.push({ ...o, x: o.x + ox, z: o.z + oz }); return o; }, solids: s.local,   // S.solids: what stands here so far, in the set's own measure
     tap: (obj, fn) => tapTarget(obj, fn),
-    lamp: (i, color, distance, decay) => { const l = lamps[i]; l.color.set(color); l.distance = distance; l.decay = decay; l.intensity = 0; return l; },
-    figure: (name, spec) => { const f = makeFigure(name, spec, root); set.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
+    // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
+    lamp: (i, color, distance, decay) => (s.lamps[i] = { color, distance, decay, intensity: 0, position: new THREE.Vector3() }),
+    figure: (name, spec) => { const f = makeFigure(name, spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
   };
-  Object.assign(set, def.build(S));
-  root.traverse(o => { if (o.isMesh && o.geometry.type === 'ExtrudeGeometry' && !o.userData.tap) set.ground.push(o); });   // card she can be sent to with a tap
-  if (BAKE) set.sea = bakeSea(set.seaRows, root);
-  bake(root);
-  // the sun's shadow covers the whole set: a bigger set gets a wider (and so softer) shadow sheet
-  { const r = set.shadow || 13, [cx, cz] = set.shadowAt || [0, 0], k = Math.max(1, r / 13);
+  Object.assign(s, def.build(S));
+  s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
+  s.places = Object.fromEntries(Object.entries(s.places || {}).map(([n, q]) => [n, W(q)])); s.spots = Object.fromEntries(Object.entries(s.spots).map(([n, [x, y, z]]) => [n, [x + ox, y, z + oz]]));
+  s.shots = (s.shots || [SHOT0]).map(q => ({ ...SHOT_DEF, ...q, ...(q.zone ? { zone: [q.zone[0] + ox, q.zone[1] + oz, q.zone[2] + ox, q.zone[3] + oz] } : {}) }));
+  root.traverse(o => { if (o.isMesh && o.geometry.type === 'ExtrudeGeometry' && !o.userData.tap) s.ground.push(o); });   // card she can be sent to with a tap
+  bake(root); s.farTrees = glueTrees(s); into = null; s.ms = performance.now() - t0;
+  return s;
+}
+/** every tree of a set once more, all glued into one piece that stands still: what is drawn of them while she is on another
+ *  set (a tree only moves when she taps it). The trees themselves are shown again the moment she steps onto their set */
+function glueTrees(s) {
+  if (!BAKE || !s.trees.length) return null;
+  s.root.updateMatrixWorld(true);
+  const inv = s.root.matrixWorld.clone().invert(), rel = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), lots = new Map();
+  for (const t of s.trees) for (const m of (t.sway.children.find(c => c.name === 'baked') || { children: [] }).children) {
+    const key = m.material.uuid + (m.castShadow ? 'c' : '') + (m.receiveShadow ? 'r' : ''), g = m.geometry, P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, C = g.attributes.color;
+    let lot = lots.get(key); if (!lot) lots.set(key, lot = { m, p: [], n: [], u: [], c: [] });
+    rel.multiplyMatrices(inv, m.matrixWorld); nm.getNormalMatrix(rel);
+    for (let i = 0; i < P.count; i++) {
+      v.fromBufferAttribute(P, i).applyMatrix4(rel); lot.p.push(v.x, v.y, v.z);
+      v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); lot.n.push(v.x, v.y, v.z);
+      lot.u.push(U.getX(i), U.getY(i)); if (C) lot.c.push(C.getX(i), C.getY(i), C.getZ(i)); else lot.c.push(1, 1, 1);
+    }
+  }
+  const out = new THREE.Group(); out.name = 'far trees'; out.userData.live = true; out.visible = false;
+  for (const lot of lots.values()) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(lot.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(lot.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(lot.u, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(lot.c, 3));
+    const m = new THREE.Mesh(g, lot.m.material); m.castShadow = lot.m.castShadow; m.receiveShadow = lot.m.receiveShadow; out.add(m);
+  }
+  s.root.add(out); return out;
+}
+/** she stands on `s` now: its trees are themselves, every other set's are the glued piece */
+let pinned = false;   // (a test may hold her on a set she does not stand on, to see that it makes no difference to the picture)
+function standOn(s) { set = s; for (const q of sets) if (q.farTrees) { q.farTrees.visible = q !== s; for (const t of q.trees) t.g.visible = q === s; } }
+/** throw away what exists and build the set called `name` with its neighbours; she starts on `name` */
+function loadWorld(name) {
+  const t0 = performance.now();
+  for (const s of sets) dropSet(s);
+  sets = [name, ...(NEAR[name] || [])].map(n => buildSet(SETS[n])); standOn(sets[0]);
+  buildSea();
+  // the sun's shadow: a set says how wide a sheet covers it (a number: the sheet lies still over the set) or that the sheet follows the camera
+  { const sh = set.shadow || 13, r = sh.follow || sh, [cx, cz] = set.shadowAt || [0, 0], k = Math.max(1, r / 13);
     Object.assign(key.shadow.camera, { left: -r, right: r, top: r, bottom: -r, far: 40 * k }); key.shadow.camera.updateProjectionMatrix();
-    key.target.position.set(cx, 0, cz); key.position.set(cx - 7 * k, 11 * k, cz + 8 * k); }
-  theatre.position.z = set.back || 0; sky.scale.set(set.sky || 1, 1, set.sky || 1);
-  [girl.x, girl.z] = at || set.start;   // `at`: she comes through a gate and stands where she stood, seen from this set
-  // a new set is a cut: the camera is there at once
-  set.shots = (set.shots || [SHOT0]).map(s => ({ ...SHOT_DEF, ...s })); shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
-  [uni.x, uni.z] = at ? [at[0] - dir[0] * .9, at[1] - dir[1] * .9] : set.uni || [set.start[0] - 1.2, set.start[1] + .4]; uni.face = 1;
+    sun3.set(-7 * k, 11 * k, 8 * k); shadowFollow = sh.follow ? r : 0;
+    key.target.position.set(set.ox + cx, 0, set.oz + cz); key.position.copy(key.target.position).add(sun3); }
+  // the theatre stands behind everything that exists
+  theatre.position.z = Math.min(...sets.map(s => s.back || 0)); { const k = Math.max(...sets.map(s => s.sky || 1)); sky.scale.set(k, 1, k); }
+  [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni; uni.face = 1;
+  // a new world is a cut: the camera is there at once
+  shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
   girl.y = heightAt(girl.x, girl.z) ?? 0; uni.y = heightAt(uni.x, uni.z) ?? 0; target = null; hold = null;
-  set.ms = performance.now() - t0;
-  return set;
+  world.ms = performance.now() - t0;
 }
-function dropSet() {
-  scene.remove(set.root);
-  set.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-  for (const f of set.figs) { figures.splice(figures.indexOf(f), 1); f.dispose(); }
-  for (const l of lamps) l.intensity = 0;
-  set = null;
+function dropSet(s) {
+  scene.remove(s.root);
+  s.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  for (const f of s.figs) { figures.splice(figures.indexOf(f), 1); scene.remove(f.g); f.mesh.geometry.dispose(); f.dispose(); }
 }
+const sun3 = new THREE.Vector3(-7, 11, 8); let shadowFollow = 0;
 
 /* ---------------- cut-paper figures ---------------- */
 
@@ -219,14 +273,14 @@ const figures = [];
  *  A sister (spec.kid) is a paper doll: she also has poses (fig.poseName), eyes that shut and things to wear (fig.redress).
  *  Drawings are made when first shown and kept; the usual ones are made ahead, a few per frame (warm), so a walk never stutters. */
 const warm = [], figMats = [];   // figMats: the materials of figures that left with their set, kept for the next one (a material thrown away takes its program along, and making that again is a hitch)
-function makeFigure(name, { w, h, draw, front, back, frames, size, kid }, parent = scene) {
+function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
   const views = { side: draw, front, back }, cache = new Map();
   const H = size, W = size * w / h;
   const geo = new THREE.PlaneGeometry(W, H); geo.translate(0, H / 2, 0);
   const [mat, depth] = figMats.pop() || [new THREE.MeshStandardMaterial({ alphaTest: .5, side: THREE.DoubleSide, roughness: .9, bumpMap: paperBump, bumpScale: .6 }), new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: .5 })];
   const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = false;
   mesh.customDepthMaterial = depth;
-  const g = new THREE.Group(), pose = new THREE.Group(); g.userData.live = true; g.add(pose); pose.add(mesh); parent.add(g);
+  const g = new THREE.Group(), pose = new THREE.Group(); g.userData.live = true; g.add(pose); pose.add(mesh); scene.add(g);
   const fig = { name, g, pose, mesh, mat, views, kid, w, h, W, H, cyc: frames > WALK, view: 'side', x: 0, z: 0, y: 0, face: 1, frame: 0, walking: false, hop: 0, hopV: 0, tilt: 0, dirX: 1, dirZ: 0,
     wear: {}, poseName: null, eyes: 'open' };
   const poseOf = i => fig.poseName && fig.poseName !== 'sit' ? fig.poseName : fig.poseName === 'sit' && !i ? 'sit' : i ? 'walk' : 'stand';
@@ -327,14 +381,20 @@ function tapFigure(f) {
 }
 
 /* ---------------- where she can stand ---------------- */
-function heightAt(x, z) {
-  for (const f of set.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) return f.h;
-  return null;
+/** how high the floor is at a spot, or null where there is none. In each set the first floor that holds the spot counts (a
+ *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
+function floorAt(x, z) {
+  let best = null;
+  for (const s of sets) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!best || f.h > best.h)) best = { h: f.h, set: s }; break; }
+  return best;
 }
+const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
 function free(x, z, fromH, me = girl) {
   const h = heightAt(x, z); if (h === null || Math.abs(h - fromH) > .34) return false;
-  for (const s of set.solids) if (s.fig !== me && Math.hypot(x - s.x, z - s.z) < s.r + .18) return false;
-  for (const [cx, cz, hx, hz] of set.walls) if (Math.abs(x - cx) < hx && Math.abs(z - cz) < hz) return false;
+  for (const s of sets) {
+    for (const o of s.solids) if (o.fig !== me && Math.hypot(x - o.x, z - o.z) < o.r + .18) return false;
+    for (const [cx, cz, hx, hz] of s.walls) if (Math.abs(x - cx) < hx && Math.abs(z - cz) < hz) return false;
+  }
   return true;
 }
 function move(f, dx, dz) {
@@ -368,7 +428,7 @@ let target = null, hold = null;
 function pickAt(cx, cy) {
   const r = canvas.getBoundingClientRect(); ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects([...baseTaps, ...set.taps, ...set.ground], false);
+  const hits = ray.intersectObjects([...baseTaps, ...sets.flatMap(s => s.taps), ...sets.flatMap(s => s.ground), ...seaRows.map(r => r.m)], false);
   // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
   return hits.find(h => !h.object.userData.fig || solidAt(h.object.userData.fig, h.uv)) || null;
 }
@@ -376,7 +436,7 @@ function pickAt(cx, cy) {
  *  thing that is small because the camera stands far back is as easy to hit as a big one (everything is at least 48 points across) */
 function nearTap(cx, cy, reach = 24) {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = reach;
-  for (const s of [...baseSpots, ...set.tapSpots]) {
+  for (const s of [...baseSpots, ...sets.flatMap(q => q.tapSpots)]) {
     const f = s.obj.children[0]?.children[0]?.userData.fig;
     if (f) v.set(f.x, f.y + f.H * .45, f.z); else v.copy(s.c || (s.c = new THREE.Box3().setFromObject(s.obj).getCenter(new THREE.Vector3())));
     v.project(camera); if (v.z > 1) continue;
@@ -401,7 +461,7 @@ function groundPoint(cx, cy) {
   return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -girl.y), new THREE.Vector3());   // nothing when the finger is on the sky
 }
 canvas.addEventListener('pointerdown', e => {
-  audio(); if (gate) return; canvas.setPointerCapture(e.pointerId);
+  audio(); canvas.setPointerCapture(e.pointerId);
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
@@ -550,32 +610,7 @@ function bakeSea(rows, root) {
   root.add(out); return out;
 }
 bake(theatre); for (const g of hungs) bake(g);
-loadSet(SETS[ASK.get('set')] || eiland);
-
-/* ---------------- the gate: from one set to the next behind a paper curtain ----------------
-   A set says where its gates are: { to, zone, shift, dir }. When she walks into a gate's zone (the far half of a bridge) she
-   keeps walking by herself, a sheet of paper slides across the stage in stop-motion steps, behind it this set is thrown away
-   and the next one built, and the sheet slides on. She stands where she stood, seen from the new set (shift), and walks on a
-   little before the stick is hers again. Both sets show the same bridge and each other's real shore, and both look at the
-   bridge with the same far shot, so what she sees after the sheet is what she saw before it, from the other side. */
-const CLOSE = .42, OPEN = .42;
-let gate = null; const gateStat = { n: 0, build: 0, first: 0 };
-const wipeEl = document.body.appendChild(document.createElement('div'));
-{ const pts = [];   // a sheet of pale paper wider than the screen, its two long edges cut wavy
-  for (let i = 0; i <= 20; i++) pts.push(`${(3.5 + Math.sin(i * 1.3) * 1.5 + (i % 2) * .7).toFixed(2)}% ${i * 5}%`);
-  for (let i = 20; i >= 0; i--) pts.push(`${(96.5 + Math.sin(i * 1.1 + 2) * 1.5 - (i % 2) * .7).toFixed(2)}% ${i * 5}%`);
-  wipeEl.style.cssText = `position:fixed;top:0;left:0;width:150vw;height:100%;pointer-events:none;z-index:5;transform:translateX(-155vw);background:#f3e6cc url(${PAPER.toDataURL()});background-blend-mode:multiply;clip-path:polygon(${pts.join(',')})`; }
-const slide = (from, to, secs) => wipeEl.animate([{ transform: `translateX(${from}vw)` }, { transform: `translateX(${to}vw)` }], { duration: secs * 1000, easing: 'steps(6, end)', fill: 'forwards' });
-function startGate(g) { gate = { g, t: 0, phase: 'close' }; target = null; hold = null; slide(-155, -25, CLOSE); sfx.rustle(); }
-function stepGate(dt) {
-  if (!gate) { const g = set.gates && set.gates.find(g => inZone(g, girl.x, girl.z)); if (g) startGate(g); return; }
-  gate.t += dt;
-  if (gate.phase === 'close' && gate.t >= CLOSE + .06) {   // the sheet covers everything: change the set
-    const g = gate.g, t0 = performance.now(); loadSet(SETS[g.to], [girl.x + g.shift[0], girl.z + g.shift[1]], g.dir);
-    gateStat.build = performance.now() - t0; gateStat.n++; gate.phase = 'first'; gate.t0 = performance.now();
-  } else if (gate.phase === 'first') { gateStat.first = performance.now() - gate.t0; gate.phase = 'open'; gate.t = 0; slide(-25, 105, OPEN); sfx.rustle(); }   // the first picture of the new set has been drawn (the slow one)
-  else if (gate.phase === 'open' && gate.t >= OPEN) gate = null;
-}
+loadWorld(SETS[ASK.get('set')] ? ASK.get('set') : 'eiland');
 
 /* ---------------- the readout (?fps): how smoothly it runs here and how big she is on this screen ---------------- */
 const stat = { fps: 0, worst: 0, her: 0, calls: 0, tris: 0, n: 0, t0: 0, prev: 0, slow: 0, slows: [] };
@@ -591,11 +626,12 @@ function measure(now) {
   // her height on the screen in points: from her feet to the top of her head
   const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
   stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
-  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${set.ms.toFixed(0)} ms\n${gateStat.n ? `gate: built in ${gateStat.build.toFixed(0)} ms, first picture ${gateStat.first.toFixed(0)} ms\n` : ''}${innerWidth}×${innerHeight} at ×${+DPR.toFixed(2)}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall (${shot.name}, ${set.name})\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles, built in ${world.ms.toFixed(0)} ms\n${innerWidth}×${innerHeight} at ×${+DPR.toFixed(2)}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}${BAKE ? '' : ', nothing glued'}`;
 }
 
 /* ---------------- the loop ---------------- */
 const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3(); let tracking = null;
+const UP = new THREE.Vector3(0, 1, 0), sunDir = new THREE.Vector3(), sunRight = new THREE.Vector3(), sunUp = new THREE.Vector3();
 let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0, still = false;   // still: the clock of the stop motion stands (for comparing screenshots)
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; time += dt;
@@ -612,7 +648,6 @@ function frame(now) {
     const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
     if (d < .08) target = null; else { ix = dx / d; iz = dz / d; }
   }
-  stepGate(dt); if (gate) { [ix, iz] = gate.g.dir; target = null; }   // through a gate she walks on by herself
   const speed = 2.3, il = Math.hypot(ix, iz);
   girl.walking = false;
   if (il > 0) {
@@ -662,11 +697,11 @@ function frame(now) {
   stepBalloon(dt);
   for (let n = 0; n < 2 && warm.length; n++) warm.shift()();   // drawings made ahead, a few per frame
   // trees wobble when tapped, in steps
-  if (stepped) for (const t of set.trees) if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
+  if (stepped) for (const q of sets) for (const t of q.trees) if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
   // confetti (its paper is shared with everything else: never thrown away)
   for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); bits.splice(i, 1); } }
   // the sea rows rock gently, each its own way
-  if (stepped) { if (set.sea) seaTick.value = tick; else for (const r of set.seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12; }
+  if (stepped) { if (seaBaked) seaTick.value = tick; else for (const r of seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12; }
 
   // day and evening: the sun is pulled up out of view and the moon let down on its thread
   eve += (eveTarget - eve) * Math.min(1, dt * 1.6);
@@ -677,7 +712,11 @@ function frame(now) {
   scene.fog.color.copy(C('#efd2b4', '#5a5478', eve));
   sun.position.y = lerp(4.6, 24, eve); moon.position.y = lerp(22, 4.8, eve);
   for (const s of stars.children) s.position.y = lerp(28, 3.5 + (s.id % 5) * .7, eve);
-  if (set.step) set.step({ dt, tick, stepped, eve, time });   // the set's own doors, lamps and animals
+  { const here = floorAt(girl.x, girl.z); if (here && here.set !== set && !pinned) standOn(here.set); }   // which set she stands on
+  for (const q of sets) if (q.step) q.step({ dt, tick, stepped, eve, time });   // each set's own doors, lamps and animals
+  // the two real lights go to the two lit lamps nearest her
+  { const lit = sets.flatMap(q => q.lamps.filter(Boolean).map(d => ({ d, q }))).filter(o => o.d.intensity > .001).map(o => ({ ...o, far: Math.hypot(o.d.position.x + o.q.ox - girl.x, o.d.position.z + o.q.oz - girl.z) })).sort((a, b) => a.far - b.far);
+    lamps.forEach((l, i) => { const o = lit[i]; if (!o) { l.intensity = 0; return; } l.color.set(o.d.color); l.distance = o.d.distance; l.decay = o.d.decay; l.intensity = o.d.intensity; l.position.set(o.d.position.x + o.q.ox, o.d.position.y, o.d.position.z + o.q.oz); }); }
 
   // camera: a still diorama shot that leans a little towards her
   { const next = shotFor(girl.x, girl.z); if (next !== shot) { shot = next; shotChanges++; }
@@ -688,11 +727,16 @@ function frame(now) {
     camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
     camera.position.copy(camPos); camera.lookAt(camLook);
     camYaw = Math.atan2(camPos.x - camLook.x, camPos.z - camLook.z);
+    if (shadowFollow) {   // the shadow sheet goes where the camera looks, in whole stitches of its own weave, so shadows never crawl
+      const d = sunDir.copy(sun3).normalize(), rt = sunRight.crossVectors(UP, d).normalize(), up = sunUp.crossVectors(d, rt), st = 2 * shadowFollow / key.shadow.mapSize.x;
+      const a = Math.round(camLook.dot(rt) / st) * st, b = Math.round(camLook.dot(up) / st) * st, c = camLook.dot(d);
+      key.target.position.set(0, 0, 0).addScaledVector(rt, a).addScaledVector(up, b).addScaledVector(d, c); key.position.copy(key.target.position).add(sun3);
+    }
     post.uniforms.dof.value = dofBase * cam.dof; post.uniforms.range.value = cam.range; }
   post.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(girl.x, girl.y + .5, girl.z));
   if (stepped) post.uniforms.seed.value = (tick % 12) * 1.37;
 
-  if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; }
+  if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; if (tracking.last) tracking.slow = Math.max(tracking.slow, now - tracking.last); tracking.last = now; }
   renderer.info.reset();
   if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
@@ -705,12 +749,12 @@ requestAnimationFrame(frame);
 window.__p = {
   placeAt(x, z) { girl.x = x; girl.z = z; uni.x = x; uni.z = z - .9; if (heightAt(uni.x, uni.z) === null) { uni.x = x - 1; uni.z = z; } target = null; },
   walkTo(x, z) { target = { x, z }; },
-  tap(name) { const f = figures.find(f => f.name === name); if (f) tapFigure(f); else if (set.names[name]) set.names[name](); else if (name === 'tree') { set.trees[0].wob = 1; } },
+  tap(name) { const f = figures.find(f => f.name === name); const named = sets.map(q => q.names[name]).find(Boolean); if (f) tapFigure(f); else if (named) named(); else if (name === 'tree') { set.trees[0].wob = 1; } },
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
-  screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + .4, f.z) : new THREE.Vector3(...set.spots[name]); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+  screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + .4, f.z) : new THREE.Vector3(...sets.map(q => q.spots[name]).find(Boolean)); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
   still(on = true) { still = on; if (on) tick = 0; },
-  stats() { return { set: set.name, load: set.ms, px: innerWidth * innerHeight * DPR * DPR, fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
+  stats() { return { set: set.name, sets: sets.map(q => q.name), load: world.ms, px: innerWidth * innerHeight * DPR * DPR, fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST, bake: BAKE, baked }; },
   /** dress her: __p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon']); pose her: __p.pose('sit' | 'hold' | 'up' | null); __p.sleep(true) shuts her eyes */
   wear(ids) { girl.redress(wearOf(ids || [])); return girl.wear; },
   pose(name) { girl.poseName = name || null; },
@@ -720,23 +764,24 @@ window.__p = {
   view(name = 'girl') { return figures.find(f => f.name === name).view; },
   uniOk() { return heightAt(uni.x, uni.z) !== null; },
   hop(name) { return figures.find(f => f.name === name).hop; },
-  info() { return { set: set.name, girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], eve, h: heightAt(girl.x, girl.z), ...(set.info ? set.info() : {}) }; },
-  /** throw the set away and build another (or the same one again); how long that took is in stats().load */
-  load(name) { loadSet(SETS[name]); return set.ms; },
+  info() { return { set: set.name, girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], eve, h: heightAt(girl.x, girl.z), ...Object.assign({}, ...sets.map(q => q.info ? q.info() : {})) }; },
+  /** throw away what exists and build the set called `name` with its neighbours; gives how long that took */
+  load(name) { loadWorld(name); return world.ms; },
   dbg: { get set() { return set; }, scene, renderer, figures },
   /** what exists right now: to see that a set thrown away is really gone */
-  count() { return { set: set.name, ms: set.ms, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs.length, newest: Math.max(...renderer.info.programs.map(p => p.id)), calls: stat.calls, taps: set.taps.length, solids: set.solids.length, trees: set.trees.length, ground: set.ground.length, figures: figures.length, things: scene.children.length }; },
+  count() { const all = k => sets.reduce((n, q) => n + q[k].length, 0); return { set: set.name, ms: world.ms, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs.length, newest: Math.max(...renderer.info.programs.map(p => p.id)), calls: stat.calls, taps: all('taps'), solids: all('solids'), trees: all('trees'), ground: all('ground'), figures: figures.length, things: scene.children.length }; },
   /** which of the set's named places she can walk to from where she starts: a flood over the floor in small steps, by the same rule as her walk */
   reach(step = .15) {
     const key = (i, j) => i * 10000 + j, seen = new Map(), [sx, sz] = set.start, todo = [[0, 0]]; seen.set(key(5000, 5000), heightAt(sx, sz));
     while (todo.length) { const [i, j] = todo.pop(), h = seen.get(key(i + 5000, j + 5000));
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = key(i + di + 5000, j + dj + 5000); if (seen.has(k)) continue; const x = sx + (i + di) * step, z = sz + (j + dj) * step; if (Math.abs(i + di) > 400 || Math.abs(j + dj) > 400 || !free(x, z, h)) continue; seen.set(k, heightAt(x, z)); todo.push([i + di, j + dj]); } }
     const at = ([x, z]) => { for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) if (seen.has(key(Math.round((x - sx) / step) + di + 5000, Math.round((z - sz) / step) + dj + 5000))) return true; return false; };
-    return { cells: seen.size, places: Object.fromEntries(Object.entries(set.places || {}).map(([n, p]) => [n, at(p)])) };
+    return { cells: seen.size, places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
-  places() { return set.places || {}; },
-  /** the last walk through a gate: how long the build took and the first picture after it; active while the sheet is on its way */
-  gate() { return { ...gateStat, active: !!gate }; },
+  /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
+  pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
+  /** the named places of the set she stands on, or of the set called `name` */
+  places(name) { return (sets.find(q => q.name === name) || set).places; },
   /** does a finger at this spot on the screen land on something that answers a tap (without the finger's-width margin)? */
   direct(x, y) { const h = pickAt(x, y); return !!(h && h.object.userData.tap); },
   /** whose tap a finger at this spot would get through the margin alone: a figure's name, 'thing', or null */
@@ -744,11 +789,11 @@ window.__p = {
   /** the set's shots: which is on, how often it changed, and how tall she is in each on this screen (in points) */
   shots() {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), top = (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H;
-    return { on: shot.name, changes: shotChanges, yaw: camYaw, list: set.shots.map(s => { const d = clamp((portrait ? s.tall : s.span) / 2 / (tan * camera.aspect), 8, 60), rise = portrait ? s.riseTall : s.rise; return { name: s.name, play: s.play, zone: s.zone || null, her: top / (2 * d * Math.hypot(1, rise) * tan) * innerHeight }; }) };
+    return { on: shot.name, changes: shotChanges, yaw: camYaw, list: [...sets.flatMap(q => q.shots.filter(s => s.zone)), set.shots[set.shots.length - 1]].map(s => { const d = clamp((portrait ? s.tall : s.span) / 2 / (tan * camera.aspect), 8, 60), rise = portrait ? s.riseTall : s.rise; return { name: s.name, play: s.play, zone: s.zone || null, her: top / (2 * d * Math.hypot(1, rise) * tan) * innerHeight }; }) };
   },
   /** hold keys down as a child would ('a', 'd', 'w', 's'), or none */
   keys(list = []) { keys.clear(); for (const k of list) keys.add(k); },
   /** follow her for a while: how far she went on the screen's left-right and up-down, and the smallest step along `want` ([right, down]) in any frame: under zero means she turned back */
-  track(want) { tracking = want ? { want, min: 1e9, sx: 0, sz: 0, x: girl.x, z: girl.z, n: 0 } : null; },
-  tracked() { return tracking && { min: tracking.min === 1e9 ? 0 : tracking.min, sx: tracking.sx, sz: tracking.sz, n: tracking.n }; },
+  track(want) { tracking = want ? { want, min: 1e9, sx: 0, sz: 0, x: girl.x, z: girl.z, n: 0, slow: 0, last: 0 } : null; },
+  tracked() { return tracking && { min: tracking.min === 1e9 ? 0 : tracking.min, sx: tracking.sx, sz: tracking.sz, n: tracking.n, slow: tracking.slow }; },   // slow: the longest single frame, in ms
 };

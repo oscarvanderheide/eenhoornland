@@ -7,7 +7,7 @@
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { cottage, shore, GROUND } from './props.js';
-import { dorpLand, bosLand, move, SHIFT } from './lands.js';
+import { dorpLand, bosLand, ORIGIN, BACK } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile) */
 const T = (x, z) => [(x - 31) * .6, (z - 42) * .6];
@@ -26,12 +26,9 @@ export default {
     /* ---------------- the land: a beach, the green, and a terrace in the north where her house stands ---------------- */
     const { SAND, GRASS, SAND_S, SAND_W, GRASS_W, HIGH, under } = dorpLand();
     const WEI = blob(19.6, 2.2, 4.2, 5, 78, 48, .05);        // the near shore of the meadow, across the east bridge (a stand-in)
-    // the forest across the north bridge: its real outline (lands.js), only to be seen. The gate on the bridge takes her there
-    const [bx, bz] = SHIFT['bos>dorp'], B = bosLand(), FAR = [B.SAND, B.GRASS, B.SAND_E, B.GRASS_E].map(o => move(o, bx, bz));
     // the ground is the island's real printed paper (it costs what it will cost); what stands on it is still grey
     const sandP = GROUND.sand, grassP = GROUND.grass, highP = GROUND.high;
     shore(S, [...[SAND, SAND_S, SAND_W].map(o => [o, H_SAND, .55, sandP]), ...[GRASS, GRASS_W].map(o => [o, H_GRASS, .32, grassP]), [HIGH, H_HIGH, .48, highP], [WEI, H_GRASS, .87, grassP]], [...under, blob(19.6, 2.3, 4.5, 5.3, 85, 56, .04)]);
-    shore(S, [[FAR[0], H_SAND, .55, sandP], [FAR[1], H_GRASS, .32, GROUND.wood], [FAR[2], H_SAND, .55, sandP], [FAR[3], H_GRASS, .32, GROUND.wood]], B.under.map(o => move(o, bx, bz)));
 
     // stairs down from the terrace: in front of her door (south), and at its east end where the street goes on to the bridge
     const edge = (poly, at, axis) => { let best = -99; for (let v = -12; v <= 12; v += .01) if (axis === 'z' ? inPoly(poly, at, v) : inPoly(poly, v, at)) best = v; return best; };
@@ -46,18 +43,19 @@ export default {
     };
     steps('s', .3, .55); steps('e', -3.4, .55);
 
-    // the bridges: planks on posts. North to the forest, east to the meadow
-    const NORTH = { x0: 5.4, x1: 6.6, z0: -12.4, z1: -5.5 }, EAST = { x0: 8.3, x1: 16.2, z0: 1.8, z1: 3.0 }, DECK = -.12;
+    // the bridges: planks on posts. East to the meadow; north to the forest, which is a set of its own standing in the same
+    // world (lands.js): the bridge is this set's, all the way to the forest's shore
+    const NORTH = { x0: 5.4, x1: 6.6, z0: ORIGIN.bos[1] + bosLand().bridge[1] - .7, z1: -5.5 }, EAST = { x0: 8.3, x1: 16.2, z0: 1.8, z1: 3.0 }, DECK = -.12;
     for (let z = NORTH.z0; z < NORTH.z1; z += .32) root.add(slab(rect(NORTH.x0 - .05, z, NORTH.x1 + .05, z + .28), DECK, .06, P('thing'), edgeMat));
     for (let x = EAST.x0; x < EAST.x1; x += .32) root.add(slab(rect(x, EAST.z0 - .05, x + .28, EAST.z1 + .05), DECK, .06, P('thing'), edgeMat));
-    for (const z of [-11.6, -10.2, -8.8, -7.4]) for (const x of [NORTH.x0, NORTH.x1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
+    for (let z = -7.2; z > NORTH.z0 + .6; z -= 1.7) for (const x of [NORTH.x0, NORTH.x1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
     for (const x of [10.4, 12, 13.6, 15.2]) for (const z of [EAST.z0, EAST.z1]) put(cyl(.06, 1.6, 'dark', 8), x, DECK - .6, z);
 
     // the pond: a sheet of water lying in the green; nobody walks on it
     const [pcx, pcz] = T(14.5, 42.5), POND = blob(pcx, pcz, 1.44, 1.2, 86, 40, .05);
     root.add(slab(POND, H_GRASS + .02, .02, P('water'), whiteEdge));
 
-    S.sea({ land: [SAND, SAND_S, SAND_W, FAR[0], FAR[2], WEI], x0: -40, x1: 40, z0: -27, z1: 21, deep: [170, 130, 0, -3] });
+    S.sea({ land: [SAND, SAND_S, SAND_W, WEI], x0: -40, x1: 40, z0: -19.5, z1: 21, deep: [170, 120, 0, 0] });
 
     // where she can stand: the first floor that holds the spot counts
     for (const s of stairs) S.floorBox(s.h, ...s.b);
@@ -139,14 +137,11 @@ export default {
       n++;
     }
     for (const [x, z] of [[20.5, .2], [21, 4.4]]) S.lollipop(x, z, H_GRASS, .6, cols[0][0], cols[0][1], 140 + Math.round(x));   // on the meadow's shore
-    { const R3 = rng(93); let m = 0; for (let i = 0; i < 300 && m < 14; i++) { const x = bx - 9 + R3() * 18, z = bz - 4 + R3() * 8; if (!inPoly(FAR[1], x, z) || edgeDist(FAR[1], x, z) < .6 || Math.abs(x - 6) < 1.3) continue; S.pine(x, z, H_GRASS, 1.4 + R3() * .7, ['#5f8665', '#6f9670', '#547a5c'][m % 3]); m++; } }   // the forest's edge, seen from here
 
     const [sx, sz] = T(31.5, 36.6);
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
-      shadow: 22, back: -14, sky: 1.3,     // the theatre's hills stand further back here: the forest's shore lies where they stand on the island
-      // the bridge to the forest is a gate: past its middle the paper curtain crosses and the forest stands there instead
-      gates: [{ to: 'bos', zone: [5.2, -12.6, 6.8, -9.4], shift: SHIFT['dorp>bos'], dir: [0, -1] }],
+      shadow: { follow: 20 }, back: BACK, sky: 1.4,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
       step: e => HOUSE.step(e),
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
@@ -158,7 +153,7 @@ export default {
         { name: 'vijver', zone: [-14, -3.2, -8.6, 3.8], span: 10.5, rise: .38, yaw: .22 },                      // the pond: closer, looking down on the water
         { name: 'wei', zone: [1.3, 3.4, 7.2, 6.3], span: 12, rise: .36 },                                       // in the unicorns' meadow
         { name: 'brug-oost', zone: [9.0, .9, 17, 3.9], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },    // the bridge to the meadow: far back, she is small
-        { name: 'brug-noord', zone: [4.9, -12.2, 7.1, -6.4], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge to the forest: far back and high
+        { name: 'brug-noord', zone: [4.9, NORTH.z0 + .2, 7.1, -6.4], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge to the forest: far back and high
         { name: 'modder', zone: [-8, 7.6, 6, 13], span: 11, rise: .3 },                                         // the pig's corner in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
