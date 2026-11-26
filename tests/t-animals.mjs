@@ -1,5 +1,6 @@
-// The sheet of cut-paper animals (paper/animals.html): PORT=9555 SERVE=8766 node cdp.mjs tests/t-animals.mjs
-// -> tmp-shots/a-animals.png (the whole sheet), a-animals-<name>.png (one row, twice as big), a-animals-phone.png (the phone strip, four times as big)
+// The sheet of cut-paper animals and things (paper/animals.html): PORT=9555 SERVE=8766 node cdp.mjs tests/t-animals.mjs
+// -> tmp-shots/a-animals.png (the whole sheet), a-animals-<name>.png (one row, twice as big), a-animals-phone.png (the phone strip, four times as big),
+//    a-animals-small.png and a-animals-small-dingen.png (every frame at phone size, three times as big: the animals, the things)
 // It draws, every frame has a name and is its own drawing, and nothing is cut off by the edge of a card.
 export default async function (t) {
   const fs = await import('node:fs'); fs.mkdirSync('tmp-shots', { recursive: true });
@@ -27,5 +28,5 @@ export default async function (t) {
   await clip('#phone', 'tmp-shots/a-animals-phone.png', 4);
   // every frame at phone size (a third of the sheet's), enlarged: does each pose still read as its own?
   await t.ev('document.querySelectorAll("#sheet canvas").forEach(c => { c.style.width = parseFloat(c.style.width) / 3 + "px"; c.style.height = parseFloat(c.style.height) / 3 + "px"; })');
-  await t.sleep(200); await clip('#sheet', 'tmp-shots/a-animals-small.png', 3);
+  await t.sleep(200); await clip('#dieren', 'tmp-shots/a-animals-small.png', 3); await clip('#dingen', 'tmp-shots/a-animals-small-dingen.png', 3);
 }

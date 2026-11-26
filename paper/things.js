@@ -1,0 +1,148 @@
+// Things of the paper world that she holds or that stand about, cut by the same scissors as the animals (see STYLE.md):
+// few round pieces of sugar paper on a white card. Where a thing has a front it faces right. The sheet is animals.html.
+import { E, S, C, U, P, piece, ink, line, eye } from './cut.js';
+
+const DARK = '#33262E', PI = Math.PI;
+const arc = (x, y, r, a0, a1, n = 6) => Array.from({ length: n + 1 }, (_, i) => [x + Math.cos(a0 + (a1 - a0) * i / n) * r, y + Math.sin(a0 + (a1 - a0) * i / n) * r]);
+const cheek = (g, x, y, rx = 7, ry = 5) => ink(g, 'rgba(240,120,150,.4)', E(x, y, rx, ry));
+/** a shape with straight sides and corners rounded by r (a box, a sleeve, a trouser leg) */
+const round = (pts, r) => S(pts.flatMap((p, i) => {
+  const n = pts.length, to = q => { const dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1, k = Math.min(r, l / 2) / l; return [p[0] + dx * k, p[1] + dy * k]; };
+  return [to(pts[(i + n - 1) % n]), p, to(pts[(i + 1) % n])];
+}));
+/** a bent strip of paper: capsules along a row of points */
+const strip = (pts, r) => U(...pts.slice(1).map((q, i) => C(...pts[i], ...q, r)));
+const mir = (pts, cx = 100) => pts.map(([x, y]) => [2 * cx - x, y]).reverse();
+
+// the watering can, from the side: spout and rose to the right, a big loop of a handle at the left.
+// 0 empty (dark inside), 1 full (water at the open top), 2 pouring: tipped to the right, drops falling from the rose
+const CAN = { c: '#6FB0B8', c2: '#5F9FAE', dark: '#3A7483', light: '#A5D3D6', water: '#8FD0E0' };
+function drawGieter(g, f) {
+  const k = CAN, pour = f === 2;
+  g.save(); g.translate(pour ? 76 : 80, pour ? 70 : 107); g.rotate(pour ? .75 : 0);
+  piece(g, k.c2, strip(arc(-33, 0, 30, .5 * PI, 1.5 * PI, 8), 5));
+  piece(g, k.c2, C(26, 24, 78, -22, 8, 5.5));
+  // the rose: a little funnel and a disc with holes
+  piece(g, k.c2, P([[73.6, -10.9], [94, -17.5], [75.4, -38.5], [66.4, -19.1]]));
+  piece(g, k.light, E(84.7, -28, 6, 14, -.72), .6);
+  ink(g, k.dark, U(...[[0, 0], [0, -8], [0, 8], [-2.4, -4], [2.4, 4]].map(([u, v]) => E(84.7 + u * .749 + v * .663, -28 - u * .663 + v * .749, 1.5, 1.5))));
+  piece(g, k.c, round([[-29, -37], [29, -37], [33, 37], [-33, 37]], 10));
+  piece(g, k.c2, E(0, -37, 29, 9), .6);
+  ink(g, f ? k.water : k.dark, E(0, -36.5, 25, 6.4));
+  if (f) ink(g, '#D9F1F5', E(-9, -38, 8, 1.8));
+  ink(g, k.light, round([[-31, 14], [31, 14], [32, 22], [-32, 22]], 0));
+  g.restore();
+  if (pour) for (const [x, y] of [[171, 96], [176, 112], [170, 126], [177, 139]]) piece(g, k.water, S([[x, y - 8], [x, y - 8], [x + 5, y + 2], [x, y + 6.5], [x - 5, y + 2]]), .6);
+}
+
+// the scarecrow, looking at us: a straw hat, a round face of sackcloth, a red shirt with its arms out on the cross beam,
+// straw for hands and feet, patched blue trousers, a wooden post. 0 stands still, 1 leans left, 2 leans right (a wobble)
+function drawSchrik(g, f) {
+  const straw = '#E6B748', straw2 = '#CF9C35', sack = '#EBD9B4', red = '#D8574F', red2 = '#BC463F', blue = '#6F9BCB', blue2 = '#5880B2', wood = '#8D6A48';
+  // a bunch of straw: a fan of stalks with their tips snipped blunt (a sharp tip frays the backing card)
+  const fan = (x, y, rot, n = 4, l = 22, w = 22) => { g.save(); g.translate(x, y); g.rotate(rot); piece(g, straw, P([[0, -w * .36], ...Array.from({ length: 2 * n - 1 }, (_, i) => { const v = -w / 2 + w * i / (2 * n - 2); return i % 2 ? [[l * .55, v]] : [[l, v - 1.8], [l, v + 1.8]]; }).flat(), [0, w * .36]])); g.restore(); };
+  g.save(); g.translate(100, 250); g.rotate(f === 1 ? -.06 : f === 2 ? .06 : 0); g.translate(-100, -250);
+  piece(g, wood, round([[94, 130], [106, 130], [106, 250], [94, 250]], 3));
+  fan(44, 112, PI); fan(156, 112, 0); fan(87, 208, PI / 2, 3, 16, 18); fan(113, 208, PI / 2, 3, 16, 18);
+  // trousers with two patches
+  piece(g, blue, U(round([[75, 150], [125, 150], [126, 176], [74, 176]], 4), round([[74, 160], [97, 160], [96, 212], [77, 212]], 5), round(mir([[74, 160], [97, 160], [96, 212], [77, 212]]), 5)));
+  piece(g, straw2, P([[79, 184], [90, 182], [92, 194], [80, 196]]), .3); piece(g, blue2, P([[107, 168], [119, 169], [118, 180], [106, 179]]), .3);
+  for (const [x, y, a] of [[79, 190, 0], [91, 188, 0], [85, 183, 1], [86, 195, 1], [107, 174, 0], [118, 174, 0], [112, 168.5, 1], [112, 179.5, 1]]) line(g, DARK, 1.4, a ? [[x, y - 2.5], [x, y + 2.5]] : [[x - 2.5, y], [x + 2.5, y]]);
+  // the shirt, arms straight out
+  piece(g, red, U(round([[75, 98], [125, 98], [129, 158], [71, 158]], 9), C(80, 112, 50, 112, 13, 12), C(120, 112, 150, 112, 13, 12)));
+  piece(g, red2, C(42, 102, 42, 122, 3.5), .5); piece(g, red2, C(158, 102, 158, 122, 3.5), .5);
+  ink(g, '#F4ECDC', U(E(100, 124, 2.6, 2.6), E(100, 138, 2.6, 2.6)));
+  piece(g, straw, P([[113, 138], [123, 136], [124, 148], [114, 149]]), .3);
+  for (const [x, y, a] of [[113, 143, 0], [124, 142, 0], [118, 136.5, 1], [119, 149, 1]]) line(g, DARK, 1.4, a ? [[x, y - 2.5], [x, y + 2.5]] : [[x - 2.5, y], [x + 2.5, y]]);
+  // a straw ruff, straw hair, the face
+  piece(g, straw, P([[74, 92], [80, 106], [86, 98], [93, 109], [100, 99], [107, 109], [114, 98], [120, 106], [126, 92]]));
+  piece(g, straw2, P([[74, 52], [63, 58], [62, 62], [70, 65], [62, 70], [63, 74], [72, 76], [80, 60]])); piece(g, straw2, P(mir([[74, 52], [63, 58], [62, 62], [70, 65], [62, 70], [63, 74], [72, 76], [80, 60]])));
+  piece(g, sack, E(100, 70, 30, 28));
+  eye(g, 87, 68, 5.4); eye(g, 113, 68, 5.4); cheek(g, 79, 79, 7, 5); cheek(g, 121, 79, 7, 5);
+  piece(g, '#E2803E', S([[95, 73], [105, 73], [100, 82]]), .4);
+  const sm = arc(100, 74, 14, .2 * PI, .8 * PI, 8);
+  line(g, '#8A3D4C', 2, sm);
+  for (const i of [2, 4, 6]) line(g, '#8A3D4C', 1.5, [[sm[i][0], sm[i][1] - 2.6], [sm[i][0], sm[i][1] + 2.6]]);
+  // the hat, a little askew
+  g.save(); g.translate(100, 46); g.rotate(-.1);
+  piece(g, straw, U(E(0, 0, 45, 9), S([[-26, 4], [-22, -30], [22, -30], [26, 4]])));
+  ink(g, red2, round([[-22.5, -9], [22.5, -9], [23.5, -2], [-23.5, -2]], 2));
+  line(g, straw2, 1.6, [[-36, 2], [-20, 5]]); line(g, straw2, 1.6, [[20, 5], [36, 2]]);
+  g.restore();
+  g.restore();
+}
+
+// a little blackbird, round and dark with an orange beak. 0 sits, 1 flies with her wings up, 2 with her wings down
+function drawVogel(g, f) {
+  const b = '#4B3D3D', b2 = '#3A2E31', b3 = '#6B5852', o = '#E2803E', o2 = '#C96A2E';
+  const face = (x, y) => {
+    piece(g, b, E(x, y, 16, 15.5));
+    piece(g, o, S([[x + 13, y - 4], [x + 26, y + 1], [x + 26, y + 1], [x + 13, y + 6]]), .6);
+    ink(g, '#F0B354', E(x + 5, y - 2, 4.8, 5.4)); eye(g, x + 5, y - 2, 3.7);
+  };
+  if (!f) {
+    piece(g, o2, C(40, 66, 40, 74, 1.7)); piece(g, o2, E(42, 76, 5, 2.2));
+    piece(g, o, C(48, 66, 48, 74, 1.7)); piece(g, o, E(50, 76, 5, 2.2));
+    piece(g, b2, S([[30, 50], [9, 46], [9, 46], [14, 58], [28, 62]]));
+    piece(g, b, E(43, 54, 22, 17, -.15));
+    face(59, 38);
+    piece(g, b3, S([[46, 49], [48, 61], [32, 64], [20, 56], [20, 56], [34, 47]]), .6);
+    return;
+  }
+  const up = f === 1, y = up ? 3 : -2;
+  g.save(); g.translate(3, y);
+  piece(g, b2, up ? S([[46, 46], [48, 12], [48, 12], [66, 24], [64, 46]]) : S([[46, 46], [50, 76], [50, 76], [66, 64], [64, 46]]));
+  piece(g, b2, S([[30, 42], [7, 36], [7, 36], [9, 50], [28, 50]]));
+  piece(g, b, E(46, 45, 22, 13.5, -.08));
+  face(66, 40);
+  piece(g, b3, up ? S([[34, 46], [28, 10], [28, 10], [50, 20], [56, 46]]) : S([[34, 44], [34, 78], [34, 78], [52, 66], [56, 44]]), .8);
+  g.restore();
+}
+
+// a carrot just pulled: the orange root points down and to the left, the green leaves stand up at the right
+function drawWortel(g) {
+  const o = '#E2803E', o2 = '#C96A2E', gr = '#7FB069', gr2 = '#5F9450';
+  const leaf = (rot, l, col) => { g.save(); g.translate(74, 46); g.rotate(rot); piece(g, col, S([[-5, 2], [-10, -l * .5], [-2, -l], [2, -l], [10, -l * .5], [5, 2]])); g.restore(); };
+  leaf(-.25, 34, gr2); leaf(1.3, 32, gr2); leaf(.5, 38, gr);
+  piece(g, o, C(66, 56, 25, 103, 16, 4));
+  for (const [x, y, l] of [[60, 52, 9], [47, 64, 8], [44, 78, 6], [33, 86, 5]]) line(g, o2, 2, [[x, y], [x + l, y + l * .8]]);
+}
+
+// a hen's egg
+function drawEi(g) {
+  piece(g, '#F0D6AC', U(E(30, 40, 17, 19), E(30, 33, 13, 20)));
+  ink(g, '#FCF8F1', E(24, 27, 3.6, 6, .45));
+}
+
+// the picnic basket: wicker, a handle, a red checked cloth peeking out
+function drawMand(g) {
+  const w = '#C79A66', w2 = '#A87B4B', w3 = '#8D6A48', red = '#D8574F', cream = '#FCF8F1';
+  piece(g, w3, strip(arc(75, 66, 40, PI, 2 * PI, 10), 4.5));
+  piece(g, red, S([[66, 70], [72, 50], [92, 44], [112, 52], [118, 70]]));
+  piece(g, w, round([[30, 66], [120, 66], [112, 116], [38, 116]], 12));
+  for (const y of [80, 92, 104]) line(g, w2, 2, [[34 + (y - 66) * .16, y], [116 - (y - 66) * .16, y]]);
+  for (let r = 0; r < 4; r++) for (let x = 44 + (r % 2) * 9; x < 110; x += 18) line(g, w2, 2, [[x, 71 + r * 12], [x, 77 + r * 12]]);
+  piece(g, w2, C(30, 66, 120, 66, 5.5), .6);
+  piece(g, red, S([[80, 60], [122, 60], [116, 82], [102, 94], [102, 94], [90, 80]]));
+  for (const [a, b] of [[[94, 62], [94, 80]], [[104, 62], [104, 89]], [[113, 63], [113, 77]], [[87, 70], [118, 70]], [[93, 79], [113, 79]]]) line(g, cream, 1.6, [a, b]);
+  for (const [a, b] of [[[84, 50], [84, 60]], [[94, 47.5], [94, 60]], [[104, 49], [104, 60]], [[75, 54], [111, 54]]]) line(g, cream, 1.6, [a, b]);
+}
+
+// a red apple with a leaf
+function drawAppel(g) {
+  piece(g, '#7A5A3E', C(32, 28, 35, 16, 1.9));
+  piece(g, '#7FB069', S([[35, 22], [42, 10], [54, 12], [54, 12], [47, 23]]));
+  piece(g, '#D8574F', U(E(25, 41, 14, 17), E(39, 41, 14, 17)));
+  ink(g, 'rgba(255,255,255,.45)', E(21, 34, 3.4, 6, .45));
+}
+
+/** canvas sizes (drawing units), how tall each card stands in the world (Anna is 1.2) and what each frame is */
+export const THINGS = {
+  gieter: { w: 190, h: 154, draw: drawGieter, frames: 3, size: .56, does: ['empty', 'full', 'pour'] },
+  vogelverschrikker: { w: 200, h: 260, draw: drawSchrik, frames: 3, size: 2, does: ['still', 'left', 'right'] },
+  vogel: { w: 106, h: 88, draw: drawVogel, frames: 3, size: .34, does: ['sit', 'up', 'down'] },
+  wortel: { w: 120, h: 120, draw: drawWortel, frames: 1, size: .4, does: ['carrot'] },
+  ei: { w: 60, h: 70, draw: drawEi, frames: 1, size: .2, does: ['egg'] },
+  mand: { w: 150, h: 126, draw: drawMand, frames: 1, size: .45, does: ['basket'] },
+  appel: { w: 64, h: 70, draw: drawAppel, frames: 1, size: .18, does: ['apple'] },
+};

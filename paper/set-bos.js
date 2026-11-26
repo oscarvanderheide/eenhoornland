@@ -3,7 +3,7 @@
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
-import { hedgehog, owl, squirrel, butterfly } from './critters.js';
+import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
 
@@ -64,12 +64,14 @@ export default {
     for (const [x, z] of [[tx - 1.3, tz - .9], [tx + 1.2, tz - .6], [tx + .2, tz - 1.5]]) S.lollipop(x, z, 3.3, 1.05, '#7fa676', '#a3c08c', 260 + Math.round(x), .5);
 
     /* ---------------- trees: a forest's worth ---------------- */
+    const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [cx - .7, cz + .2], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
     const greens = [['#7fa676', '#a3c08c'], ['#93b071', '#b3c98d'], ['#6f9670', '#8fb089']], R = rng(271); let n = 0;
     for (let i = 0; i < 3600 && n < 84; i++) {
       const x = (-15 + R() * 35) * K, z = (-7.6 + R() * 15.2) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
       const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .5 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .7 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
       if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.3 && z > BR[1] - 3.4 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
+      if (sights.some(([px, pz]) => Math.abs(x - px) < 1.9 && z > pz - .4 && z < pz + 5.5)) continue;   // a clear view from the camera (in the south) to each place where something lives: no trees folding away here (Oscar), so none are planted in the way
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.15)) continue;
       if (pineTree) S.pine(x, z, H_GRASS, 1.4 + R() * .8, ['#5f8665', '#6f9670', '#547a5c', '#7fa676'][n % 4]); else S.lollipop(x, z, H_GRASS, .45 + R() * .3, c[0], c[1], 400 + n, 1 + R() * .6);
       n++;
@@ -83,8 +85,13 @@ export default {
     }, 402, 1.6, ['#7a9a5c', '#8fae6e', '#6f9057'], bunch);
     const mill = pinwheel(S, cx + 2.2, H_GRASS, cz + 1.4, '#f2c65c', '#f6efe2');   // a toy windmill somebody left in the clearing
 
+    // a tree each for the two squirrels that live away from the oak
+    S.lollipop(cx - 5.7, cz - 3.6, H_GRASS, .7, '#7fa676', '#a3c08c', 480, 1.5); S.lollipop(ox + 5.1, oz + 2.6, H_GRASS, .65, '#93b071', '#b3c98d', 481, 1.4);
+
     // who lives here (critters.js): the shy hedgehog in the nook, the owl asleep on the cave's ledge, the squirrel at the oak
-    const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.2) };
+    const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.2),
+      // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
+      hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.6, 'eekhoorn2'), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.5, 'eekhoorn3') };
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
     const thePicnic = picnic(S, cx - .7, H_GRASS + .015, cz + .2, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
@@ -99,7 +106,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], picnic: [cx - .8, cz + 1.4], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [cx - .8, cz + 1.4], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

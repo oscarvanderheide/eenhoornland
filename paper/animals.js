@@ -217,6 +217,72 @@ function drawEekhoorn(g, f) {
   } else piece(g, r, C(90, 78, 103, 86, 5.5, 5));
 }
 
+// the fawn: light brown with white spots on her back, big leaf ears, long thin legs, a cream tail that stands up.
+// 0 stands, 1-2 walk, 3 grazes (head down in the grass, eye shut), 4 has heard something (head high, ears straight up, tail up)
+const HERT = { c: '#DBA772', c2: '#BF8A58', cream: '#F4ECDC', spot: '#FCF8F1', inner: '#F2C4BC', hoof: '#7A5A3E' };
+function fawnEar(g, x, y, rot, col) {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  piece(g, col, S([[-9, 4], [-15, -20], [-3, -44], [3, -44], [15, -20], [9, 4]]));
+  ink(g, HERT.inner, S([[-4, -2], [-8, -19], [0, -36], [0, -36], [8, -19], [4, -2]]));
+  g.restore();
+}
+function fawnHead(g, x, y, rot, e1, e2, look) {
+  const d = HERT; g.save(); g.translate(x, y); g.rotate(rot); g.scale(1.1, 1.1);
+  fawnEar(g, 6, -19, e2, d.c2);
+  piece(g, d.c, U(E(0, 0, 29, 27), E(23, 10, 15, 12.5)));
+  piece(g, d.cream, E(27, 14, 10, 7.5), .4);
+  fawnEar(g, -15, -15, e1, d.c);
+  piece(g, '#4B3D3D', E(36.5, 7, 4, 3.5), .4);
+  if (look === 'shut') shut(g, 9, -1, 5.6); else eye(g, 9, -3, look === 'wide' ? 6.6 : 5.8);
+  cheek(g, 3, 12, 8, 5.5); smile(g, 25, 15, 3.6);
+  g.restore();
+}
+function drawHert(g, f) {
+  const d = HERT, sw = step(f) * 7, graze = f === 3, alert = f === 4;
+  const leg = (x, s, col) => { piece(g, col, C(x, 158, x + s, 189, 6.5, 5.5)); piece(g, d.hoof, E(x + s + 1, 194.5, 7.5, 5), .5); };
+  g.save(); g.translate(0, 10);
+  leg(66, sw, d.c2); leg(112, -sw, d.c2);
+  piece(g, d.cream, alert ? E(41, 117, 5.5, 12, -.1) : E(37 - step(f) * 2, 124, 5.5, 10.5, -.7 - step(f) * .3));
+  // body and neck in one piece
+  piece(g, d.c, U(E(80, 140, 42, 26), graze ? C(104, 136, 138, 150, 17, 14) : alert ? C(104, 132, 116, 94, 17, 14) : C(104, 132, 124, 102, 17, 14)));
+  piece(g, d.cream, E(82, 157, 24, 7), .4);
+  for (const [x, y] of [[57, 129], [71, 121], [87, 123], [66, 138], [82, 135], [98, 131]]) piece(g, d.spot, E(x, y, 4.3, 4), .3);
+  leg(52, -sw, d.c); leg(98, sw, d.c);
+  if (graze) fawnHead(g, 148, 157, .9, -1.5, -.9, 'shut');
+  else if (alert) fawnHead(g, 122, 74, -.15, .1, .32, 'wide');
+  else fawnHead(g, 132, 86, 0, -.6, .15, '');
+  g.restore();
+}
+
+// the boar piglet: brown and round, cream stripes along her back, a soft snout, a little tail with a tuft.
+// 0 stands, 1-2 walk, 3 roots in the earth (snout in the ground, bottom in the air, eye shut)
+function drawZwijn(g, f) {
+  const sw = step(f) * 5, root = f === 3, b = '#A0744E', b2 = '#825A3C', st = '#EBD3A4', sn = '#DDA38E', hoof = '#4B3D3D';
+  const tilt = fn => { g.save(); if (root) { g.translate(92, 112); g.rotate(.4); g.translate(-92, -112); } fn(); g.restore(); };
+  const leg = (x1, y1, x2, y2, r, col) => { piece(g, col, C(x1, y1, x2, y2, r)); piece(g, hoof, E(x2 + 1, y2 + r - 3, r + .5, 4.2), .5); };
+  // a stripe along her back: a bent strip that follows the round of the body, flatter the lower it lies
+  const stripe = (ky, x0, x1) => { const at = i => { const x = x0 + (x1 - x0) * i / 6; return [x, 72 - 33 * ky * Math.sqrt(1 - ((x - 76) / 47) ** 2)]; }; return U(...Array.from({ length: 6 }, (_, i) => C(...at(i), ...at(i + 1), 2.8))); };
+  tilt(() => { const wag = step(f) * 5; piece(g, b2, C(38, 64, 25 + wag, 50, 3.6, 2.8)); piece(g, b2, E(23 + wag, 47, 5, 4.4)); });
+  if (root) { leg(52, 84, 48, 106, 7, b2); leg(112, 100, 122, 106, 7, b2); }
+  else { leg(58, 94, 58 + sw, 106, 7, b2); leg(110, 94, 110 - sw, 106, 7, b2); }
+  tilt(() => {
+    piece(g, b, E(76, 72, 44, 33));
+    piece(g, st, stripe(.8, 44, 100), .3); piece(g, st, stripe(.5, 38, 100), .3); piece(g, st, stripe(.16, 36, 100), .3);
+  });
+  if (root) { leg(64, 88, 60, 107, 8, b); leg(100, 102, 108, 107, 8, b); }
+  else { leg(68, 96, 68 - sw, 107, 8, b); leg(100, 96, 100 + sw, 107, 8, b); }
+  tilt(() => {
+    piece(g, b2, S([[126, 50], [134, 26], [146, 34], [148, 54]]));
+    piece(g, b, U(E(122, 70, 31, 29), E(145, 78, 16, 14)));
+    piece(g, b2, S([[102, 56], [102, 28], [117, 30], [126, 50]]));
+    piece(g, sn, E(158, 79, 8.5, 11.5), .6); ink(g, '#A8685C', U(E(156, 78, 1.7, 2.8), E(160.5, 78, 1.7, 2.8)));
+    if (root) shut(g, 133, 66, 5.2); else eye(g, 133, 64, 5.2);
+    cheek(g, 127, 82, 8, 5.5); smile(g, 143, 86, 4.5);
+  });
+  // the earth she turns over
+  if (root) { piece(g, '#7A5A3E', S([[142, 119], [146, 106], [158, 103], [170, 107], [176, 119], [176, 119], [142, 119]]), .6); piece(g, '#7A5A3E', E(172, 94, 3.6, 3.2), .6); }
+}
+
 /** canvas sizes (drawing units), how tall each card stands in the world (Anna is 1.2) and what each frame is */
 export const ANIMALS = {
   hond: { w: 194, h: 152, draw: drawHond, frames: 5, size: .8, does: ['stand', 'walk', 'walk', 'sit', 'roll'] },
@@ -227,4 +293,6 @@ export const ANIMALS = {
   egel: { w: 136, h: 90, draw: drawEgel, frames: 4, size: .45, does: ['stand', 'walk', 'walk', 'ball'] },
   uil: { w: 156, h: 138, draw: drawUil, frames: 3, size: .7, does: ['awake', 'asleep', 'hoot'] },
   eekhoorn: { w: 160, h: 124, draw: drawEekhoorn, frames: 4, size: .6, does: ['sit', 'run', 'run', 'acorn'] },
+  hert: { w: 200, h: 220, draw: drawHert, frames: 5, size: 1, does: ['stand', 'walk', 'walk', 'graze', 'alert'] },
+  zwijn: { w: 190, h: 128, draw: drawZwijn, frames: 4, size: .6, does: ['stand', 'walk', 'walk', 'root'] },
 };

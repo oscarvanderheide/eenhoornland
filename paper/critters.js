@@ -3,6 +3,7 @@
 // and a place in the set's own measure, and gives back { f, step, state } for the set to step and the tests to ask.
 import { THREE, paper } from './kit.js';
 import { ANIMALS } from './animals.js';
+import { THINGS } from './things.js';
 
 const near = (f, girl, r) => Math.hypot(f.x - girl.x, f.z - girl.z) < r;
 const look = (f, girl) => { f.face = girl.x < f.x ? -1 : 1; };
@@ -15,7 +16,7 @@ export function hen(S, x, y, z) {
   f.act = () => f.setFrame(sit > 0 && sit < 1.3 ? 3 : 0);
   return { f, state: () => ({ eggs, frame: f.frame }), step({ dt }) {
     if (near(f, girl, 2.2) && sit <= 0) look(f, girl);
-    if (sit > 0) { sit -= dt; if (sit <= 0 && eggs < 3) { eggs++; const e = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), paper('#fbf5ea')); e.scale.y = 1.25; e.castShadow = true; e.position.set(x - f.face * (.28 + eggs * .13), y + .08, z + .12); S.root.add(e); sfx.hop(); f.x += f.face * .3; } }
+    if (sit > 0) { sit -= dt; if (sit <= 0 && eggs < 3) { eggs++; const e = S.figure('ei' + eggs, THINGS.ei); e.x = f.x - f.face * (.3 + eggs * .16); e.z = f.z + .14; e.hopV = 1.8; sfx.hop(); f.x += f.face * .3; } }
   } };
 }
 /** a chick: a tap and it hops and peeps; it keeps close to where it lives */
@@ -63,8 +64,8 @@ export function owl(S, x, z, up) {
   return { f, state: () => ({ frame: f.frame }), step({ dt, eve: e }) { eve = e; if (woke > 0) woke -= dt; } };
 }
 /** the squirrel sits at the foot of the oak. A tap: up the trunk it runs, and comes down with an acorn */
-export function squirrel(S, x, z, high) {
-  const { sfx, girl } = S, f = make(S, 'eekhoorn', x, z), g = guest(S, f, 4.6); let t = -1, busy = false; f.face = -1;
+export function squirrel(S, x, z, high, name = 'eekhoorn') {
+  const { sfx, girl } = S, f = make(S, 'eekhoorn', x, z, name), g = guest(S, f, 4.6); let t = -1, busy = false; f.face = -1;
   f.onTap = () => { if (t >= 0) return; t = 0; sfx.peep(); };
   f.act = tick => f.setFrame(busy ? (f.walking ? 1 + (Math.floor(tick / 2) % 2) : 3) : t >= 0 && t < 1.7 ? 1 + (Math.floor(tick / 2) % 2) : t >= 1.7 ? 3 : 0);
   return { f, guest: g, state: () => ({ frame: f.frame, lift: f.lift || 0, busy: t >= 0, there: g.there() }), step({ dt }) {
@@ -106,5 +107,42 @@ export function butterfly(S, x, z, name, col = '#f4a6c4', col2 = '#f2c65c') {
     else { const k = Math.min(1, dt * (calm > 2.2 ? 2.4 : 1.1)); px += (tx - px) * k; pz += (tz - pz) * k; py += (ty - py) * k; py += Math.sin((time || 0) * 5 + x) * .004; }
     g.position.set(px - origin[0], base + py, pz - origin[1]);
     if (stepped) wings.scale.x = on ? (tick % 6 < 1 ? .5 : 1) : (tick % 2 ? .28 : 1);   // wings shut and open, in steps
+  } };
+}
+
+/** The fawn. It grazes, and it is shy: when she comes walking it lifts its head, and if she comes too close it trots off to
+ *  another spot. But if she stands still near it for a moment it comes to her by itself and nuzzles her; a tap then is a
+ *  hop and hearts. (Given flowers, it takes them, like anyone.) `spots`: where it grazes, in the set's own measure */
+export function deer(S, spots) {
+  const { girl, sfx } = S, f = make(S, 'hert', ...spots[0]), at = spots.map(p => S.at(p)); let spot = 0, mode = 'graze', calm = 0, nuzzles = 0, t = 0;
+  const go = (p, dt, sp) => { const dx = p[0] - f.x, dz = p[1] - f.z, d = Math.hypot(dx, dz); if (d < .25) { f.walking = false; return true; } const s = Math.min(d, sp * dt); f.walking = true; if (!S.move(f, dx / d * s, dz / d * s)) { f.x += dx / d * s; f.z += dz / d * s; } if (Math.abs(dx) > .1) f.face = Math.sign(dx); return false; };
+  f.onTap = () => { f.hopV = 2.6; sfx.peep(); if (mode === 'friend') S.confetti(f.x, f.y + .9, f.z, ['#f4a6c4', '#f8dde4', '#e98f8f'], 9, undefined, 2.2); };
+  f.act = tick => f.setFrame(f.walking ? 1 + (Math.floor(tick / 2) % 2) : mode === 'graze' ? 3 : mode === 'alert' ? 4 : 0);
+  return { f, state: () => ({ mode, spot, nuzzles, at: [f.x, f.z] }), step({ dt }) {
+    const d = Math.hypot(girl.x - f.x, girl.z - f.z); t += dt;
+    calm = !girl.walking && d < 5 ? calm + dt : 0;
+    if (mode === 'flee') { if (go(at[spot], dt, 4.2)) mode = 'graze'; return; }
+    if (mode === 'come' || mode === 'friend') {
+      if (d > 6) { mode = 'graze'; return; }
+      if (d > 1.0) go([girl.x - (girl.x < f.x ? -.8 : .8), girl.z + .1], dt, 1.6); else { f.walking = false; f.face = girl.x < f.x ? -1 : 1; if (mode === 'come') { mode = 'friend'; nuzzles++; f.hopV = 1.6; sfx.chime(); S.confetti(f.x, f.y + .9, f.z, ['#f4a6c4', '#f8dde4'], 7, undefined, 2); } }
+      return;
+    }
+    f.walking = false;
+    if (calm > 2.4 && d < 5) { mode = 'come'; return; }                                        // she waits quietly: it comes
+    if (girl.walking && d < 2.3) { spot = (spot + 1) % at.length; mode = 'flee'; sfx.flutter(); return; }   // she walks right up to it: off it trots
+    mode = d < 4.6 ? 'alert' : 'graze'; if (mode === 'alert') f.face = girl.x < f.x ? -1 : 1;
+  } };
+}
+/** A wild boar piglet and two smaller ones behind it, rooting in the ground. A tap on any of them: a squeal, and the whole
+ *  row trots a little circle and roots again; where the first one rooted, something small is turned up */
+export function boars(S, x, z) {
+  const { girl, sfx } = S, lead = make(S, 'zwijn', x, z, 'zwijn'), kids = [1, 2].map(i => { const k = S.figure('zwijn' + (i + 1), { ...ANIMALS.zwijn, size: ANIMALS.zwijn.size * .68 }); k.x = lead.x - i * .62; k.z = lead.z + i * .12; return k; });
+  const all = [lead, ...kids], home = [lead.x, lead.z]; let run = 0, a = 0, squeals = 0;
+  const squeal = () => { if (run > 0) return; run = 2.6; a = 0; squeals++; sfx.oink(); for (const p of all) p.hopV = 2.2; };
+  for (const p of all) { p.onTap = squeal; p.act = tick => p.setFrame(run > 0 ? 1 + (Math.floor(tick / 2) % 2) : Math.hypot(girl.x - p.x, girl.z - p.z) < 2.2 ? 0 : 3); }
+  return { f: lead, state: () => ({ run: run > 0, squeals, at: [lead.x, lead.z] }), step({ dt }) {
+    if (run > 0) { run -= dt; a += dt * 2.6; all.forEach((p, i) => { const b = a - i * .55, tx = home[0] + Math.sin(b) * 1.1 - i * .62 * Math.max(0, 1 - a), tz = home[1] + (1 - Math.cos(b)) * .7 + i * .12; p.face = Math.cos(b) >= 0 ? 1 : -1; p.x += (tx - p.x) * Math.min(1, dt * 6); p.z += (tz - p.z) * Math.min(1, dt * 6); });
+      if (run <= 0) { all.forEach((p, i) => { p.face = 1; }); S.confetti(lead.x + .3, lead.y + .15, lead.z, ['#8d6a48', '#a98f6f', '#7a5a3e'], 8, undefined, 1.4); } }
+    else all.forEach((p, i) => { const tx = home[0] - i * .62, tz = home[1] + i * .12; p.x += (tx - p.x) * Math.min(1, dt * 4); p.z += (tz - p.z) * Math.min(1, dt * 4); if (Math.hypot(girl.x - p.x, girl.z - p.z) < 2.2) p.face = girl.x < p.x ? -1 : 1; });
   } };
 }

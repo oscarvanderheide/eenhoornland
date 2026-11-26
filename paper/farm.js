@@ -7,6 +7,7 @@
 // When something is missing (no can, an empty can) the thing she needs gives a little hop: there is no wrong.
 // Also here: the scarecrow, with three birds that fly up when she comes close and settle again when she has gone.
 import { THREE, paper, card, slab, blob } from './kit.js';
+import { THINGS } from './things.js';
 
 const mesh = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 const box = (w, h, d, col) => mesh(new THREE.BoxGeometry(w, h, d), col), cyl = (r0, r1, h, col, n = 12) => mesh(new THREE.CylinderGeometry(r0, r1, h, n), col);
@@ -33,16 +34,12 @@ export function well(S, x, y, z) {
 
 export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters = [] }) {
   const { girl, sfx } = S;
-  /* ---------------- the watering can ---------------- */
-  const can = new THREE.Group(); can.userData.live = true; S.root.add(can);
-  { const body = cyl(.14, .16, .26, '#6fb0b8', 12); body.position.y = .13; can.add(body);
-    const spout = cyl(.03, .045, .3, '#6fb0b8', 6); spout.position.set(.22, .2, 0); spout.rotation.z = -.9; can.add(spout);
-    const rose = cyl(.06, .03, .05, '#5f9fae', 8); rose.position.set(.34, .3, 0); rose.rotation.z = -.9; can.add(rose);
-    const handle = mesh(new THREE.TorusGeometry(.1, .018, 5, 10, Math.PI), '#5f9fae'); handle.position.set(-.15, .16, 0); handle.rotation.z = Math.PI / 2; can.add(handle); }
-  const water = cyl(.115, .115, .015, '#8fd0e0', 12); water.position.y = .25; water.castShadow = false; water.visible = false; can.add(water);
-  const C = { at: S.at(canAt), held: false, full: 0, tilt: 0, hop: 0 };
+  /* ---------------- the watering can: a paper card like everything she holds (things.js: empty, full, pouring) ---------------- */
+  const can = S.figure('gieter', THINGS.gieter), carrot = S.figure('wortel', THINGS.wortel); carrot.g.visible = false;
+  const C = { at: S.at(canAt), held: false, full: 0, hop: 0 };
   const origin = S.at([0, 0]);
-  S.tap(can, () => { if (S.playing()) return; if (C.held) { C.held = false; girl.poseName = null; C.at = [girl.x + girl.face * .5, girl.z + .15]; sfx.thud(); } else S.walkThen(C.at[0] - .35, C.at[1] + .1, () => { C.held = true; sfx.hop(); }, .9); });
+  can.onTap = () => { if (S.playing()) return; if (C.held) { C.held = false; girl.poseName = null; C.at = [girl.x + girl.face * .5, girl.z + .15]; sfx.thud(); } else S.walkThen(C.at[0] - .35, C.at[1] + .1, () => { C.held = true; sfx.hop(); }, .9); };
+  can.act = () => can.setFrame(pour ? 2 : C.full ? 1 : 0);
 
   /* ---------------- the rows of carrots ---------------- */
   const rows = rowsAt.map(([rx, rz], n) => {
@@ -68,16 +65,15 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
     if (S.playing() || pour) return;
     if (row.stage === 2 && row.left > 0) { S.walkThen(row.at[0], row.at[1], () => pull(row), 1.1); return; }
     if (row.stage !== 0 || row.grow) return;
-    if (!C.held) { C.hop = 1; sfx.peep(); return; }                                  // no can: the can gives a hop
-    if (!C.full) { theWell.g.userData.hop = 1; C.hop = 1; sfx.peep(); return; }      // an empty can: she needs the well
+    if (!C.held) { can.hopV = 2.6; sfx.peep(); return; }                             // no can: the can gives a hop
+    if (!C.full) { can.hopV = 2.6; sfx.peep(); return; }                             // an empty can: it hops (she needs the well)
     S.walkThen(row.at[0], row.at[1], () => { pour = { row, t: 0 }; C.full--; sfx.swish(3); }, 1.1);
   }
   function pull(row) {
     if (row.left <= 0 || flying) return; row.left--; row.show(); pulled++; sfx.boing();
     const i = row.left, from = new THREE.Vector3(row.mid[0] + [-.8, -.4, 0, .4, .8][i], y + .1, row.mid[1]);
     const who = eaters.map(e => e()).filter(Boolean).sort((a, b) => Math.hypot(a.x - from.x, a.z - from.z) - Math.hypot(b.x - from.x, b.z - from.z))[0] || S.uni;
-    const m = mesh(new THREE.ConeGeometry(.08, .34, 8), '#e8893a'); m.rotation.x = Math.PI; const top = card(LEAF, .02, paper('#6f9057')); top.scale.setScalar(1.2); top.position.y = -.17; top.rotation.x = Math.PI; m.add(top);
-    m.position.copy(from).sub(new THREE.Vector3(origin[0], 0, origin[1])); S.root.add(m); flying = { m, from, who, t: 0 };
+    carrot.g.visible = true; flying = { from, who, t: 0 };
     if (row.left === 0) row.back = 45;
   }
   S.tap(theWell.g, () => { if (S.playing() || theWell.busy()) return; S.walkThen(theWell.at[0], theWell.at[1], () => { if (theWell.draw() && C.held) setTimeout(() => { C.full = 2; sfx.chime(); }, 600); }, 1.2); });
@@ -88,56 +84,40 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
     step({ dt, stepped }) {
       theWell.step(dt);
       // the can: in her hands, or where she left it
-      if (C.held && !S.playing()) { girl.poseName = 'hold'; const h = S.hand(); can.position.set(h.x - origin[0], h.y - .1, h.z - origin[1] + .04); can.rotation.y = girl.face > 0 ? 0 : Math.PI; }
-      else if (C.held) { can.position.set(girl.x - origin[0] + .5, y, girl.z - origin[1] + .3); can.rotation.y = 0; }   // she is on a toy: the can waits beside it
-      else { can.position.set(C.at[0] - origin[0], y + (C.hop > 0 ? Math.sin(C.hop * Math.PI) * .25 : 0), C.at[1] - origin[1]); can.rotation.y = 0; }
-      if (C.hop > 0) C.hop = Math.max(0, C.hop - dt * 2.4);
-      can.rotation.z = pour ? -.75 * Math.min(1, pour.t / .25) : 0; water.visible = C.full > 0;
-      if (pour) { pour.t += dt; if (stepped) S.confetti(can.position.x + origin[0] + girl.face * .35, y + .45, can.position.z + origin[1], ['#8fd0e0', '#f6efe2'], 2, undefined, .4); if (pour.t > 1.0) { pour.row.grow = .01; watered++; pour = null; } }
+      if (C.held && !S.playing()) { girl.poseName = 'hold'; const h = S.hand(); can.x = h.x + girl.face * .08; can.z = h.z + .04; can.floatY = can.y = h.y - .2; can.face = girl.face; }
+      else if (C.held) { can.x = girl.x + .5; can.z = girl.z + .3; can.floatY = undefined; can.face = 1; }   // she is on a toy: the can waits beside it
+      else { can.x = C.at[0]; can.z = C.at[1]; can.floatY = undefined; can.face = 1; }
+      if (pour) { pour.t += dt; if (stepped) S.confetti(can.x + girl.face * .3, can.y + .25, can.z, ['#8fd0e0', '#f6efe2'], 2, undefined, .4); if (pour.t > 1.0) { pour.row.grow = .01; watered++; pour = null; } }
       for (const r of rows) {
         if (r.grow) { r.grow += dt; const st = r.grow > 1.7 ? 2 : r.grow > .7 ? 1 : 0; if (st !== r.stage) { r.stage = st; r.left = 5; r.show(); sfx.hop(); } if (r.grow > 1.7) r.grow = 0; }
         if (r.back > 0) { r.back -= dt; if (r.back <= 0) { r.stage = 0; r.left = 5; r.show(); } }
       }
       if (flying) {   // a pulled carrot: up, over, and into a hungry mouth
-        flying.t += dt; const k = Math.min(1, flying.t / .7), w = flying.who, tx = w.x, tz = w.z, ty = (w.y || 0) + .35;
-        flying.m.position.set(flying.from.x + (tx - flying.from.x) * k - origin[0], flying.from.y + (ty - flying.from.y) * k + Math.sin(k * Math.PI) * 1.1, flying.from.z + (tz - flying.from.z) * k - origin[1]); flying.m.rotation.z = k * 6;
-        if (k >= 1) { S.root.remove(flying.m); w.hopV = 2.6; sfx.munch(); S.confetti(tx, ty + .3, tz, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); flying = null; }
+        flying.t += dt; const k = Math.min(1, flying.t / .7), w = flying.who, ty = (w.y || 0) + .2;
+        carrot.x = flying.from.x + (w.x - flying.from.x) * k; carrot.z = flying.from.z + (w.z - flying.from.z) * k + .05; carrot.floatY = carrot.y = flying.from.y + (ty - flying.from.y) * k + Math.sin(k * Math.PI) * 1.1; carrot.lean = k * 6;
+        if (k >= 1) { carrot.g.visible = false; w.hopV = 2.6; sfx.munch(); S.confetti(w.x, ty + .4, w.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); flying = null; }
       }
     },
   };
 }
 
-/** the scarecrow: a tap and it shakes its straw arms; its three birds fly up when she comes close, and settle again when she has gone */
+/** the scarecrow: a paper card on its post. A tap and it rocks from side to side; its three birds (paper too) fly up when
+ *  she comes close, and settle on its arms again when she has gone */
 export function scarecrow(S, x, y, z) {
-  const { girl, sfx } = S, [wx, wz] = S.at([x, z]);
-  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
-  const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
-  const post = cyl(.04, .05, 1.7, '#8d6a48', 6); post.position.y = .85; sway.add(post);
-  const arms = cyl(.035, .035, 1.5, '#8d6a48', 6); arms.rotation.z = Math.PI / 2; arms.position.y = 1.2; sway.add(arms);
-  const shirt = card([[-.42, 0], [.42, 0], [.3, .62], [.62, .62], [.62, .8], [-.62, .8], [-.62, .62], [-.3, .62]], .04, paper('#d9706c')); shirt.position.set(0, .62, .04); sway.add(shirt);
-  const head = mesh(new THREE.SphereGeometry(.2, 12, 10), '#ecd3a0'); head.position.y = 1.62; sway.add(head);
-  const hat = cyl(0, .26, .3, '#7a5a3e', 12); hat.position.y = 1.9; sway.add(hat); const brim = cyl(.34, .34, .03, '#7a5a3e', 14); brim.position.y = 1.76; sway.add(brim);
-  for (const s of [-1, 1]) { const straw = card(LEAF, .02, paper('#e6b748')); straw.scale.setScalar(1.1); straw.rotation.z = -s * Math.PI / 2; straw.position.set(s * .74, 1.2, 0); sway.add(straw); }
-  for (const s of [-1, 1]) { const eye = mesh(new THREE.SphereGeometry(.025, 6, 5), '#33262e'); eye.position.set(s * .07, 1.65, .19); sway.add(eye); }
-  S.glue(sway); S.solid({ x, z, r: .12 });
-  const birds = [-.5, .15, .55].map((bx, i) => {
-    const b = new THREE.Group(); b.userData.live = true; g.add(b);
-    const body = mesh(new THREE.SphereGeometry(.07, 8, 6), ['#4b3d3d', '#6f625c', '#4b3d3d'][i]); body.scale.set(1.5, 1, 1); b.add(body);
-    const beak = cyl(0, .025, .07, '#e2803e', 5); beak.rotation.z = -Math.PI / 2; beak.position.x = .13; b.add(beak);
-    const wings = [-1, 1].map(s => { const w = card([[0, 0], [.2, .04], [.14, .14], [0, .08]], .01, paper('#33262e', { side: THREE.DoubleSide })); w.position.set(-.02, .03, s * .03); w.rotation.x = s * .3; b.add(w); return w; });
-    return { b, wings, perch: [bx, 1.29, 0], a: i * 2.1, r: 1.3 + i * .35, h: 2.3 + i * .25 };
-  });
+  const { girl, sfx } = S, [wx, wz] = S.at([x, z]), f = S.figure('vogelverschrikker', THINGS.vogelverschrikker);
+  f.x = wx; f.z = wz; S.solid({ x, z, r: .12 });
   let wob = 0, up = 0, calm = 0, flights = 0;
-  S.tap(g, () => { wob = 1; sfx.rustle(); });
-  return { state: () => ({ up: up > .5, flights, wob }), step({ dt, tick, stepped }) {
+  f.onTap = () => { wob = 1.6; sfx.rustle(); };
+  f.act = tick => f.setFrame(wob > 0 ? 1 + (Math.floor(tick / 2) % 2) : 0);
+  const arm = f.H * .6, birds = [-.55, .2, .6].map((bx, i) => { const b = S.figure('vogel' + (i + 1), THINGS.vogel); b.act = tick => b.setFrame(up > .15 ? 1 + (tick % 2) : 0); return { b, bx, a: i * 2.1, r: 1.3 + i * .35, h: 2.4 + i * .25 }; });
+  return { f, state: () => ({ up: up > .5, flights, wob: wob > 0 }), step({ dt }) {
     const d = Math.hypot(girl.x - wx, girl.z - wz);
     if (d < 2.8) { if (up === 0) { flights++; sfx.flutter(); } calm = 3.5; } else calm = Math.max(0, calm - dt);
     up += ((calm > 0 ? 1 : 0) - up) * Math.min(1, dt * 2.2); if (up < .01) up = 0;
+    if (wob > 0) wob -= dt;
     for (const o of birds) {
-      o.a += dt * (1.4 + o.r * .2); const fx = Math.cos(o.a) * o.r, fz = Math.sin(o.a) * o.r * .6;
-      o.b.position.set(o.perch[0] + (fx - o.perch[0]) * up, o.perch[1] + (o.h - o.perch[1]) * up + (up > 0 ? Math.sin(o.a * 3) * .08 * up : 0), o.perch[2] + fz * up); o.b.rotation.y = up > .1 ? -o.a - Math.PI / 2 : 0;
-      if (stepped) for (const [i, w] of o.wings.entries()) w.rotation.x = (i ? 1 : -1) * (up > .1 ? (tick % 2 ? 1.1 : -.2) : .3);
+      o.a += dt * (1.4 + o.r * .2); const fx = Math.cos(o.a) * o.r, fz = Math.sin(o.a) * o.r * .6, b = o.b;
+      b.x = wx + o.bx + (fx - o.bx) * up; b.z = wz + .06 + fz * up; b.floatY = b.y = y + arm + (o.h - arm) * up + (up > 0 ? Math.sin(o.a * 3) * .08 * up : 0); if (up > .15) b.face = -Math.sin(o.a) > 0 ? 1 : -1;
     }
-    if (stepped) { if (wob > .02) { wob *= .8; sway.rotation.z = Math.sin(tick * 2.1) * .16 * wob; } else sway.rotation.z = 0; }
   } };
 }

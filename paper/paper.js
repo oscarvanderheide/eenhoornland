@@ -428,28 +428,25 @@ function stepWind(dt, stepped) {
   if (gust.t > 6.4) { gust.t = -1; gust.g.visible = false; }
 }
 
-/* ---------------- the island's own sound: slow and calm ----------------
-   A few soft notes, far apart, wandering up and down five notes that always sound well together, over a low hum that
-   comes and goes like breathing. Sitting down to rest (a bench, the picnic cloth) the tune comes closer: a second voice
-   joins and the notes come a little sooner. In the evening it is lower and slower; indoors it is only the hum. */
-const tune = { t: 3, i: 2, hum: null, rest: 0 };
-const NOTES = [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3, 659.3];
-function soft(freq, dur, vol) {
-  const a = audio(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain();
-  o.type = 'sine'; o.frequency.value = freq; o2.type = 'triangle'; o2.frequency.value = freq * 2.001; const g2 = a.createGain(); g2.gain.value = .18;
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .09); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(a.destination); o.start(t); o2.start(t); o.stop(t + dur + .1); o2.stop(t + dur + .1);
-}
+/* ---------------- the island's own sound: one long, soft chord that slowly changes ----------------
+   Not a tune: Oscar found single chiming notes distracting ("the chimes make my brain think I need to pay attention to
+   something ... needs to be more continuous"). So: four soft voices holding a chord, each swelling and fading on its own
+   slow breath, the chord sliding to the next every twenty seconds or so. Nothing ever starts with a click or a pluck.
+   Resting on a bench or the picnic cloth it opens up a little; in the evening it is darker; indoors it is quieter. */
+const tune = { v: null, out: null, lp: null, chord: 0, t: 0, rest: 0 };
+const CHORDS = [[130.8, 196, 261.6, 329.6], [146.8, 220, 261.6, 349.2], [110, 164.8, 261.6, 329.6], [98, 196, 246.9, 293.7], [130.8, 196, 293.7, 392]];
 function stepTune(dt) {
   if (!ac || ac.state !== 'running') return;
-  if (!tune.hum) { const g = ac.createGain(); g.gain.value = 0; g.connect(ac.destination); for (const f of [130.8, 196.2]) { const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(); } tune.hum = g; }
-  const resting = playing && playing.rest ? 1 : 0, indoors = set.seaAsk ? 0 : 1; tune.rest += (resting - tune.rest) * Math.min(1, dt * 1.5);
-  tune.hum.gain.setTargetAtTime((.012 + .01 * tune.rest) * (.75 + .25 * Math.sin(time * .5)), ac.currentTime, .4);
-  tune.t -= dt; if (tune.t > 0 || indoors) return;
-  tune.i = clamp(tune.i + [-2, -1, -1, 1, 1, 2][Math.floor(Math.random() * 6)], 0, NOTES.length - 1);
-  const low = eve > .5 ? .5 : 1; soft(NOTES[tune.i] * low, 3.2, .026 + .012 * tune.rest);
-  if (tune.rest > .5 && Math.random() < .7) setTimeout(() => soft(NOTES[Math.min(NOTES.length - 1, tune.i + 2)] * low, 2.8, .018), 260);   // resting: a second voice answers
-  tune.t = (tune.rest > .5 ? 1.5 : 2.8 + Math.random() * 2.4) * (eve > .5 ? 1.35 : 1);
+  if (!tune.v) {
+    tune.lp = ac.createBiquadFilter(); tune.lp.type = 'lowpass'; tune.lp.frequency.value = 700; tune.out = ac.createGain(); tune.out.gain.value = 0; tune.lp.connect(tune.out); tune.out.connect(ac.destination);
+    tune.v = CHORDS[0].map((f, i) => { const g = ac.createGain(); g.gain.value = 0; g.connect(tune.lp); const os = [0, 4].map((cents, k) => { const o = ac.createOscillator(); o.type = k ? 'triangle' : 'sine'; o.frequency.value = f; o.detune.value = cents; const og = ac.createGain(); og.gain.value = k ? .25 : 1; o.connect(og); og.connect(g); o.start(); return o; }); return { g, os, rate: .11 + i * .037, ph: i * 1.7 }; });
+  }
+  const now = ac.currentTime, resting = playing && playing.rest ? 1 : 0, indoors = set.seaAsk ? 0 : 1; tune.rest += (resting - tune.rest) * Math.min(1, dt * .8);
+  // the chord slides over to the next, slowly
+  tune.t -= dt; if (tune.t <= 0) { tune.t = 18 + Math.random() * 8; tune.chord = (tune.chord + 1 + Math.floor(Math.random() * 2)) % CHORDS.length; tune.v.forEach((v, i) => v.os.forEach(o => o.frequency.setTargetAtTime(CHORDS[tune.chord][i], now, 3.5))); }
+  // each voice on its own slow breath
+  tune.v.forEach(v => v.g.gain.setTargetAtTime(.5 + .5 * Math.sin(time * v.rate + v.ph), now, .8));
+  tune.out.gain.setTargetAtTime((.022 + .008 * tune.rest) * (indoors ? .55 : 1), now, 1.2); tune.lp.frequency.setTargetAtTime((eve > .5 ? 480 : 720) + 380 * tune.rest, now, 1.5);
 }
 
 /* the water: a soft wash of waves that grows as she comes near the sea or the pond, and is gone indoors */
@@ -469,7 +466,7 @@ function stepWater(dt) {
   // how near water is: looking round her at three distances for places with no floor (the sea, the pond)
   let n = 0; if (set.seaAsk) for (const r of [1.3, 2.6, 4]) for (let a = 0; a < 8; a++) if (heightAt(girl.x + Math.cos(a * .785) * r, girl.z + Math.sin(a * .785) * r) === null) n += r < 2 ? 2 : r < 3 ? 1.2 : .7;
   const low = (heightAt(girl.x, girl.z) ?? 0) < -.05;   // only down on the sand, or on planks over the water: up on the grass the waves are out of earshot (Oscar's wish)
-  wash.near = low ? Math.min(1, n / 9) : 0; wash.g.gain.setTargetAtTime(wash.near * .17, ac.currentTime, .6); wash.lp.frequency.setTargetAtTime(500 + wash.near * 500, ac.currentTime, .5);
+  wash.near = low ? Math.min(1, n / 9) : 0; wash.g.gain.setTargetAtTime(wash.near * .06, ac.currentTime, .8); wash.lp.frequency.setTargetAtTime(500 + wash.near * 500, ac.currentTime, .5);
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */

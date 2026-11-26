@@ -23,7 +23,8 @@ Read this before any work under `paper/`. Then `paper/STYLE.md` if you draw a fi
 | Between islands | One world. A bridge is a real bridge and nothing happens on it. He found a sheet of paper sliding across "really intrusive" |
 | A tap | The first island's way is the model for everything that answers a tap: a hop or a wobble in stop-motion steps, a few bits of confetti, one soft sound, always the same. "So much better than what we had in the pixel art version" |
 | More to do | "Overall there could be more things to interact with in the world." Each should be a small real action, not a menu |
-| Calm | A slow, calm tune belongs to the island. Waves are heard only on the sand by the water. Small touches of sound matter to him |
+| Calm | The island has a sound of its own, and it must be **continuous**: one long soft chord that slowly changes, never single notes ("the chimes make my brain think I need to pay attention to something"). Waves are heard only on the sand by the water, and softly. Small touches of sound matter to him |
+| Where to look for ideas | **Lumino City and Pok Pok** ("it has nice interactions"): handmade mechanisms to work with your fingers. Cranks, levers, wheels and gears, a lift on a rope, shutters and doors with somebody behind them, bells, switches, a marble run, a seesaw, blocks to stack. Each is one clear cause and effect, with its own sound |
 | Nothing by itself | The toy windmills turn only when tapped ("don't auto-blow"). The fountain runs and gusts of wind cross, because he asked for those; when adding a new thing, it waits for her unless he said otherwise |
 | Flowers | She picks one at a time and holds the very flower she picked. Gardens are flowers only, laid out as if somebody planted them; no bare brown soil |
 | Night | Lanterns come on by themselves; she can also light and put out each one |
