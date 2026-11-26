@@ -410,6 +410,12 @@ const sfx = {
   note(f) { tone(f, 1.7, 'sine', .07); tone(f * 2, 1.1, 'sine', .018); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
+  /** somebody says hello: two soft voiced notes */
+  hello() { tone(294, .26, 'triangle', .045, 1.18, 5); setTimeout(() => tone(370, .36, 'triangle', .045, .92, 5), 190); },
+  /** the accordion: a few long, soft, breathing notes out of the island's own chord (never plucked: every note swells and fades) */
+  squeeze() { const a = audio(); if (!a) return; const ch = CHORDS[tune.chord] || CHORDS[0], t0 = a.currentTime + .05, lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.connect(a.destination);
+    [2, 3, 1, 2, 3].forEach((n, i) => { const f = ch[n] * 2, t = t0 + i * .95, g = a.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.04, t + .25); g.gain.setValueAtTime(.04, t + .8); g.gain.linearRampToValueAtTime(0, t + 1.4); g.connect(lp);
+      for (const [type, det, v] of [['sawtooth', -6, .5], ['square', 7, .22]]) { const o = a.createOscillator(), og = a.createGain(); o.type = type; o.frequency.value = f; o.detune.value = det; og.gain.value = v; o.connect(og); og.connect(g); o.start(t); o.stop(t + 1.45); } }); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
 

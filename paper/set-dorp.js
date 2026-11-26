@@ -11,6 +11,7 @@ import { swing, slide } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
 import { farm, well, scarecrow } from './farm.js';
+import { grandma, gardener, fisher, player } from './folk.js';
 import { dorpLand, bosLand, weiLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile, spread out by SPREAD) */
@@ -98,7 +99,7 @@ export default {
     const beds = [-1, 1].map(s => flowerBed(S, .3 * K + s * 3.7, H_HIGH, -5.5 * K + .15, 320 + s, bunch, 3.6, 2.0, s < 0 ? ['#e98f8f', '#f2c65c'] : ['#bba6ea', '#f4a6c4']));
     // toy windmills (his idea too): one at the outer corner of each flower bed, one by the unicorns' gate, the playground, the pond. A tap, or running past, spins them
     const mills = [pinwheel(S, .3 * K - 5.75, H_HIGH, -5.5 * K + 1.15), pinwheel(S, .3 * K + 5.75, H_HIGH, -5.5 * K + 1.15, '#9ed9cf', '#f6efe2'), pinwheel(S, 3.4 * K - 2.3, H_GRASS, 4.3 * K - 2.5, '#bba6ea', '#f2c65c', .65),
-      pinwheel(S, -5.3 * K + 3.9, H_GRASS, .3 * K + 2.9, '#e98f8f', '#f6efe2'), pinwheel(S, pcx + 2.9, H_GRASS, pcz + 2.2, '#9ed9cf', '#f4a6c4')];
+      pinwheel(S, -5.3 * K + 3.9, H_GRASS, .3 * K + 2.9, '#e98f8f', '#f6efe2'), pinwheel(S, pcx + 3.3, H_GRASS, pcz + 2.6, '#9ed9cf', '#f4a6c4')];
     for (const dx of [-1.3, -.75, .75, 1.3]) { const [x, z] = [.3 * K + dx, -5.5 * K + 1.6]; put(cyl(.11, .2, 'dark'), x, H_HIGH + .1, z); S.solid({ x, z, r: .1 }); }   // the flower pots
     { const [x, z] = [.3 * K - 1.9, -5.5 * K + 1.7]; put(cyl(.09, .22, 'thing'), x, H_HIGH + .11, z); }                                                                    // the watering can
 
@@ -106,9 +107,9 @@ export default {
     const theFountain = fountain(S, SQ[0], H_GRASS + .015, SQ[1]);
     { const [x, z] = T(37, 40.5); put(box(1.2, .8, .55), x, .4, z); put(box(1.4, .06, .8, 'roof'), x, 1.35, z); for (const sx of [-.62, .62]) put(cyl(.03, 1.35, 'dark', 6), x + sx, .68, z + .3); S.wall(x, z, .72, .4); }
     // two benches looking at the pond, one at the square
-    const benches = [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]].map(([x, z]) => bench(S, x, H_GRASS, z));
+    const benches = [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]].map(([x, z], i) => bench(S, x, H_GRASS, z, i === 2 ? -.3 : 0));
     // lanterns, each beside a path: a tap lights one, a tap puts it out (Oscar: "let me turn them on")
-    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 3.4, pcz + 1.2]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
+    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 4.4, pcz + 1.7]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const SW = [-6.4 * K, -.4 * K], SL = [-4.9 * K, 1.05 * K];
@@ -141,6 +142,9 @@ export default {
     { const [x, z] = T(42.5, 43.5); for (const sx of [-.28, .28]) { const w = put(cyl(.2, .04, 'dark', 14), x + sx, .2, z); w.rotation.x = Math.PI / 2; } put(box(.6, .05, .05), x, .34, z); }
     // the brambles that shut the bridge to the meadow: watered, they bloom into roses and curl aside (props.js). The fountain fills the can as well as the well
     const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, theFarm);
+    // the people of the village (folk.js): grandma knitting on the square's bench, the accordion player on the square, the gardener asleep
+    // in his wheelbarrow by the carrots, the fisherman at the pond
+    const folk = { oma: grandma(S, SQ[0] + 2.3, SQ[1] - 3.0, benches[2]), muzikant: player(S, SQ[0] - 2.35, SQ[1] - 1.25), tuinman: gardener(S, F[0] - 4.4, F[1] - 2.9, theFarm), visser: fisher(S, pcx + 2.62, pcz - .4, -1) };
     theFountain.tapped = () => { if (theFarm.holding() && !theFarm.full()) S.walkThen(SQ[0], SQ[1] + 1.45, () => theFarm.fill(), 1.6); };
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
@@ -170,8 +174,8 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); },
-      toys: { ...live, ...flies, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); },
+      toys: { ...live, ...flies, ...folk, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
@@ -186,7 +190,7 @@ export default {
         { name: 'boerderij', zone: [F[0] - 9.6, F[1] - 3.7, F[0] + 9.6, F[1] + 4.8], span: 12.5, rise: .34 },              // the farm in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
-      spots: { swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
+      spots: { bank: [SQ[0] + 1.9, .42, SQ[1] - 2.87], swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
       places: { start: [sx, sz], fountain: [SQ[0], SQ[1] + 2.0], stall: T(37, 41.8), swing: [SW[0], SW[1] + .95], slide: [SL[0] - .4, SL[1] + .15], pond: [pcx, pcz + 2.6], bench: [SQ[0] + 2.3, SQ[1] - 2.2], pen: [3.4 * K + .4, 4.3 * K], arch: T(44.5, 46.6), pole: T(43.5, 35.5), mud: [F[0] + 5.4, F[1] - .9], well: [F[0] + .3, F[1] - .8], rows: [F[0] - 4.6, F[1] - .35], crow: [F[0] - 7.6, F[1] + 1.0], north: [6 * K, NORTH.z1 - 3.5], east: [EAST.x0 + 1.9, 2.4 * K], thorns: [EAST.x0 + 2.5, 2.4 * K] },
     };

@@ -219,4 +219,32 @@ export default async function (t) {
     await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); ok(await until(`__p.toy('ballon').mode === null`, 9), 'a push: it comes down and she hops out');
     await t.sleep(2500); const g = (await t.ev('__p.info()')); ok(g.h !== null && Math.abs(g.girl[2]) < .2, 'she stands on the grass again'); await t.shot('tmp-shots/y-balloon-down-land.png');
   }
+
+  /* ---------------- the people (folk.js): each answers a tap in a way of their own ---------------- */
+  if (!only || only === 'people') {
+    await open('?set=dorp', LAND); await t.sleep(1200); await t.ev('__p.open()');
+    const toy = n => t.ev(`__p.toy('${n}')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.6, dz = .9, wait = 2400) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(wait); };
+    // grandma
+    await by('oma'); ok((await toy('oma')).frame < 2, 'grandma knits while she is near'); await t.ev(`__p.tap('oma')`); await t.sleep(400); ok((await toy('oma')).frame === 2 && (await toy('oma')).waves === 1, 'a tap: she waves'); await t.shot('tmp-shots/y-oma-land.png');
+    await t.sleep(1800); await tapOn('bank'); ok(await until(`__p.toy('bank').mode === 'sit'`, 6), 'she sits down on the free half of the bench'); await t.sleep(500); ok((await toy('oma')).waves === 2, 'and grandma waves again'); await t.shot('tmp-shots/y-oma-sit-land.png');
+    await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); await t.sleep(700);
+    // the accordion player
+    await by('muzikant', 1.7, 1.0); ok(!(await toy('muzikant')).playing, 'the accordion player is silent by himself'); await t.ev(`__p.tap('muzikant')`); await t.sleep(1700); const m = await toy('muzikant'); ok(m.playing && m.notes > 0, 'a tap: he plays, and notes float up'); await t.shot('tmp-shots/y-muzikant-land.png');
+    ok(await until(`!__p.toy('muzikant').playing`, 6), 'and stops again');
+    // the gardener
+    await by('tuinman', 1.8, 1.0); await t.shot('tmp-shots/y-tuinman-land.png'); await t.ev(`__p.tap('tuinman')`); await t.sleep(350); ok((await toy('tuinman')).frame === 2, 'a tap on the sleeping gardener: up he shoots'); await t.shot('tmp-shots/y-tuinman-up-land.png');
+    await t.sleep(1100); ok((await toy('tuinman')).frame === 3, 'then he waves, sleepily'); ok(await until(`__p.toy('tuinman').frame < 2`, 5), 'and sleeps on');
+    // the fisherman
+    await by('visser', 1.6, 1.3); await t.ev(`__p.tap('visser')`); await t.sleep(1300); ok((await toy('visser')).mode === 'fish', 'a tap on the fisherman: a bite, and a fish'); await t.shot('tmp-shots/y-visser-land.png');
+    await until(`!__p.toy('visser').mode`, 5); await t.ev(`__p.tap('visser')`); await until(`!__p.toy('visser').mode && __p.toy('visser').caught === 2`, 6); await t.ev(`__p.tap('visser')`); await t.sleep(1300); ok((await toy('visser')).mode === 'boot', 'the third time: a boot'); await t.shot('tmp-shots/y-visser-boot-land.png');
+    // the baker
+    await by('bakker', 2.0, 1.2); await t.shot('tmp-shots/y-bakker-land.png'); await t.ev(`__p.tap('bakker')`); ok(await until(`__p.toy('bakker').held`, 7), 'a tap on the baker: she walks over and gets a bun'); await t.sleep(600); await t.shot('tmp-shots/y-bakker-bun-land.png');
+    await t.sleep(900); await t.ev(`__p.tap('unicorn')`); await t.sleep(300); const b = await toy('bakker'); ok(!b.held && b.given === 1, 'a tap on the unicorn: it gets the bun');
+    // the painter
+    await by('schilder', -1.2, 1.3); await t.shot('tmp-shots/y-schilder-land.png');
+    for (let k = 1; k <= 3; k++) { await t.ev(`__p.tap('schilder')`); await until(`__p.toy('schilder').pic === ${k}`, 4); await t.sleep(300); }
+    const pa = await toy('schilder'); ok(pa.pic === 3 && pa.done === 1 && pa.frame === 3, 'three taps on the painter: strokes, a rainbow, a unicorn, and she is proud'); await t.shot('tmp-shots/y-schilder-done-land.png');
+    await t.sleep(2600); await t.ev(`__p.tap('ezel')`); await t.sleep(300); ok((await toy('schilder')).pic === 0, 'the next tap: a clean sheet');
+    const r = await t.ev('__p.reach()'), lost = Object.entries(r.places).filter(([, v]) => !v).map(([n]) => n); ok(!lost.length, 'every named place can still be walked to' + (lost.length ? ' NOT: ' + lost.join(', ') : ''));
+  }
 }

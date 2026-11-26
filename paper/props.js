@@ -125,7 +125,7 @@ export function fountain(S, x, y, z) {
   return api;
 }
 /** a bench of painted wood. A tap: she walks round to the front, hops on and sits; any push on the stick, or a touch, and she is up */
-export function bench(S, x, y, z) {
+export function bench(S, x, y, z, seat = 0) {   // (`seat`: where on it she sits, off the middle: somebody may have the other half)
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   const add = (w, h, d, col, px, py, pz, rx = 0) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); m.rotation.x = rx; g.add(m); return m; };
   for (const k of [-1, 0, 1]) add(1.1, .04, .12, '#d9a066', 0, .4, k * .13);                       // the seat's slats
@@ -135,12 +135,12 @@ export function bench(S, x, y, z) {
   const { girl, sfx } = S, [wx, wz] = S.at([x, z]); let mode = null, t = 0, sits = 0;
   const toy = { rest: true, look: [wx, wz + .6], step(dt, inp) {
     t += dt;
-    if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx; girl.z = wz + .1 + (1 - k) * .7; girl.lift = .44 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1; if (k >= 1) { mode = 'sit'; sits++; sfx.hop(); } return; }
+    if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx + seat; girl.z = wz + .1 + (1 - k) * .7; girl.lift = .44 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1; if (k >= 1) { mode = 'sit'; sits++; sfx.hop(); } return; }
     if (mode === 'sit') { girl.lift = .44; girl.poseName = 'sit'; if (inp.act || inp.x) { mode = 'off'; t = 0; } return; }
     const k = Math.min(1, t / .28); girl.z = wz + .1 + k * .75; girl.lift = .44 * (1 - k) + Math.sin(k * Math.PI) * .22; girl.poseName = null; if (k >= 1) { girl.lift = 0; mode = null; S.stopPlay(); }
   } };
   const sit = () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); };
-  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx, wz + .8, sit, 1.1); });
+  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx + seat, wz + .8, sit, 1.1); });
   let bump = 0;
   return { toy, state: () => ({ mode, sits }),
     /** walking into the bench from the front sits her down as well: one rule for the finger and the stick */
