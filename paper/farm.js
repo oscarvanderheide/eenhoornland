@@ -38,7 +38,7 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
   const can = S.figure('gieter', THINGS.gieter), carrot = S.figure('wortel', THINGS.wortel); carrot.g.visible = false;
   const C = { at: S.at(canAt), held: false, full: 0, hop: 0 };
   const origin = S.at([0, 0]);
-  can.onTap = () => { if (S.playing()) return; if (C.held) { C.held = false; girl.poseName = null; C.at = [girl.x + girl.face * .5, girl.z + .15]; sfx.thud(); } else S.walkThen(C.at[0] - .35, C.at[1] + .1, () => { C.held = true; sfx.hop(); }, .9); };
+  can.onTap = () => { if (S.playing()) return; const down = () => { C.held = false; girl.poseName = null; C.at = [girl.x + girl.face * .5, girl.z + .15]; }; if (C.held) { down(); S.hands.free(C); sfx.thud(); } else S.walkThen(C.at[0] - .35, C.at[1] + .1, () => { S.hands.take(C, down); C.held = true; sfx.hop(); }, .9); };
   can.act = () => can.setFrame(pour ? 2 : C.full ? 1 : 0);
 
   /* ---------------- the rows of carrots ---------------- */

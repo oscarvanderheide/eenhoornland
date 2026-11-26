@@ -17,10 +17,14 @@ export function bouquet(S) {
   const { girl, sfx } = S, origin = S.at([0, 0]); let hand = null, hair = null, picks = 0, gifts = 0;
   const make = (o, big) => { const b = bloom(o.kind, rnd(o.seed), o.big * big, o.col); b.userData.live = true; S.root.add(b); S.glue(b); return b; };
   const drop = b => { if (!b) return; S.root.remove(b.g); b.g.traverse(q => { if (q.geometry) q.geometry.dispose(); }); };
-  S.offer(who => { if (!hand) return false; drop(hand); hand = null; gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
+  const me = {}, toHair = o => { drop(hair); hair = { o, g: make(o, .62) }; };
+  S.offer(who => { if (!hand) return false; drop(hand); hand = null; S.hands.free(me); gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
   return {
     /** she picks the flower `o` ({ kind, seed, big, col }) that stood at x, y, z */
-    add(x, y, z, o) { if (hand) { drop(hair); hair = { ...hand.o, o: hand.o, g: make(hand.o, .62) }; drop(hand); } hand = { o, g: make(o, 1.15) }; picks++; sfx.hop(); S.confetti(x, y + .45, z, ['#f4a6c4', '#f2c65c', '#f2efe6'], 6, undefined, 1.6); },
+    add(x, y, z, o) {
+      if (S.hands.busy(me)) toHair(o);   // her hands are full (the can, the kite): the flower goes straight into her hair
+      else { if (hand) { toHair(hand.o); drop(hand); } hand = { o, g: make(o, 1.15) }; S.hands.take(me, () => { if (hand) { toHair(hand.o); drop(hand); hand = null; girl.poseName = null; } }); }
+      picks++; sfx.hop(); S.confetti(x, y + .45, z, ['#f4a6c4', '#f2c65c', '#f2efe6'], 6, undefined, 1.6); },
     state: () => ({ held: hand ? 1 : 0, kind: hand ? hand.o.kind : null, hair: hair ? hair.o.kind : null, picks, gifts }),
     step() {
       if (hand) { hand.g.visible = !S.playing(); if (hand.g.visible) { girl.poseName = 'hold'; const h = S.hand(); hand.g.position.set(h.x - origin[0] + girl.face * .05, h.y - hand.g.userData.h * .45, h.z - origin[1] + .05); hand.g.rotation.z = -girl.face * .22; } }   // her hands round the middle of the stem, the flower leaning forward a little
@@ -316,7 +320,7 @@ export function bramble(S, x, y, z, span, can) {
     if (can.holding() && can.full()) { const side = girl.x < wx ? -1 : 1; S.walkThen(wx + side * 1.05, wz, () => { if (at === 0 && can.pourThen(() => { set(1); t = 0; sfx.hop(); })) girl.face = -side; }, 1.2); return; }
     wob = 1; show = 2.4; wish.hopV = 2.2; sfx.rustle(); can.hint();   // dry and shut: it shakes, and shows what it wants
   });
-  return { state: () => ({ stage: at, open: at === 2, wishing: show > 0 }), open() { set(2); wall[2] = 0; }, step({ dt, tick, stepped }) {
+  return { state: () => ({ stage: at, open: at === 2, wishing: show > 0 }), openGate() { set(2); wall[2] = 0; }, step({ dt, tick, stepped }) {
     if (at === 1) { t += dt; if (t > 1.0) { set(2); wall[2] = 0; sfx.chime(); S.confetti(wx, y + 1.0, wz, ['#e98f8f', '#f8dde4', '#d9706c', '#86a466'], 22, undefined, 2.6); } }   // green, a breath, and then roses, and the way is open
     if (show > 0) { show -= dt; wish.g.visible = show > 0; wish.floatY = wish.y = y + 1.75; }
     if (stepped) { if (wob > .03) { wob *= .78; g.rotation.x = Math.sin(tick * 2.2) * .07 * wob; } else g.rotation.x = 0; }

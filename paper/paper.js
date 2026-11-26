@@ -162,6 +162,7 @@ function pine(x, z, y, h, col) {
  *  round it (S.sea: the outlines its rows are cut around, how far it reaches); the stage makes one sea of all of that */
 const seaRoot = new THREE.Group(); seaRoot.name = 'sea'; scene.add(seaRoot);
 let seaRows = [], seaBaked = null;
+const view = new THREE.Frustum(), viewM = new THREE.Matrix4();
 function buildSea() {
   seaRoot.traverse(o => { if (o.geometry) o.geometry.dispose(); }); seaRoot.clear(); seaRows = []; seaBaked = null;
   const asks = sets.map(s => s.seaAsk).filter(Boolean); if (!asks.length) return;
@@ -213,6 +214,7 @@ function buildSet(def) {
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
     pushing: () => push,   // which way she is pushing right now, in the world's measure ([0, 0]: not at all)
+    hands,   // one thing in her hands at a time (see `hands`)
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
@@ -222,7 +224,7 @@ function buildSet(def) {
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
   s.places = Object.fromEntries(Object.entries(s.places || {}).map(([n, q]) => [n, W(q)])); s.spots = Object.fromEntries(Object.entries(s.spots).map(([n, [x, y, z]]) => [n, [x + ox, y, z + oz]]));
-  { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const f of s.floors) for (const [x, z] of f.box ? [[f.box[0], f.box[1]], [f.box[2], f.box[3]]] : f.pts) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); } s.box = [x0 - 1, z0 - 1, x1 + 1, z1 + 1]; }   // where its floors lie: a far set is passed over quickly
+  { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const f of s.floors) for (const [x, z] of f.box ? [[f.box[0], f.box[1]], [f.box[2], f.box[3]]] : f.pts) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); } s.box = [x0 - 1, z0 - 1, x1 + 1, z1 + 1]; s.box3 = new THREE.Box3(new THREE.Vector3(x0 - 4, -3, z0 - 4), new THREE.Vector3(x1 + 4, 9, z1 + 4)); }   // where its floors lie: a far set is passed over quickly
   s.shots = (s.shots || [SHOT0]).map(q => ({ ...SHOT_DEF, ...q, ax: (q.ax ?? SHOT_DEF.ax) + ox, az: (q.az ?? SHOT_DEF.az) + oz, ...(q.zone ? { zone: [q.zone[0] + ox, q.zone[1] + oz, q.zone[2] + ox, q.zone[3] + oz] } : {}) }));
   root.traverse(o => { if (o.isMesh && o.geometry.type === 'ExtrudeGeometry' && !o.userData.tap) s.ground.push(o); });   // card she can be sent to with a tap
   bake(root); s.farTrees = glueTrees(s); into = null; s.ms = performance.now() - t0;
@@ -257,10 +259,11 @@ let pinned = false;   // (a test may hold her on a set she does not stand on, to
 function standOn(s) { set = s; for (const q of sets) if (q.farTrees) { q.farTrees.visible = q !== s; for (const t of q.trees) t.g.visible = q === s; } }
 /** throw away what exists and build the set called `name` with its neighbours; she starts on `name` */
 /** every gate of the world stands open (brambles in bloom): for a start somewhere beyond them, and for the tests */
-function openGates() { for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.open) q.open(); }
+function openGates() { for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.openGate) q.openGate(); }
 function loadWorld(name) {
   const t0 = performance.now();
   for (const s of sets) dropSet(s);
+  inHand = null;
   const group = WORLDS.find(w => w.includes(name)) || [name];
   sets = [name, ...group.filter(n => n !== name && SETS[n])].map(n => buildSet(SETS[n])); standOn(sets[0]);
   buildSea();
@@ -478,6 +481,14 @@ function stepWater(dt) {
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
+/* Her hands: she carries one thing at a time. Whatever she takes says so (and how to put itself down); taking the next
+   thing puts the first one down. A flower is the gentle one: with her hands full it goes straight into her hair. */
+let inHand = null;
+const hands = {
+  take(who, drop) { if (inHand && inHand.who !== who) { const d = inHand.drop; inHand = null; d(); } inHand = { who, drop }; },
+  free(who) { if (inHand && inHand.who === who) inHand = null; },
+  busy(who) { return !!inHand && inHand.who !== who; },
+};
 const offers = [];   // what she is holding that can be given: each is asked when somebody else is tapped, and says true if it was given
 function tapFigure(f) {
   if (f !== girl && offers.some(o => o(f))) return;
@@ -947,6 +958,8 @@ function frame(now) {
 
   if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; if (tracking.last) tracking.slow = Math.max(tracking.slow, now - tracking.last); tracking.last = now; }
   renderer.info.reset();
+  // a set the camera cannot see sleeps: its pieces are big glued sheets, and without this every island is drawn all the time
+  { camera.updateMatrixWorld(); viewM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); view.setFromProjectionMatrix(viewM); for (const s of sets) s.root.visible = s === set || view.intersectsBox(s.box3); }
   if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
   measure(now);

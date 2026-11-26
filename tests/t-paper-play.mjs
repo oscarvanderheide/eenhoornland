@@ -204,7 +204,7 @@ export default async function (t) {
     ok(await until(`__p.toy('braam').open`, 8), 'watered, the brambles bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-open-land.png');
     ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and now the meadow can be walked to');
     // the kite on the hill's top
-    await t.ev(`__p.placeAt(${w.top[0] + .8}, ${w.top[1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('vlieger')`); ok(await until(`__p.toy('vlieger').held`, 5), 'a tap on the kite: she takes its string');
+    await t.ev(`__p.placeAt(${w.top[0] + .8}, ${w.top[1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('vlieger')`); ok(await until(`__p.toy('vlieger').held`, 5), 'a tap on the kite: she takes its string'); ok(!(await toy('boerderij')).held, 'and the can she carried is put down: one thing in her hands at a time');
     ok(await until(`__p.toy('vlieger').alt > 2.2`, 6), 'on the windy top it goes up by itself'); await t.shot('tmp-shots/y-kite-land.png');
     await t.ev(`__p.placeAt(${w.cross[0]}, ${w.cross[1]})`); ok(await until(`__p.toy('vlieger').alt < .8`, 9), 'down in the meadow, standing still, it sinks');
     await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('vlieger').alt > 1.6`, 6), 'and running lifts it again'); await t.shot('tmp-shots/y-kite-run-land.png'); await t.ev(`__p.keys([])`);

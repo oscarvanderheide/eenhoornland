@@ -134,7 +134,8 @@ export function kite(S, x, y, z, windy = (wx, wz) => (S.heightAt(wx, wz) ?? 0) >
   const string = new THREE.Group(); string.visible = false; S.root.add(string); const strips = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.BoxGeometry(.022, .022, 1), paper('#fbf5ea')); m.userData.live = true; string.add(m); return m; });
   const span = (m, a, b) => { m.position.copy(a).lerp(b, .5); m.position.x -= origin[0]; m.position.z -= origin[1]; m.scale.z = a.distanceTo(b); m.lookAt(b.x, b.y, b.z); };
   const origin = S.at([0, 0]);
-  f.onTap = () => { if (S.playing()) return; if (held) { held = false; at = [girl.x + girl.face * .7, girl.z + .2]; alt = 0; sfx.thud(); } else S.walkThen(at[0] - .4, at[1] + .2, () => { held = true; px = at[0]; pz = at[1]; sfx.hop(); }, 1.0); };
+  const me = {}, down = () => { held = false; at = [girl.x + girl.face * .7, girl.z + .2]; alt = 0; };
+  f.onTap = () => { if (S.playing()) return; if (held) { down(); S.hands.free(me); sfx.thud(); } else S.walkThen(at[0] - .4, at[1] + .2, () => { S.hands.take(me, down); held = true; px = at[0]; pz = at[1]; sfx.hop(); }, 1.0); };
   f.act = tick => f.setFrame(held && alt > .5 ? 1 + (Math.floor(tick / 3) % 2) : 0);
   return { f, state: () => ({ held, alt, best, at: [px, pz] }), step({ dt, time }) {
     t += dt; const v = Math.hypot(girl.x - lx, girl.z - lz) / Math.max(dt, 1e-3); lx = girl.x; lz = girl.z; speed += (Math.min(v, 3) - speed) * Math.min(1, dt * 2.5);
