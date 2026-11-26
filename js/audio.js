@@ -56,6 +56,8 @@ export const sfx = {
   hoot() { tone(392, 0, .3, 'sine', .12, 370); tone(330, .38, .5, 'sine', .12, 300); },
   horn() { tone(110, 0, 1.1, 'sawtooth', .04); tone(165, 0, 1.1, 'triangle', .08); },
   squeak() { [0, .12, .24].forEach((t, i) => tone(1600 + i * 300, t, .09, 'sine', .07, 2400)); },
+  // getting a tool: three quick notes up, a bright chord that rings, and a twinkle on top (our own little tune)
+  fanfare() { [[392, 0], [523, .11], [659, .22]].forEach(([f, t]) => tone(f, t, .2, 'square', .05)); [784, 988, 1175].forEach(f => tone(f, .34, 1.3, 'triangle', .11)); tone(196, .34, 1.3, 'triangle', .1); [1568, 1976, 2349, 3136].forEach((f, i) => tone(f, .9 + i * .08, .5, 'sine', .05)); },
   lullaby() { [659, 587, 523, 587, 659, 659, 659].forEach((f, i) => tone(f, i * .42, .7, 'sine', .09)); },
 };
 

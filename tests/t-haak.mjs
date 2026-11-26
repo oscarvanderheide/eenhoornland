@@ -1,6 +1,5 @@
-// node cdp.mjs tests/t-haak.mjs — the hookshot: a chest in the forest opens when both buttons in front of it carry weight
-// (the big stones beside it, an animal, herself); △ at the gap in the bridge pulls her across to the post; it pulls her
-// over to a big stone and pulls an animal to her (tmp-shots/hk-*.png)
+// node cdp.mjs tests/t-haak.mjs — the hookshot: △ at the gap in the bridge pulls her across to the post; it pulls her
+// over to a big stone and pulls an animal to her (tmp-shots/hk-*.png). Getting it, in the waterfall's cave: t-cave.mjs
 import fs from 'node:fs';
 export default async function (t) {
   fs.mkdirSync('tmp-shots', { recursive: true });
@@ -10,29 +9,16 @@ export default async function (t) {
   const URL = 'http://127.0.0.1:8765/dev.html?go&debug';
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(1500);
   await t.ev(`__w.Q._reset({ stage: 'ei' }); __w.Q.giveTool('zwaard'); 0`); await t.sleep(300);
-  ok(!(await J('__w.haak.info().shown')), 'before the unicorn hatched there is no chest');
-  ok(await t.ev(`getComputedStyle(document.getElementById('b-hook')).visibility === 'hidden'`), 'and no hook button');
+  ok(await t.ev(`getComputedStyle(document.getElementById('b-hook')).visibility === 'hidden'`), 'no hook button before she has the hookshot');
   await t.ev(`__w.Q._reset({ stage: 'baby' }); __w.Q.giveTool('zwaard'); 0`); await t.sleep(400);
-  const H = await J('__w.haak.info()'); ok(H.shown && !H.open, 'once it hatched the chest stands in the forest: ' + H.chest);
-  ok(JSON.stringify(await J(`__w.tools.spot('haak')`)) === JSON.stringify(H.chest), 'the map knows where it is');
+  ok(JSON.stringify(await J(`__w.tools.spot('haak')`)) === JSON.stringify(await J('__w.MAP.ROOMS.val.door')), 'the map knows where it waits: behind the waterfall (t-cave.mjs plays the cave)');
+  ok(await t.ev(`!__w.M.bigStones.some(s => s[3] === 'puzzle')`), 'no chest puzzle left in the forest');
   // walking to the gap without the hookshot: it does not let her across
   await t.ev(`__w.placeAt(70.5, 55.5)`); await t.sleep(400); await t.key('ArrowDown', 1200);
   ok(await t.ev('__w.kid.pos.z') < 57, 'the gap in the bridge stops her: ' + await t.ev('__w.kid.pos.z'));
   ok(await t.ev('__w.hook()') === false, 'no hookshot yet: △ does nothing'); await t.shot('tmp-shots/hk-1-gap.png');
-  // the puzzle: one stone on a button, herself on the other
-  const [cx, cz] = H.chest, P = H.plates;
-  await t.ev(`__w.placeAt(${cx + .5}, ${cz + 3.5})`); await t.sleep(600); await t.shot('tmp-shots/hk-2-chest.png');
-  const st = await J(`__w.keien.stones().filter(s => s.tag === 'puzzle').map(s => [s.id, s.x, s.z])`); ok(st.length === 2, 'two stones beside the chest');
-  // carry the west stone onto the west button
-  await t.ev(`__w.placeAt(${st[0][1] + .5}, ${st[0][2] + 1.5})`); await t.sleep(400);
-  await t.ev(`__w.keien.lift(__w.keien.stones()[${st[0][0]}])`); await t.sleep(300);
-  await t.ev(`__w.placeAt(${P[0][0] + .5}, ${P[0][1] - .5}); __w.kid.face = 1`); await t.sleep(300);
-  await t.ev(`__w.stick(0, 1)`); await t.sleep(60); await t.ev(`__w.stick(0, 0)`); await t.ev(`__w.keien.putDown()`); await t.sleep(500);
-  ok(JSON.stringify(await J(`__w.keien.info().stones[${st[0][0]}]`)) === JSON.stringify(P[0]), 'a stone on the first button: ' + await J(`__w.keien.info().stones[${st[0][0]}]`));
-  ok(await until(`__w.haak.info().pressed[0] && !__w.haak.info().open`, 1500), 'it goes down, the chest stays shut'); await t.shot('tmp-shots/hk-3-one.png');
-  await t.ev(`__w.placeAt(${P[1][0] + .5}, ${P[1][1] + .5})`);
-  ok(await until(`__w.haak.info().open && __w.Q.hasTool('haak')`, 2500), 'she stands on the other: the chest opens, the hookshot is hers'); await t.sleep(400); await t.shot('tmp-shots/hk-4-open.png');
-  ok(await until(`getComputedStyle(document.getElementById('b-hook')).visibility !== 'hidden'`, 1000), 'the △ button shows');
+  await t.ev(`__w.Q.giveTool('haak')`);
+  ok(await until(`getComputedStyle(document.getElementById('b-hook')).visibility !== 'hidden'`, 1000), 'with the hookshot the △ button shows');
   // across the gap
   await t.ev(`__w.placeAt(70.5, 55.5); __w.kid.face = 1`); await t.sleep(600);
   await t.ev('__w.hook()'); await t.sleep(250); await t.shot('tmp-shots/hk-5-fly.png');

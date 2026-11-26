@@ -99,6 +99,21 @@ export const stapsteen = (k = 0) => cached('stapsteen' + k, () => gridSprite(14,
   const d = ((x + .5 - 7) / 6.6) ** 2 + ((y + .5 - 5) / 4.4) ** 2; if (d > 1) return null;
   const n = ((x * 7 + y * 13 + k * 5) % 11); return y < 4 && d < .7 ? (n < 3 ? '#E6E9F2' : '#D2D6E2') : d > .78 ? '#8E93A8' : n < 2 ? '#C3C8D6' : '#B4B9C8';
 }));
+/** a plank of the bridge over the stream in the waterfall's cave (lies flat; boards run across, two nails each) */
+export const plank = (k = 0) => cached('plank' + k, () => gridSprite(16, 16, (x, y) => {
+  const b = Math.floor(x / 4), seam = x % 4 === 3, wood = ['#C99A62', '#B9874F', '#D2A66E', '#BF8F58'][(b + k) % 4];
+  if (y === 0 || y === 15) return '#7A5230';
+  if ((y === 2 || y === 13) && x % 4 === 1) return '#5A4A5E';                       // nails
+  return seam ? '#8A5A33' : (x + y * 3 + k) % 9 === 0 ? '#A97A47' : wood;
+}));
+/** a switch in the cave: a round crystal on a little stone post. Off it is grey-blue, on it lights up in its colour */
+export const knopKristal = (on = false, k = 0) => cached('knopk' + on + k, () => gridSprite(12, 17, (x, y) => {
+  const col = ['#FF6B8A', '#FFD43B', '#4DABF7'][k % 3], d = Math.hypot(x + .5 - 6, y + .5 - 5.5);
+  if (d <= 4.8) { if (d < 1.8 && x < 6 && y < 6) return '#FFFFFF'; if (d < 2.6 && x < 6 && y < 6) return on ? mix(col, '#ffffff', .55) : '#C9D8EE'; return d > 4 ? (on ? mix(col, '#2B1E3A', .25) : '#6F82A6') : (on ? col : '#8FA6C8'); }
+  if (y >= 10 && x >= 2 && x <= 9) return y === 10 ? '#9CC4D8' : x === 2 || x === 9 ? '#5E82A0' : y > 14 ? '#5E82A0' : '#7299B4';
+  if (y >= 9 && y < 10 && x >= 4 && x <= 7) return '#7299B4';
+  return null;
+}));
 /** the frog: 0 sitting, 1 mid-jump, 2 croaking with its throat blown up */
 export const kikker = (f = 0) => cached('kikker' + f, () => sprite(f === 1 ? [
   '..ww.ww..', '.wkgwkg..', '.ggggggg.', 'gglllllgg', 'g.ggggg.g', 'g.......g',

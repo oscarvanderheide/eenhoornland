@@ -98,7 +98,7 @@ export function createTools(ctx) {
     if (h.step === 0 && h.id === 'zwaard') {                                       // the sword: a scene from the side where she pulls it out herself (cutscene.js playPull)
       h.step = 9; kid.path = []; kid.face = h.x >= kid.pos.x ? 1 : -1; const got = Q.giveTool('zwaard');   // saved first, shown after
       setArt(h, ART.zwaardSteen(false)); h.glow.visible = false;
-      ctx.show('pull').then(() => { if (!got) return; sfx.sparkle(); burst(kid.pos, 12, true); bubble(kid, '!', ART.toolIcon('zwaard')); speak(Q.TOOLS.zwaard.found); kid.hop = .6; });
+      ctx.show('pull').then(() => { if (!got) return; ctx.gift.give(ART.toolIcon('zwaard'), new THREE.Vector3(h.x, .9, h.z + .1), () => speak(Q.TOOLS.zwaard.found)); });   // back in the world she holds it up high
       return;
     }
     if (h.step === 0) { h.step = 1; h.t = 0; kid.path = []; kid.face = h.x >= kid.pos.x ? 1 : -1; }

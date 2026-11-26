@@ -60,9 +60,10 @@ export function createRooms(ctx) {
     wall(k, r.x0 - 1, r.z0 - 2, r.x1 + 1, r.z0 - 1, H2);                                   // the back wall
     wall(k, r.x0 - 2, r.z0 - 2, r.x0 - 1, r.z1 + 1, H2); wall(k, r.x1 + 1, r.z0 - 2, r.x1 + 2, r.z1 + 1, H2);   // the side walls
     wall(k, r.x0 - 1, r.z1 + 1, r.exit[0] - 1, r.z1 + 1, .45); wall(k, r.exit[0] + 1, r.z1 + 1, r.x1 + 1, r.z1 + 1, .45);   // a low front wall, so nothing hides her
-    { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
-    if (r.wall) { const gz = r.gate.map(g => g[1]); wall(k, r.wall, r.z0, r.wall, Math.min(...gz) - 1, 1.7); wall(k, r.wall, Math.max(...gz) + 1, r.wall, r.z1, 1.7); }   // the wall between the cave's two rooms
-    if (k === 'val') { for (const fx of [.2, .5, .8]) lightAt(k, '#A8E8FF', 9, 1.3, .55, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); continue; }
+    for (const sx of [r.x0 - 2 - 3, r.x1 + 3 + 3]) { const dark = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, r.z1 - r.z0 + 5), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set(sx, 1.6, (r.z0 + r.z1 + 1) / 2); dark.visible = false; dark.userData.room = k; scene.add(dark); darks.push(dark); }   // and beside it: no other room to be seen next door
+    { const dark = new THREE.Mesh(new THREE.BoxGeometry(r.x1 - r.x0 + 9, 9, 10), new THREE.MeshBasicMaterial({ color: '#120D16' })); dark.position.set((r.x0 + r.x1 + 1) / 2, 4.5, r.z0 - 2 - 5); dark.visible = false; dark.userData.room = k; scene.add(dark); darks.push(dark); }   // only while she is inside: from the beach it would black out the screen   // the dark beyond the back wall: no sea to be seen from inside
+    for (const w of MAP.roomWalls(r)) { const gz = w.gate.map(g => g[1]); wall(k, w.x, r.z0, w.x, Math.min(...gz) - 1, 1.7); wall(k, w.x, Math.max(...gz) + 1, w.x, r.z1, 1.7); }   // the walls between the rooms (the cave's two, the waterfall cave's three)
+    if (k === 'val') { for (const fx of [.08, .3, .5, .7, .92]) lightAt(k, '#A8E8FF', 9, 1.3, .55, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.8, r.z0 + 2); continue; }
     if (k === 'hut') { for (const fx of [.25, .75]) lightAt(k, '#FFD9A0', 8, 1.3, .5, r.x0 + (r.x1 - r.x0 + 1) * fx, 1.9, r.z0 + 1.5); lightAt(k, '#BFE8FF', 3.5, 1.5, .2, r.x0 + .5, 1, r.zip[1] + .5); lightAt(k, '#CFEFFF', 4, 1.4, .25, r.x1 - .5, 1.3, r.z0 + .4); continue; }   // warm daylight through the windows, sky through the zipline door and the big window
     const n = k === 'grot' ? 5 : 5; for (let i = 0; i < n; i++) torch(k, r.x0 + (r.x1 - r.x0 + 1) * (i + .5) / n + (k === 'hal' && i === 2 ? 2.5 : 0), r.z0 + .02, 1.35, k === 'grot');
   }
@@ -176,7 +177,7 @@ export function createRooms(ctx) {
     where: () => MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)),
     info: () => ({ coins: coins.length, chest: chest.open > 0 }),
     update(dt, time, active) {
-      const inRoom = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)); for (const d of darks) d.visible = !!inRoom; light(inRoom);
+      const inRoom = MAP.roomAt(Math.floor(kid.pos.x), Math.floor(kid.pos.z)); for (const d of darks) d.visible = d.userData.room === inRoom; light(inRoom);
       beam.material.opacity = .32 + Math.sin(time * .8) * .08;
       for (let i = 0; i < flames.length; i++) { const f = Math.floor(time * 6 + i) % 2, t = tex(ART.fakkel(f)); if (flames[i].userData.f !== f) { flames[i].userData.f = f; flames[i].material.map = t; flames[i].material.emissiveMap = t; } }
       for (const c of coins) { const near = Math.abs(c.x - kid.pos.x) < 3.5 && Math.abs(c.z - kid.pos.z) < 3.5; c.m.scale.x = near ? Math.max(.15, Math.abs(Math.cos(time * 2 + c.ph))) : 1; }

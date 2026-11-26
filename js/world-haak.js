@@ -1,19 +1,20 @@
 // The hookshot (△, the hook button, G on the keys). It flies out on a chain the way she looks (or at what is clearly
 // meant: a post across the gap, a big stone, an animal in front of her) and:
-//   - catches the golden ring of a post: the chain pulls her across, over the water (the gap in the bridge to the beach)
+//   - catches the golden ring of a post: the chain pulls her across, over the water (the gap in the bridge to the beach,
+//     the beach's little islands, the stream in the waterfall's cave: MAP.HOOK_POSTS and MAP.HOOK_LINKS). She means the
+//     post across the water that she faces, never one on her own side
 //   - catches a big stone: the chain pulls her over to it (she lands beside it; never somewhere she could not walk to)
 //   - catches an animal: it comes flying and lands in front of her (it is fine, it giggles)
 //   - hits a tree or a wall: tink, and it comes back
-// It lies in a chest in the forest that only turns up once the unicorn has hatched (Q.toolReady). Two stone buttons
-// lie in front of the chest and a big stone beside each: whatever weighs on both buttons (a stone, an animal, the girl
-// herself) opens the lid. No fail states: what is missing wiggles, and the buttons glow while they wait.
+// It lies in a chest at the end of the cave behind the waterfall (world-waterval.js), from the moment the unicorn has
+// hatched (Q.toolReady).
 import * as Q from './quest.js';
 import * as ART from './art.js';
 import * as MAP from './map.js';
 import { sfx, speak } from './audio.js';
 import * as PX from './pixel.js';
 
-const RANGE = 6.5, SPEED = 15;
+const RANGE = 6.5, POST_RANGE = 10, SPEED = 15;
 
 export function createHaak(ctx, { camera }) {
   const { THREE, scene, M, kid, makeSprite, bubble } = ctx;
@@ -26,14 +27,26 @@ export function createHaak(ctx, { camera }) {
   let shot = null;
 
   /* ---------------- the posts by the gap ---------------- */
-  const posts = MAP.HOOK_POSTS.map(([x, z]) => {
+  const spots = []; for (const p of [...MAP.HOOK_POSTS, ...MAP.HOOK_LINKS.flat()]) if (!spots.some(q => q[0] === p[0] && q[1] === p[1])) spots.push(p);
+  const posts = spots.map(([x, z]) => {
     const art = ART.haakPaal(), m = makeSprite(art, { lean: .3, scale: .9 }); m.position.set(x + .5, 0, z + .55); m.userData.alpha = art; scene.add(m);
     ctx.solid(x, z);
     const p = { x, z, m, ring: v3(x + .5, z + .55, 1.35) };
     m.userData.tap = () => { if (!fire({ kind: 'post', obj: p, at: v3(x + .5, z + .5) })) { p.wob = .5; if (!Q.hasTool('haak')) { sfx.wrong(); bubble(kid, '?', ART.toolIcon('haak')); } } };
     ctx.pick.push(m); return p;
   });
+  const postTiles = new Set(posts.map(p => I(p.x, p.z)));
   const gapTiles = new Set(); M.obstacles.forEach(o => { if (o.kind === 'kloof') gapTiles.add(I(o.x, o.z)); });
+  { const V = MAP.ROOMS.val; for (let z = V.z0; z <= V.z1; z++) for (let x = V.stream.x0; x <= V.stream.x1; x++) gapTiles.add(I(x, z)); }   // the stream in the waterfall's cave
+  // the pairs of posts she can be pulled between, as tiles: from beside one post to beside the other (world-fly.js asks)
+  const beside = ([x, z]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => [x + dx, z + dz]).filter(([X, Z]) => M.inb(X, Z) && !M.block[I(X, Z)]).map(([X, Z]) => I(X, Z));
+  const hookTo = new Map(); for (const [a, b] of MAP.HOOK_LINKS) { const A = beside(a), B = beside(b); for (const i of A) hookTo.set(i, (hookTo.get(i) || []).concat(B)); for (const i of B) hookTo.set(i, (hookTo.get(i) || []).concat(A)); }
+  /** water (or a gap) lies between her and there: the post is across, not on her own side */
+  function across(x0, z0, x1, z1) {
+    const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / .2);
+    for (let k = 1; k < n; k++) { const x = Math.floor(x0 + (x1 - x0) * k / n), z = Math.floor(z0 + (z1 - z0) * k / n), i = I(x, z); if (gapTiles.has(i) || (M.ground[i] === MAP.SE && M.block[i])) return true; }
+    return false;
+  }
 
   /** something solid between her and there (water, the gap and low things do not count) */
   function blocked(x0, z0, x1, z1, skip) {
@@ -49,7 +62,12 @@ export function createHaak(ctx, { camera }) {
   /** what she means: the post across the gap first, else the stone or animal most in front of her */
   function aim() {
     const kx = kid.pos.x, kz = kid.pos.z, d = ctx.lastDir && ctx.lastDir(), f = d ? { x: d.x, z: d.z } : { x: kid.face, z: 0 };
-    for (const p of posts) { const dd = Math.hypot(p.x + .5 - kx, p.z + .5 - kz); if (dd > 2.2 && dd <= RANGE && !blocked(kx, kz, p.x + .5, p.z + .5, new Set([I(p.x, p.z)]))) return { kind: 'post', obj: p, at: v3(p.x + .5, p.z + .5) }; }
+    let post = null, ps = -9;   // the post across the water she faces most
+    for (const p of posts) {
+      const dx = p.x + .5 - kx, dz = p.z + .5 - kz, dd = Math.hypot(dx, dz); if (dd <= 2.2 || dd > POST_RANGE || !across(kx, kz, p.x + .5, p.z + .5) || blocked(kx, kz, p.x + .5, p.z + .5, postTiles)) continue;   // (a post is thin: the chain passes the one beside her)
+      const sc = (dx * f.x + dz * f.z) / dd - dd * .01; if (sc > -.25 && sc > ps) { ps = sc; post = p; }   // never one behind her
+    }
+    if (post) return { kind: 'post', obj: post, at: v3(post.x + .5, post.z + .5) };
     let best = null, bs = .55;
     const consider = (kind, obj, x, z) => {
       const dx = x - kx, dz = z - kz, dd = Math.hypot(dx, dz); if (dd < 1.3 || dd > RANGE) return;
@@ -107,62 +125,21 @@ export function createHaak(ctx, { camera }) {
     links.forEach((l, k) => { l.visible = k < n; if (k >= n) return; const u = (k + 1) / (n + 1); l.position.set(ax + (hx - ax) * u, ay + (hy - ay) * u, az + (hz + .25 - az) * u); l.quaternion.copy(camera.quaternion); });
   }
 
-  /* ---------------- the chest in the forest with its two buttons ---------------- */
-  const [cx, cz] = M.toolSpots.haak, plates = [[cx - 1, cz + 2], [cx + 1, cz + 2]];
-  const chestArt = o => ART.schatkist(o), chest = makeSprite(chestArt(false), { lean: .3, scale: .95 }); chest.position.set(cx + .5, 0, cz + .55); chest.userData.alpha = chestArt(false); scene.add(chest);
-  const plateMeshes = plates.map(([x, z]) => { const m = makeSprite(ART.knop(false), { lean: Math.PI / 2, shadow: false, scale: .8 }); m.position.set(x + .5, .02, z + .5); scene.add(m); return m; });
-  let shown = null, pressed = [false, false], wiggleT = 0, flyer = null;
-  const waiting = () => Q.toolOut('haak') && Q.toolReady('haak');
-  chest.userData.tap = () => { if (waiting()) { const w = plates.findIndex((_, k) => !pressed[k]); if (w >= 0) wiggleMissing(true); } else { chest.userData.wob = .4; sfx.pop(); } };
-  ctx.pick.push(chest);
-  function show() {
-    const on = waiting() || Q.hasTool('haak'); if (on === shown) return; shown = on;
-    chest.visible = on; plateMeshes.forEach(m => { m.visible = on; }); ctx.solid(cx, cz, on);
-    setChest(Q.hasTool('haak'));
-  }
-  const setChest = open => { const art = chestArt(open), t = ctx.tex(art); chest.material.map = t; chest.material.emissiveMap = t; chest.material.needsUpdate = true; chest.userData.alpha = art; if (chest.customDepthMaterial) chest.customDepthMaterial.map = t; };
-  const weighs = (x, z) => !!ctx.keien.at(x, z) || (Math.floor(kid.pos.x) === x && Math.floor(kid.pos.z) === z && !(kid.lift > .05) && !(kid.path[0] && kid.path[0].jump)) || ctx.animals.some(a => a.g.visible && !a.held && !a.fly && Math.floor(a.pos.x) === x && Math.floor(a.pos.z) === z);
-  /** nothing happens yet: the stones that could go on the buttons wiggle (and the empty buttons bob) */
-  function wiggleMissing(say) {
-    const free = ctx.keien.stones().filter(s => s.tag === 'puzzle' && !plates.some(([x, z]) => s.x === x && s.z === z) && s !== ctx.keien.holding());
-    for (const s of free) s.wob = .6; plateMeshes.forEach((m, k) => { if (!pressed[k]) m.userData.bob = .5; });
-    if (say && free[0]) bubble(kid, '', free[0].art);
-  }
-  function open() {
-    if (!Q.giveTool('haak')) return;                                              // saved first, shown after
-    setChest(true); sfx.chime(6); sfx.tada(); ctx.burst(v3(cx + .5, cz + .5, .8), 14, true);
-    const m = makeSprite(ART.toolIcon('haak'), { lean: .2, shadow: false, scale: 1.3 }); scene.add(m); flyer = { m, t: 0, from: v3(cx + .5, cz + .5, .8) };
-    setTimeout(() => { bubble(kid, '!', ART.toolIcon('haak')); speak(Q.TOOLS.haak.found); }, 900);
-  }
-
-  const off = Q.on(type => { if (type === 'stage' || type === 'tool') show(); });
-  show();
+  const off = () => {};
 
   return {
     fire: () => fire(),
     aim,
     shooting: () => !!shot,
-    /** where the chest waits (for the map's goal marker), null once the hookshot is hers */
-    spot: () => waiting() ? [cx, cz] : null,
+    /** where the hookshot waits (for the map's goal marker): the waterfall's cave; null once it is hers */
+    spot: () => ctx.val ? ctx.val.spot() : null,
+    /** the tiles the hookshot pulls her to from tile i (beside a post across the water) */
+    linksFrom: i => hookTo.get(i) || [],
     posts: () => posts.map(p => [p.x, p.z]),
-    info: () => ({ shot: shot && { kind: shot.kind, phase: shot.phase }, pressed: pressed.slice(), chest: [cx, cz], plates, shown, open: Q.hasTool('haak') }),
+    info: () => ({ shot: shot && { kind: shot.kind, phase: shot.phase }, open: Q.hasTool('haak'), posts: posts.map(p => [p.x, p.z]) }),
     gapTile: i => gapTiles.has(i),
     update(dt, time) {
-      show();
-      // the buttons and the chest
-      if (shown && waiting()) {
-        const now = plates.map(([x, z]) => weighs(x, z));
-        now.forEach((p, k) => { if (p !== pressed[k]) { const art = ART.knop(p), t = ctx.tex(art); plateMeshes[k].material.map = t; plateMeshes[k].material.needsUpdate = true; (p ? sfx.click : sfx.pop)(); } });
-        pressed = now;
-        if (pressed[0] && pressed[1]) open();
-        else if (Math.hypot(cx + .5 - kid.pos.x, cz + 2 - kid.pos.z) < 4.5 && (wiggleT -= dt) < 0) { wiggleT = 3.5; wiggleMissing(false); }
-        // the chest is the goal of the moment: it sparkles now and then
-        if (Math.random() < dt * 2) ctx.life.bit(PX.sparkle('#FFF6D0'), cx + .2 + Math.random() * .6, .5 + Math.random() * .5, cz + .7, { vx: 0, vy: .5, g: 0, life: 1 });
-      }
-      plateMeshes.forEach(m => { const b = m.userData.bob || 0; if (b > 0) { m.userData.bob = b - dt; m.position.y = .02 + Math.abs(Math.sin(b * 12)) * .06; } });
-      if (chest.userData.wob > 0) { chest.userData.wob -= dt; chest.rotation.z = Math.sin(chest.userData.wob * 40) * .05; } else chest.rotation.z = 0;
       for (const p of posts) { if (p.wob > 0) { p.wob -= dt; p.m.rotation.z = Math.sin(p.wob * 40) * .06; } else p.m.rotation.z = 0; }
-      if (flyer) { flyer.t += dt * 1.3; const k = Math.min(1, flyer.t); flyer.m.position.set(flyer.from.x + (kid.pos.x - flyer.from.x) * k, flyer.from.y + Math.sin(k * Math.PI) * 1.4 + k * .4, flyer.from.z + (kid.pos.z - flyer.from.z) * k + .1); flyer.m.rotation.z = flyer.t * 10; if (k >= 1) { scene.remove(flyer.m); flyer = null; } }
       // the shot
       const s = shot; if (!s) return;
       if (s.phase === 'out') { s.d = Math.min(s.len, s.d + SPEED * dt); if (s.d >= s.len) arrive(); }
@@ -185,6 +162,6 @@ export function createHaak(ctx, { camera }) {
       const hx = kid.pos.x + s.dir.x * Math.max(0, s.d), hz = kid.pos.z + s.dir.z * Math.max(0, s.d);
       draw(hx, hz, s.kind === 'post' ? .55 + (s.d / s.len) * (s.obj.ring.y * .55 - .55) : .5);
     },
-    dispose() { off(); for (const p of posts) ctx.solid(p.x, p.z, false); ctx.solid(cx, cz, false); },
+    dispose() { off(); for (const p of posts) ctx.solid(p.x, p.z, false); },
   };
 }

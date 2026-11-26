@@ -593,7 +593,21 @@ export const slotsIcon = cur => cached('slots' + cur, () => gridSprite(14, 8, (x
   return y === top && cx < 2 ? SLOT_COLS[k][1] : SLOT_COLS[k][0];
 }));
 /** throw a save away (held down, see saves.js) */
-export const binIcon = () => cached('bin', () => sprite(['...dd...', '.dddddd.', 'dddddddd', '........', '.gGgGgg.', '.gGgGgg.', '.gGgGgg.', '.gGgGgg.', '..gggg..'], { d: '#7A6A8A', g: '#C3B5CF', G: '#8C7A9A' }));
+export const binIcon = () => cached('bin2', () => sprite([   // a little round-lidded bin with a handle, ribs and a shine
+  '....oooo....',
+  '...o....o...',
+  '.oooooooooo.',
+  'oLhLLLLLLLLo',
+  'ollllllllllo',
+  '.oooooooooo.',
+  '.oBhrBrBrBo.',
+  '.oBhrBrBrBo.',
+  '.oBhrBrBrBo.',
+  '.oBBrBrBrBo.',
+  '.oBBrBrBrBo.',
+  '..oBBBBBBo..',
+  '..oooooooo..',
+], { o: '#4A3B5C', L: '#F2ECF8', l: '#C9BCD8', h: '#FFFFFF', B: '#DCD2E8', r: '#A797BC' }));
 export const mapIcon = () => cached('mapi', () => sprite(['pppp.pppp.pp', 'pgpppgbbppgp', 'pggpppbbpggp', 'ppgprppbpppp', 'pppprrpppgpp', 'pp.pppp.pppp'], { p: '#F2DDB4', g: '#69DB7C', b: '#4DABF7', r: '#FF5E9C' }));
 
 /** a tiny picture of a house you can go into, in its own colours (wish chips, map) */

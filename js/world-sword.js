@@ -68,6 +68,7 @@ export function createSword(ctx, { camera, cuttables, lastDir }) {
     if (cut) sfx.snip();
     // brambles: the same as the tool always did (tools.use with the slash already made)
     M.obstacles.forEach((o, i) => { if (o.type === 'break' && o.tool === 'zwaard' && inArc(o.x + .5, o.z + .5)) ctx.tools.use(i, true); });
+    for (const f of ctx.strikes || []) f(cx, cz, R);                                // places that answer the sword (the switches in the waterfall's cave)
     // a tree or bush in the way shakes, animals jump up
     ctx.life.hitAt(cx, cz);
     for (const a of ctx.animals) if (a.g.visible && !a.held && !a.isUni && Math.hypot(a.pos.x - cx, a.pos.z - cz) < R) { a.hop = 1; a.wait = Math.max(a.wait || 0, 1.5); }

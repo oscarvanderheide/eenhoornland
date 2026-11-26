@@ -100,17 +100,21 @@ export function createExtras(ctx) {
   }
 
   /* ---------------- loose decoration (never blocks) ---------------- */
-  function scatter(art, n, ok, scale = 1) {
-    const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), spriteMat(tex(art)), n); inst.receiveShadow = true;
+  function scatter(art, n, ok, scale = 1, cut = false) {   // cut: the sword cuts them (listed per tile in ctx.cuttables, world-sword.js)
+    const inst = new THREE.InstancedMesh(spriteGeom(art.width, art.height), spriteMat(tex(art)), n); inst.receiveShadow = true; inst.userData.alpha = art;
     const d = new THREE.Object3D(); let k = 0, guard = 0;
-    while (k < n && guard++ < n * 40) { const x = 4 + r() * (W - 8), z = 4 + r() * (H - 8); if (!ok(Math.floor(x), Math.floor(z), z)) continue; d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.scale.setScalar(scale); d.updateMatrix(); inst.setMatrixAt(k++, d.matrix); }
+    while (k < n && guard++ < n * 40) {
+      const x = 4 + r() * (W - 8), z = 4 + r() * (H - 8); if (!ok(Math.floor(x), Math.floor(z), z)) continue; d.position.set(x, 0, z); d.rotation.set(-.3, 0, 0); d.scale.setScalar(scale); d.updateMatrix();
+      if (cut && ctx.cuttables) { const ti = M.I(Math.floor(x), Math.floor(z)); if (!ctx.cuttables.has(ti)) ctx.cuttables.set(ti, []); ctx.cuttables.get(ti).push({ inst, i: k, x, z, m: d.matrix.clone() }); }
+      inst.setMatrixAt(k++, d.matrix);
+    }
     inst.count = k; scene.add(inst);
   }
   const g = (x, z) => M.ground[M.I(x, z)];
-  scatter(ART.propArt('fern', 1), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO); scatter(ART.propArt('fern', 2), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO);
+  scatter(ART.propArt('fern', 1), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO, 1, true); scatter(ART.propArt('fern', 2), 90, (x, z) => M.free(x, z) && g(x, z) === MAP.FO, 1, true);
   const beach = (x, z) => M.free(x, z) && g(x, z) === MAP.SA && (M.zone[M.I(x, z)] === 'strand' || M.zone[M.I(x, z)] === 'eiland');
   scatter(ART.starfish(), 9, beach);                                              // (no loose shells for show: every shell on the beach can be picked up)
-  for (const art of [ART.ISLE.madelief(), ART.ISLE.klaproos(), ART.ISLE.korenbloem()]) scatter(art, 45, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei');   // the flower meadow: daisies, poppies, cornflowers
+  for (const art of [ART.ISLE.madelief(), ART.ISLE.klaproos(), ART.ISLE.korenbloem()]) scatter(art, 45, (x, z) => M.free(x, z) && g(x, z) === MAP.GR && M.zone[M.I(x, z)] === 'wei', 1, true);   // the flower meadow: daisies, poppies, cornflowers (the sword cuts them, like the grass)
   // the ring of big mushrooms in the forest plays music: every one is a note, tap them (or walk into them)
   const shrooms = [];
   for (let k = 0; k < 9; k++) {

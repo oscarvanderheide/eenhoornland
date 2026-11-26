@@ -51,6 +51,7 @@ body{background:#1C2150;color:var(--ink);font-family:var(--f-pixel);overflow:hid
 /* HUD */
 .hud{position:absolute;display:flex;gap:8px;z-index:5}
 .hud.tr{top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px))}
+body:has(#start:not([hidden])) .hud.tr{z-index:21}   /* the saves button top right works over the start screen too */
 .hud.tl{top:calc(10px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px))}
 .hbtn{height:48px;min-width:48px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-size:1.05rem}
 .hbtn canvas{width:30px;height:auto}

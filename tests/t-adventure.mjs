@@ -51,9 +51,12 @@ export default async function (t) {
   await place(76.5, 31.5); await settle(600); await t.ev(`__w.walkTo(76,25)`); await settle(5000); s = await q(); ok(s.pos[1] > 28.9 && s.mount === null, 'a baby cannot jump the broken bridge yet (z=' + s.pos[1] + ')');
   s = await q(); ok(s.uni && s.w.join() === 'tool:haak,fruit:fruit', 'a little unicorn follows; now the hookshot');
   // hookshot → the gap → boat → fruit
-  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('haak'))`)); ok(!!p && await t.ev(`__w.M.zone[__w.M.I(Math.floor(${p && p[0]}),Math.floor(${p && p[1]}))]`) === 'bos', 'the hookshot chest stands in the forest'); await place(p[0] + .5, p[1] + 3.5); await settle(1800); await shot('17b-chest');
-  await t.ev(`(() => { const H = __w.haak.info(), st = __w.keien.stones().filter(s => s.tag === 'puzzle'); st.forEach((s, k) => __w.keien.slideTo(s, H.plates[k][0], H.plates[k][1])); })()`);
-  ok(await until(`__w.Q.hasTool('haak')`, 6000), 'a stone on each button: the chest opens, the hookshot is hers'); await settle(1500); await shot('17c-hookshot');
+  p = JSON.parse(await t.ev(`JSON.stringify(__w.tools.spot('haak'))`));
+  { const R = JSON.parse(await t.ev(`JSON.stringify(__w.MAP.ROOMS.val)`)); ok(JSON.stringify(p) === JSON.stringify(R.door), 'the hookshot waits behind the waterfall');
+    await place(R.in[0] + .5, R.in[1] + .5); await settle(1500); await shot('17b-cave');
+    await t.ev(`__w.val.solve(3)`); await t.sleep(2500); await place(R.chest[0] + .5, R.chest[1] + 1.5); await settle(800); await t.ev(`__w.val.openChest()`); }
+  ok(await until(`__w.Q.hasTool('haak') && __w.gift.active()`, 3000), 'the chest in the cave opens: she holds up the hookshot'); await t.sleep(1200); await shot('17c-hookshot');
+  ok(await until(`!__w.gift.active() && !__w.busy()`, 8000), 'and it is hers');
   await place(70.5, 55.5); await settle(1500); await shot('18-gap'); await t.ev(`__w.hook()`); ok(await until(`__w.kid.pos.z > 60 && !__w.busy()`, 8000), 'the hookshot pulls her across the gap in the bridge');
   await place(88.5, 70.5); await settle(1500); await shot('19-beach'); ok(await t.ev(`__w.walkTo(134,67)`) === true, 'walking to the island walks to the pier'); ok(await until(`__w.busy()`, 40000), 'she gets into the boat'); await t.sleep(2500); await shot('20-sailing'); ok(await t.ev(`__w.sea.info().arrow`), 'a rainbow arrow by the boat points the way'); await t.ev(`__w.play.steer(126.5, 66.5)`);
   ok(await until(`!__w.busy()`, 150000), 'the boat arrives'); s = await q(); ok(s.play.side === 'eiland' && s.pos[0] > 110, 'on the rainbow island');  await settle(1500); await shot('21-island');

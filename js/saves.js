@@ -1,6 +1,6 @@
 // The three saves, for girls who cannot read: each save has its own colour and shows who played it and her egg or
 // unicorn. Tap a save to play it (the page starts again in that save), hold the bin under one to start it afresh
-// (a hold, not a tap, so it never happens by accident). Opened by the button top right and on the start screen;
+// (a hold, not a tap, so it never happens by accident). Opened by the button top right (also over the start screen);
 // with a controller, Options.
 import * as PX from './pixel.js';
 import * as ART from './art.js';
@@ -25,8 +25,7 @@ const CSS = `
 .save-bin.hold{animation:binshake .18s linear infinite;background:#FF5C5C;box-shadow:0 0 0 9px #FF9A9A,0 3px 0 var(--ink);transition:background ${HOLD}ms linear,box-shadow ${HOLD}ms linear}
 @keyframes binshake{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
 .save-bin.gone{visibility:hidden}
-#start-saves{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:64px;height:56px;padding:0;display:grid;place-items:center}
-#start-saves canvas,#b-save canvas{image-rendering:pixelated}
+#b-save canvas{image-rendering:pixelated}
 `;
 let styled = false;
 const style = () => { if (styled) return; styled = true; const s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s); };
@@ -79,7 +78,7 @@ export function openSaves() {
       colEl.appendChild(b);
       // the bin: hold it until it is all red (a transition, not an animation: it must fill with 'reduce motion' on too)
       const bin = document.createElement('button'); bin.className = 'save-bin' + (s ? '' : ' gone'); bin.setAttribute('aria-label', 'Spel ' + n + ' weggooien (vasthouden)');
-      bin.appendChild(PX.domSprite(ART.binIcon(), 4)); colEl.appendChild(bin);
+      bin.appendChild(PX.domSprite(ART.binIcon(), 3)); colEl.appendChild(bin);
       let timer = 0;
       const stop = () => { clearTimeout(timer); timer = 0; bin.classList.remove('hold'); };
       bin.addEventListener('pointerdown', e => {
@@ -95,11 +94,4 @@ export function openSaves() {
   close = ui.modal(el);
 }
 
-/** the button on the start screen (the HUD has its own, see hud.js) */
-export function startButton(parent) {
-  style();
-  const b = document.createElement('button'); b.className = 'pbtn'; b.id = 'start-saves'; b.setAttribute('aria-label', 'Ander spel');
-  b.appendChild(PX.domSprite(ART.slotsIcon(slot), 3)); b.onclick = e => { e.stopPropagation(); openSaves(); }; parent.appendChild(b);
-  return b;
-}
 export const slotIcon = () => ART.slotsIcon(slot);

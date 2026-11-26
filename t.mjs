@@ -11,13 +11,13 @@ import net from 'node:net';
 const ISLANDS = {
   dorp: [['t-toys', 'dorp,fiets'], ['t-ways', 'dorp'], ['t-varken'], ['t-bank'], ['t-speeltuin'], ['t-areas', 'dorp']],
   bos: [['t-toys', 'bos'], ['t-ways', 'bos'], ['t-boomhut'], ['t-areas', 'bos']],
-  wei: [['t-toys', 'wei'], ['t-ways', 'wei'], ['t-castle', 'wei'], ['t-waterval'], ['t-areas', 'wei']],
-  strand: [['t-toys', 'strand,vissen'], ['t-ways', 'strand'], ['t-schildpad'], ['t-areas', 'strand']],
+  wei: [['t-toys', 'wei'], ['t-ways', 'wei'], ['t-castle', 'wei'], ['t-waterval'], ['t-cave'], ['t-areas', 'wei']],
+  strand: [['t-toys', 'strand,vissen'], ['t-ways', 'strand'], ['t-schildpad'], ['t-cave'], ['t-areas', 'strand']],
   eiland: [['t-toys', 'eiland'], ['t-ways', 'eiland'], ['t-eiland'], ['t-areas', 'eiland']],
   kasteel: [['t-toys', 'kasteel'], ['t-ways', 'kasteel'], ['t-castle', 'kasteel,race'], ['t-draaimolen'], ['t-areas', 'kasteel']],
   zee: [['t-toys', 'boot'], ['t-ways', 'zee'], ['t-swim']],
 };
-const WHOLE = { adventure: 't-adventure', gamepad: 't-gamepad', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump', fly: 't-fly', swim: 't-swim', boomhut: 't-boomhut', waterval: 't-waterval', eiland: 't-eiland', schildpad: 't-schildpad', varken: 't-varken', bank: 't-bank', speeltuin: 't-speeltuin', draaimolen: 't-draaimolen', saves: 't-saves', sword: 't-sword', keien: 't-keien', haak: 't-haak', muziek: 't-muziek', motion: 't-motion' };
+const WHOLE = { adventure: 't-adventure', gamepad: 't-gamepad', life: 't-life', pickup: 't-pickup', powers: 't-powers', weather: 't-weather', houses: 't-houses', bed: 't-bed', castle: 't-castle', perf: 't-perf', areas: 't-areas', toys: 't-toys', ways: 't-ways', jump: 't-jump', fly: 't-fly', swim: 't-swim', boomhut: 't-boomhut', waterval: 't-waterval', cave: 't-cave', eiland: 't-eiland', schildpad: 't-schildpad', varken: 't-varken', bank: 't-bank', speeltuin: 't-speeltuin', draaimolen: 't-draaimolen', saves: 't-saves', sword: 't-sword', keien: 't-keien', haak: 't-haak', muziek: 't-muziek', motion: 't-motion' };
 const PARALLEL = 3;
 
 const args = process.argv.slice(2); if (!args.length) { console.log('usage: node t.mjs <island|look|adventure|all ...>   islands: ' + Object.keys(ISLANDS).join(' ')); process.exit(1); }

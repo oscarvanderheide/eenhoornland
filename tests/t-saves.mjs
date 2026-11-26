@@ -45,8 +45,9 @@ export default async function (t) {
   ok(await t.ev(`__w.Q.quest.stage`) === 'zoek', 'the save being played starts afresh');
   // the start screen has the button too
   await t.go(URL.replace('?go&', '?')); await t.sleep(1500);
-  ok(await t.ev(`!!document.getElementById('start-saves') && !!document.getElementById('start-saves').offsetParent`), 'the start screen has the saves button');
-  await t.click(...await mid('#start-saves')); ok(await until(`!document.getElementById('modal').hidden`), 'it opens the saves over the start screen');
+  ok(await t.ev(`!document.getElementById('start-saves')`), 'no second saves button at the bottom of the start screen');
+  ok(await t.ev(`(() => { const b = document.getElementById('b-save').getBoundingClientRect(), e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return !!e && !!e.closest('#b-save'); })()`), 'the saves button top right is on top of the start screen');
+  await t.click(...await mid('#b-save')); ok(await until(`!document.getElementById('modal').hidden`), 'it opens the saves over the start screen');
   await t.shot('tmp-shots/s-5-start.png');
   console.log(fail ? `${fail} FAILED` : 'ALL OK'); for (const l of t.logs.filter(l => /error|fail/i.test(l)).slice(0, 8)) console.log('  log', l);
 }

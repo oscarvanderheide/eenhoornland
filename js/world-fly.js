@@ -41,6 +41,7 @@ export function createFlight(ctx) {
       const i = q[h], x = i % W, z = Math.floor(i / W);
       if (i === docks[0] && !re[docks[1]]) { re[docks[1]] = 1; q.push(docks[1]); }
       if (i === docks[1] && !re[docks[0]]) { re[docks[0]] = 1; q.push(docks[0]); }
+      if (hook) for (const j of ctx.haak.linksFrom(i)) if (!re[j]) { re[j] = 1; q.push(j); }   // from post to post (the beach's little islands)
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= W || Z >= MAP.OUT_H) continue; const j = I(X, Z);
         if (!re[j] && pass(j)) { re[j] = 1; q.push(j); }

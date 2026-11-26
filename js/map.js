@@ -46,8 +46,17 @@ export const ROOMS = {
   grot: { x0: 20, z0: 109, x1: 46, z1: 119, in: [27, 118], exit: [27, 120], door: [36, 6], out: [36.5, 7.6], egg: [42, 112],
     wall: 35, gate: [[35, 113], [35, 114]], box: [25, 114], plate: [30, 111] },   // two rooms: the crate goes on the button, the crystal gate in the wall between them sinks
   hal: { x0: 58, z0: 108, x1: 82, z1: 119, in: [70, 118], exit: [70, 120], door: [84, 11], out: [84.5, 12.6], garden: [70, 107] },
-  val: { x0: 130, z0: 110, x1: 141, z1: 117, in: [135, 117], exit: [135, 118], door: [94, 35], out: [94.5, 36.6], pool: { cx: 137.5, cz: 113.5, rx: 2.3, rz: 1.6 } },   // the grotto behind the waterfall
-  hut: { x0: 112, z0: 111, x1: 119, z1: 116, in: [115, 116], exit: [115, 117], door: [56, 14], out: [56.5, 15.6], zip: [111, 116] },   // the treehouse: up the ladder; the zipline leaves from the front of the left wall (outside, the rope runs off to the south-west)
+  // behind the waterfall: three rooms in a row, split by walls (`walls`, each with a gate of crystal bars that is shut at
+  // runtime only, world-waterval.js). A: six singing crystals (all six sung: the gate opens) and the koi pool; B: two stone
+  // buttons (`plates`) and one big stone (`stone`): the stone on one, herself on the other; C: an underground stream
+  // (`stream`, x0..x1 across the room) with three switches (`switches`) that raise a bridge (`bridge`: the row it crosses
+  // at), the hookshot's chest (`chest`) on the far bank, and a hook post on each bank (`posts`): once the hookshot is hers
+  // the bridge falls into the water and the hookshot is the way back
+  val: { x0: 112, z0: 109, x1: 147, z1: 118, in: [117, 118], exit: [117, 119], door: [94, 35], out: [94.5, 36.6], pool: { cx: 119.5, cz: 114.2, rx: 2.3, rz: 1.5 },
+    walls: [{ x: 124, gate: [[124, 113], [124, 114]] }, { x: 135, gate: [[135, 113], [135, 114]] }],
+    plates: [[128, 111], [131, 111]], stone: [127, 116],
+    stream: { x0: 140, x1: 142 }, bridge: 114, switches: [[137, 110], [136, 117], [139, 117]], chest: [145, 111], posts: [[139, 111], [143, 111]] },
+  hut: { x0: 96, z0: 111, x1: 103, z1: 116, in: [99, 116], exit: [99, 117], door: [56, 14], out: [56.5, 15.6], zip: [95, 116] },   // the treehouse: up the ladder; the zipline leaves from the front of the left wall (outside, the rope runs off to the south-west)
 };
 export const CAVE = { x0: 32, z0: 4, x1: 40, z1: 6 };
 /** bos: the giant oak with the treehouse in its crown (trunk on x0..x1, z0..z1; the ladder is ROOMS.hut.door), and the
@@ -57,6 +66,8 @@ export const TREEHOUSE = { x0: 55, z0: 12, x1: 57, z1: 13 };
  *  the water is the way into the grotto (ROOMS.val.door); stepping stones (`steps`, each with a note) cross the pool to it */
 export const FALLS = { x0: 86, z0: 30, x1: 100, z1: 35, fall: [93, 95], h: 2.9, pool: { cx: 94.5, cz: 38.3, rx: 4.6, rz: 2.5 }, steps: [[94, 40, 0], [94, 39, 2], [94, 38, 4], [94, 37, 5], [94, 36, 7]] };
 export const ZIP = { from: [56.5, 13.95], h0: 2.75, pole: [44, 34], to: [43.5, 35.5], h1: 1.25 };                                   // the rock the cave mouth is in (ROOMS.grot.door)
+/** the walls between the rooms of one place: [{ x, gate: [[x, z], ...] }] */
+export const roomWalls = r => r.walls || (r.wall ? [{ x: r.wall, gate: r.gate }] : []);
 export const roomAt = (x, z) => Object.keys(ROOMS).find(k => { const r = ROOMS[k]; return x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 + 1; }) || null;
 export const PEN = { x0: 33, z0: 47, x1: 42, z1: 51, gate: [[37, 47], [38, 47]] };    // dorp: the meadow where the unicorns of earlier adventures live (fence on the perimeter tiles, the gate is always open)
 export const RACE = [44.5, 47.5];                                                     // dorp: the arch where the unicorn race starts
@@ -130,6 +141,17 @@ export const TOOL_FOR = { bramble: 'zwaard', kloof: 'haak', gat: 'rit' };
  *  the post on the other side. Posts stand on the bridge's east half, one on each side of the gap */
 export const HOOK_GAP = { x0: 70, x1: 71, z0: 57, z1: 59 };
 export const HOOK_POSTS = [[71, 56], [71, 60]];
+/** strand: a row of little sandy islands in the sea west of the south beach, each with a hook post in it (deep water in
+ *  between, too far to swim): the hookshot pulls her from the post on the beach (`shore`) to the first, from one to the
+ *  next, and the last one has coins on it (world-hops.js). Every post works both ways. */
+export const HOPS = { shore: [47, 79], isles: [
+  { x0: 38, z0: 79, x1: 40, z1: 81, post: [39, 80] },
+  { x0: 30, z0: 82, x1: 32, z1: 84, post: [31, 83] },
+  { x0: 18, z0: 79, x1: 24, z1: 83, post: [24, 81], coins: true },
+] };
+const hopAt = (x, z) => HOPS.isles.find(h => x >= h.x0 && x <= h.x1 && z >= h.z0 && z <= h.z1 && !((x === h.x0 || x === h.x1) && (z === h.z0 || z === h.z1) && h.x1 - h.x0 > 3)) || null;   // (the big one has its corners rounded off)
+/** the posts the hookshot pulls her between, in pairs (both ways): the beach's islands and the two banks of the stream in the waterfall's cave */
+export const HOOK_LINKS = [[HOPS.shore, HOPS.isles[0].post], [HOPS.isles[0].post, HOPS.isles[1].post], [HOPS.isles[1].post, HOPS.isles[2].post], [ROOMS.val.posts[0], ROOMS.val.posts[1]]];
 
 /** Builds the world. `seed` 0 is the first, hand-tuned one; every later cycle passes a new seed, which reshuffles
  *  everything outside the village. A seed that fails `validate` is skipped. */
@@ -154,6 +176,8 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
     [...POTS, CAN, KITE, BUCKET, SHOVEL, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
     [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], ...[[0, 0], [-1, 0], [1, 0], [0, 1], [-1, 1], [1, 1], [2, 1], [-4, 1], [-4, 0], [-3, 2], [-2, 2], [0, 2], [1, 2]].map(([dx, dz]) => [MUSIC.x + dx, MUSIC.z + dz]), ...Array.from({ length: (PLAY.x1 - PLAY.x0 + 1) * (PLAY.z1 - PLAY.z0 + 1) }, (_, k) => [PLAY.x0 + k % (PLAY.x1 - PLAY.x0 + 1), PLAY.z0 + Math.floor(k / (PLAY.x1 - PLAY.x0 + 1))]), ...BENCHES.flatMap(b => [b.at, [b.x, b.z + 1], [b.x + 1, b.z + 1]]), [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
+  for (const h of HOPS.isles) for (let z = h.z0; z <= h.z1; z++) for (let x = h.x0; x <= h.x1; x++) keepSet.add(I(x, z));   // nothing grows on the hookshot islands
+  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) keepSet.add(I(HOPS.shore[0] + dx, HOPS.shore[1] + dz));
 
   /* ---- the islands in the sea ---- */
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
@@ -161,6 +185,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     if (z >= ROCK_Z) { const rm = roomAt(x, z); zone[i] = rm || 'rots'; ground[i] = RK; block[i] = 1; continue; }   // rooms are carved out below
     const zn = zone[i] = zoneAt(x + .5, z + .5);
     if (isletAt(x, z) && !onLand(x, z)) { ground[i] = SA; block[i] = 1; zone[i] = 'zee'; continue; }   // seen, never walked on
+    if (hopAt(x, z)) { ground[i] = SA; block[i] = 0; zone[i] = 'strand'; continue; }                  // the beach's little islands, reached with the hookshot
     if (!onLand(x, z) || x < 4 || z < 4 || x >= W - 4 || z >= OUT_H - 4) { ground[i] = SE; block[i] = 1; continue; }
     ground[i] = zn === 'bos' ? FO : zn === 'strand' ? SA : zn === 'eiland' ? (metric(ISLES.eiland, x + .5, z + .5) < .42 ? GR : SA) : GR;
   }
@@ -171,8 +196,11 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     ground[I(...r.exit)] = floor; block[I(...r.exit)] = 0;
     if (r.zip) { ground[I(...r.zip)] = floor; block[I(...r.zip)] = 0; }
     if (r.pool) for (let z = r.z0; z <= r.z1; z++) for (let x = r.x0; x <= r.x1; x++) if (((x + .5 - r.pool.cx) / r.pool.rx) ** 2 + ((z + .5 - r.pool.cz) / r.pool.rz) ** 2 <= 1) block[I(x, z)] = 1;   // a pool inside the grotto
-    if (r.wall) for (let z = r.z0; z <= r.z1; z++) if (!r.gate.some(([gx, gz]) => gx === r.wall && gz === z)) block[I(r.wall, z)] = 1;   // the wall between the two rooms (its gate is closed at runtime, world-rooms.js)
+    for (const w of roomWalls(r)) for (let z = r.z0; z <= r.z1; z++) if (!w.gate.some(([gx, gz]) => gx === w.x && gz === z)) block[I(w.x, z)] = 1;   // the walls between the rooms (their gates are closed at runtime, world-rooms.js / world-waterval.js)
+    if (r.stream) for (let z = r.z0; z <= r.z1; z++) for (let x = r.stream.x0; x <= r.stream.x1; x++) if (z !== r.bridge) block[I(x, z)] = 1;   // the stream in the cave: only the bridge's row is open (shut at runtime until the switches raise it)
+    for (const p of [...(r.posts || []), ...(r.switches || []), ...(r.chest ? [r.chest] : [])]) block[I(...p)] = 1;
   }
+  for (const p of [HOPS.shore, ...HOPS.isles.map(h => h.post)]) block[I(...p)] = 1;              // the hook posts on the beach and its islands
   const sea = (x, z) => !inb(x, z) || ground[I(x, z)] === SE;
   const rim = new Uint8Array(W * H);                              // a strip of beach around every island
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (!sea(x, z) && (sea(x + 1, z) || sea(x - 1, z) || sea(x, z + 1) || sea(x, z - 1) || sea(x + 1, z + 1) || sea(x - 1, z - 1) || sea(x + 1, z - 1) || sea(x - 1, z + 1))) rim[I(x, z)] = 1;
@@ -316,12 +344,16 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const docks = [I(...BOAT.strand.dock), I(...BOAT.eiland.dock)];
   const links = new Map(); for (const r of Object.values(ROOMS)) { links.set(I(...r.door), I(...r.in)); links.set(I(...r.exit), I(...r.door)); }   // walking through a door
   links.set(I(...ROOMS.hut.zip), I(Math.floor(ZIP.to[0]), Math.floor(ZIP.to[1])));                     // the zipline: from the treehouse down to the village
+  // the hookshot between two posts: from any open tile beside one post to any open tile beside the other
+  const hookTo = new Map(), beside = ([x, z]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => [x + dx, z + dz]).filter(([X, Z]) => inb(X, Z) && !block[I(X, Z)]).map(([X, Z]) => I(X, Z));
+  for (const [a, b] of HOOK_LINKS) { const A = beside(a), B = beside(b); for (const i of A) hookTo.set(i, (hookTo.get(i) || []).concat(B)); for (const i of B) hookTo.set(i, (hookTo.get(i) || []).concat(A)); }
   const flood = tools => {
     const re = new Uint8Array(W * H), s = I(Math.floor(START[0]), Math.floor(START[1])), q = [s]; re[s] = 1;
     const add = j => { if (!re[j]) { re[j] = 1; q.push(j); } };
     for (let h = 0; h < q.length; h++) {
       const i = q[h], x = i % W, z = Math.floor(i / W);
       if (i === docks[0]) add(docks[1]); if (i === docks[1]) add(docks[0]); if (links.has(i)) add(links.get(i));
+      if (tools.haak && hookTo.has(i)) for (const j of hookTo.get(i)) add(j);
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         let X = x + dx, Z = z + dz; if (!inb(X, Z)) continue; let j = I(X, Z);
         if (block[j] === LOW || (block[j] === GAP && tools.rit)) { X += dx; Z += dz; if (!inb(X, Z)) continue; j = I(X, Z); if (block[j]) continue; }
@@ -340,15 +372,11 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const reach0 = flood({}), reach1 = flood({ zwaard: 1 }), reach2 = flood({ zwaard: 1, haak: 1 });   // no tools / shears / shears and hammer
   const at = (m, x, z) => !!m[I(x, z)];
 
-  /* ---- where the tools lie: the sword in the village, the hookshot in a chest in the forest ---- */
-  // the hookshot's chest stands at (x, z) with two stone buttons in front of it (x-1 and x+1, z+2) and two big stones
-  // beside it (x-2 and x+2, z): put a stone (or an animal, or herself) on each button and the lid flies open
-  const roomy = (x, z) => { for (let dz = 0; dz <= 3; dz++) for (let dx = -2; dx <= 2; dx++) { const X = x + dx, Z = z + dz; if (!inb(X, Z) || block[I(X, Z)] || keepSet.has(I(X, Z)) || !plain(ground[I(X, Z)]) || !at(reach0, X, Z)) return false; } return clearView(x, z); };
+  /* ---- where the tools lie: the sword in the village, the hookshot in a chest in the cave behind the waterfall ---- */
   const toolSpots = {
     zwaard: pick(1, (x, z, g, zn) => g === GR && zn === 'dorp' && at(reach0, x, z) && farFromStart(x, z) && !nearBusy(x, z, 1) && clearView(x, z), 0)[0] || [24, 47],
-    haak: pick(1, (x, z, g, zn) => zn === 'bos' && roomy(x, z), 0)[0] || pick(1, (x, z, g, zn) => (zn === 'bos' || zn === 'dorp') && roomy(x, z), 0)[0] || [18, 16],
+    haak: ROOMS.val.chest.slice(),
   };
-  { const [x, z] = toolSpots.haak; for (let dz = 0; dz <= 3; dz++) for (let dx = -2; dx <= 2; dx++) keepSet.add(I(x + dx, z + dz)); }
   /* ---- the fallen star that hatches the egg lies somewhere deep in the flower meadow ---- */
   const starSpots = pick(5, (x, z, g, zn) => g === GR && zn === 'wei' && x > 73 && at(reach1, x, z) && open4(x, z) && clearView(x, z), 3);
 
@@ -359,7 +387,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const bigStones = [];
   for (const [zn, n] of [['dorp', 3], ['bos', 2], ['wei', 2], ['strand', 3], ['eiland', 2], ['kasteel', 2]])
     for (const [x, z] of pick(n, (x, z, g, z2) => z2 === zn && plain(g) && open4(x, z) && !nearBusy(x, z, 1) && !inPen(x, z) && at(reach, x, z) && clearView(x, z), 4)) { bigStones.push([x, z, zn]); keepSet.add(I(x, z)); }
-  { const [x, z] = toolSpots.haak, zn = zone[I(x, z)] === 'dorp' ? 'dorp' : 'bos'; bigStones.push([x - 2, z, zn, 'puzzle'], [x + 2, z, zn, 'puzzle']); }   // the hookshot chest's two stones
+  bigStones.push([...ROOMS.val.stone, 'wei', 'val']);                                             // the stone for a button in the waterfall's cave
 
   /* ---- spawn spots for collectibles & egg hiding places ---- */
   const isTree = (x, z) => inb(x, z) && block[I(x, z)] && !structural[I(x, z)] && ground[I(x, z)] !== SE;
@@ -408,9 +436,10 @@ export function validate(m, keep = []) {
   for (const g of PEN.gate) ok(m.reach0[I(...g)], 'the unicorn meadow must be open from the start');
   ok(m.reach0[I(PEN.x0 + 3, PEN.z0 + 2)], 'pen interior unreachable'); ok(m.reach0[I(Math.floor(RACE[0]), Math.floor(RACE[1]) - 1)], 'race arch unreachable');
   ok(m.reach[I(...CASTLE.door)] && !m.reach2[I(...CASTLE.door)], 'the castle door must need the unicorn');
-  // the adventure in order: egg and hookshot in the forest, sword in the village, star behind the brambles, fruit over the sea
+  // the adventure in order: egg in the forest, sword in the village, hookshot behind the waterfall, star behind the brambles, fruit over the sea
   const free = ([x, z]) => !m.block[I(x, z)];
-  ok(m.reach0[I(...m.toolSpots.zwaard)] && free(m.toolSpots.zwaard), 'shears unreachable'); ok(m.reach0[I(...m.toolSpots.haak)] && free(m.toolSpots.haak), 'hookshot chest unreachable');
+  ok(m.reach0[I(...m.toolSpots.zwaard)] && free(m.toolSpots.zwaard), 'shears unreachable'); { const [x, z] = m.toolSpots.haak; ok(m.reach1[I(x, z + 1)] && !m.reach0[I(x, z + 1)] && free([x, z + 1]), 'the hookshot chest stands in the waterfall cave, open with the sword'); }
+  for (const h of HOPS.isles) ok(m.reach2[I(h.post[0] - 1, h.post[1])] && !m.reach1[I(h.post[0] - 1, h.post[1])], 'the beach islands are reached with the hookshot only');
   ok(m.starSpots.length >= 3, 'too few star spots'); for (const s of m.starSpots) ok(m.reach1[I(...s)] && !m.reach0[I(...s)], 'star spot must lie behind the brambles');
   ok(m.reach2[I(...BOAT.strand.dock)] && !m.reach1[I(...BOAT.strand.dock)], 'boat must lie behind the gap in the bridge'); ok(m.reach2[I(...BOAT.eiland.dock)], 'island pier unreachable');
   ok(m.reach2[I(RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1)], 'rainbow tree unreachable');

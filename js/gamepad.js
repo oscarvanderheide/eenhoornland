@@ -86,7 +86,7 @@ export function initGamepad(getWorld) {
       }
       if (hit(B.X)) tapDown(); else if (!cur[B.X] && held) tapUp();
       if (hit(B.O)) back();
-      if (hit(B.OPT) && shown($('#start')) && $('#modal').hidden) press('#start-saves');   // the saves, also from the start screen
+      if (hit(B.OPT) && shown($('#start')) && $('#modal').hidden) press('#b-save');   // the saves, also from the start screen
     } else {
       setMode('world');
       const w = getWorld();

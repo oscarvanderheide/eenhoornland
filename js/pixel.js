@@ -136,11 +136,27 @@ const WEAR_PAL = { F: '#FF7EB6', G: '#FFD43B', W: '#FFFFFF', L: '#5DC88A', R: '#
   1: RAINBOW[0], 2: RAINBOW[1], 3: RAINBOW[2], 4: RAINBOW[3], 5: RAINBOW[4], 6: RAINBOW[5] };
 const DRESS = { jurkgeel: ['#FFD43B', '#E0A020'], jurkblauw: ['#6CC6F0', '#3E9AD6'] };
 const put = (row, at, str) => { const a = row.split(''); for (let i = 0; i < str.length; i++) if (str[i] !== ' ' && at + i >= 0 && at + i < a.length) a[at + i] = str[i]; return a.join(''); };
+/** both arms up over her head (holding up a tool she just got): the hands by her dress go, two arms go up past her face */
+function armsUp(rows, K) {
+  const edge = r => { const a = r.search(/[dDy]/); return a < 0 ? null : [a, r.length - 1 - r.split('').reverse().join('').search(/[dDy]/)]; };
+  rows = rows.map((r, i) => {
+    if (i >= K.neck && i <= K.dress[1]) { const e = edge(r); if (e) r = r.split('').map((c, x) => c === 's' && (x < e[0] || x > e[1]) ? '.' : c).join(''); }
+    return '..' + r + '..';
+  });
+  const [l, r] = edge(rows[K.neck]), W = rows[0].length, set = (x, y) => { if (y >= 0 && x >= 0 && x < W) rows[y] = put(rows[y], x, 's'); };
+  for (const [x0, dir, stop] of [[l - 1, -1, 1], [r + 1, 1, W - 2]]) {
+    let x = x0, y = K.neck;
+    while (x !== stop && y > 1) { set(x, y); x += dir; y--; }                       // up and out from the shoulder
+    while (y >= 1) { set(x, y); y--; }                                              // then straight up beside her head
+  }
+  return rows;
+}
 /** a girl with what she has on: wear = {head, neck, dress, back, hand}. The balloon is not part of the sprite (it floats). */
 export function kidSprite(who, frame = 'idle', blink = false, wear = {}) {
-  const K = KID_ROWS[who] || KID_ROWS.anna, w = K.top[0].length, mid = w / 2, pal = Object.assign({}, WEAR_PAL, kidPal(KIDS[who] || KIDS.anna));
+  const K = KID_ROWS[who] || KID_ROWS.anna, w = K.top[0].length + (frame === 'up' ? 4 : 0), mid = w / 2, pal = Object.assign({}, WEAR_PAL, kidPal(KIDS[who] || KIDS.anna));
   const sig = ['head', 'neck', 'dress', 'back', 'hand'].map(k => wear[k] || '').join(','), key = 'kid' + who + frame + blink + sig;
   let rows = K.top.map((r, i) => blink && i === K.eyes ? r.replace(/k/g, 's') : r).concat(K.legs[frame] || K.legs.idle), up = [];
+  if (frame === 'up') rows = armsUp(rows, K);
   if (DRESS[wear.dress]) { pal.d = DRESS[wear.dress][0]; pal.D = DRESS[wear.dress][1]; }
   if (wear.dress === 'jurkregenboog') for (let i = K.dress[0]; i <= K.dress[1]; i++) rows[i] = rows[i].replace(/[dD]/g, String(1 + (i - K.dress[0]) % 6));
   if (wear.neck === 'ketting') { let n = 0; rows[K.neck] = rows[K.neck].replace(/d|[1-6]/g, () => n++ % 2 ? 'P' : 'W'); }
@@ -149,6 +165,7 @@ export function kidSprite(who, frame = 'idle', blink = false, wear = {}) {
   if (wear.head === 'kroon') { up = [put('.'.repeat(w), mid - 4, 'Y  YY  Y'), put('.'.repeat(w), mid - 4, 'YYYggYYY')]; }
   if (wear.head === 'hoed') { up = [put('.'.repeat(w), 3, 'M'.repeat(w - 6)), put('.'.repeat(w), 2, 'MMw' + 'M'.repeat(w - 9) + 'wM')]; rows[0] = put(rows[0], 1, 'MMMM' + 'M'.repeat(w - 9) + 'wMMM'); rows[1] = 'MwM' + 'M'.repeat(w - 6) + 'MMM'; }
   rows = up.concat(rows); const off = up.length;
+  if (frame === 'up') wear = Object.assign({}, wear, { hand: '' });   // both hands are up holding something: the cuddly toy waits
   if (wear.back === 'vleugels' || wear.hand === 'knuffel') {
     rows = rows.map(r => '....' + r + '....');
     if (wear.back === 'vleugels') ['vVV', 'vVV', 'vV', 'v'].forEach((wing, k) => { const i = off + K.neck - 1 + k, r = rows[i], a = r.search(/[^.]/), b = r.length - 1 - r.split('').reverse().join('').search(/[^.]/); rows[i] = put(put(r, a - wing.length, wing), b + 1, wing.split('').reverse().join('')); });
