@@ -282,6 +282,8 @@ function confetti(x, y, z, cols, n = 10, shape = bitGeo, up = 2.2) {
     bits.push({ m, vx: Math.cos(a) * s, vz: Math.sin(a) * s * .6, vy: up + Math.random() * 1.5, spin: (Math.random() - .5) * 12, life: 1.1 + Math.random() * .5 });
   }
 }
+// the very first confetti would make the graphics chip build its program while she watches: draw one bit out of sight at the start
+{ const m = new THREE.Mesh(bitGeo, paper('#ffffff', { side: THREE.DoubleSide })); m.castShadow = true; m.frustumCulled = false; m.position.set(0, -30, 0); scene.add(m); setTimeout(() => scene.remove(m), 2000); }
 const starGeo = (() => { const s = new THREE.Shape(sunPts(.08, 5).map(([x, y]) => new THREE.Vector2(x, y))); return new THREE.ShapeGeometry(s); })();
 
 /* ---------------- sound: a few soft synth notes ---------------- */
@@ -629,8 +631,8 @@ function frame(now) {
   for (let n = 0; n < 2 && warm.length; n++) warm.shift()();   // drawings made ahead, a few per frame
   // trees wobble when tapped, in steps
   if (stepped) for (const t of set.trees) if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
-  // confetti
-  for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); b.m.material.dispose(); bits.splice(i, 1); } }
+  // confetti (its paper is shared with everything else: never thrown away)
+  for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); bits.splice(i, 1); } }
   // the sea rows rock gently, each its own way
   if (stepped) { if (set.sea) seaTick.value = tick; else for (const r of set.seaRows) r.m.position.x = r.base + Math.sin(tick * .05 + r.k * 1.7) * .12; }
 
@@ -701,6 +703,10 @@ window.__p = {
     return { cells: seen.size, places: Object.fromEntries(Object.entries(set.places || {}).map(([n, p]) => [n, at(p)])) };
   },
   places() { return set.places || {}; },
+  /** does a finger at this spot on the screen land on something that answers a tap (without the finger's-width margin)? */
+  direct(x, y) { const h = pickAt(x, y); return !!(h && h.object.userData.tap); },
+  /** whose tap a finger at this spot would get through the margin alone: a figure's name, 'thing', or null */
+  near(x, y) { const s = nearTap(x, y); return s ? (s.obj.children[0]?.children[0]?.userData.fig?.name || 'thing') : null; },
   /** the set's shots: which is on, how often it changed, and how tall she is in each on this screen (in points) */
   shots() {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), top = (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H;

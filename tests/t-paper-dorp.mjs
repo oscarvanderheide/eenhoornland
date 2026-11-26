@@ -44,13 +44,14 @@ export default async function (t) {
   const finger = on => t.send('Input.dispatchMouseEvent', { type: on ? 'mousePressed' : 'mouseReleased', x: 1000, y: 430, button: 'left', clickCount: 1, pointerType: 'mouse' });
   await cross('a finger held to her right, onto the east bridge', [7.0, 2.4], finger, [1, 0], 1.15, 'brug-oost');
   await t.sleep(2500); await t.shot('tmp-shots/d-shot-brug-oost-desk.png');
+  const fingerL = on => t.send('Input.dispatchMouseEvent', { type: on ? 'mousePressed' : 'mouseReleased', x: 250, y: 430, button: 'left', clickCount: 1, pointerType: 'mouse' });
+  await cross('a finger held to her left, into the playground where the camera turns', [-.6, -.4], fingerL, [-1, 0], 1.5, 'speeltuin');
   for (const [n, at] of [['thuis', places.start], ['speeltuin', places.swing], ['vijver', places.pond], ['wei', places.pen], ['brug-noord', places.north], ['modder', places.mud], ['dorp', places.fountain]]) { await t.ev(`__p.placeAt(${at[0]}, ${at[1]})`); await t.sleep(3200); ok((await t.ev('__p.shots()')).on === n, `the shot at ${n} is on there`); await t.shot(`tmp-shots/d-shot-${n}-desk.png`); }
 
-  // a finger that just misses a small thing still counts: far back on the bridge the unicorn is small
   await t.ev('__p.placeAt(10.2, 2.4)'); await t.sleep(3200);
-  const u = await t.ev(`__p.screen('unicorn')`), h0 = await t.ev(`__p.hop('unicorn')`);
-  await t.click(u[0] + 14, u[1] - 4); await t.sleep(250);
-  ok(h0 === 0 && await t.ev(`__p.hop('unicorn')`) > .05, 'a tap 14 points beside the small unicorn on the bridge still makes it hop');
+  // and tapping makes no new program (confetti is cut from paper that is kept)
+  const n0 = (await t.ev('__p.count()')).newest; await t.ev(`__p.tap('unicorn')`); await t.sleep(2500); await t.ev(`__p.tap('girl')`); await t.sleep(600);
+  ok((await t.ev('__p.count()')).newest === n0, 'a tap with confetti builds no program again');
 
   // thrown away means gone: back and forth, and nothing piles up
   await open('', DESK); for (let i = 0; i < 20 && (await t.ev('__p.doll().warm')) > 0; i++) await t.sleep(300);
@@ -63,6 +64,8 @@ export default async function (t) {
   ok(!same.length, `island, village, island six times over leaves nothing behind and builds no program twice (${b.geometries} shapes, ${b.textures} pictures, ${b.programs} programs)` + (same.length ? ' CHANGED: ' + same.map(k => `${k} ${a[k]} -> ${b[k]}`).join(', ') : ''));
   const ms = []; for (let i = 0; i < 3; i++) { ms.push(await t.ev(`__p.load('dorp')`)); await t.sleep(300); } console.log('     the village builds in ' + ms.map(v => v.toFixed(0)).join(', ') + ' ms here');
   await t.ev(`__p.load('eiland')`); await t.sleep(600);
+  { const taps = async () => { for (const who of ['sheep', 'mama', 'unicorn']) { await t.ev(`__p.tap('${who}')`); await t.sleep(900); } await t.sleep(1500); return (await t.ev('__p.count()')).newest; };
+    const n1 = await taps(), n2 = await taps(); ok(n1 === n2, 'on the island too: sheep, mama and unicorn tapped a second time, no program built again'); }
   await t.ev('__p.tap("house")'); await t.sleep(500); ok((await t.ev('__p.info()')).door === 1, 'the island still answers after all that (its door opens)');
 
   // the phone, lying down
@@ -72,5 +75,12 @@ export default async function (t) {
   const shp = await t.ev('__p.shots()'), small = shp.list.filter(s => s.play && s.her < 40), tiny = shp.list.filter(s => s.her < 22);
   console.log('     she is, in points on the phone: ' + shp.list.map(s => `${s.name} ${s.her.toFixed(0)}${s.play ? '' : ' (walk through)'}`).join(', '));
   ok(!small.length && !tiny.length, 'on the phone she is at least 40 points tall wherever there are things to tap, and 22 where she only walks through' + (small.length || tiny.length ? ' NOT: ' + [...small, ...tiny].map(s => s.name).join(', ') : ''));
+  // a finger that just misses a small thing still counts: far back on the bridge the unicorn is small. Find a spot on the screen
+  // that is off every card but within a finger's width of the unicorn, and tap there
+  await t.ev('__p.placeAt(10.2, 2.4)'); await t.sleep(3500);
+  const u = await t.ev(`__p.screen('unicorn')`); let spot = null;
+  for (let k = 0; k < 16 && !spot; k++) { const x = u[0] + Math.cos(k / 16 * 6.283) * 19, y = u[1] + Math.sin(k / 16 * 6.283) * 19; if (!(await t.ev(`__p.direct(${x}, ${y})`)) && (await t.ev(`__p.near(${x}, ${y})`)) === 'unicorn') spot = [x, y]; }
+  if (spot) { await t.click(spot[0], spot[1]); await t.sleep(250); }
+  ok(spot && await t.ev(`__p.hop('unicorn')`) > .05, 'a tap 19 points from the small unicorn on the bridge, off its card, still makes it hop' + (spot ? '' : ' (no such spot found)'));
   for (const [n, at] of [['thuis', places.start], ['speeltuin', places.swing], ['vijver', places.pond], ['wei', places.pen], ['brug-oost', places.east], ['brug-noord', places.north], ['modder', places.mud], ['dorp', places.fountain]]) { await t.ev(`__p.placeAt(${at[0]}, ${at[1]})`); await t.sleep(3200); await t.shot(`tmp-shots/d-shot-${n}-land.png`); }
 }
