@@ -580,6 +580,10 @@ export const slashArc = () => cached('slash', () => gridSprite(26, 26, (x, y) =>
   const k = Math.cos(a / 1.75 * Math.PI / 2), outer = 12.6, inner = outer - .8 - 4.2 * k; if (r > outer || r < inner) return null;
   return r > outer - 1.1 ? '#BFE8FF' : r < inner + 1 ? '#DDF3FF' : '#FFFFFF';
 }, { outline: false }));
+/** the beach's little shovel (it goes with the bucket) */
+export const schep = () => cached('schep', () => sprite(['...hh...', '...hh...', '...hh...', '...hh...', '...hH...', '..bbbb..', '.bBbbbb.', '.bBbbbb.', '.bbbbbb.', '..bbbb..'], { h: '#FF9F43', H: '#E07F2A', b: '#4DABF7', B: '#9FD3FF' }));
+/** a starfish found in the sand */
+export const zeester = () => cached('zeester', () => sprite(['...o...', '...o...', 'ooooooo', '.ooOoo.', '..ooo..', '.oo.oo.', 'oo...oo'], { o: '#FF8A65', O: '#FFD0B5' }));
 /** the three saves each have their own colour, so the girls know theirs without reading */
 export const SLOT_COLS = [['#FF9EC7', '#FFD7E8'], ['#B9A3F0', '#E4D9FF'], ['#7FD69B', '#CDF3D8']];
 /** the save button: three little cards in the saves' colours, the one being played stands up */

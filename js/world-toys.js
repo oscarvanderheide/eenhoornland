@@ -4,7 +4,7 @@
 //            things to wear
 //   bos      somebody is hiding in the bushes
 //   wei      a kite that flies when you run, dandelions to blow
-//   strand   a bucket for sand towers (jump on them to flatten them)
+//   strand   a bucket for sand towers (jump on them to flatten them) and a shovel to dig for shells, crabs and coins
 //   eiland   puddles of paint: coloured footprints, and two colours make a third
 //   kasteel  tap the castle and somebody looks out of a window
 // The bike's trailer and the boat live in world-play.js; the playground (swing, slide) is world-speeltuin.js. What should stay the way the children left it (the
@@ -41,6 +41,7 @@ export function createToys(ctx) {
   function putDown(quiet = false) {
     const t = carry; if (!t) return;
     if (!quiet && t === bucket) { const a = sandAhead(); if (a) { build(a[0], a[1]); return; } }   // on the sand, "put it down" is: flip it over, a tower
+    if (!quiet && t === shovel) { const a = digAhead(); if (a) { dig(a[0], a[1]); return; } }       // and with the shovel: dig
     carry = null;
     let x = kid.pos.x + kid.face * .55, z = kid.pos.z + .12; if (!ctx.walkable(Math.floor(x), Math.floor(z))) { x = kid.pos.x; z = kid.pos.z + .05; }
     t.x = x; t.z = z; t.m.position.set(x, 0, z); t.m.rotation.set(-.3, 0, 0); t.m.scale.set(t.scale, t.scale, 1); t.m.castShadow = true; t.tilt = 0; pop(t); if (!quiet) sfx.pop();
@@ -126,8 +127,44 @@ export function createToys(ctx) {
     const x = Math.floor(kid.pos.x + kid.face * 1.05), z = Math.floor(kid.pos.z), t = towers.get(x + ',' + z);
     return sandOK(x, z) && (!t || t.l < Q.SAND_MAX) ? [x, z] : null;
   }
-  /** a tap on the ground: with the bucket in her hands, a tap on the sand builds a tower there */
+  /* ================= strand: the shovel. On the beach sand she digs a hole; what is down there: a shell, a starfish, a crab
+     that scuttles off and digs itself in again, or just sand, and now and then a coin (three a day at most). The holes
+     fill up again after a while. ================= */
+  const shovel = thing('schep', ART.schep(), MAP.SHOVEL, 1);
+  const holes = new Map(), crabs = [], holeArt = PX.gridSprite(14, 8, (x, y) => { const d = ((x + .5 - 7) / 7) ** 2 + ((y + .5 - 4) / 4) ** 2; return d > 1 ? null : d > .55 ? '#D9B068' : d > .25 ? '#B08A4E' : '#8E6C3A'; }, { outline: false, key: 'kuil' });
+  let digs = 0;
+  function digAhead() {
+    if (carry !== shovel) return null;
+    const x = Math.floor(kid.pos.x + kid.face * 1.05), z = Math.floor(kid.pos.z), k = x + ',' + z;
+    return sandOK(x, z) && !towers.get(k) ? [x, z] : null;
+  }
+  function dig(x, z) {
+    kid.face = x + .5 >= kid.pos.x ? 1 : -1; shovel.tilt = 1; kid.hop = .3; sfx.brush();
+    for (let i = 0; i < 7; i++) bit(sandGrain, x + .5 + rnd(-.3, .3), .2, z + .6, { vx: -kid.face * rnd(.5, 2), vy: rnd(1.5, 3), g: 8, life: .7 });
+    const k = x + ',' + z, old = holes.get(k); if (old) { pop(old, .3); old.t = 70; return 'zand'; }   // a hole already: just more sand flying
+    const h = { m: sprite(holeArt, x + .5, z + .55, { lean: Math.PI / 2, shadow: false, y: .015, scale: 1 }), t: 70, x, z, scale: 1 }; holes.set(k, h); pop(h, .3);
+    digs++; const r = Math.random(), at = v3(x + .5, .3, z + .6);
+    let what = r < .28 ? 'schelp' : r < .48 ? 'krab' : r < .62 ? 'zeester' : r < .8 ? 'munt' : 'zand';
+    if (what === 'munt') { what = 'zand'; for (const n of [1, 2, 3]) if (Q.giftOnce('schep' + n, 'munt')) { what = 'munt'; break; } }
+    setTimeout(() => {
+      if (what === 'munt') { sfx.chime(5); bit(ART.coin(), at.x, .3, at.z, { vx: 0, vy: 3.4, g: 6, life: 1.1, spin: 9 }); }
+      else if (what === 'schelp' || what === 'zeester') { const art = what === 'schelp' ? ART.shell(digs) : ART.zeester(); sfx.sparkle(); bubble(kid, '', art); bit(art, at.x, .3, at.z, { vx: kid.face * -.4, vy: 2.6, g: 6, life: .9 }); }   // a moment: look! (and back in the sand it goes)
+      else if (what === 'krab') { sfx.click(); const m = sprite(ART.crab(), at.x, at.z, { scale: .9 }); crabs.push({ m, t: 0, dir: Math.random() < .5 ? -1 : 1 }); }
+      else sfx.pop();
+    }, 260);
+    return what;
+  }
+  function stepDig(dt, time) {
+    for (const [k, h] of holes) { h.t -= dt; if (h.t < 1) { const s = Math.max(.01, h.t); h.m.scale.set(s, s, 1); } if (h.t <= 0) { scene.remove(h.m); holes.delete(k); } }
+    for (let i = crabs.length - 1; i >= 0; i--) {                                 // out it pops, a sideways dash, and it digs itself in again
+      const c = crabs[i]; c.t += dt; c.m.position.y = c.t < .3 ? Math.sin(c.t / .3 * Math.PI) * .4 : 0;
+      if (c.t > .3 && c.t < 2) { const nx = c.m.position.x + c.dir * dt * 1.6; if (ctx.walkable(Math.floor(nx), Math.floor(c.m.position.z))) c.m.position.x = nx; else c.dir = -c.dir; c.m.rotation.z = Math.sin(time * 30) * .1; if (Math.random() < dt * 3) sfx.click(); }
+      if (c.t >= 2) { const s = Math.max(0, 1 - (c.t - 2) / .5); c.m.scale.set(.9, .9 * s, 1); if (s <= 0) { scene.remove(c.m); crabs.splice(i, 1); } }
+    }
+  }
+  /** a tap on the ground: with the bucket in her hands, a tap on the sand builds a tower there (with the shovel: a hole) */
   function tapGround(x, z) {
+    if (carry === shovel && sandOK(x, z)) { sfx.click(); ctx.showMarker(x + .5, z + .5); ctx.approach(x, z, () => dig(x, z)); return true; }
     if (carry !== bucket || !sandOK(x, z)) return false;
     sfx.click(); ctx.showMarker(x + .5, z + .5); ctx.approach(x, z, () => build(x, z)); return true;
   }
@@ -293,7 +330,7 @@ export function createToys(ctx) {
     nearUse() { if (carry !== can) return null; const p = potNear(1.4); return p ? { key: 'water', art: ART.gieter(!!can.water), run: () => usePot(p) } : null; },
     bumpAt(x, z) { if (carry !== can) return false; const p = pots.find(p => Math.floor(p.x) === x && Math.floor(p.z) === z); if (!p) return false; usePot(p); return true; },
     nearest() { let b = null; for (const t of Object.values(things)) { if (t === carry) continue; const d = Math.hypot(t.x - kid.pos.x, t.z - kid.pos.z); if (d < 1.5 && (!b || d < b.d)) b = { id: t.id, art: t.art, d }; } return b; },
-    take: id => take(things[id]), takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
+    take: id => take(things[id]), dig, digAhead, holes: () => [...holes.keys()], takeNear() { for (const t of Object.values(things)) if (t !== carry && near(t.x, t.z, 1.5)) { take(t); return true; } return false; }, usePot: i => usePot(pots[i]), build, rustle: i => rustle(hides[i], true), blow: i => blow(puffs[i]), openStall,
     info: () => ({ ahead: sandAhead(), carry: carry && carry.id, water: can.water, pots: pots.map(p => Q.plant(p.i)), towers: [...towers.values()].map(t => [t.x, t.z, t.l]), hides: hides.map(h => [h.x, h.z, !!h.who]), hiders: hiders.map(h => h.state), puffs: puffs.map(d => [d.x, d.z, d.full]), puddles: puddles.map(p => [p.x, p.z]), paint: paint && { base: paint.base, left: paint.left }, prints: printAt.filter(Boolean).length, peekers: peekers.length, kite: [kiteP.x, kiteP.y, kiteP.z], things: Object.values(things).map(t => [t.id, t.x, t.z]) }),
     /** with a full can in her hands, a tap on an animal waters it. Returns true if it handled the tap. */
     tapAnimal(c) {
@@ -308,7 +345,7 @@ export function createToys(ctx) {
       }, 450); return true;
     },
     update(dt, time, active) {
-      clock += dt;
+      clock += dt; stepDig(dt, time);
       for (let i = pops.length - 1; i >= 0; i--) { const o = pops[i]; o.pop = Math.min(1, o.pop + dt * 2.4); const q = Math.sin(o.pop * Math.PI * 3) * o.amp * (1 - o.pop), s = o.scale || o.m.userData.s0 || (o.m.userData.s0 = o.m.scale.y); if (o !== carry) o.m.scale.set(s * (1 + q) * Math.sign(o.m.scale.x || 1), s * (1 - q), 1); if (o.pop >= 1) pops.splice(i, 1); }
       for (const a of animals) if (a.shake > 0) { a.shake -= dt; a.mesh.rotation.z = a.shake > 0 ? Math.sin(a.shake * 45) * .25 : 0; }
       /* in her hands */

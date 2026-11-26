@@ -82,6 +82,15 @@ export default async function (t) {
     await t.ev(`__w.toys.build(59,72); __w.toys.build(59,72); __w.toys.build(61,72); __w.toys.build(56,72)`); await t.sleep(900); let s = await toys(); ok(s.towers.length === 3 && s.towers.some(x => x[2] === 3), 'towers grow three high'); await place(58.5, 73.6); await t.sleep(1500); await shot('22-towers');
     ok(await t.ev(`__w.Q.quest.sand.length`) === 3, 'saved'); await place(59.9, 72.6); await t.sleep(300); await t.ev(`__w.toys.putDown(true); __w.jump()`); await t.sleep(1200); s = await toys(); ok(s.towers.length === 2, 'jumping on a tower flattens it'); await shot('23-stomped');
   }
+  if (run('strand')) {   // the shovel: dig holes, find things
+    const SH = await J(`__w.MAP.SHOVEL`); await place(SH[0] - .8, SH[1] + 1.2); await t.sleep(800); ok(await t.ev(`__w.toys.nearest() && __w.toys.nearest().id`) === 'schep' || await t.ev(`__w.toys.nearest() && __w.toys.nearest().id`) === 'emmer', 'the shovel lies by the bucket');
+    await t.ev(`__w.toys.take('schep')`); await t.sleep(300); ok(await t.ev(`__w.action().key`) === 'putschep', '✕ with the shovel: dig (' + await t.ev(`__w.action().key`) + ')');
+    await place(60.5, 73.5); await t.sleep(300); await t.ev(`__w.kid.face = 1`); const finds = [];
+    for (let k = 0; k < 8; k++) { await place(58.5 + (k % 4) * 1.0, 73.5 + Math.floor(k / 4) * 1.0); await t.ev(`__w.kid.face = 1`); finds.push(await t.ev(`(a => a ? __w.toys.dig(a[0], a[1]) : 'none')(__w.toys.digAhead())`)); await t.sleep(350); if (k === 2) await shot('22a-dig'); }
+    ok(finds.filter(f => f !== 'none').length >= 6, 'on the sand she digs holes: ' + finds.join(','));
+    ok(await t.ev(`__w.toys.holes().length`) >= 5, 'the holes stay for a while'); await t.sleep(400); await shot('22b-holes');
+    await t.ev(`__w.toys.putDown(true)`);
+  }
   if (run('boot')) {   // sailing
     await place(91.5, 70.5); await t.sleep(600); await place(95.5, 70.5); ok(await until(`__w.play.info().sailing`, 10000), 'stepping on the pier: into the boat'); ok(await until(`!__w.play.info().moving`, 30000), 'it pushes off and waits'); let s = await play(); ok(Math.hypot(s.boat[0] - 96.6, s.boat[1] - 71) > 2, 'a little way out (' + s.boat + ')'); await t.sleep(800); await shot('24-pushed-off');
     await t.ev(`__w.play.steer(103.5, 74.5)`); ok(await until(`!__w.play.info().moving`, 40000), 'a tap on the water sails there'); s = await play(); ok(Math.hypot(s.boat[0] - 103.5, s.boat[1] - 74.5) < 1, 'arrived at ' + s.boat); await t.sleep(800); await shot('25-sailing');

@@ -85,7 +85,8 @@ export const SWING = { x: 20, z: 41, on: [20, 42], land: [[17, 41], [18, 41], [2
 export const SLIDE = { x: 23, z: 43, on: [22, 43], off: [26, 43] };
 export const HIDES = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]];   // bos: bushes somebody hides in
 export const KITE = [62.5, 44.4];                                                     // wei: a kite for the wind
-export const BUCKET = [57.5, 70.5];                                                   // strand: a bucket for sand towers
+export const BUCKET = [57.5, 70.5];
+export const SHOVEL = [58.6, 70.6];                                                   // strand: the shovel next to the bucket: dig for shells, crabs and now and then a coin                                                   // strand: a bucket for sand towers
 export const PAINT = [[137.5, 65.5], [135.5, 68.5], [133.5, 64.5]];                      // eiland: red, yellow and blue puddles
 /** the part of the sea the boat sails on: marked with buoys, so nobody sails off the map */
 export const LAGOON = { x0: 92, z0: 27, x1: 146, z1: 89 };
@@ -151,7 +152,7 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
     }
   };
   const keepSet = new Set(keep.concat(Object.values(PLACES).map(p => p.tile), [BOAT.strand.dock, BOAT.eiland.dock], BALLS.map(b => [Math.floor(b[0]), Math.floor(b[1])]), [[Math.floor(BIKE[0]), Math.floor(BIKE[1])], [Math.floor(START[0]), Math.floor(START[1])], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0], RAINBOW_TREE[1] + 1], [RAINBOW_TREE[0] + 1, RAINBOW_TREE[1]]],
-    [...POTS, CAN, KITE, BUCKET, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
+    [...POTS, CAN, KITE, BUCKET, SHOVEL, ...PEN.gate, [PEN.gate[0][0], PEN.gate[0][1] - 1], [RACE[0], RACE[1] - 1], RACE, [RACE[0], RACE[1] + 1], ROOMS.grot.door, [ROOMS.grot.door[0], ROOMS.grot.door[1] + 1], [ROOMS.grot.door[0], ROOMS.grot.door[1] + 2], ROOMS.hut.door, [ROOMS.hut.door[0], ROOMS.hut.door[1] + 1], CAROUSEL.on, [CAROUSEL.on[0], CAROUSEL.on[1] + 1], ...[[-1, 0], [-2, 0], [0, 0], [-1, 1], [-2, 1], [0, 1], [-2, -1]].map(([dx, dz]) => [HOUSES.atelier.x - 1 + dx, HOUSES.atelier.z + HOUSES.atelier.d + dz]),   // room round the atelier's easel (world.js makes it solid)
     [27, 59], [28, 59], [26, 59], [27, 60], [28, 60], [29, 59], NEST, [NEST[0], NEST[1] + 1], [NEST[0] - 1, NEST[1]], [NEST[0] + 1, NEST[1]], ...FALLS.steps.map(([x, z]) => [x, z]), [94, 41], [94, 42], ZIP.to, [ZIP.to[0] - 1, ZIP.to[1]], [STALL.x, STALL.z + 1], [STALL.x + 1, STALL.z + 1], ...[[0, 0], [-1, 0], [1, 0], [0, 1], [-1, 1], [1, 1], [2, 1], [-4, 1], [-4, 0], [-3, 2], [-2, 2], [0, 2], [1, 2]].map(([dx, dz]) => [MUSIC.x + dx, MUSIC.z + dz]), ...Array.from({ length: (PLAY.x1 - PLAY.x0 + 1) * (PLAY.z1 - PLAY.z0 + 1) }, (_, k) => [PLAY.x0 + k % (PLAY.x1 - PLAY.x0 + 1), PLAY.z0 + Math.floor(k / (PLAY.x1 - PLAY.x0 + 1))]), ...BENCHES.flatMap(b => [b.at, [b.x, b.z + 1], [b.x + 1, b.z + 1]]), [27, 35], [28, 36], [58, 70], [57, 71]].map(([x, z]) => [Math.floor(x), Math.floor(z)])).map(([x, z]) => I(x, z)));
 
   /* ---- the islands in the sea ---- */
@@ -405,7 +406,7 @@ export function validate(m, keep = []) {
   const T = ([x, z]) => I(Math.floor(x), Math.floor(z));
   for (const p of [...POTS, CAN, [STALL.x, STALL.z + 1], ...BENCHES.filter(b => !b.log).map(b => b.at)]) ok(m.reach0[T(p)] && !m.block[T(p)], 'village toy unreachable ' + p);
   for (const b of BENCHES.filter(b => b.log)) ok(m.reach1[T(b.at)] && !m.block[T(b.at)], 'the meadow bench is unreachable');
-  ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable');
+  ok(m.reach1[T(KITE)] && !m.block[T(KITE)], 'kite unreachable'); ok(m.reach2[T(BUCKET)] && !m.block[T(BUCKET)], 'bucket unreachable'); ok(m.reach2[T(SHOVEL)] && !m.block[T(SHOVEL)], 'shovel unreachable');
   for (const p of [SWING.on, ...SWING.land, SLIDE.on, SLIDE.off]) ok(m.reach0[T(p)] && !m.block[T(p)], 'playground spot unreachable ' + p);
   let sail = 0; for (let z = LAGOON.z0; z <= LAGOON.z1; z++) for (let x = LAGOON.x0; x <= LAGOON.x1; x++) if (m.ground[I(x, z)] === SE && !m.deck[I(x, z)]) sail++;
   ok(sail > 300, 'the lagoon is too small to sail on');
