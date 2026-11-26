@@ -93,7 +93,7 @@ Her house on a terrace with a flower garden and two windmills; the room inside (
 
 People live here now (`folk.js`): grandma knitting on the square's bench (sit on the free half and she waves), the accordion player on the square (silent until tapped), the gardener asleep in his wheelbarrow by the carrots (a tap, or a full watering can), the fisherman at the pond (a fish, a fish, a boot). The brambles on the east bridge bloom open when watered; the fountain fills the can as well as the well.
 
-Still grey stand-ins: the stall, the race arch, the pole, the bike (to become the step). To come: a paper aeroplane thrown from the terrace, a dolphin leaping over a bridge.
+Also new: a seesaw on the playground for her and the unicorn (kick off just as she lands and the unicorn is thrown higher each time, until it turns a somersault); a paper aeroplane on the terrace that really glides; a dolphin that leaps over the long east bridge once on every crossing; the stall is a real fruit stall (an apple to give away). No grey stand-ins are left: the race arch, the zipline's pole and the bike were taken away until there is a race, a zipline and a step.
 
 ### The forest (`bos`): built as a first pass
 
@@ -103,27 +103,31 @@ Bigger than the pixel game's. A log cabin (no inside yet), the cave's rock with 
 
 Not a port. East over the long bridge the brambles shut. A wide meadow of flowers with a windy hill on two levels (**the kite** lies on its top: run and it climbs, on the hill the wind holds it), **the balloon on a rope** at the back (up she goes and the camera pulls far back until the islands lie below like models), the waterfall with its pool and five stepping stones that each sing a note (she hops from stone to stone), the otter in the pool, dandelion clocks to blow, the sheep's pasture (puff, then the wool flies) with a lamb, the bakery with the baker outside (he hands her a bun to give away), the painter at her easel by the pool (tap by tap: strokes, a rainbow, a unicorn). To come: the inside of the bakery, the cave behind the waterfall, bees, a bridge south to the beach (the path already ends there).
 
-### The beach (`strand`), the rainbow island (`eiland` in the pixel game), the castle (`kasteel`): after that
+### The beach (`strand`): built as a first pass
 
-Beach: sand that keeps what she builds (bucket towers), shells, the crab, the fisherman on his pier with his boot, a lighthouse that turns at night, the boat she steers to the rainbow island in a wide shot. Rainbow island: paint puddles and coloured footprints, bouncy mushrooms, the rainbow tree, flamingos, the parrot. Castle: a walk-in hall, the garden, the carousel, the peacock, the little dragon, somebody funny at the gate.
+South of the meadow over a long bridge (the beach's own). Not a port. A wide island of sand with a green dune. **The sandcastle**: every tap she builds a piece more (tower, tower, wall and gate, big tower, flag); it stays; a tap on the finished castle and she jumps on it. **The lighthouse** on its rock: a tap lights it and two beams turn over the sea; at night it is on by itself. The pier, with the gull on its posts (it flies from post to post, every other time with a fish) and the seal on a rock (claps; a tap on the clapping seal: a ball on its nose). The crab (dances; a tap on the dancing crab, or running at it: it digs in and comes up elsewhere). The turtle (tucks in, then walks on). Palms (a tap shakes one; the first time a coconut drops), parasols, benches, shells. To come: the boat to the rainbow island, shells to hold to her ear, something to dig up, the dolphin for this bridge (the dolphin code only knows bridges that run east-west).
+
+### The rainbow island (`eiland` in the pixel game), the castle (`kasteel`): after that
+
+Rainbow island: paint puddles and coloured footprints, bouncy mushrooms, the rainbow tree, flamingos, the parrot, the rabbit. Castle: a walk-in hall, the garden, the carousel, the peacock, the little dragon, somebody funny at the gate. The cards for all six animals are drawn (`animals2.js`).
 
 ### How many islands exist at once
 
-All of them, built once at the start (`WORLDS` in `lands.js`: the first test island is a world of its own, everything else is one world). Every set is stepped all the time. A set the camera cannot see is not drawn (its root is hidden: `view.intersectsBox` in the frame loop); without that the far islands cost about 200k triangles at her door. The sea is one piece for the whole world and is always drawn (about 120k triangles): the first thing to thin out if the phone is slow. `?set=wei` starts on the meadow with every gate open.
+All of them, built once at the start (`WORLDS` in `lands.js`: the first test island is a world of its own, everything else is one world). Every set is stepped all the time. A set the camera cannot see is not drawn (its root is hidden: `view.intersectsBox` in the frame loop); without that the far islands cost about 200k triangles at her door. The sea is glued in pieces of 44 by 22 steps, and a piece the camera cannot see is not drawn either. `?set=wei` starts on the meadow with every gate open.
 
 ## Order of work
 
-Done: the paper things and forest animals; all sets at once; the brambles; the meadow; people.
+Done: the paper things and forest animals; all sets at once; the brambles; the meadow; people; the beach; the first things with a little real mechanism in them (seesaw, aeroplane, kite, balloon, sandcastle).
 
-1. Things to work with her fingers, Lumino City and Pok Pok style: one per place, each a small real mechanism.
-2. The beach; the rainbow island; the castle.
+1. More things to work with her fingers, Lumino City and Pok Pok style, one per place: a lift on a rope up the oak (and the zipline down), a crank, a marble run down the windy hill, shutters with somebody behind them.
+2. The rainbow island; the castle.
 3. The insides: the cave, the cabin, the bakery.
 4. The thread of the adventure, once Oscar has answered the open questions.
 5. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
 
 ## How to work
 
-- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
+- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people|seesaw|plane|beach`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
 - **Never a full round before a publish.** Check what changed, look at a picture, push.
 - **Helpers** draw figures well from `STYLE.md` and a precise brief: new files only, their own browser port (`PORT=9555`), no commits. Their sheets go to Oscar.
 - **Phone.** He holds it lying down: 750 by 313 points. He has not yet read the frame rate on the phone with the big world; on his laptop it was 60 after the pixel budget. Watch draws (about 180 at her door now).
@@ -240,6 +244,22 @@ What was asked: go on with the rest of the world, more to interact with, people 
 6. **People** (`folk.js`, drawn in `people.js`, sheet `people.html`). Nobody makes a sound by themselves. The accordion's notes swell and fade and come out of the island's chord of the moment (`sfx.squeeze`), because single plucked notes were what Oscar disliked.
 7. **Sheep, lamb, otter** (`critters2.js`, drawn in `animals2.js`, sheet `animals2.html`). Also drawn and waiting: bee, crab, gull, turtle, dolphin, seal, rabbit, parrot, flamingo, peacock, baby dragon.
 8. **The balloon was moved to the back of the meadow**: in front it stood between her and the camera and filled the screen. Rule for sets: nothing tall south of where she plays.
+9. **The dolphin** (`dolphin` in `critters2.js`): Oscar's wish. Once on every crossing of the east bridge; a tap on it in the air is a flip.
+10. **The seesaw** (`seesaw` in `toys.js`): the plank is a small real sum (where it is, how fast it turns, her side a little heavier). A touch kicks off; kicking off within a third of a second of landing counts as well timed and builds a streak. The unicorn rides the other end (`uni.busy` stops it following her).
+11. **The paper aeroplane** (`plane` in `toys.js`): Oscar's wish. Speed and nose angle with lift that grows with speed, so it swoops and climbs. It stays where it lands; from the sea or anywhere she cannot stand it comes back to the terrace.
+12. **The beach** (`set-strand.js`, `beach.js`), as described above.
+13. **The sea in pieces**, and **the fruit stall**; the last grey stand-ins taken away.
+
+### What to look at first, and what is not right yet
+
+- **Listen.** The accordion (`sfx.squeeze`), the hello of the people (`sfx.hello`), the singing stones (`sfx.note`): none was heard by a person. If any of them is a chime that asks for attention, say so and it goes.
+- **The phone.** Five islands now exist at once. Triangles are 300k at her door and up to 480k on the meadow; draws about 200. Nothing was measured on the phone.
+- **The unicorn stands in the way** now and then: it walks onto the sandcastle's heap and in front of things she wants to tap.
+- **Trees can hide her** on the meadow and the beach where I did not clear a view (the tree-folding is still switched off, as asked).
+- **From the balloon the sea has an edge** on the far right: the waves stop and flat deep water goes on.
+- **The bridge to the beach has no dolphin**, the bakery, the cave and the cabin have no inside, the lighthouse cannot be climbed.
+- **Two things share one rule that may surprise**: with the can or the kite in her hands a picked flower goes into her hair; taking an apple or a bun puts the can down where she stands.
+- **Older tests** (`t-paper-dorp.mjs`, `t-paper-cross.mjs`, and the swing, slide, house, dog, animals parts of `t-paper-play.mjs`) were not run tonight and may carry places from before the world grew.
 
 ## Appendix: what the pixel game had (a memory aid, not a contract)
 
