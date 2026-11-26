@@ -11,6 +11,7 @@ import { cottage, shore, meadow, bouquet, pinwheel, bench, lantern, dandelion, G
 import { kite, balloon } from './toys.js';
 import { butterfly } from './critters.js';
 import { baker, painter } from './folk.js';
+import { sheep, lamb, otter } from './critters2.js';
 import { weiLand, BACK } from './lands.js';
 
 const H_SAND = -.32, H_GRASS = 0, H_HILL = .48, H_TOP = .96;
@@ -66,12 +67,15 @@ export default {
     lay(blob(10.6, -5.0, 2.0, 1.5, 436, 36, .06), GROUND.high);                                                                                    // where the balloon stands
     stepping([[2.5, 2.0], [2.75, 1.1], [2.95, .2], [3.1, -.7], [3.2, -1.6], [3.2, -2.5], [3.2, -3.4]], 440);                                      // up to the bakery
     stepping([[10.4, -.6], [10.3, -1.5], [10.45, -2.4], [10.6, -3.2]], 450);                                                                     // up to the balloon
+    lay(blob(6.2, 5.3, 2.7, 1.8, 437, 36, .06), GROUND.high);                                                                                     // the sheep's pasture: a paler patch of grass
     stepping([[28.0, -3.0], [28.7, -2.6], [29.3, -2.1]], 455);                                                                                   // on from the last stone
 
     /* ---------------- things ---------------- */
     const bakery = cottage(S, 3.2, H_GRASS, -5.7, null, { wall: '#f6e7c8', roof: '#5f8fb0', door: '#b9675a' });
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
     const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9) };   // the baker by his door, the painter painting the waterfall (folk.js)
+    const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [23.5, -4.45]]) };   // critters2.js
+    herd.schaap2.f.face = -1;
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
     const lamps = [[-9.2, 3.3], [X[0] + 2.4, X[1] + 1.3], [8.6, .1], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
     const mills = [pinwheel(S, 8.2, H_GRASS, 6.1, '#9ed9cf', '#f2c65c'), pinwheel(S, -8.0, H_HILL, -4.4, '#f4a6c4', '#f6efe2')];
@@ -79,7 +83,7 @@ export default {
     const flies = { vlinder1: butterfly(S, -6.5, 4.6, 'w1'), vlinder2: butterfly(S, 9.5, -1.6, 'w2', '#bba6ea', '#f6efe2'), vlinder3: butterfly(S, 22.0, .6, 'w3', '#f2c65c', '#e98f8f') };
 
     /* ---------------- trees in blossom, and flowers everywhere: this is the flower meadow ---------------- */
-    const keepOff = [[W[0] - 1, W[1] - 2.4, W[0] + 4, W[1] + 2.4], [1.2, -8, 5.4, -3.2], [3.6, 3.2, 8.6, 7.4], [8.2, -7.4, 13.2, -2.6], [18.5, -6, 29, .2], [-8.8, -8.6, -3.6, -3.6]];
+    const keepOff = [[W[0] - 1, W[1] - 2.4, W[0] + 4, W[1] + 2.4], [1.2, -8, 5.4, -3.2], [3.2, 3.0, 9.2, 9.8], [8.2, -7.4, 13.2, -2.6], [18.0, -6, 29.5, 2.8], [-8.8, -8.6, -3.6, -3.6]];
     const blossom = [['#f4a6c4', '#f8dde4'], ['#f6efe2', '#fcf8f1'], ['#a3bf76', '#bccb84'], ['#f2c65c', '#f6dfa6']], R = rng(461); let n = 0;
     for (let i = 0; i < 1600 && n < 18; i++) {
       const x = -14 + R() * 44, z = -10 + R() * 20, c = blossom[Math.floor(R() * blossom.length)];
@@ -103,7 +107,7 @@ export default {
       step(e) {
         const { dt, tick, stepped } = e;
         bakery.step(e); theKite.step(e); theBalloon.step(e); bunch.step(e); grass.step(e);
-        for (const q of [...benches, ...lamps, ...mills, ...clocks, ...Object.values(flies), ...Object.values(folk)]) q.step(e);
+        for (const q of [...benches, ...lamps, ...mills, ...clocks, ...Object.values(flies), ...Object.values(folk), ...Object.values(herd)]) q.step(e);
         if (stepped) { const on = Math.floor(tick / 2) % 3; fall.forEach((g, i) => { g.visible = i === on; }); }
         // the stones: stepping onto one makes it dip and sing its note (hers to play, like keys)
         // between two stones she is in the air: a hop as high as the gap is wide, so where she is says how high she is
@@ -111,14 +115,14 @@ export default {
         else if (hopping) { hopping = false; if (!S.playing()) girl.lift = 0; }
         stones.forEach((s, i) => { const on = !S.playing() && !(girl.lift > .05) && Math.abs(girl.x - S.at([s.x, s.z])[0]) < .5 && Math.abs(girl.z - S.at([s.x, s.z])[1]) < .5; if (on && !s.on) { s.dip = 1; sung++; sfx.note(NOTES[i]); S.confetti(...S.at([s.x, s.z]).flatMap((v, k) => k ? [.12, v] : [v]), ['#bfe3ea', '#f6efe2'], 5, undefined, 1.2); } s.on = on; if (s.dip > 0) s.dip = Math.max(0, s.dip - dt * 3); s.g.position.y = -.05 * Math.sin(s.dip * Math.PI); });
       },
-      toys: { ...flies, ...folk, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, molen: mills[0], bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) } },
+      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, molen: mills[0], bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) } },
       shots: [
         { name: 'heuvel', zone: [-10.6, -9.4, .6, -2.3], span: 17, tall: 9.5, rise: .4 },          // on the hill: further back, to see the meadow below and the kite above
         { name: 'waterval', zone: [18.4, -6.2, 29.2, -.5], span: 12.5, rise: .4 },                  // at the pool: looking down on the stones
         { name: 'wei', span: 15, tall: 8.5, rise: .3 },
       ],
       spots: { ballon: [10.6, 3.3, -5.0], vlieger: [-6.4, H_TOP + .3, -6.5] },
-      places: { start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1] },
+      places: { start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1], sheep: [6.3, 6.4] },
     };
   },
 };

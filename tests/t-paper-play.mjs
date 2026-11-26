@@ -245,6 +245,12 @@ export default async function (t) {
     for (let k = 1; k <= 3; k++) { await t.ev(`__p.tap('schilder')`); await until(`__p.toy('schilder').pic === ${k}`, 4); await t.sleep(300); }
     const pa = await toy('schilder'); ok(pa.pic === 3 && pa.done === 1 && pa.frame === 3, 'three taps on the painter: strokes, a rainbow, a unicorn, and she is proud'); await t.shot('tmp-shots/y-schilder-done-land.png');
     await t.sleep(2600); await t.ev(`__p.tap('ezel')`); await t.sleep(300); ok((await toy('schilder')).pic === 0, 'the next tap: a clean sheet');
+    // the sheep, the lamb and the otter
+    await by('schaap', 1.2, 1.4); await t.ev(`__p.tap('schaap')`); await t.sleep(500); ok((await toy('schaap')).st === 1, 'a tap on a sheep: it puffs up'); await t.shot('tmp-shots/y-schaap-land.png');
+    await t.ev(`__p.tap('schaap')`); await t.sleep(500); ok((await toy('schaap')).st === 2 && (await toy('schaap')).poofs === 1, 'a second tap: the wool flies, and it is shorn'); await t.shot('tmp-shots/y-schaap-shorn-land.png');
+    await t.ev(`__p.tap('lam')`); await t.sleep(250); ok((await toy('lam')).frame === 3, 'a tap on the lamb: it leaps');
+    await by('otter', -1.6, 1.5); await t.shot('tmp-shots/y-otter-land.png'); const o0 = (await toy('otter')).at; await t.ev(`__p.tap('otter')`); await t.sleep(700); ok((await toy('otter')).mode === 'knock', 'a tap on the otter: it knocks its pebble');
+    ok(await until(`__p.toy('otter').dives === 1 && !__p.toy('otter').mode`, 6), 'then it dives'); const o1 = (await toy('otter')).at; ok(Math.hypot(o1[0] - o0[0], o1[1] - o0[1]) > 2, 'and comes up somewhere else in the pool');
     const r = await t.ev('__p.reach()'), lost = Object.entries(r.places).filter(([, v]) => !v).map(([n]) => n); ok(!lost.length, 'every named place can still be walked to' + (lost.length ? ' NOT: ' + lost.join(', ') : ''));
   }
 }
