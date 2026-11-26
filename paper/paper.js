@@ -211,6 +211,7 @@ function buildSet(def) {
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
+    move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
   };
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
@@ -381,6 +382,12 @@ const sfx = {
   whoosh() { noise(.5, .08, 700); tone(300, .45, 'sine', .04, 2.2); },
   boing() { tone(260, .22, 'sine', .09, 2.1); },
   thud() { tone(120, .12, 'sine', .12, .6); noise(.08, .05, 400); },
+  cluck() { tone(520, .07, 'square', .05, .8); setTimeout(() => tone(640, .1, 'square', .05, .7), 110); },
+  peep() { tone(1500, .08, 'sine', .06, 1.2); },
+  oink() { tone(180, .16, 'sawtooth', .06, .8, 30); setTimeout(() => tone(200, .14, 'sawtooth', .05, .8, 30), 220); },
+  hoot() { tone(330, .3, 'sine', .08, .95); setTimeout(() => tone(290, .45, 'sine', .08, .9), 380); },
+  bark() { tone(420, .09, 'square', .06, .7); tone(210, .1, 'sawtooth', .04, .8); },
+  yip() { tone(700, .12, 'triangle', .07, 1.5); },
   click() { tone(900, .04, 'square', .04, .7); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
@@ -451,6 +458,7 @@ function stepDoors(dt) {
       const { stand, dir } = through.twin; through.done = true; fadeEl.style.opacity = 0; doorArmed = false;
       girl.x = stand[0]; girl.z = stand[1]; girl.y = heightAt(girl.x, girl.z) ?? 0; girl.dirX = -dir[0]; girl.dirZ = -dir[1]; girl.view = viewFor(girl);
       [uni.x, uni.z] = [[.9, .1], [-.9, .1], [0, 0]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, girl.y, uni)) || stand; uni.y = girl.y;
+      for (const f of figures) if (f.follows) { [f.x, f.z] = [[-.9, .35], [.9, .35], [0, .5], [0, 0]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, girl.y, f)); f.y = girl.y; }   // whoever comes along with her comes through too
       target = null; hold = null; balloon.on = false; camCut = true;
     }
     if (through.t >= .32) through = null;
@@ -792,7 +800,19 @@ function frame(now) {
   stepBalloon(dt);
   for (let n = 0; n < 2 && warm.length; n++) warm.shift()();   // drawings made ahead, a few per frame
   // trees wobble when tapped, in steps
-  if (stepped) for (const q of sets) for (const t of q.trees) if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
+  if (stepped) {
+    // a tree that stands between the camera and her folds down flat to the side, like a page of a pop-up book, and stands
+    // up again when she has passed: she is never hidden behind one. (Only on the set she stands on: the others' trees are glued)
+    const cx = camera.position.x, cz = camera.position.z, D = Math.hypot(girl.x - cx, girl.z - cz) || 1, ux = (girl.x - cx) / D, uz = (girl.z - cz) / D, reach = 2.6 / Math.max(.15, camH / camDist);
+    for (const q of sets) for (const t of q.trees) {
+      const tx = t.x + q.ox - cx, tz = t.z + q.oz - cz, along = tx * ux + tz * uz, side = tx * uz - tz * ux;
+      const inWay = q === set && !still && along < D - .35 && along > D - reach && Math.abs(side) < 1.05;
+      if (inWay && !t.fold) t.lay = side >= 0 ? 1 : -1;   // it falls away from her line of sight, to whichever side it stands on
+      t.fold = (t.fold || 0) + ((inWay ? 1 : 0) - (t.fold || 0)) * .4; if (t.fold < .01) t.fold = 0;
+      if (t.wob > .01) { t.wob *= .82; t.sway.rotation.z = Math.sin(tick * 1.9) * .09 * t.wob; t.sway.rotation.x = Math.cos(tick * 1.5) * .04 * t.wob; } else t.sway.rotation.set(0, 0, 0);
+      if (t.fold) { t.sway.rotation.z += t.fold * 1.5 * (t.lay || 1) * (uz < 0 ? 1 : -1); }
+    }
+  }
   // confetti (its paper is shared with everything else: never thrown away)
   for (let i = bits.length - 1; i >= 0; i--) { const b = bits[i]; b.vy -= 7 * dt; b.m.position.x += b.vx * dt; b.m.position.y += b.vy * dt; b.m.position.z += b.vz * dt; b.m.rotation.x += b.spin * dt; b.m.rotation.y += b.spin * .7 * dt; b.life -= dt; if (b.life < .3) b.m.scale.setScalar(Math.max(.01, b.life / .3)); if (b.life <= 0) { scene.remove(b.m); bits.splice(i, 1); } }
   // the sea rows rock gently, each its own way
@@ -891,6 +911,8 @@ window.__p = {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), top = (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H;
     return { on: shot.name, changes: shotChanges, yaw: camYaw, list: [...sets.flatMap(q => q.shots.filter(s => s.zone)), set.shots[set.shots.length - 1]].map(s => { const d = clamp((portrait ? s.tall : s.span) / 2 / (tan * camera.aspect), 8, 60), rise = portrait ? s.riseTall : s.rise; return { name: s.name, play: s.play, zone: s.zone || null, her: top / (2 * d * Math.hypot(1, rise) * tan) * innerHeight }; }) };
   },
+  /** a place in the world as a spot on the screen */
+  point(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   /** where the camera looks and stands */
   cam() { return { look: camLook.toArray(), pos: camPos.toArray() }; },
   /** what she is playing on (a toy's own state), or null */

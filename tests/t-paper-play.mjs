@@ -83,4 +83,54 @@ export default async function (t) {
     await open('?set=bos', DESK); await t.sleep(1500); const rb = await t.ev('__p.reach()'); ok(rb.places['huis bed'], 'starting in the forest, the room is still there behind the door');
     await open('?set=huis', DESK); await t.sleep(2500); await t.shot('tmp-shots/y-room-desk.png'); await t.ev('__p.evening(true)'); await t.sleep(1500); await t.shot('tmp-shots/y-room-eve-desk.png');
   }
+
+  if (!only || only === 'dog') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const dogAt = async () => (await t.ev(`__p.toy('dog')`)), far = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const d0 = await dogAt(); ok(d0.mode === 'wait' && d0.frame === 3, 'the dog sits on the square and waits: it does not come to her');
+    await t.ev('__p.placeAt(.4, 1.6)'); await t.sleep(1200); ok((await dogAt()).frame === 0, 'when she comes close it gets up and looks at her'); await t.shot('tmp-shots/y-dog-land.png');
+    // hello: a real tap on the dog
+    await tapOn('hond'); await t.sleep(200); ok((await dogAt()).mode === 'follow' && await t.ev(`__p.hop('hond')`) > 0, 'a tap: it hops, and from now on it comes along');
+    // it comes along, and sits down when she stands still
+    await t.ev('__p.walkTo(-2.2, 3.6)'); await t.sleep(3800); const g1 = await t.ev('__p.info()'), d1 = await dogAt();
+    ok(far(d1.at, g1.girl) < 2.3, `she walked off and the dog is with her (${far(d1.at, g1.girl).toFixed(1)} steps away)`);
+    await t.sleep(2200); ok((await dogAt()).frame === 3, 'she stands still: the dog sits down');
+    await tapOn('hond'); await t.sleep(350); ok((await dogAt()).frame === 4, 'a tap on her friend: belly up'); await t.shot('tmp-shots/y-dog-roll-land.png'); await t.sleep(1700);
+    // the ball: a real tap on it. She walks up and kicks; it rolls; the dog brings it back
+    await t.ev('__p.placeAt(-2.5, -.9)'); await t.sleep(2500);
+    const b0 = (await t.ev(`__p.toy('ball')`)).at, [bx, by] = await t.ev(`__p.point(${b0[0]}, .2, ${b0[1]})`); await t.click(bx, by);
+    ok(await until(`__p.toy('ball').kicks > 0`, 5), 'a tap on the ball: she walks up to it and kicks'); await t.sleep(700);
+    const b1 = (await t.ev(`__p.toy('ball')`)).at; ok(far(b0, b1) > .8, `the ball rolls away (${far(b0, b1).toFixed(1)} steps so far)`);
+    ok(await until(`__p.toy('dog').mode === 'fetch' || __p.toy('dog').mode === 'bring'`, 3), 'and the dog is off after it');
+    ok(await until(`__p.toy('ball').held`, 8), 'it picks the ball up'); await t.shot('tmp-shots/y-dog-fetch-land.png');
+    ok(await until(`__p.toy('dog').mode === 'follow'`, 9), 'and brings it back'); await t.sleep(600);
+    const g2 = await t.ev('__p.info()'), b2 = await t.ev(`__p.toy('ball')`); ok(far(b2.at, g2.girl) < 1.5 && !b2.held, `the ball lies at her feet (${far(b2.at, g2.girl).toFixed(1)} steps away)`);
+    // through her front door the dog comes too
+    await t.ev('__p.placeAt(.3, -3.4)'); await t.sleep(1500); await t.ev(`__p.keys(['w'])`); await until(`__p.info().set === 'huis'`, 4); await t.ev('__p.keys([])'); await t.sleep(900);
+    const g3 = await t.ev('__p.info()'), d3 = await dogAt(); ok(g3.set === 'huis' && far(d3.at, g3.girl) < 2, 'into the house the dog comes along'); await t.shot('tmp-shots/y-dog-room-land.png');
+  }
+
+  if (!only || only === 'animals') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`);
+    // the hen: a tap, she sits, an egg lies there
+    await t.ev('__p.placeAt(-4.6, 2.9)'); await t.sleep(2600); await tapOn('kip'); await t.sleep(500); ok((await toy('kip')).frame === 3, 'a real tap on the hen: she sits down');
+    await t.sleep(1600); ok((await toy('kip')).eggs === 1, 'and leaves an egg'); await t.shot('tmp-shots/y-hen-land.png');
+    await t.ev(`__p.tap('kuiken1')`); await t.sleep(120); ok(await t.ev(`__p.hop('kuiken1')`) > 0, 'a chick hops');
+    // the pig
+    await t.ev('__p.placeAt(-1.2, 9.2)'); await t.sleep(2600); ok((await toy('varken')).frame === 3, 'the pig lies in its mud'); await tapOn('varken'); await t.sleep(400);
+    ok((await toy('varken')).up, 'a real tap: up it gets'); await t.shot('tmp-shots/y-pig-land.png'); await t.sleep(2600); ok((await toy('varken')).frame === 3, 'and lies down again');
+    // the ducks
+    await t.ev('__p.placeAt(-8.3, 1.9)'); await t.sleep(2600); const dk = (await toy('eend1')).at; await tapOn('eend1'); await t.sleep(300); ok((await toy('eend1')).dive, 'a real tap on a duck: tail up'); await t.shot('tmp-shots/y-ducks-land.png');
+    await t.sleep(2600); const dk2 = (await toy('eend1')).at; ok(Math.hypot(dk[0] - dk2[0], dk[1] - dk2[1]) > .3, 'and it swims on to another spot');
+    // the forest: hedgehog, owl, squirrel
+    const bp = await t.ev(`__p.places('bos')`);
+    await t.ev(`__p.placeAt(${bp.nook[0] + 2.6}, ${bp.nook[1] + .4})`); await t.sleep(2600); ok((await toy('egel')).frame === 0, 'from a little way off the hedgehog is just a hedgehog'); 
+    await t.ev(`__p.placeAt(${bp.nook[0] + 1.2}, ${bp.nook[1] + .4})`); await t.sleep(700); ok((await toy('egel')).frame === 3, 'she comes close: it curls up'); await t.shot('tmp-shots/y-hedgehog-land.png');
+    const e0 = (await toy('egel')).at; await tapOn('egel'); await t.sleep(1300); const e1 = (await toy('egel')).at; ok(Math.abs(e1[0] - e0[0]) > .5, 'a real tap: the ball rolls away a little'); await t.sleep(600); ok((await toy('egel')).frame === 0, 'and it peeps out again');
+    await t.ev(`__p.placeAt(${bp.grot[0]}, ${bp.grot[1]})`); await t.sleep(3000); ok((await toy('uil')).frame === 1, 'the owl sleeps on her ledge'); await tapOn('uil'); await t.sleep(300); ok((await toy('uil')).frame === 2, 'a real tap: she spreads her wings and hoots'); await t.shot('tmp-shots/y-owl-land.png');
+    await t.sleep(3400); ok((await toy('uil')).frame === 1, 'and sleeps again'); await t.ev('__p.evening(true)'); await t.sleep(400); ok((await toy('uil')).frame === 0, 'in the evening she is awake'); await t.ev('__p.evening(false)');
+    await t.ev(`__p.placeAt(${bp.oak[0] - 2.6}, ${bp.oak[1] + .6})`); await t.sleep(3000); await tapOn('eekhoorn'); await t.sleep(800); ok((await toy('eekhoorn')).lift > 1.5, 'a real tap on the squirrel: up the oak it runs'); await t.shot('tmp-shots/y-squirrel-land.png');
+    await t.sleep(1300); ok((await toy('eekhoorn')).frame === 3 && (await toy('eekhoorn')).lift === 0, 'and comes down with an acorn');
+  }
 }

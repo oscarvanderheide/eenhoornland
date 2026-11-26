@@ -8,6 +8,8 @@
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { cottage, shore, GROUND } from './props.js';
 import { swing, slide } from './toys.js';
+import { dog, ball } from './dog.js';
+import { hen, chick, pig, duck } from './critters.js';
 import { dorpLand, bosLand, ORIGIN, BACK } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile) */
@@ -100,7 +102,12 @@ export default {
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const theSwing = swing(S, -6.7, H_GRASS + .015, -.45), theSlide = slide(S, -5.7, H_GRASS + .015, 1.15);
-    { const [x, z] = T(24.5, 41.5); put(new THREE.Mesh(new THREE.SphereGeometry(.16, 14, 10), P('path')), x, .16, z).castShadow = true; }   // the ball
+    // the ball, and the dog who lives on the fountain square and fetches it (dog.js)
+    const theBall = ball(S, -3.9, H_GRASS + .015, -.3), theDog = dog(S, 2.0, .95, theBall);
+    // who else lives here (critters.js): the hen and her chicks by the carrot patch, the pig in its mud, two ducks on the pond
+    const pondSpots = [[pcx - .45, pcz - .25], [pcx + .5, pcz + .35], [pcx + .05, pcz - .55], [pcx - .35, pcz + .5]];
+    const live = { kip: hen(S, -5.5, H_GRASS, 3.9), kuiken1: chick(S, -6.0, 4.4, 'kuiken1'), kuiken2: chick(S, -5.0, 4.5, 'kuiken2'), varken: pig(S, -2.1, 10.3),
+      eend1: duck(S, ...pondSpots[0], 'eend1', pondSpots), eend2: duck(S, ...pondSpots[1], 'eend2', [pondSpots[1], pondSpots[2], pondSpots[3], pondSpots[0]]) };
 
     /* ---------------- the unicorns' meadow: a fence with an open gate, and the race arch beside it ---------------- */
     { const [x0, z0] = T(33.5, 47.5), [x1, z1] = T(42.5, 51.5), [g0] = T(37, 47), [g1] = T(39, 47);
@@ -119,7 +126,7 @@ export default {
     put(box(.5, .6, 1.2, 'dark'), 10.9, DECK + .3, 2.4); S.wall(10.9, 2.4, .35, .7);
 
     /* ---------------- trees: real ones, as many as a village has ---------------- */
-    const busy = [[-1.6, -7, 2.2, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, -1.2, 5.2], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5]];   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch
+    const busy = [[-1.6, -7, 2.2, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [.9, 2.7, 7.6, 6.4], [7.5, 2.5, 9.5, 5]];   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch
     const cols = [['#93b071', '#b3c98d'], ['#d8b35a', '#e8cd85'], ['#d9806c', '#e9a48f'], ['#7fa676', '#a3c08c']];
     const R = rng(91); let n = 0;
     for (let i = 0; i < 900 && n < 26; i++) {
@@ -138,8 +145,8 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 1.4,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); },
-      toys: { swing: theSwing, slide: theSlide },
+      step: e => { HOUSE.step(e); theSwing.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); },
+      toys: { ...live, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
