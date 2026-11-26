@@ -91,15 +91,17 @@ One world. `?set=dorp` starts her at her own front door.
 
 Her house on a terrace with a flower garden and two windmills; the room inside (beds she hops onto, a lamp); the fountain square with the dog and her ball; the playground (a real swing, a slide); the pond with ducks and benches; the unicorns' meadow; the farm in the south (well, watering can, carrots that grow and are pulled for the pig, a scarecrow and its birds, the hen and chicks); lanterns; butterflies; wild flowers to pick.
 
-Still grey stand-ins: the stall, the race arch, the pole, the bike (to become the step), the block on the east bridge. To come: people (a grandma knitting on a bench, the baker at what was the stall, the gardener asleep in his wheelbarrow on the farm, the accordion player on the square), the brambles that bloom open, a paper aeroplane thrown from the terrace, a dolphin leaping over the north bridge.
+People live here now (`folk.js`): grandma knitting on the square's bench (sit on the free half and she waves), the accordion player on the square (silent until tapped), the gardener asleep in his wheelbarrow by the carrots (a tap, or a full watering can), the fisherman at the pond (a fish, a fish, a boot). The brambles on the east bridge bloom open when watered; the fountain fills the can as well as the well.
+
+Still grey stand-ins: the stall, the race arch, the pole, the bike (to become the step). To come: a paper aeroplane thrown from the terrace, a dolphin leaping over a bridge.
 
 ### The forest (`bos`): built as a first pass
 
 Bigger than the pixel game's. A log cabin (no inside yet), the cave's rock with a close shot at its mouth (no inside yet), the clearing with the picnic the animals come to, the orchard, the nook, the oak with a platform. Hedgehog, owl, squirrel. To come: a fawn, a row of boar piglets, more squirrels (cards drawn); the inside of the cave and the cabin; the ride down the zipline from the oak to the village; hide and seek in the bushes; mushrooms.
 
-### The meadow (`wei`): next
+### The meadow (`wei`): built as a first pass
 
-Not a port. Ideas, to be judged by building them: a wide rolling meadow on two or three levels with a windy hill; **a kite** she really flies (run, and the wind takes it); dandelion clocks to blow; a flock of sheep and lambs; the waterfall with its pool and stepping stones that each sing a note; the bakery; a painter at his easel who paints what she brings him; **a balloon on a rope** she goes up in, the camera pulling far back until all the islands lie below like models (the game's big moment of scale, and what the pixel game's map and flying become).
+Not a port. East over the long bridge the brambles shut. A wide meadow of flowers with a windy hill on two levels (**the kite** lies on its top: run and it climbs, on the hill the wind holds it), **the balloon on a rope** at the back (up she goes and the camera pulls far back until the islands lie below like models), the waterfall with its pool and five stepping stones that each sing a note (she hops from stone to stone), the otter in the pool, dandelion clocks to blow, the sheep's pasture (puff, then the wool flies) with a lamb, the bakery with the baker outside (he hands her a bun to give away), the painter at her easel by the pool (tap by tap: strokes, a rainbow, a unicorn). To come: the inside of the bakery, the cave behind the waterfall, bees, a bridge south to the beach (the path already ends there).
 
 ### The beach (`strand`), the rainbow island (`eiland` in the pixel game), the castle (`kasteel`): after that
 
@@ -107,23 +109,21 @@ Beach: sand that keeps what she builds (bucket towers), shells, the crab, the fi
 
 ### How many islands exist at once
 
-All of them, built once at the start; only the set she stands on and its neighbours (`NEAR`) are awake: stepped, with loose tappable trees. A far set costs nothing while out of view (its trees are one glued piece; whole sets are skipped by the camera). This replaces "only the set she is on exists": with real bridges there is no moment to swap unseen. If the start becomes slow on the phone, build the far sets a little each frame behind the first picture.
+All of them, built once at the start (`WORLDS` in `lands.js`: the first test island is a world of its own, everything else is one world). Every set is stepped all the time. A set the camera cannot see is not drawn (its root is hidden: `view.intersectsBox` in the frame loop); without that the far islands cost about 200k triangles at her door. The sea is one piece for the whole world and is always drawn (about 120k triangles): the first thing to thin out if the phone is slow. `?set=wei` starts on the meadow with every gate open.
 
 ## Order of work
 
-1. Put in what is drawn and written but not yet in the game: the paper can, carrot, eggs, scarecrow and birds; the fawn, the boar piglets, more squirrels.
-2. All sets exist, far ones asleep.
-3. The brambles on the east bridge bloom open when watered (the fountain fills the can too).
-4. The meadow, with at least the kite, the sheep, the waterfall and the balloon.
-5. People, as their cards arrive.
-6. The beach; the rainbow island; the castle.
-7. The insides: the cave, the cabin, the bakery.
-8. The thread of the adventure, once Oscar has answered the open questions.
-9. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
+Done: the paper things and forest animals; all sets at once; the brambles; the meadow; people.
+
+1. Things to work with her fingers, Lumino City and Pok Pok style: one per place, each a small real mechanism.
+2. The beach; the rainbow island; the castle.
+3. The insides: the cave, the cabin, the bakery.
+4. The thread of the adventure, once Oscar has answered the open questions.
+5. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
 
 ## How to work
 
-- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
+- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
 - **Never a full round before a publish.** Check what changed, look at a picture, push.
 - **Helpers** draw figures well from `STYLE.md` and a precise brief: new files only, their own browser port (`PORT=9555`), no commits. Their sheets go to Oscar.
 - **Phone.** He holds it lying down: 750 by 313 points. He has not yet read the frame rate on the phone with the big world; on his laptop it was 60 after the pixel budget. Watch draws (about 180 at her door now).
@@ -225,6 +225,21 @@ All of them, built once at the start; only the set she stands on and its neighbo
       - Still to do from this look: the flower gardens laid out as if somebody planted them, flowers picked anywhere and not only in the beds.
   21. After that, in this order: Oscar's phone readings (the village at her door, on the east bridge and halfway over the north bridge; with everything on, with `shadows=0`, with `dof=0`; and "built in ... ms"); then the bedroom, the inside of the cave (a door is a cut), the swing, the dog, the sword. Known rough spots: the ends of sea rows show beside narrow land, no animal lives in the village or the forest yet, every set file is fetched at the start, and a third island will need sets built aside and thrown away (see the Loading row). The full test round takes about eight minutes because the tests walk her in real time: while changing one thing, run the one test that covers it, and the full round once before a push.
 - Before any figure work is handed to a cheaper model, the style rules have to be written down (palette, how pieces are layered and shaded, sizes against a girl, frame rates); the code in `cut.js` and `kids.js` is the only statement of them so far.
+
+## Log of the night of 2026-11-26 to 27 (Oscar asleep; Claude building on its own)
+
+What was asked: go on with the rest of the world, more to interact with, people doing funny things, think about paper or folded card, look at Lumino City and Pok Pok, rewrite this plan to match.
+
+**Nothing below was heard by ear or tried on the phone.** Every sound is untested by a person; the frame rate with the bigger world is unmeasured (on the test machine it stays at 60; triangles are 350k to 480k depending on where she stands, of which the sea is 120k). Each slice was checked by its own short part of `t-paper-play.mjs` and by looking at pictures, never by a full round.
+
+1. **The meadow** (`set-wei.js`), as described above. The bridge is the village's, all the way over.
+2. **The brambles** (`bramble` in `props.js`): dry and thorny; a tap with empty hands and they shake and show a watering can; watered they turn green, then bloom into roses and curl aside for good. The fountain fills the can too.
+3. **One thing in her hands** (`hands` in `paper.js`, `S.hands`): taking the kite puts the can down; with her hands full a picked flower goes straight into her hair. Every new thing to carry uses this.
+4. **A toy may bring its own camera** (`toy.shot`): the balloon pulls it far back; the haze and the far end of the picture go back with it.
+5. **Sets out of view are not drawn.**
+6. **People** (`folk.js`, drawn in `people.js`, sheet `people.html`). Nobody makes a sound by themselves. The accordion's notes swell and fade and come out of the island's chord of the moment (`sfx.squeeze`), because single plucked notes were what Oscar disliked.
+7. **Sheep, lamb, otter** (`critters2.js`, drawn in `animals2.js`, sheet `animals2.html`). Also drawn and waiting: bee, crab, gull, turtle, dolphin, seal, rabbit, parrot, flamingo, peacock, baby dragon.
+8. **The balloon was moved to the back of the meadow**: in front it stood between her and the camera and filled the screen. Rule for sets: nothing tall south of where she plays.
 
 ## Appendix: what the pixel game had (a memory aid, not a contract)
 
