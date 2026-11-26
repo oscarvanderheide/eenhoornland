@@ -5,11 +5,11 @@ import { blob, rng } from './kit.js';
 /** how far the forest's shore lies from the village's: the length of the bridge between them. One number: change it and the
  *  forest, the bridge and the far shot all move with it */
 export const NORTH_GAP = 13;
-export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2, -10.9 - NORTH_GAP] };
+export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2, -10.9 - NORTH_GAP], huis: [-260, 0] };   // (the room inside her house stands far off to the side, beyond what any camera in the world can see)
 /** where the theatre's hills stand when the village and the forest exist: behind the forest's north shore (on the island they stand at -16 and further) */
 export const BACK = ORIGIN.bos[1] - 10 + 14;
 /** the sets that exist together with the one she stands on: its neighbours across a bridge */
-export const NEAR = { eiland: [], dorp: ['bos'], bos: ['dorp'] };
+export const NEAR = { eiland: [], dorp: ['bos', 'huis'], bos: ['dorp', 'huis'], huis: ['dorp', 'bos'] };
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)

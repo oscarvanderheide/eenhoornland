@@ -85,7 +85,7 @@ export default {
     stones([[-.25, 2.55], [-.85, 2.75], [-1.5, 2.85], [-2.15, 3.05], [-2.8, 3.15]], 170);                               // to the sword's stone and the patch
 
     /* ---------------- her house, on the terrace ---------------- */
-    const HOUSE = cottage(S, .3, H_HIGH, -5.5);                 // the real one (props.js): the only drawn thing here
+    const HOUSE = cottage(S, .3, H_HIGH, -5.5, 'voordeur');     // the real one (props.js); its front door is a cut to the room inside (set-huis.js)
     for (const tx of [29.5, 30.45, 32.55, 33.5]) { const [x, z] = T(tx, 35.45); put(cyl(.11, .2, 'dark'), x, H_HIGH + .1, z); S.solid({ x, z, r: .1 }); }   // the flower pots
     { const [x, z] = T(28.4, 35.6); put(cyl(.09, .22, 'thing'), x, H_HIGH + .11, z); }                                                                    // the watering can
 

@@ -8,8 +8,9 @@ import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } fr
 import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
 import bos from './set-bos.js';
+import huis from './set-huis.js';
 import { ORIGIN, NEAR } from './lands.js';
-const SETS = { eiland, dorp, bos };
+const SETS = { eiland, dorp, bos, huis };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -191,7 +192,7 @@ function buildSea() {
 function buildSet(def) {
   const t0 = performance.now(), [ox, oz] = ORIGIN[def.name] || [0, 0], W = ([x, z]) => [x + ox, z + oz];
   const root = new THREE.Group(); root.name = def.name; root.position.set(ox, 0, oz); scene.add(root);
-  const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], names: {}, spots: {} };
+  const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], doors: [], names: {}, spots: {} };
   const S = {
     THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine,
     at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
@@ -204,13 +205,17 @@ function buildSet(def) {
     // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
     lamp: (i, color, distance, decay) => (s.lamps[i] = { color, distance, decay, intensity: 0, position: new THREE.Vector3() }),
     figure: (name, spec) => { const f = makeFigure(name, spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
+    // a door: walking into `zone` in the direction `dir` is a cut to the door of the same name on another set, where she then
+    // stands at its `stand`. S.through(name) takes her through at once (a tap on the house)
+    door: (name, zone, stand, dir) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir }); },
+    through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
   };
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
   s.places = Object.fromEntries(Object.entries(s.places || {}).map(([n, q]) => [n, W(q)])); s.spots = Object.fromEntries(Object.entries(s.spots).map(([n, [x, y, z]]) => [n, [x + ox, y, z + oz]]));
-  s.shots = (s.shots || [SHOT0]).map(q => ({ ...SHOT_DEF, ...q, ...(q.zone ? { zone: [q.zone[0] + ox, q.zone[1] + oz, q.zone[2] + ox, q.zone[3] + oz] } : {}) }));
+  s.shots = (s.shots || [SHOT0]).map(q => ({ ...SHOT_DEF, ...q, ax: (q.ax ?? SHOT_DEF.ax) + ox, az: (q.az ?? SHOT_DEF.az) + oz, ...(q.zone ? { zone: [q.zone[0] + ox, q.zone[1] + oz, q.zone[2] + ox, q.zone[3] + oz] } : {}) }));
   root.traverse(o => { if (o.isMesh && o.geometry.type === 'ExtrudeGeometry' && !o.userData.tap) s.ground.push(o); });   // card she can be sent to with a tap
   bake(root); s.farTrees = glueTrees(s); into = null; s.ms = performance.now() - t0;
   return s;
@@ -392,8 +397,69 @@ let playing = null, playAct = false;
 function play(toy) { playing = toy; target = null; playAct = false; }
 function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; }
 /** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
-function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = { x, z, then, near }; }
+function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = goTo(x, z, { then, near }); }
+
+/* ---------------- finding her way: a tap is a place to go, and she walks round what stands between ----------------
+   If the straight line is free she takes it. If not, a flood over the floor in small steps from where she stands finds the
+   way round (only as far as a few steps beyond the goal: a tap is rarely far), and the corners are cut where she can see
+   past them. A finger held down steers her directly instead: no way-finding there. */
+const pathStat = { n: 0, ms: 0 };
+/** can she walk the straight line from a to b? */
+function clearWay(ax, az, bx, bz) {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(d / .12)); let h = heightAt(ax, az); if (h === null) return false;
+  for (let i = 1; i <= n; i++) { const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n; if (!free(x, z, h)) return false; h = heightAt(x, z); }
+  return true;
+}
+/** the corners to walk through to get from her to (gx, gz), or as near to it as she can get */
+function wayTo(gx, gz) {
+  if (clearWay(girl.x, girl.z, gx, gz)) return [];
+  const t0 = performance.now(), step = .25, x0 = girl.x, z0 = girl.z, R = Math.min(34, Math.ceil((Math.hypot(gx - x0, gz - z0) + 3) / step));
+  const key = (i, j) => (i + 64) * 256 + j + 64, from = new Map([[key(0, 0), null]]), hs = new Map([[key(0, 0), heightAt(x0, z0) ?? 0]]), q = [[0, 0]];
+  let best = [0, 0], bd = Math.hypot(gx - x0, gz - z0);
+  for (let n = 0; n < q.length && n < 1600 && bd > step * .75; n++) {
+    const [i, j] = q[n], h = hs.get(key(i, j));
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const a = i + di, b = j + dj, k = key(a, b); if (from.has(k) || Math.abs(a) > R || Math.abs(b) > R) continue;
+      const x = x0 + a * step, z = z0 + b * step; if (!free(x, z, h)) continue;
+      from.set(k, [i, j]); hs.set(k, heightAt(x, z)); q.push([a, b]);
+      const d = Math.hypot(gx - x, gz - z); if (d < bd) { bd = d; best = [a, b]; }
+    }
+  }
+  const pts = []; for (let c = best; c; c = from.get(key(c[0], c[1]))) pts.push([x0 + c[0] * step, z0 + c[1] * step]); pts.reverse();
+  if (bd < step && clearWay(pts[pts.length - 1][0], pts[pts.length - 1][1], gx, gz)) pts.push([gx, gz]);
+  // cut the corners: from each point on, go straight to the furthest one she can walk to in a line
+  const out = []; let at = 0;
+  while (at < pts.length - 1) { let next = at + 1; for (let k = pts.length - 1; k > at + 1; k--) if (clearWay(pts[at][0], pts[at][1], pts[k][0], pts[k][1])) { next = k; break; } out.push(pts[next]); at = next; }
+  pathStat.n++; pathStat.ms = performance.now() - t0;
+  return out;
+}
+/** a place to go, with the way to it */
+function goTo(x, z, more = {}) { const way = wayTo(x, z), end = way.length ? way[way.length - 1] : [x, z]; return { x: end[0], z: end[1], gx: x, gz: z, way, again: 4, ...more }; }
 const herOnScreen = () => { const v = new THREE.Vector3(girl.x, girl.y + (girl.lift || 0) + .5, girl.z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
+
+/* ---------------- doors: a cut from one set to another ----------------
+   The picture dips to dark for a moment, as when you step through a doorway, and she stands at the other door. Nothing is
+   built: both sides exist already. She has to step out of a door's zone before it takes her again. */
+let doorArmed = true, through = null, push = [0, 0];
+const fadeEl = document.body.appendChild(document.createElement('div'));
+fadeEl.style.cssText = 'position:fixed;inset:0;background:#2c2226;opacity:0;pointer-events:none;z-index:4;transition:opacity .13s linear';
+function goThrough(d) { const twin = sets.flatMap(q => q.doors).find(q => q.name === d.name && q !== d); if (!twin || through) return; through = { twin, t: 0, done: false }; fadeEl.style.opacity = 1; sfx.door(1); }
+function stepDoors(dt) {
+  if (through) {
+    through.t += dt;
+    if (!through.done && through.t >= .15) {
+      const { stand, dir } = through.twin; through.done = true; fadeEl.style.opacity = 0; doorArmed = false;
+      girl.x = stand[0]; girl.z = stand[1]; girl.y = heightAt(girl.x, girl.z) ?? 0; girl.dirX = -dir[0]; girl.dirZ = -dir[1]; girl.view = viewFor(girl);
+      [uni.x, uni.z] = [[.9, .1], [-.9, .1], [0, 0]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, girl.y, uni)) || stand; uni.y = girl.y;
+      target = null; hold = null; balloon.on = false; camCut = true;
+    }
+    if (through.t >= .32) through = null;
+    return;
+  }
+  const here = sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z));
+  if (!here) { doorArmed = true; return; }
+  if (doorArmed && !playing && push[0] * here.dir[0] + push[1] * here.dir[1] > .5) goThrough(here);   // only when she walks into it, not past it
+}
 
 /* ---------------- where she can stand ---------------- */
 /** how high the floor is at a spot, or null where there is none. In each set the first floor that holds the spot counts (a
@@ -484,8 +550,8 @@ canvas.addEventListener('pointerdown', e => {
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(); return; }
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
-  if (hit) target = { x: hit.point.x, z: hit.point.z };
-  else { const p = groundPoint(e.clientX, e.clientY); if (p) target = { x: p.x, z: p.z }; }
+  if (hit) target = goTo(hit.point.x, hit.point.z);
+  else { const p = groundPoint(e.clientX, e.clientY); if (p) target = goTo(p.x, p.z); }
   hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
 });
 canvas.addEventListener('pointermove', e => { if (hold && hold.id === e.pointerId) { hold.x = e.clientX; hold.y = e.clientY; } });
@@ -669,10 +735,15 @@ function frame(now) {
     const act = playAct; playAct = false; playing.step(dt, { x: px, act }); ix = iz = 0; target = null;
   }
   if (target && !ix && !iz) {
-    const dx = target.x - girl.x, dz = target.z - girl.z, d = Math.hypot(dx, dz);
-    if (d < .08) { const then = target.then; target = null; if (then) then(); } else { ix = dx / d; iz = dz / d; }
+    while (target.way && target.way.length > 1 && Math.hypot(target.way[0][0] - girl.x, target.way[0][1] - girl.z) < .12) target.way.shift();   // a corner reached: on to the next
+    const [tx, tz] = target.way && target.way.length > 1 ? target.way[0] : [target.x, target.z], dx = tx - girl.x, dz = tz - girl.z, d = Math.hypot(dx, dz);
+    if (d < .08) {
+      // there. If that was only as near as the first look could find (a far tap), look again from here
+      if (target.again && Math.hypot(target.gx - girl.x, target.gz - girl.z) > .3) { const more = goTo(target.gx, target.gz, { then: target.then, near: target.near }); more.again = target.again - 1; target = Math.hypot(more.x - girl.x, more.z - girl.z) > .3 ? more : { ...target, again: 0 }; }
+      else { const q = target; target = null; if (q.then && Math.hypot((q.gx ?? q.x) - girl.x, (q.gz ?? q.z) - girl.z) < Math.max(.3, q.near || 0)) q.then(); }
+    } else { ix = dx / d; iz = dz / d; }
   }
-  const speed = 2.3, il = Math.hypot(ix, iz);
+  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -773,7 +844,9 @@ requestAnimationFrame(frame);
 // for tests and screenshots
 window.__p = {
   placeAt(x, z) { girl.x = x; girl.z = z; uni.x = x; uni.z = z - .9; if (heightAt(uni.x, uni.z) === null) { uni.x = x - 1; uni.z = z; } target = null; },
-  walkTo(x, z) { target = { x, z }; },
+  walkTo(x, z) { target = goTo(x, z); },
+  /** how often she had to look for a way round, and how long the last look took */
+  ways() { return { ...pathStat }; },
   tap(name) { const f = figures.find(f => f.name === name); const named = sets.map(q => q.names[name]).find(Boolean); if (f) tapFigure(f); else if (named) named(); else if (name === 'tree') { set.trees[0].wob = 1; } },
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = f ? new THREE.Vector3(f.x, f.y + (f.lift || 0) + .4, f.z) : new THREE.Vector3(...sets.map(q => q.spots[name]).find(Boolean)); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
@@ -797,9 +870,11 @@ window.__p = {
   count() { const all = k => sets.reduce((n, q) => n + q[k].length, 0); return { set: set.name, ms: world.ms, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs.length, newest: Math.max(...renderer.info.programs.map(p => p.id)), calls: stat.calls, taps: all('taps'), solids: all('solids'), trees: all('trees'), ground: all('ground'), figures: figures.length, things: scene.children.length }; },
   /** which of the set's named places she can walk to from where she starts: a flood over the floor in small steps, by the same rule as her walk */
   reach(step = .15, extra = []) {
-    const key = (i, j) => i * 10000 + j, seen = new Map(), [sx, sz] = set.start, todo = [[0, 0]]; seen.set(key(5000, 5000), heightAt(sx, sz));
+    const key = (i, j) => i * 10000 + j, seen = new Map(), [sx, sz] = set.start, todo = [[0, 0]], doors = sets.flatMap(q => q.doors); seen.set(key(5000, 5000), heightAt(sx, sz));
     while (todo.length) { const [i, j] = todo.pop(), h = seen.get(key(i + 5000, j + 5000));
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = key(i + di + 5000, j + dj + 5000); if (seen.has(k)) continue; const x = sx + (i + di) * step, z = sz + (j + dj) * step; if (Math.abs(i + di) > 400 || Math.abs(j + dj) > 400 || !free(x, z, h)) continue; seen.set(k, heightAt(x, z)); todo.push([i + di, j + dj]); } }
+      { const x = sx + i * step, z = sz + j * step, d = doors.find(q => inZone(q, x, z)), twin = d && doors.find(q => q.name === d.name && q !== d);   // a door is a way on
+        if (twin) { const ti = Math.round((twin.stand[0] - sx) / step), tj = Math.round((twin.stand[1] - sz) / step), tk = key(ti + 5000, tj + 5000); if (!seen.has(tk)) { seen.set(tk, heightAt(twin.stand[0], twin.stand[1])); todo.push([ti, tj]); } } }
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = key(i + di + 5000, j + dj + 5000); if (seen.has(k)) continue; const x = sx + (i + di) * step, z = sz + (j + dj) * step; if (Math.abs(i + di) > 2400 || Math.abs(j + dj) > 2400 || !free(x, z, h)) continue; seen.set(k, heightAt(x, z)); todo.push([i + di, j + dj]); } }
     const at = ([x, z]) => { for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) if (seen.has(key(Math.round((x - sx) / step) + di + 5000, Math.round((z - sz) / step) + dj + 5000))) return true; return false; };
     return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },

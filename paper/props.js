@@ -16,8 +16,11 @@ export function shore(S, tops, under = []) {
 const paneMat = new THREE.MeshStandardMaterial({ color: '#3b3a45', emissive: '#ffbf6e', emissiveIntensity: 0, roughness: .6 });
 
 /** her house: folded card, a door that opens, a lamp inside (it uses the set's second lamp). A tap opens or shuts the door
- *  and puts the light on or off. Gives back its size, toggle(), open (0 or 1) and step() for the set to call every frame. */
-export function cottage(S, x, y, z) {
+ *  and puts the light on or off. Gives back its size, toggle(), open (0 or 1) and step() for the set to call every frame.
+ *  With `doorName` (see S.door) it can be walked into: the door opens by itself when she comes close, walking
+ *  into it is a cut to the door of that name on another set, and a tap on the house sends her in. The lamp is then on in
+ *  the evening and while the door stands open. */
+export function cottage(S, x, y, z, doorName = null) {
   const HOUSE = { x, z, w: 2.4, d: 1.8, h: 1.8 };
   const house = new THREE.Group(); house.position.set(x, y, z); S.root.add(house);
   const inLight = S.lamp(1, '#ffb866', 4, 1.4); inLight.position.set(x, y + 1.0, z);
@@ -79,11 +82,14 @@ export function cottage(S, x, y, z) {
     // a little doorstep and a flower box
     const step = slab([[-.4, d / 2], [.4, d / 2], [.4, d / 2 + .28], [-.4, d / 2 + .28]], .08, .08, paper('#d9c6a2'), edgeMat); house.add(step);
   }
-  const toggle = () => { doorTarget = doorTarget ? 0 : 1; lightOn = !!doorTarget; S.sfx.door(doorTarget); };
+  const step0 = [x, z + HOUSE.d / 2 + .26], [sx, sz] = S.at(step0);   // the doorstep
+  const toggle = doorName ? () => S.walkThen(sx, sz, () => S.through(doorName), .6) : () => { doorTarget = doorTarget ? 0 : 1; lightOn = !!doorTarget; S.sfx.door(doorTarget); };
+  if (doorName) S.door(doorName, [x - .3, z + HOUSE.d / 2 + .12, x + .3, z + HOUSE.d / 2 + .4], [x, z + HOUSE.d / 2 + .85], [0, -1]);
   S.tap(house, toggle);
   S.wall(x, z, HOUSE.w / 2 + .15, HOUSE.d / 2 + .12);
   return { ...HOUSE, toggle, get open() { return doorTarget; },
     step({ dt, eve }) {
+      if (doorName) { const near = Math.hypot(S.girl.x - sx, S.girl.z - sz) < 1.25 ? 1 : 0; if (near !== doorTarget) { doorTarget = near; S.sfx.door(near); } lightOn = eve > .4 || !!doorTarget; }
       doorOpen += (doorTarget - doorOpen) * Math.min(1, dt * 6); door.rotation.y = -doorOpen * 1.7;
       inLight.intensity = lerp(inLight.intensity, (lightOn ? 1 : 0) * lerp(1.6, 2.6, eve), Math.min(1, dt * 5));
       paneMat.emissiveIntensity = lerp(.08, .3, eve) + inLight.intensity / 2.2;
