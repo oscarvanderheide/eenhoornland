@@ -103,7 +103,7 @@ export function createLife(ctx) {
   const movers = () => animals.concat(stones);
   const dist = c => Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z);
   function lift(c) {
-    if (c.fly || c.cart || carried === c) return; if (c.nap > 0) wake(c); if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
+    if (c.fly || c.cart || carried === c || (ctx.keien && ctx.keien.holding())) return; if (c.nap > 0) wake(c);   // a big stone over her head: no hands free if (carried) setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
     carried = c; c.held = true; c.lost = false; c.path = []; c.lift = .2; c.up = .2; kid.hop = .5; (sfx[c.sound] || sfx.pop)(); if (!c.stone) { bubble(c, c.say[Math.floor(Math.random() * c.say.length)]); burst(c.pos, 4, true); }
   }
   function setDown() {

@@ -28,8 +28,9 @@ export function createKeien(ctx) {
     return true;
   }
   function lift(s) {
+    if (ctx.life.carrying()) { s.wob = .5; sfx.bonk(); return false; }              // her arms are full: throw the animal first (the stone only wiggles)
     ctx.solid(s.x, s.z, false); ctx.tops.delete(I(s.x, s.z));
-    if (ctx.life.carrying()) ctx.life.setDown(); if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
+    if (ctx.toys && ctx.toys.carrying()) ctx.toys.putDown(true);
     held = s; s.up = 0; kid.hop = .3; sfx.tug(); ctx.burst(new THREE.Vector3(s.x + .5, .1, s.z + .5), 4);
   }
   /** put it down in front of her (or beside her, wherever there is room) */
@@ -65,7 +66,7 @@ export function createKeien(ctx) {
 
   /** the stone she would lift right here: next to her, not the one she stands on */
   function nearStone() {
-    if (held || ctx.mount() || kid.lift) return null; let best = null, bd = 1.25;
+    if (held || ctx.mount() || kid.lift || ctx.life.carrying()) return null; let best = null, bd = 1.25;
     for (const s of stones) { const d = Math.hypot(s.x + .5 - kid.pos.x, s.z + .5 - kid.pos.z); if (d < bd) { bd = d; best = s; } }
     return best;
   }

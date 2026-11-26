@@ -31,6 +31,20 @@ export default async function (t) {
   await t.ev(`__w.kid.face = ${from[2]}; __w.leap({ x: ${from[2]}, z: 0 })`);
   ok(await until(`__w.kid.lift > .3`, 2500), 'she jumps on top of the stone with the animal'); await t.sleep(500); await t.shot('tmp-shots/k-4-on-top.png');
   ok(await t.ev('__w.life.carrying() === __a'), 'and still holds it');
+  // arms full: no stone while she holds an animal, and no animal while she holds a stone
+  await t.ev(`__w.placeAt(${from[0]}, ${from[1]})`); await t.sleep(500);
+  const nx = await J(`(() => { const x = ${put[0]}, z = ${put[1]}; for (const [dx, dz] of [[-1, 0], [1, 0], [0, 1], [0, -1]]) if (__w.walkable(x + dx, z + dz)) return [x + dx + .5, z + dz + .5]; })()`);
+  await t.ev(`__w.placeAt(${nx[0]}, ${nx[1]})`); await t.sleep(500);
+  ok(/^throw/.test(await t.ev('__w.action().key')), 'next to the stone with an animal in her arms, ✕ throws the animal (' + await t.ev('__w.action().key') + ')');
+  await t.ev(`__w.keien.lift(__w.keien.stones()[${S.id}])`); await t.sleep(200);
+  ok(!(await t.ev('__w.keien.holding()')) && await t.ev('__w.life.carrying() === __a'), 'the stone will not come up: she still holds the animal');
+  await t.ev('__w.life.throwIt()'); await t.sleep(1200);
+  ok(await t.ev('__w.action().key') === 'kei', 'the animal thrown, ✕ lifts the stone');
+  await t.ev('__w.jump()'); ok(await until('!!__w.keien.holding()'), 'up it goes');
+  await t.ev(`__a.pos.set(__w.kid.pos.x + .4, 0, __w.kid.pos.z); __a.path = []; __a.fly = null; __w.life.lift(__a)`); await t.sleep(200);
+  ok(!(await t.ev('__w.life.carrying()')), 'holding the stone she cannot pick up an animal');
+  await t.ev(`__w.placeAt(${nx[0]}, ${nx[1]})`); await t.ev('__w.keien.putDown()'); await t.sleep(400);
+  const put2 = await J(`__w.keien.info().stones[${S.id}]`); put.splice(0, 2, ...put2);
   // the stone stays where she left it
   await t.go(URL.replace('?', '?r&')); await t.sleep(1200);
   ok(JSON.stringify(await J(`__w.keien.info().stones[${S.id}]`)) === JSON.stringify(put), 'after a reload the stone is where she put it');

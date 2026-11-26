@@ -1,6 +1,6 @@
 // node cdp.mjs tests/t-haak.mjs — the hookshot: a chest in the forest opens when both buttons in front of it carry weight
-// (the big stones beside it, an animal, herself); △ at the gap in the bridge pulls her across to the post; it pulls a
-// big stone and an animal to her (tmp-shots/hk-*.png)
+// (the big stones beside it, an animal, herself); △ at the gap in the bridge pulls her across to the post; it pulls her
+// over to a big stone and pulls an animal to her (tmp-shots/hk-*.png)
 import fs from 'node:fs';
 export default async function (t) {
   fs.mkdirSync('tmp-shots', { recursive: true });
@@ -45,7 +45,10 @@ export default async function (t) {
   if (from) {
     await t.ev(`__w.placeAt(${from[0]}, ${from[1]}); __w.kid.face = ${from[2]}`); await t.sleep(400); await t.ev(`__w.stick(${from[2]}, 0)`); await t.sleep(40); await t.ev('__w.stick(0, 0)'); await t.ev(`__w.placeAt(${from[0]}, ${from[1]})`); await t.sleep(200);
     await t.ev('__w.hook()'); await t.sleep(1500);
-    const now = await J(`__w.keien.info().stones[${S[0]}]`); ok(Math.abs(now[0] + .5 - from[0]) <= 1.01 && now[1] === S[2], 'the hookshot pulls a big stone to her: ' + S.slice(1) + ' -> ' + now); await t.shot('tmp-shots/hk-7-stone.png');
+    const now = await J(`__w.keien.info().stones[${S[0]}]`), me = await J('[__w.kid.pos.x, __w.kid.pos.z]');
+    ok(now[0] === S[1] && now[1] === S[2], 'the stone stays where it lies: ' + now);
+    ok(Math.hypot(me[0] - S[1] - .5, me[1] - S[2] - .5) < 1.2 && Math.abs(me[0] - from[0]) > 2 && !(await t.ev('__w.busy()')), 'the hookshot pulls her over to the stone: ' + me.map(v => v.toFixed(1)));
+    ok(await t.ev(`__w.walkable(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))`), 'she lands beside it on open ground'); await t.shot('tmp-shots/hk-7-stone.png');
   } else console.log('  (no straight line to a stone; skipped)');
   // an animal comes flying
   await t.ev(`__w.placeAt(30.5, 46.5); __w.kid.face = 1`); await t.sleep(300);

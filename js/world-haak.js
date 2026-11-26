@@ -1,7 +1,7 @@
 // The hookshot (△, the hook button, G on the keys). It flies out on a chain the way she looks (or at what is clearly
 // meant: a post across the gap, a big stone, an animal in front of her) and:
 //   - catches the golden ring of a post: the chain pulls her across, over the water (the gap in the bridge to the beach)
-//   - catches a big stone: it slides over to her
+//   - catches a big stone: the chain pulls her over to it (she lands beside it; never somewhere she could not walk to)
 //   - catches an animal: it comes flying and lands in front of her (it is fine, it giggles)
 //   - hits a tree or a wall: tink, and it comes back
 // It lies in a chest in the forest that only turns up once the unicorn has hatched (Q.toolReady). Two stone buttons
@@ -78,23 +78,22 @@ export function createHaak(ctx, { camera }) {
     return true;
   }
   /** where she lands after a post pulled her: the free tile beside the post nearest to where she came from */
-  function landBy(p) {
+  function landBy(p, ok) {
     let best = null, bd = 1e9;
-    for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const x = p.x + dx, z = p.z + dz; if (!ctx.walkable(x, z)) continue; const d = Math.hypot(x + .5 - kid.pos.x, z + .5 - kid.pos.z); if (d < bd) { bd = d; best = [x, z]; } }
+    for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const x = p.x + dx, z = p.z + dz; if (!ctx.walkable(x, z) || (ok && !ok[I(x, z)])) continue; const d = Math.hypot(x + .5 - kid.pos.x, z + .5 - kid.pos.z); if (d < bd) { bd = d; best = [x, z]; } }
     return best;
   }
   function arrive() {
     const s = shot;
     if (s.kind === 'post') {
       const to = landBy(s.obj); if (!to) { s.phase = 'back'; return; }
-      sfx.chime(4); s.obj.wob = .4; s.phase = 'pull'; s.to = v3(to[0] + .5, to[1] + .5); ctx.setBusy(true); return;
+      sfx.chime(4); s.obj.wob = .4; s.phase = 'pull'; s.ring = s.obj.ring; s.to = v3(to[0] + .5, to[1] + .5); ctx.setBusy(true); return;
     }
-    if (s.kind === 'stone') {
-      const st = s.obj, kx = Math.floor(kid.pos.x), kz = Math.floor(kid.pos.z), sx = Math.sign(st.x - kx), sz = Math.sign(st.z - kz);
-      const tries = Math.abs(st.x - kx) >= Math.abs(st.z - kz) ? [[sx, 0], [sx, sz], [0, sz || 1], [0, -(sz || 1)]] : [[0, sz], [sx, sz], [sx || 1, 0], [-(sx || 1), 0]];
-      let ok = false; for (const [dx, dz] of tries) if ((dx || dz) && ctx.keien.slideTo(st, kx + dx, kz + dz, s.len / (SPEED * 1.2))) { ok = true; break; }
-      if (!ok) { st.wob = .5; sfx.bonk(); }
-      s.phase = 'back'; return;
+    if (s.kind === 'stone') {   // the stone stays put: she is pulled over to it, onto the free side nearest her
+      const st = s.obj, ok = ctx.fly && ctx.fly.reachable(Math.floor(kid.pos.x), Math.floor(kid.pos.z), Q.canRide()), to = landBy(st, ok);
+      st.wob = .4; sfx.bonk();
+      if (!to || Math.hypot(to[0] + .5 - kid.pos.x, to[1] + .5 - kid.pos.z) < .5) { s.phase = 'back'; return; }
+      s.phase = 'pull'; s.ring = v3(st.x + .5, st.z + .55, .9); s.to = v3(to[0] + .5, to[1] + .5); ctx.setBusy(true); return;
     }
     if (s.kind === 'animal') { const a = s.obj; if (a.g.visible && !a.held && !a.fly) { s.carry = a; a.path = []; a.wait = 4; a.held = true; sfx[a.sound] ? sfx[a.sound]() : sfx.pop(); } s.phase = 'back'; return; }
     if (s.kind === 'tink') { sfx.bonk(); ctx.life.hitAt(kid.pos.x + s.dir.x * s.len, kid.pos.z + s.dir.z * s.len); }
@@ -181,7 +180,7 @@ export function createHaak(ctx, { camera }) {
           return;
         }
         kid.pos.x += dx / l * st; kid.pos.z += dz / l * st; kid.lift = Math.sin(Math.min(1, 1 - l / s.len) * Math.PI) * .35;
-        draw(s.obj.ring.x, s.obj.ring.z, s.obj.ring.y * .55); return;
+        draw(s.ring.x, s.ring.z, s.ring.y * .55); return;
       }
       const hx = kid.pos.x + s.dir.x * Math.max(0, s.d), hz = kid.pos.z + s.dir.z * Math.max(0, s.d);
       draw(hx, hz, s.kind === 'post' ? .55 + (s.d / s.len) * (s.obj.ring.y * .55 - .55) : .5);
