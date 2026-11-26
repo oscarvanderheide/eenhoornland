@@ -2,7 +2,7 @@
 // a long lens with shallow focus), to see how Eenhoornland could look in that style. Separate from the game.
 // Everything is drawn in code: the paper is noise + fibres, the figures are cut-paper shapes on canvases.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { FIGS, cutout } from './figures.js';
+import { FIGS, cutout, WALK } from './figures.js';
 
 const DPR = Math.min(devicePixelRatio || 1, 2);
 const canvas = document.getElementById('c');
@@ -17,6 +17,7 @@ function rng(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const STEP = 1 / 12;   // figures move like stop motion: their poses change twelve times a second
+const WSTEP = 1 / 24;  // ...but a walk has twelve drawings per two steps and runs at 24 a second, so it looks smooth
 
 /* ---------------- paper ---------------- */
 /** a tileable sheet of paper: soft clouds of value noise plus little fibres, near white (materials tint it) */
@@ -640,10 +641,11 @@ addEventListener('resize', resize); resize();
 
 /* ---------------- the loop ---------------- */
 const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3();
-let last = performance.now(), tick = 0, acc = 0, time = 0;
+let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; time += dt;
   acc += dt; let stepped = false; while (acc >= STEP) { acc -= STEP; tick++; stepped = true; }
+  wacc += dt; let wsteps = 0; while (wacc >= WSTEP) { wacc -= WSTEP; wsteps++; }
 
   // her input
   let ix = 0, iz = 0;
@@ -678,11 +680,17 @@ function frame(now) {
     f.y += (ground - f.y) * Math.min(1, dt * 14);
     if (f.hopV || f.hop > 0) { f.hop += f.hopV * dt; f.hopV -= 14 * dt; if (f.hop <= 0) { f.hop = 0; f.hopV = 0; } }
     if (f === duck && f.dive) { f.dive -= dt; }
-    if (stepped) {
-      const walkK = Math.floor(tick / 2);
-      if (f.maps.length > 2) f.setFrame(f.walking ? 1 + walkK % 2 : 0);
-      f.bob = f.walking ? (walkK % 2 ? .05 : 0) : 0;
-      f.tilt = f.walking ? (walkK % 2 ? .05 : -.05) : 0;
+    const cyc = f.maps.length > WALK;
+    if (cyc && f.walking) f.phase = ((f.phase || 0) + wsteps) % WALK;
+    if (stepped || (cyc && f.walking && wsteps)) {
+      if (cyc) {
+        // walking: the next of twelve drawings, a little bounce on each step, a gentle sway
+        const ph = f.phase || 0, sw = Math.sin(ph / WALK * Math.PI * 2);
+        f.setFrame(f.walking ? 1 + ph : 0);
+        f.bob = f.walking ? (1 - Math.abs(sw)) * .045 : 0;
+        f.tilt = f.walking ? sw * .03 : 0;
+        if (!f.walking) f.phase = 0;
+      } else { f.bob = 0; f.tilt = 0; }
       if (f === duck) { const dv = f.dive > 0 ? Math.sin(clamp(1 - (f.dive - .1) / 1.1, 0, 1) * Math.PI) : 0; f.sink = dv * .55; f.tilt = Math.sin(tick * .4) * .04; f.setFrame(f.dive > 0 ? 1 : 0); }
       // pose = position snapped to the frame, so even a hop moves in little steps
       f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0);
@@ -735,6 +743,7 @@ window.__p = {
   tap(name) { const f = figures.find(f => f.name === name); if (f) tapFigure(f); else if (name === 'house') toggleHouse(); else if (name === 'tree') { trees[0].wob = 1; } },
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
+  frame() { return girl.frame; },
   uniOk() { return heightAt(uni.x, uni.z) !== null; },
   hop(name) { return figures.find(f => f.name === name).hop; },
   info() { return { girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], door: doorTarget, eve, h: heightAt(girl.x, girl.z) }; },

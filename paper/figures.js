@@ -58,6 +58,10 @@ function eye(g, x, y, r = 4.6) {
   ink(g, '#33262e', E(x, y, r * .86, r * 1.08)); ink(g, '#fff', E(x + r * .3, y - r * .4, r * .32, r * .32));
 }
 
+/** a walk is WALK drawings (frames 1..WALK after the standing frame 0); s swings from -1 to 1 and back over one cycle of two steps */
+export const WALK = 12;
+const swing = f => f ? Math.sin((f - 1) / WALK * TAU) : 0;
+
 /* ---------- the sisters ---------- */
 const KID = {
   anna: { skin: '#F4CDB0', skin2: '#E2B293', hair: '#EEC363', hair2: '#D4A648', dress: '#F58DB9', dress2: '#DC6A9E', collar: '#FBF3E6', shoe: '#5BAEE8', shoe2: '#3E8DCB', clip: '#FF6FA5',
@@ -67,7 +71,7 @@ const KID = {
 };
 function kid(o) {
   return (g, f) => {
-    const s = f === 1 ? 1 : f === 2 ? -1 : 0, hy = o.headY, r = o.head, cx = 102;
+    const s = swing(f), hy = o.headY, r = o.head, cx = 102;
     const thigh = o.hem - 10, legR = 8, shoulder = o.neck + 12;
     // far leg and arm (in the shade)
     piece(g, o.skin2, C(cx - 8, thigh, cx - 8 - s * 7, o.foot - 2, legR));
@@ -109,7 +113,7 @@ export const drawAnna = kid(KID.anna), drawFenna = kid(KID.fenna);
 const UNI = { body: '#FCF8F1', shade: '#E6DCEA', pink: '#F4A6C4', lilac: '#BBA6EA', mint: '#9ED9CF', horn: '#EBC35E', horn2: '#C9993A', hoof: '#C9A9DE', hoof2: '#AE8CC8', muzzle: '#F8DDE4' };
 /** the baby: round and chubby, no neck, a little horn */
 export function drawBaby(g, f) {
-  const s = f === 1 ? 1 : f === 2 ? -1 : 0, u = UNI;
+  const s = swing(f), u = UNI;
   piece(g, u.shade, C(82, 150, 84 - s * 6, 176, 10.5)); piece(g, u.hoof2, E(86 - s * 6, 182, 12, 7));
   piece(g, u.shade, C(138, 150, 140 + s * 6, 176, 10.5)); piece(g, u.hoof2, E(142 + s * 6, 182, 12, 7));
   // a curly tail
@@ -131,7 +135,7 @@ export function drawBaby(g, f) {
 }
 /** the grown unicorn: tall and slender, a long horn, a flowing mane and tail, wings folded on her side */
 export function drawGrown(g, f) {
-  const s = f === 1 ? 1 : f === 2 ? -1 : 0, u = UNI;
+  const s = swing(f), u = UNI;
   piece(g, u.shade, C(104, 196, 102 - s * 9, 262, 10, 8)); piece(g, u.hoof2, E(105 - s * 9, 268, 12, 7));
   piece(g, u.shade, C(178, 196, 180 + s * 9, 262, 10, 8)); piece(g, u.hoof2, E(183 + s * 9, 268, 12, 7));
   // the tail: three long strands
@@ -167,10 +171,10 @@ export function drawGrown(g, f) {
 
 /** canvas sizes (drawing units) and how tall each stands in the world */
 export const FIGS = {
-  anna: { w: 200, h: 240, draw: drawAnna, frames: 3, size: 1.2 },
-  fenna: { w: 200, h: 276, draw: drawFenna, frames: 3, size: 1.38 },
-  baby: { w: 220, h: 200, draw: drawBaby, frames: 3, size: .95 },
-  grown: { w: 280, h: 284, draw: drawGrown, frames: 3, size: 1.75 },
+  anna: { w: 200, h: 240, draw: drawAnna, frames: 1 + WALK, size: 1.2 },
+  fenna: { w: 200, h: 276, draw: drawFenna, frames: 1 + WALK, size: 1.38 },
+  baby: { w: 220, h: 200, draw: drawBaby, frames: 1 + WALK, size: .95 },
+  grown: { w: 280, h: 284, draw: drawGrown, frames: 1 + WALK, size: 1.75 },
 };
 
 /** draws a figure twice: its outline grown into a white backing card, then the pieces in colour, then paper grain */
