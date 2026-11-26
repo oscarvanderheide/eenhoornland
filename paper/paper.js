@@ -4,11 +4,15 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
 
-const DPR = Math.min(devicePixelRatio || 1, 2);
+// switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
+// ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2). Also ?who=fenna and ?wear=kroon,ballon.
+const ASK = new URLSearchParams(location.search);
+const DPR = ASK.get('dpr') ? Math.max(.5, Math.min(3, +ASK.get('dpr') || 1)) : Math.min(devicePixelRatio || 1, 2);
+const SHADOWS = ASK.get('shadows') !== '0', DOF = ASK.get('dof') !== '0', POST = ASK.get('post') !== '0';
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(DPR);
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.enabled = SHADOWS; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.info.autoReset = false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(26, 1, .5, 140);
 
@@ -467,7 +471,6 @@ function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
   mesh.userData.fig = fig; figures.push(fig); return fig;
 }
 const fig = (name, k) => makeFigure(name, FIGS[k]);
-const ASK = new URLSearchParams(location.search);   // ?who=fenna plays Fenna, ?wear=kroon,ketting,jurkregenboog,vleugels,ballon dresses her
 const girl = fig('girl', ASK.get('who') === 'fenna' ? 'fenna' : 'anna');
 const uni = fig('unicorn', 'baby');
 const mama = fig('mama', 'grown');
@@ -647,6 +650,7 @@ let rt = null;
 const post = new THREE.ShaderMaterial({
   uniforms: { tColor: { value: null }, tDepth: { value: null }, res: { value: new THREE.Vector2() }, near: { value: camera.near }, far: { value: camera.far }, focus: { value: 14 }, dof: { value: 8 }, seed: { value: 0 }, eve: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
+  defines: { TAPS: DOF ? 24 : 1 },
   fragmentShader: `
     uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 res; uniform float near, far, focus, dof, seed, eve; varying vec2 vUv;
     float lin(float d){ float z=d*2.-1.; return 2.*near*far/(far+near-z*(far-near)); }
@@ -657,7 +661,7 @@ const post = new THREE.ShaderMaterial({
     void main(){
       float coc=cocAt(vUv);
       float r=coc*dof; vec3 acc=vec3(0.); float wsum=0.; vec3 bl=vec3(0.);
-      for(int i=0;i<24;i++){ float fi=float(i); float a=fi*2.39996; float rr=sqrt((fi+.5)/24.);
+      for(int i=0;i<TAPS;i++){ float fi=float(i); float a=fi*2.39996; float rr=sqrt((fi+.5)/24.);
         vec2 o=vec2(cos(a),sin(a))*rr;
         vec2 uv=vUv+o*r/res;
         float w=max(cocAt(uv), coc*.6)+.02;          // a sharp thing in front is not smeared over by the blur behind it
@@ -699,6 +703,23 @@ function resize() {
   post.uniforms.tColor.value = rt.texture; post.uniforms.tDepth.value = rt.depthTexture; post.uniforms.res.value.set(pw, ph); post.uniforms.dof.value = (portrait ? 6 : 9) * DPR * Math.min(1.4, w / 1100 + .4);
 }
 addEventListener('resize', resize); resize();
+
+/* ---------------- the readout (?fps): how smoothly it runs here and how big she is on this screen ---------------- */
+const stat = { fps: 0, worst: 0, her: 0, calls: 0, tris: 0, n: 0, t0: 0, prev: 0, slow: 0, slows: [] };
+const statEl = ASK.has('fps') ? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'stat' })) : null;
+if (statEl) statEl.style.cssText = 'position:fixed;left:calc(env(safe-area-inset-left) + 10px);bottom:calc(env(safe-area-inset-bottom) + 10px);padding:8px 12px;border-radius:10px;background:#f3ead8;color:#4a3b30;font:600 14px/1.45 ui-rounded,system-ui,sans-serif;box-shadow:0 2px 0 #b9a888;white-space:pre;pointer-events:none';
+function measure(now) {
+  if (stat.prev) stat.slow = Math.max(stat.slow, now - stat.prev); stat.prev = now; stat.n++;
+  if (!stat.t0) stat.t0 = now;
+  if (now - stat.t0 < 1000) return;
+  stat.fps = stat.n * 1000 / (now - stat.t0); if ((stat.seen = (stat.seen || 0) + 1) > 2) stat.slows.push(stat.slow); if (stat.slows.length > 5) stat.slows.shift();   // the first two seconds are loading, not play
+  stat.worst = stat.slows.length ? 1000 / Math.max(...stat.slows) : stat.fps;   // the slowest single frame of the last five seconds, as frames a second
+  stat.n = 0; stat.t0 = now; stat.slow = 0; stat.calls = renderer.info.render.calls; stat.tris = renderer.info.render.triangles;
+  // her height on the screen in points: from her feet to the top of her head
+  const feet = new THREE.Vector3(girl.x, girl.y, girl.z).project(camera), top = new THREE.Vector3(girl.x, girl.y + (1 - kidPoints(girl.kid, 'front').top[1] / girl.h) * girl.H, girl.z).project(camera);
+  stat.her = Math.abs(top.y - feet.y) / 2 * innerHeight;
+  if (statEl) statEl.textContent = `${stat.fps.toFixed(0)} frames a second (slowest ${stat.worst.toFixed(0)})\nshe is ${stat.her.toFixed(0)} points tall\n${stat.calls} draws, ${(stat.tris / 1000).toFixed(0)}k triangles\n${innerWidth}×${innerHeight} at ×${DPR}${SHADOWS ? '' : ', no shadows'}${DOF ? '' : ', no soft focus'}${POST ? '' : ', no lens'}`;
+}
 
 /* ---------------- the loop ---------------- */
 const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3();
@@ -799,8 +820,10 @@ function frame(now) {
   post.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(girl.x, girl.y + .5, girl.z));
   if (stepped) post.uniforms.seed.value = (tick % 12) * 1.37;
 
-  renderer.setRenderTarget(rt); renderer.render(scene, camera);
-  renderer.setRenderTarget(null); renderer.render(postScene, postCam);
+  renderer.info.reset();
+  if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
+  else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
+  measure(now);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -813,6 +836,7 @@ window.__p = {
   evening(on = true) { eveTarget = on ? 1 : 0; eve = eveTarget; },
   screen(name) { const f = figures.find(f => f.name === name); const v = name === 'house' ? new THREE.Vector3(HOUSE.x + .5, 1.2, HOUSE.z + HOUSE.d / 2) : new THREE.Vector3(f.x, f.y + .4, f.z); v.project(camera); const r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; },
   frame() { return girl.frame; },
+  stats() { return { fps: stat.fps, worst: stat.worst, her: stat.her, calls: stat.calls, tris: stat.tris, dpr: DPR, shadows: SHADOWS, dof: DOF, post: POST }; },
   /** dress her: __p.wear(['kroon', 'ketting', 'jurkregenboog', 'vleugels', 'ballon']); pose her: __p.pose('sit' | 'hold' | 'up' | null); __p.sleep(true) shuts her eyes */
   wear(ids) { girl.redress(wearOf(ids || [])); return girl.wear; },
   pose(name) { girl.poseName = name || null; },

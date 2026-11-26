@@ -23,6 +23,11 @@ Read this before any work under `paper/`. Status at the bottom.
 | Figures | Simple cut-paper shapes on a white backing card, dot eyes, ponytails with bows | Oscar, 2026-11-26 |
 | New world each cycle | Gone (a hand-built set cannot be reshuffled). A cycle changes where the egg lies, the egg kind and the weather | follows from "hand-built sets" |
 | The list below | Every verdict agreed as written | Oscar, 2026-11-26 |
+| Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Oscar, 2026-11-26 (on the figure sheet) |
+| Carrying | She holds an animal in her arms in front of her (pose `hold`), not over her head as in the pixel game | Oscar, 2026-11-26 (on the figure sheet) |
+| Blinking | The sisters blink now and then while they stand | Oscar, 2026-11-26 (on the figure sheet) |
+| The balloon | Its own little card on a thread tied to her hand, not part of her card | Oscar, 2026-11-26 (on the figure sheet) |
+| The bought bow (`strik`) | A big red bow with white dots on top of her head | Oscar, 2026-11-26 (on the figure sheet) |
 
 Claude's picks. Oscar has seen them and has not objected, but has not said yes to each either:
 
@@ -33,11 +38,6 @@ Claude's picks. Oscar has seen them and has not objected, but has not said yes t
 | Saves | 2.0 keeps its own saves and starts fresh | 1.x stays playable beside it; positions cannot carry over anyway |
 | Set size | Smaller and denser than the tile islands (start the village at about 60% of its old footprint, on two or three levels) | The paper island works because everything is close together |
 | Loading | Only the set she is on exists. A bridge (or a door, or the boat) is the gate: the next set is built while she crosses, in a wide shot, and the old one is thrown away. Other islands show on the horizon as flat card cutouts | Oscar asked whether loading the whole world at once is wise; this is the answer he got |
-| Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Outfits and new poses then cost little; the walk is already drawn from one parameter |
-| Carrying | She holds an animal in her arms in front of her (pose `hold`), not over her head as in the pixel game | With a big head and short arms, arms straight up end beside her cheeks; "arms up" (pose `up`) is kept for the moment a tool becomes hers |
-| Blinking | The sisters blink now and then while they stand | A small sign of life (the pixel game has it too). It is the one thing that moves by itself, so Oscar may want it gone |
-| The balloon | Its own little card on a thread tied to her hand, not part of her card | It floats too far above her to fit on her card, and on a thread it can trail and sway |
-| The bought bow (`strik`) | A big red bow with white dots on top of her head | Both sisters already wear a small bow on their ponytail; the bought one has to look plainly different |
 
 ## What carries over, what does not
 
@@ -238,10 +238,11 @@ Each girl and unicorn needs a side, front and back view.
 ## Status
 
 - 2026-11-26: plan written, and the list checked against every `js/world-*.js`, `js/act-*.js` and the named places in `js/map.js`; Oscar agreed to the list.
-- 2026-11-26: step 2 (figures with outfit layers) built, **waiting for Oscar's eye on the figure sheet** (`paper/figures.html`). Not done until he says so.
+- 2026-11-26: step 2 (figures with outfit layers) built, **approved by Oscar on the figure sheet** (2026-11-26), with the four choices made along the way (carrying in front, the dotted bow, the balloon on its thread, blinking).
   - The sisters are paper dolls (`paper/kids.js`): poses stand, walk, sit, hold, up; eyes that shut and blink; all eleven things the stall sells in five slots, in side, front and back view. Plain, they are pixel for pixel what Oscar approved (checked against the old drawing code, all 13 frames of all three views).
   - Points on her card (`kidPoints`: hand, between her hands, top of her head, seat) for things she holds or sits on.
   - On the island: `?who=fenna`, `?wear=kroon,ketting,jurkregenboog,vleugels,ballon`; in the console `__p.wear([...])`, `__p.pose('sit')`.
   - Shared shapes and the backing card moved to `paper/cut.js`.
   - Seen at phone size on the island: dresses, wings, hat, crown, bow, wreath and balloon read; the necklace does not and the rabbit barely does. That is risk 3 above, left for the test piece.
   - Still to draw for later steps: riding, swimming, climbing, asleep in bed (lying down), and every unicorn pose. The test island and figure sheet exist (`paper/index.html`, `paper/figures.html`; `node cdp.mjs tests/t-paper.mjs`).
+- 2026-11-26: step 3 (the test piece) started in the main session. First part: the island code split into an engine and a set, a camera director, the village blocked out at real size, a gate between two sets, and a readout of frame rate, figure size and build time for Oscar's phone.

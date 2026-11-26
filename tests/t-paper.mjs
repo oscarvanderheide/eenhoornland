@@ -61,4 +61,15 @@ export default async function (t) {
   await t.ev("__p.wear(['hoed', 'jurkblauw', 'knuffel'])"); await t.ev("__p.pose('up'); __p.face('front')"); await t.sleep(1500);
   const d3 = await t.ev('__p.doll()'); ok(d3.pose === 'up' && !d3.balloon, 'arms up, and the balloon is gone with the other outfit'); await t.shot(pre + 'up.png');
   await t.ev("__p.pose(null); __p.sleep(true)"); await t.sleep(500); ok((await t.ev('__p.doll()')).eyes === 'shut', 'her eyes shut'); await t.ev('__p.sleep(false)');
+  // the readout for a phone (?fps) and the switches that tell what costs what
+  await t.ev('__p.wear([])'); await t.sleep(2600);
+  const s0 = await t.ev('__p.stats()'); ok(s0.fps > 5 && s0.her > 15 && s0.calls > 20 && s0.shadows && s0.dof && s0.post, `it measures itself (${s0.fps.toFixed(0)} frames a second, she is ${s0.her.toFixed(0)} points tall, ${s0.calls} draws)`);
+  await t.go(`http://127.0.0.1:${port}/paper/?fps&shadows=0&dof=0&dpr=1`);
+  for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
+  await t.sleep(2600);
+  const s1 = await t.ev('__p.stats()'); ok(!s1.shadows && !s1.dof && s1.dpr === 1 && s1.calls < s0.calls && s1.fps > 5, `without shadows and soft focus it still draws, with fewer draws (${s1.calls} against ${s0.calls})`);
+  ok(await t.ev("!!document.getElementById('stat') && document.getElementById('stat').textContent.includes('frames a second')"), 'the readout shows'); await t.shot(pre + 'readout.png');
+  await t.go(`http://127.0.0.1:${port}/paper/?fps&post=0`);
+  for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
+  await t.sleep(2600); ok((await t.ev('__p.stats()')).fps > 5, 'without the lens pass it still draws'); await t.shot(pre + 'nolens.png');
 }
