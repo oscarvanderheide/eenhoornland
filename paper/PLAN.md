@@ -9,7 +9,7 @@ Read this before any work under `paper/`. Status at the bottom.
 - **Branch `paper`**, in the worktree `.claude/worktrees/paper` of the repository. Oscar, 2026-11-26: the pixel game keeps existing on `main`; 2.0 is committed on its own branch. Never commit 2.0 work to `main`.
 - This copy of the plan (on `paper`) is the current one; the copy on `main` stopped at the commit where the branch began.
 - Serve the worktree on its own port for tests: `python3 serve.py 8766`, then `SERVE=8766 node cdp.mjs tests/t-paper.mjs` (the main checkout's server on 8765 serves the pixel game's folder).
-- **Publishing is not set up yet.** The site is built from `main` only, so nothing on `paper` is online. Putting it online needs a change to the repository's Pages settings, which waits for Oscar's yes.
+- **Publishing is not set up yet.** The site is built from `main` only (Pages build type `legacy`), and only `main` and `gh-pages` may deploy, so nothing on `paper` is online. Putting it online would take three changes, all waiting for Oscar's yes: Pages built by a workflow instead of straight from `main`; `paper` added to the branches allowed to deploy; and one workflow file on both `main` and `paper` that puts the pixel game at `/` and this branch's `paper/` folder at `/paper/`. A wrong workflow would stop the girls' live game from updating, so test it before relying on it.
 
 ## Decided
 
@@ -33,6 +33,7 @@ Claude's picks. Oscar has seen them and has not objected, but has not said yes t
 | Loading | Only the set she is on exists. A bridge (or a door, or the boat) is the gate: the next set is built while she crosses, in a wide shot, and the old one is thrown away. Other islands show on the horizon as flat card cutouts | Oscar asked whether loading the whole world at once is wise; this is the answer he got |
 | Figure poses | A jointed rig (separate paper parts with pivots) instead of redrawing every frame | Outfits and new poses then cost little; the walk is already drawn from one parameter |
 | Carrying | She holds an animal in her arms in front of her (pose `hold`), not over her head as in the pixel game | With a big head and short arms, arms straight up end beside her cheeks; "arms up" (pose `up`) is kept for the moment a tool becomes hers |
+| Blinking | The sisters blink now and then while they stand | A small sign of life (the pixel game has it too). It is the one thing that moves by itself, so Oscar may want it gone |
 | The balloon | Its own little card on a thread tied to her hand, not part of her card | It floats too far above her to fit on her card, and on a thread it can trail and sway |
 | The bought bow (`strik`) | A big red bow with white dots on top of her head | Both sisters already wear a small bow on their ponytail; the bought one has to look plainly different |
 
