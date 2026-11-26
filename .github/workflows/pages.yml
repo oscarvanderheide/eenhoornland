@@ -1,0 +1,41 @@
+# Publishes Eenhoornland to GitHub Pages from two branches at once:
+#   main   -> the pixel game, at the root of the site (everything on main except hidden files)
+#   paper  -> the paper game (2.0), its paper/ folder, at /paper/
+# A push to either branch builds the whole site again. This file must be the same on both branches.
+name: Publish the site
+on:
+  push:
+    branches: [main, paper]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: The pixel game (main)
+        uses: actions/checkout@v7
+        with: { ref: main, path: pixel }
+      - name: The paper game (paper)
+        uses: actions/checkout@v7
+        with: { ref: paper, path: paperwork }
+      - name: Put the site together
+        run: |
+          mkdir _site
+          rsync -a --exclude='.*' pixel/ _site/
+          rm -rf _site/paper
+          rsync -a --exclude='.*' paperwork/paper/ _site/paper/
+          test -f _site/index.html && test -f _site/js/main.js && test -f _site/paper/index.html
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: _site }
+      - id: deploy
+        uses: actions/deploy-pages@v5
