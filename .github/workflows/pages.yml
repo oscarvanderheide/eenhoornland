@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.again.outputs.page_url }}
     steps:
       - name: The pixel game (main)
         uses: actions/checkout@v7
@@ -37,5 +37,14 @@ jobs:
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with: { path: _site }
+      # Deploying now and then fails with "No artifacts named github-pages were found" although the upload just before it
+      # succeeded (about one push in three on 2026-11-26; a re-run always passed). So: try, and if that fails wait and try once more.
       - id: deploy
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - name: Wait before trying again
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - id: again
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v5
