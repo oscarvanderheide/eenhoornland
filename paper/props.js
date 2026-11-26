@@ -9,15 +9,23 @@ export const GROUND = {
 const PETALS = (() => { const p = []; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; for (let j = 0; j <= 6; j++) { const b = a - .5 + j / 6; p.push([Math.cos(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI)), Math.sin(b) * (.07 + .05 * Math.sin((j / 6) * Math.PI))]); } } return p; })();
 const TUFT = [[-.16, 0], [-.12, .2], [-.06, .05], [0, .26], [.05, .05], [.12, .22], [.16, 0]];
 const rnd = seed => { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
-/** The flowers she has picked: up to five make a bunch she carries in front of her, and whoever she taps next is given
- *  it. One per set: the garden beds and the flowers in the grass all go into the same bunch */
+/** The flower she has picked. One at a time (Oscar: not a bunch), and it is the very flower she picked: the same kind, the
+ *  same colour. She holds it by its stem in front of her. Whoever she taps next is given it. If she picks another while she
+ *  holds one, the first goes into her hair, and stays there until a third takes its place. One of these per set */
 export function bouquet(S) {
-  const { girl, sfx } = S, origin = S.at([0, 0]), R = rnd(77); let held = 0, picks = 0, gifts = 0;
-  const bunch = new THREE.Group(); bunch.userData.live = true; bunch.visible = false; S.root.add(bunch);
-  const heads = [0, 1, 2, 3, 4].map(k => { const b = bloom(['daisy', 'tulip', 'rose', 'daisy', 'tulip'][k], R, .9); b.position.set((k - 2) * .07, Math.abs(k - 2) * -.03, k * .01); b.rotation.z = -(k - 2) * .22; bunch.add(b); return b; });
-  S.offer(who => { if (!held) return false; held = 0; gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
-  return { add(x, y, z) { held = Math.min(5, held + 1); picks++; sfx.hop(); S.confetti(x, y + .45, z, ['#f4a6c4', '#f2c65c', '#f2efe6'], 6, undefined, 1.6); }, state: () => ({ held, picks, gifts }),
-    step() { bunch.visible = held > 0 && !S.playing(); heads.forEach((b, k) => { b.visible = k < held; }); if (bunch.visible) { girl.poseName = 'hold'; const h = S.hand(); bunch.position.set(h.x - origin[0], h.y - .16, h.z - origin[1] + .05); } } };
+  const { girl, sfx } = S, origin = S.at([0, 0]); let hand = null, hair = null, picks = 0, gifts = 0;
+  const make = (o, big) => { const b = bloom(o.kind, rnd(o.seed), o.big * big, o.col); b.userData.live = true; S.root.add(b); S.glue(b); return b; };
+  const drop = b => { if (!b) return; S.root.remove(b.g); b.g.traverse(q => { if (q.geometry) q.geometry.dispose(); }); };
+  S.offer(who => { if (!hand) return false; drop(hand); hand = null; gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
+  return {
+    /** she picks the flower `o` ({ kind, seed, big, col }) that stood at x, y, z */
+    add(x, y, z, o) { if (hand) { drop(hair); hair = { ...hand.o, o: hand.o, g: make(hand.o, .62) }; drop(hand); } hand = { o, g: make(o, 1.15) }; picks++; sfx.hop(); S.confetti(x, y + .45, z, ['#f4a6c4', '#f2c65c', '#f2efe6'], 6, undefined, 1.6); },
+    state: () => ({ held: hand ? 1 : 0, kind: hand ? hand.o.kind : null, hair: hair ? hair.o.kind : null, picks, gifts }),
+    step() {
+      if (hand) { hand.g.visible = !S.playing(); if (hand.g.visible) { girl.poseName = 'hold'; const h = S.hand(); hand.g.position.set(h.x - origin[0] + girl.face * .05, h.y - hand.g.userData.h * .45, h.z - origin[1] + .05); hand.g.rotation.z = -girl.face * .22; } }   // her hands round the middle of the stem, the flower leaning forward a little
+      if (hair) { const t = S.head(); hair.g.position.set(t.x - origin[0] + girl.face * .13, t.y - .1 - hair.g.userData.h, t.z - origin[1] + .03); hair.g.rotation.z = -girl.face * .3; }
+    },
+  };
 }
 /** what grows in grass: tufts of two greens and, now and then, a paper flower. `pick(R)` gives a spot [x, y, z] or null (the
  *  set knows where grass is and what lies on it); `n` things, `flowers` of every ten are flowers. The tufts are glued with
@@ -30,7 +38,7 @@ export function meadow(S, n, pick, seed, flowers = 2.5, greens = ['#86a466', '#9
     if (R() * 10 >= flowers) {
       const g = paper(greens[Math.floor(R() * greens.length)]), t = new THREE.Mesh(tuft, [g, g]); t.castShadow = t.receiveShadow = true; t.position.set(x, y, z); t.rotation.y = R() * .6 - .3; t.scale.setScalar(.8 + R() * .7); S.root.add(t);
       if (R() < .5) { const t2 = new THREE.Mesh(tuft, [g, g]); t2.castShadow = true; t2.position.set(x + .16 + R() * .1, y, z + R() * .12 - .06); t2.rotation.y = R() * .8 - .4; t2.scale.setScalar(.6 + R() * .4); S.root.add(t2); }   // tufts grow in twos and threes
-    } else { const f = bloom(['daisy', 'daisy', 'tulip', 'rose', 'spike'][Math.floor(R() * 5)], R, 1.05); f.position.set(x, y, z); f.rotation.y = R() * .5 - .25; blooms.push({ f, x, y, z, back: 0 }); }
+    } else { const o = { kind: ['daisy', 'daisy', 'tulip', 'rose', 'spike'][Math.floor(R() * 5)], seed: Math.floor(R() * 1e9) + 1, big: 1.05 }, f = bloom(o.kind, rnd(o.seed), o.big); f.position.set(x, y, z); f.rotation.y = R() * .5 - .25; blooms.push({ f, o, x, y, z, back: 0 }); }
   }
   if (!blooms.length) return { step() {}, state: () => ({ flowers: 0 }) };
   // all the flowers as one piece: every corner keeps its colour, and each flower remembers which corners are its own
@@ -49,7 +57,7 @@ export function meadow(S, n, pick, seed, flowers = 2.5, greens = ['#86a466', '#9
   let picked = 0;
   if (bunch) S.tap(field, hit => { if (!hit || S.playing()) return; const hx = hit.point.x - origin[0], hz = hit.point.z - origin[1]; let best = null, bd = .45;
     for (const b of blooms) { const d = Math.hypot(b.x - hx, b.z - hz); if (!b.gone && d < bd) { bd = d; best = b; } }
-    if (best) S.walkThen(best.x + origin[0], best.z + origin[1] + .45, () => { if (best.gone) return; show(best, false); best.back = 50 + Math.random() * 30; picked++; bunch.add(best.x + origin[0], best.y, best.z + origin[1]); }, 1.0); });
+    if (best) S.walkThen(best.x + origin[0], best.z + origin[1] + .45, () => { if (best.gone) return; show(best, false); best.back = 50 + Math.random() * 30; picked++; bunch.add(best.x + origin[0], best.y, best.z + origin[1], best.o); }, 1.0); });
   return { state: () => ({ flowers: blooms.length, picked, first: [blooms[0].x + origin[0], blooms[0].z + origin[1]] }), step({ dt }) { for (const b of blooms) if (b.back > 0) { b.back -= dt; if (b.back <= 0) show(b, true); } } };
 }
 const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
@@ -62,7 +70,7 @@ function bloom(kind, R, big = 1, col = null) {
   const h = (kind === 'sun' ? .5 : kind === 'spike' ? .34 : .24) * (.85 + R() * .4) * big, sc = (.9 + R() * .45) * big;
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(.013, .013, h, 4), stemMat); stem.position.y = h / 2; stem.castShadow = stem.receiveShadow = true; g.add(stem);
   const leaf = card(LEAFY, .015, paper(pick(['#86a466', '#7f9d5e']))); leaf.position.y = h * .35; leaf.scale.setScalar(sc * .9); if (R() < .5) leaf.scale.x *= -1; g.add(leaf);
-  const head = new THREE.Group(); head.position.y = h + .02; head.scale.setScalar(sc); g.add(head);
+  const head = new THREE.Group(); head.position.y = h + .02; head.scale.setScalar(sc); g.add(head); g.userData.h = h + .02;
   if (kind === 'daisy') { head.add(card(PETALS, .02, paper(pick(['#f2efe6', '#f4a6c4', '#f2c65c', '#b9a3e0'])))); const c = disc(.04, '#e2a13c'); c.position.z = .012; head.add(c); }
   else if (kind === 'tulip') head.add(card([[-.06, 0], [-.09, .13], [-.04, .09], [0, .16], [.04, .09], [.09, .13], [.06, 0], [0, -.03]], .03, paper(pick(['#e98f8f', '#d9706c', '#f4a6c4', '#bba6ea', '#f2c65c']))));
   else if (kind === 'sun') { const pts = []; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283, r = i % 2 ? .1 : .17; pts.push([Math.cos(a) * r, Math.sin(a) * r]); } head.add(card(pts, .02, paper(pick(['#f2c65c', '#e6b748', '#f6dfa6'])))); const c = disc(.075, '#8d6a48'); c.position.z = .012; head.add(c); }
@@ -84,9 +92,9 @@ export function flowerBed(S, cx, y, cz, seed, bunch, w = 3.6, d = 2.0, tints = [
   for (const s of [-1, 1]) plant('spike', cx + s * w * .4, cz + .02, 1.2, '#bba6ea');
   const tulips = [];
   for (let i = 0; i < 6; i++) {
-    const x = cx + (i - 2.5) * w * .12, z = cz + .02, f = plant('tulip', x, z, 1.35, tints[i % 2]); f.userData.live = true; S.glue(f);
+    const x = cx + (i - 2.5) * w * .12, z = cz + .02, what = { kind: 'tulip', seed: seed * 31 + i + 1, big: 1.35, col: tints[i % 2] }, f = bloom(what.kind, rnd(what.seed), what.big, what.col); f.position.set(x, y + .012, z); S.root.add(f); f.userData.live = true; S.glue(f);
     const o = { f, at: S.at([x, z]), back: 0 }; tulips.push(o);
-    S.tap(f, () => { if (S.playing() || !f.visible) return; S.walkThen(o.at[0], o.at[1] + .75, () => { if (!f.visible) return; f.visible = false; o.back = 40 + R() * 20; bunch.add(o.at[0], y, o.at[1]); }, 1.3); });
+    S.tap(f, () => { if (S.playing() || !f.visible) return; S.walkThen(o.at[0], o.at[1] + .75, () => { if (!f.visible) return; f.visible = false; o.back = 40 + R() * 20; bunch.add(o.at[0], y, o.at[1], what); }, 1.3); });
   }
   return { state: () => ({ tulips: tulips.map(o => ({ at: o.at, there: o.f.visible })) }), step({ dt }) { for (const o of tulips) if (o.back > 0) { o.back -= dt; if (o.back <= 0) o.f.visible = true; } } };
 }
@@ -172,8 +180,8 @@ export function cabin(S, x, y, z) {
   S.tap(g, () => { knocks++; S.sfx.thud(); setTimeout(() => S.sfx.thud(), 160); S.confetti(wx + .75, y + top + 1.5, wz - .4, ['#efe8dc', '#d9d2c4', '#f7f1e6'], 7, undefined, 1.2); });   // a knock, and a puff from the chimney
   return { state: () => ({ knocks }) };
 }
-/** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and so does she when she runs past;
- *  it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */
+/** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and only a tap (Oscar: not by
+ *  itself, not from her running past, not from the wind); it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */
 export function pinwheel(S, x, y, z, a = '#f4a6c4', b = '#f2c65c', h = .8) {
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   const stick = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, h, 5), paper('#f4ecdc')); stick.position.y = h / 2; stick.castShadow = true; g.add(stick);
@@ -184,7 +192,6 @@ export function pinwheel(S, x, y, z, a = '#f4a6c4', b = '#f2c65c', h = .8) {
   const blow = (v = 16) => { if (om < v * .5) { S.sfx.whirr(); spins++; } om = Math.max(om, v); };
   S.tap(g, () => blow());
   return { blow, at: [wx, wz], state: () => ({ om, spins }), step({ dt, stepped }) {
-    if (S.girl.walking && om < 5 && Math.hypot(S.girl.x - wx, S.girl.z - wz) < .95) blow(9);   // the wind of her passing
     om *= Math.exp(-.75 * dt); if (om < .25) om = 0;
     if (stepped && om) rotor.rotation.z -= om / 12;
   } };

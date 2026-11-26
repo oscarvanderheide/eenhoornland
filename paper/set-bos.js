@@ -91,7 +91,6 @@ export default {
 
     return {
       step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); },
-      wind: (x, z, from) => { const [mx, mz] = S.at([cx + 2.2, cz + 1.4]); if (mx > from && mx <= x && Math.abs(mz - z) < 4.5) mill.blow(13); },
       toys: { ...live, ...flies, molen: mill, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 1.65,
