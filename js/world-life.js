@@ -119,7 +119,7 @@ export function createLife(ctx) {
     if (!best) return false; lift(best); return true;
   }
   /** for the action button: the animal or pebble within reach she would lift (ducks stay in their pond; one busy with its own hello answers her jumps instead) */
-  function nearMover() { let best = null, bd = 1; for (const c of movers()) { if (!c.g.visible || c.fly || c.cart || c.swim || c.isUni || c.dog || c.water || c.held || c.way) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } } return best; }
+  function nearMover(notFollowers) { let best = null, bd = 1; for (const c of movers()) { if (!c.g.visible || (notFollowers && c.uniKind && c.friend) || c.fly || c.cart || c.swim || c.isUni || c.dog || c.water || c.held || c.way) continue; const d = dist(c); if (d < bd) { bd = d; best = c; } } return best; }
   function tapAnimal(c) {
     if (c.fly || c.cart || c.swim) return; if (carried === c) return void throwIt();
     if (c.uniKind) return tapHerd(c);                                                                  // an old unicorn from the meadow: she comes along

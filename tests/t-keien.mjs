@@ -10,7 +10,11 @@ export default async function (t) {
   await t.go(URL); await t.ev('localStorage.clear()'); await t.go(URL); await t.sleep(1500);
   await t.ev(`__w.Q._reset({ stage: 'baby' }); 0`); await t.sleep(300);
   const info = await J('__w.keien.info()'); ok(info.stones.length >= 10, 'big stones lie around: ' + info.stones.length);
-  const S = await J(`(() => { const st = __w.keien.stones().find(s => s.zone === 'dorp'); for (const [dx, dz] of [[-1, 0], [1, 0], [0, 1], [0, -1]]) if (__w.walkable(st.x + dx, st.z + dz)) return { id: st.id, x: st.x, z: st.z, sx: st.x + dx + .5, sz: st.z + dz + .5 }; })()`);
+  // the rocks along the shore of another island are big stones too (they look the same)
+  { const R = await J(`(() => { for (const st of __w.keien.stones().filter(s => s.tag === 'rim' && s.zone === 'bos')) for (const [dx, dz] of [[-1, 0], [1, 0], [0, 1], [0, -1]]) if (__w.walkable(st.x + dx, st.z + dz)) return { n: __w.keien.stones().filter(s => s.tag === 'rim').length, sx: st.x + dx + .5, sz: st.z + dz + .5 }; })()`);
+    ok(R && R.n > 20, 'the shore rocks she can reach are big stones: ' + (R && R.n));
+    if (R) { await t.ev(`__w.placeAt(${R.sx}, ${R.sz})`); await t.sleep(500); ok(await t.ev('__w.action().key') === 'kei', 'next to a forest shore rock ✕ lifts it'); await t.shot('tmp-shots/k-0-rim.png'); } }
+  const S = await J(`(() => { const st = __w.keien.stones().find(s => s.zone === 'dorp' && !s.tag); for (const [dx, dz] of [[-1, 0], [1, 0], [0, 1], [0, -1]]) if (__w.walkable(st.x + dx, st.z + dz)) return { id: st.id, x: st.x, z: st.z, sx: st.x + dx + .5, sz: st.z + dz + .5 }; })()`);
   ok(!(await t.ev(`__w.walkable(${S.x}, ${S.z})`)), 'a stone is solid: she does not walk through it');
   await t.ev(`__w.placeAt(${S.sx}, ${S.sz})`); await t.sleep(700); await t.shot('tmp-shots/k-1-next-to.png');
   ok(await t.ev('__w.action().key') === 'kei', '✕ next to it: lift it (' + await t.ev('__w.action().key') + ')');

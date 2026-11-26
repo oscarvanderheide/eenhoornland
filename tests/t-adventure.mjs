@@ -22,8 +22,8 @@ export default async function (t) {
   ok(await until(`!document.querySelector('#dream') && document.querySelector('#start').hidden`, 90000), 'the dream ends and the game begins');
   let s = await q(); const door = JSON.parse(await t.ev(`JSON.stringify(__w.BUILDINGS.find(b=>b.id==='huisje').door)`));
   ok(await t.ev('__w.who()') === 'fenna', 'the girl who was picked plays'); ok(Math.hypot(s.pos[0] - door[0] - .5, s.pos[1] - door[1] - 1.5) < .1, 'she steps out of her own front door');
-  ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 2, 'the goal is the egg'); await settle(1500); await shot('08-outside');
-  await t.ev(`document.querySelector('#quest .qchip').click()`); await settle(700); ok(await t.ev(`!!document.querySelector('.kaart-goal') && document.querySelectorAll('.kaart-gate').length === 3`), 'the chip opens the map with the goal and the three closed bridges'); await shot('09-map');
+  ok(s.stage === 'zoek' && !s.uni && s.w.join() === 'egg:ei' && s.chips === 1, 'the goal is the egg (no goal chip, only the coins)'); await settle(1500); await shot('08-outside');
+  await t.ev(`__hud.openMap()`); await settle(700); ok(await t.ev(`!!document.querySelector('.kaart-goal') && document.querySelectorAll('.kaart-gate').length === 3`), 'the chip opens the map with the goal and the three closed bridges'); await shot('09-map');
   await t.ev(`document.querySelector('#modal [data-close]').click()`);
   ok(await t.ev(`!__w.tools.spot('zwaard') && !__w.tools.spot('haak')`), 'no sword in the stone and no hookshot chest yet'); ok(!s.info.star && !s.info.fruit, 'no star or fruit yet');
   ok(await t.ev(`document.querySelector('#b-ride').hidden`), 'no ride button yet');
@@ -58,7 +58,7 @@ export default async function (t) {
   await place(88.5, 70.5); await settle(1500); await shot('19-beach'); ok(await t.ev(`__w.walkTo(134,67)`) === true, 'walking to the island walks to the pier'); ok(await until(`__w.busy()`, 40000), 'she gets into the boat'); await t.sleep(2500); await shot('20-sailing'); ok(await t.ev(`__w.sea.info().arrow`), 'a rainbow arrow by the boat points the way'); await t.ev(`__w.play.steer(126.5, 66.5)`);
   ok(await until(`!__w.busy()`, 150000), 'the boat arrives'); s = await q(); ok(s.play.side === 'eiland' && s.pos[0] > 110, 'on the rainbow island');  await settle(1500); await shot('21-island');
   ok(s.info.fruitInTree, 'the fruit hangs in the rainbow tree'); await place(s.info.fruit[0] + 1, s.info.fruit[1] + .9); await settle(2000); await shot(`22-rainbow-tree`);
-  for (let k = 0; k < 2; k++) { await until(`__w.kid.hop <= 0`, 8000); await t.ev(`__w.jump()`); await t.sleep(1200); } await shot('22b-shaken'); ok(await until(`!__w.extras.info().fruitInTree`, 8000), 'two jumps shake it out of the tree'); await t.sleep(1500); s = await q();
+  for (let k = 0; k < 2; k++) { await until(`__w.kid.hop <= 0`, 8000); await t.ev(`__w.leapNow()`); await t.sleep(1200); } await shot('22b-shaken'); ok(await until(`!__w.extras.info().fruitInTree`, 8000), 'two jumps shake it out of the tree'); await t.sleep(1500); s = await q();
   if (s.info.fruit) await place(s.info.fruit[0] + .3, s.info.fruit[1] + .3); ok(await until(`!!document.querySelector('#scene')`, 15000), 'catching the fruit starts the feeding scene');
   for (const n of ['23a-hungry', '23b-pick', '23c-eat', '23d-magic', '23e-strong', '23f-climb']) { await t.sleep(3200); await shot(n); await tap(); } await t.sleep(4500); await shot('23g-gallop'); await t.ev(`document.querySelector('#scene .skip') && document.querySelector('#scene .skip').click()`);
   ok(await until(`!document.querySelector('#scene')`, 30000), 'the feeding scene ends'); await settle(1500);

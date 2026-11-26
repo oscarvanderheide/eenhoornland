@@ -721,9 +721,12 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
    *  get on the bike, or (with nothing around) jump */
   const A = (key, icon, run) => ({ key, icon, run });
   const near = (c, r) => c.g.visible && Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) < r;
-  function action(grab = false) {                                               // grab: the pick-up key (E/Enter) asks; it never jumps
+  // ✕ (and Enter) never jumps (Oscar: one button for doing, one for jumping): with nothing here it does nothing.
+  // ○ (and Space) asks with `leaping` on, and only runs the jumps in here (into the water, off a top, off the swing)
+  const NONE = A('none', null, () => { });
+  function action(grab = false, leaping = false) {                              // grab: the pick-up key (E, R1) asks; it never jumps
     if (fly.on()) return A('land', WILD.landIcon(), () => fly.land());             // up in the sky every button lands
-    if (park.on()) return A(park.mode() === 'swing' ? 'jump' : 'wait', ART.jumpIcon(), park.action());   // on the swing: jump off
+    if (park.on()) return leaping || park.mode() !== 'swing' ? A(park.mode() === 'swing' ? 'jump' : 'wait', ART.jumpIcon(), park.action()) : NONE;   // on the swing: ○ jumps off
     if (fishing.biting()) return A('fish', ART.fish(0), () => fishing.tap());
     if (mount === 'fiets') return grab ? A('off', ART.bike(), () => setMount(null)) : A('bell', ART.belIcon(), () => { kid.hop = .45; play.bell(); });
     const held = life.carrying(); if (held) return A('throw' + held.name, held.frames.idle, () => life.throwIt());
@@ -732,25 +735,27 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!mount) for (const f of uses) { const u = f(); if (u) return A(u.key, u.art, u.run); }   // each use checks for itself what she may hold
     const toy = toys.carryArt(); if (toy) return A('put' + toys.carrying(), toy, () => toys.putDown());
     const t = tools.nearAction(); if (t) return t;
-    if (!grab) {
+    { const fi = extras.info(); if (!grab && !mount && fi.fruitInTree && fi.fruit && Math.hypot(fi.fruit[0] - kid.pos.x, fi.fruit[1] - kid.pos.z) < 2.4)   // under the rainbow tree with the fruit: ○ jumps (that shakes it), ✕ shakes it like a tap
+      return leaping ? A('jump', ART.jumpIcon(), hop) : A('shake', ART.foodItem(Q.quest.kind), () => { kid.squash = .4; life.hitAt(MAP.RAINBOW_TREE[0] + .5, MAP.RAINBOW_TREE[1] + .5); }); }
+    if (!grab && leaping) {
       if (life.swimming()) return A('splash', ART.jumpIcon(), () => life.splashJump());
-      { const fi = extras.info(); if (fi.fruitInTree && fi.fruit && Math.hypot(fi.fruit[0] - kid.pos.x, fi.fruit[1] - kid.pos.z) < 2.4) return A('jump', ART.jumpIcon(), hop); }   // under the rainbow tree with the fruit: a jump shakes it
       if (perch || (!mount && !padHere && leapDir()) || toys.stompable() || weather.stompable()) return A('jump', ART.jumpIcon(), hop);   // a sand tower, puddle or leaf pile to jump on
     }
     if (!mount) {
-      if (!grab) { const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w)); }
-      if (!grab && Q.quest.stage !== 'zoek' && !Q.canRide() && near(uni, 1.3)) return A('hallo', ART.talkIcon(), () => tapChar(uni));   // once she can be ridden, getting on is the ride button's job (or a tap on her), never Space
+      if (!grab && !perch) { const w = life.nearWater(); if (w) return A('dip', ART.jumpIcon(), () => life.dip(w)); }
+      // her own egg or unicorn walking along never takes ✕ (it is always right next to her, so it stole the button from
+      // what she walked up to): a tap on her still says hello
       // the nearest thing wins, animal, pebble or toy alike: what lies right at her feet is what she picks up
-      const c = life.nearMover(), ta = toys.nearest(), dc = c ? Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) : 1e9;
+      const c = life.nearMover(true), ta = toys.nearest(), dc = c ? Math.hypot(c.pos.x - kid.pos.x, c.pos.z - kid.pos.z) : 1e9;
       { const st = keien.nearStone(), ds = st ? Math.hypot(st.x + .5 - kid.pos.x, st.z + .5 - kid.pos.z) : 1e9; if (st && ds < dc && (!ta || ds < ta.d)) return A('kei', st.art, () => keien.lift(st)); }   // a big stone right here: up it goes
       // ✕ is a tap on it: its own hello first, a second press lifts it; the pick-up key (E, L1) lifts at once
       if (c && (!ta || dc <= ta.d)) return c.uniKind ? A('hallo' + c.name, ART.talkIcon(), () => life.tapAnimal(c)) : grab ? A('lift' + c.name, c.frames.idle, () => life.lift(c)) : A('pet' + c.name, c.frames.idle, () => life.tapAnimal(c));
       if (ta) return A('take', ta.art, () => toys.take(ta.id));
       if (play.bikeNear()) return A('bike', ART.bike(), () => play.tapBike());
-      if (!grab && life.nearSea()) return A('dip', ART.jumpIcon(), () => life.dip('zee'));   // at the water's edge: in she hops
+      if (!grab && !perch && life.nearSea()) return A('dip', ART.jumpIcon(), () => life.dip('zee'));   // at the water's edge: in she hops
       if (!grab) { const th = nearThing(); if (th) return A('tap' + th.k, th.icon, th.run); }   // anything else right here that answers a tap: its picture, and the same as a tap
     }
-    return grab ? A('hop', ART.jumpIcon(), () => { kid.hop = .4; }) : A('jump', ART.jumpIcon(), hop);
+    return grab ? A('hop', ART.jumpIcon(), () => { kid.hop = .4; }) : leaping ? A('jump', ART.jumpIcon(), hop) : NONE;
   }
   /** the nearest thing within reach that answers a tap (a telescope, a hammock, a chest, the boat...): the action button does that tap */
   const thingAt = new THREE.Vector3();
@@ -777,13 +782,13 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (Math.hypot(MAP.WHALE[0] - b.x, MAP.WHALE[1] - b.z) < Math.min(bd, 4)) best = A('walvis', ART.walvis(), () => play.whaleUp());
     return best;
   }
-  const actionNow = () => !interactive || paused ? null : !busy ? action() : play.aboard() ? (seaThing() || A('jump', ART.jumpIcon(), () => { })) : null;
+  const actionNow = (leaping = false) => !interactive || paused ? null : !busy ? action(false, leaping) : play.aboard() ? (seaThing() || A('jump', ART.jumpIcon(), () => { })) : null;
   /** the action button (and Space) */
   function jump() { if (!interactive || paused) return; if (busy) { if (play.aboard()) { const s = seaThing(); if (s) s.run(); } return; } action().run(); }
   // with a game controller ✕ is the action button and ○ jumps (gamepad.js), so the action button does what is right here
   // even while she walks (the stick is nearly always held), and ○ is a jump: into the water, up a top, off the swing, or a leap
   let padHere = true;                                                            // ○ is always on the screen now (hud.js), so ✕ never has to be the jump
-  function leapNow() { if (!interactive || paused || busy) return; const a = action(); if (/^(jump|splash|dip|land|wait|bell)$/.test(a.key)) a.run(); else hop(); }
+  function leapNow() { if (!interactive || paused || busy) return; const a = action(false, true); if (/^(jump|splash|dip|land|wait|bell)$/.test(a.key)) a.run(); else hop(); }
   /** the sword (□, the sword button, F): a slash, never while she is busy with something else */
   function slash() { if (!interactive || paused || busy || fly.on() || park.on() || life.carrying() || life.swimming()) return false; return sword.swing(); }
   /** the hookshot (△, the hook button, G) */
@@ -981,8 +986,9 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     if (!interactive || paused) return;
     const arrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key);
     if (busy) { if (arrow && play.aboard()) { keys.add(e.key.toLowerCase()); e.preventDefault(); } return; }   // in the boat the keys steer it
-    if (e.key === ' ') { e.preventDefault(); if (!e.repeat) jump(); return; }
-    if (e.key === 'Enter' || e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!e.repeat) grabKey(); return; }
+    if (e.key === ' ') { e.preventDefault(); if (!e.repeat) leapNow(); return; }   // Space is ○ (jump), Enter is ✕ (do), E picks up
+    if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) jump(); return; }
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); if (!e.repeat) grabKey(); return; }
     if (e.key === 'f' || e.key === 'F') { e.preventDefault(); if (!e.repeat) slash(); return; }
     if (e.key === 'g' || e.key === 'G') { e.preventDefault(); if (!e.repeat) hook(); return; }
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) { keys.add(e.key.toLowerCase()); if (!midJump()) { kid.path = []; target = null; after = null; } e.preventDefault(); }
@@ -1227,7 +1233,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
   function placeAt(x, z, dx = 0, dz = 1) { if (perch || liftOn) { perch = null; liftOn = false; kid.lift = 0; } jumpTo = null; kid.pos.set(x, 0, z); kid.path = []; target = null; after = null; resetTrail(dx, dz); uni.pos.set(x + dx * 1.4, 0, z + dz * 1.4); lastTile = I(Math.floor(x), Math.floor(z)); camTarget.set(x, 0, z); }
 
   if (new URLSearchParams(location.search).has('debug')) window.__w = {
-    grabKey, slash, sword, keien, leapNow, hook, haak, muziek, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: () => actionNow(), perch: () => perch, bank, park, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
+    grabKey, slash, sword, keien, leapNow, hook, haak, muziek, weather, rooms, fly, hut, val, isle, beach, farm, molen, sea: seaLife, fishing, ways, kid, chars, uni, setWho, who: () => who, renderer, walkTo, BUILDINGS, walkable, camera, M, Q, MAP, extras, tools, play, life, toys, animals, placeAt, jump, action: leaping => actionNow(!!leaping),   // (true: what ○ would do)
+    perch: () => perch, bank, park, seated: () => ctx.seated(), tops, leap, stick: (x, z) => { stick.x = x; stick.z = z; }, seed, setMount, mount: () => mount, busy: () => busy,
     walkToBuilding(id) { const b = BUILDINGS.find(b => b.id === id); return !!b && walkTo(b.door[0], b.door[1], b); },
     screen(x, y, z) { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     info() { return { pos: [+kid.pos.x.toFixed(2), +kid.pos.z.toFixed(2)], path: kid.path.length, target: target && target.id, paused }; },
@@ -1238,7 +1245,8 @@ export function createWorld(cv, { onEnter, onWish, onMount, onShow, onShop }) {
     /** the joystick: (x, z) in -1..1, screen up is north */
     stick(x, z) { stick.x = x; stick.z = z; },
     /** what the action button would do right now ({ key, icon, run }), or null while she cannot act */
-    action: () => actionNow(),
+    action: leaping => actionNow(!!leaping),   // (true: what ○ would do)
+   
     setNight(n, instant) { nightTarget = n ? 1 : 0; if (instant) { nightT = nightTarget; applyNight(nightT); } },
     wakeUp,
     /** after the castle: everybody walked home over the rainbow, so the evening goes on by the meadow in the village. Her

@@ -55,7 +55,7 @@ export default async function (t) {
     const b = (await play()).bike; await place(b[0] - 1, b[1] + 1); await t.sleep(1200); await t.ev(`__w.play.tapBike()`); await t.sleep(1200); ok(await t.ev(`__w.mount()`) === 'fiets', 'on the bike');
     ok(await t.ev(`__w.play.tapAnimal(__w.animals[0]) && __w.play.tapAnimal(__w.animals[2])`) === true, 'on the bike a tap on an animal puts it in the trailer'); await t.sleep(1500); ok((await play()).riders === 2, 'two ride along'); await shot('11-trailer');
     await t.ev(`__w.walkTo(Math.floor(__w.kid.pos.x) + 3, Math.floor(__w.kid.pos.z))`); await t.sleep(1500); await shot('12-ride');
-    await t.sleep(2500); const a0 = await J(`[__w.animals[0].pos.x, __w.kid.pos.x]`); ok(Math.abs(a0[0] - a0[1]) < 2.5, 'the animals came along'); await t.ev(`__w.jump()`); await t.sleep(300);
+    await t.sleep(2500); const a0 = await J(`[__w.animals[0].pos.x, __w.kid.pos.x]`); ok(Math.abs(a0[0] - a0[1]) < 2.5, 'the animals came along'); await t.ev(`__w.leapNow()`); await t.sleep(300);
     await t.ev(`__w.play.tapBike()`); await t.sleep(900); ok((await play()).riders === 0 && await t.ev(`__w.animals[0].lift`) === 0, 'off the bike: everybody out'); await shot('13-out');
   }
   if (run('bos')) {   // hide and seek
@@ -80,7 +80,7 @@ export default async function (t) {
     await t.ev(`__w.toys.putDown()`); await t.sleep(400); ok(await t.ev(`__w.toys.info().towers.length === 1 && __w.toys.carrying() === 'emmer'`), 'putting it down on the sand flips it into a tower'); await t.ev(`(([x, z]) => __w.Q.stompSand(x, z))(__w.toys.info().towers[0]); 0`); await t.sleep(300);
     ok(await t.ev(`__w.toys.tapGround(59, 72)`) === true, 'with the bucket a tap on the sand builds'); ok(await until(`__w.toys.info().towers.length === 1`, 20000), 'a sand tower stands');
     await t.ev(`__w.toys.build(59,72); __w.toys.build(59,72); __w.toys.build(61,72); __w.toys.build(56,72)`); await t.sleep(900); let s = await toys(); ok(s.towers.length === 3 && s.towers.some(x => x[2] === 3), 'towers grow three high'); await place(58.5, 73.6); await t.sleep(1500); await shot('22-towers');
-    ok(await t.ev(`__w.Q.quest.sand.length`) === 3, 'saved'); await place(59.9, 72.6); await t.sleep(300); await t.ev(`__w.toys.putDown(true); __w.jump()`); await t.sleep(1200); s = await toys(); ok(s.towers.length === 2, 'jumping on a tower flattens it'); await shot('23-stomped');
+    ok(await t.ev(`__w.Q.quest.sand.length`) === 3, 'saved'); await place(59.9, 72.6); await t.sleep(300); await t.ev(`__w.toys.putDown(true); __w.leapNow()`); await t.sleep(1200); s = await toys(); ok(s.towers.length === 2, 'jumping on a tower flattens it'); await shot('23-stomped');
   }
   if (run('strand')) {   // the shovel: dig holes, find things
     const SH = await J(`__w.MAP.SHOVEL`); await place(SH[0] - .8, SH[1] + 1.2); await t.sleep(800); ok(await t.ev(`__w.toys.nearest() && __w.toys.nearest().id`) === 'schep' || await t.ev(`__w.toys.nearest() && __w.toys.nearest().id`) === 'emmer', 'the shovel lies by the bucket');

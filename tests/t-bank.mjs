@@ -17,8 +17,8 @@ export default async function (t) {
   ok((await J('__w.kid.lift')) > .1, 'she sits up on the seat');
   ok(await until(`__w.animals.filter(a => a.water && a.path.length).length > 0`, 2000), 'the ducks paddle over');
   await t.sleep(1800); await t.shot('tmp-shots/b-1-pond.png');
-  ok(await t.ev('__w.action().key') === 'jump', 'sitting, the button hops her off');
-  await t.ev('__w.action().run()'); ok(await until(`!(${sat})`), 'and off she hops');
+  { const x = await t.ev('__w.action().key'); ok(!/^(jump|dip)$/.test(x) && await t.ev('__w.action(true).key') === 'jump', 'sitting, ✕ neither jumps nor hops into the pond (' + x + '), ○ hops her off'); }
+  await t.ev('__w.leapNow()'); ok(await until(`!(${sat})`), 'and off she hops');
   // 2. a real tap on the fountain bench from close by, then a key gets her up
   await t.ev(`__w.placeAt(${B[2].x + 1}, ${B[2].z + 2.2})`); await t.sleep(900);
   const s = await J(`__w.screen(${B[2].cx}, .3, ${B[2].z + .45})`); await t.click(s[0], s[1]);

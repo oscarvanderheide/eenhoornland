@@ -24,5 +24,11 @@ export default async function (t) {
   await t.ev(`__w.ways.tap(__w.animals[${fl[0]}])`); ok(await until(`__w.animals[${fl[0]}].way && __w.animals[${fl[0]}].way.kind === 'been'`, 2000), 'a tap: up on one leg'); await t.sleep(400); await t.shot('tmp-shots/e-3-oneleg.png');
   await t.ev(`__w.ways.tap(__w.animals[${fl[0]}])`); ok(await until(`${JSON.stringify(fl)}.every(i => __w.animals[i].way && __w.animals[i].way.dance)`, 3000), 'another tap: the whole flock dances'); await t.sleep(600); await t.shot('tmp-shots/e-4-dance.png');
   ok(await until(`${JSON.stringify(fl)}.every(i => !__w.animals[i].way)`, 6000), 'and stops again');
+  // the rainbow tree: ✕ under it (never a jump) shakes it, twice and the fruit falls
+  await t.ev(`__w.Q._reset({ stage: 'baby' }); 0`); await t.sleep(600);
+  { const T = await J('__w.MAP.RAINBOW_TREE'); await t.ev(`__w.placeAt(${T[0] + 1.5}, ${T[1] + 1.5})`); await t.sleep(800);
+    ok(await t.ev('__w.action().key') === 'shake', 'under the rainbow tree ✕ shakes it (' + await t.ev('__w.action().key') + ')');
+    for (let k = 0; k < 2; k++) { await t.ev('__w.jump()'); await t.sleep(700); }
+    ok(await until('!__w.extras.info().fruitInTree', 5000), 'twice: the fruit falls out'); await t.shot('tmp-shots/e-5-shake.png'); }
   if (fail) console.log('  EILAND FAILED ' + fail);
 }

@@ -38,7 +38,7 @@ export default async function (t) {
   await t.ev(`__w.M.obstacles.forEach(o => { if (o.gate && o.type === 'break') __w.M.block[__w.M.I(o.x, o.z)] = 0; })`);
   const C = await J('__w.MAP.PLACES.kasteel.tile');
   await t.ev(`__w.placeAt(32.5, 46.5); __w.setMount('uni'); 0`); await t.sleep(400);
-  ok(await t.ev(`!!document.querySelector('#quest .qchip.now').click() || true`), 'open the map');
+  ok(await t.ev(`(__hud.openMap(), true)`), 'open the map');
   await t.sleep(700); await t.shot('tmp-shots/f-5-map.png');
   const pin = await t.ev(`(() => { const b = [...document.querySelectorAll('.kaart-pin')].find(b => b.getAttribute('aria-label') === 'Kasteel'); if (!b) return false; b.click(); return true; })()`);
   ok(pin, 'tap the castle on the map'); ok(await until(`__w.fly.on()`, 2000), 'far away: she flies there'); await t.sleep(2500); await t.shot('tmp-shots/f-6-to-castle.png');
@@ -46,7 +46,7 @@ export default async function (t) {
   { const p = await pos(); ok(await zone() === 'kasteel' && Math.hypot(p[0] - C[0], p[1] - C[1]) < 6, 'at the castle ' + p); }
   // the goal on the map (the castle, now that she can ride): she flies there, lands and rides in through the gate
   await t.ev(`__w.placeAt(32.5, 46.5); __w.setMount('uni'); 0`); await t.sleep(400);
-  await t.ev(`document.querySelector('#quest .qchip.now').click()`); await t.sleep(700);
+  await t.ev(`__hud.openMap()`); await t.sleep(700);
   ok(await t.ev(`(() => { const b = document.querySelector('.kaart-goal'); if (!b) return false; b.click(); return true; })()`), 'tap the goal on the map');
   ok(await until(`__w.fly.on()`, 2000), 'she flies to the castle'); ok(await until(`!__w.fly.on()`, 25000), 'lands');
   ok(await until(`__w.info().pos[1] > 102`, 15000), 'and rides on in through the castle gate'); await t.sleep(800); await t.shot('tmp-shots/f-7b-hall.png');

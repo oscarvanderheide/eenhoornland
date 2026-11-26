@@ -17,8 +17,12 @@ export function createSword(ctx, { camera, cuttables, lastDir }) {
   const arcTex = ctx.tex(ART.slashArc());
   const arc = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshBasicMaterial({ map: arcTex, transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
   arc.renderOrder = 20; arc.visible = false; scene.add(arc);
-  const bladeArt = ART.toolIcon('zwaard'), blade = new THREE.Mesh(new THREE.PlaneGeometry(bladeArt.width / 24, bladeArt.height / 24), new THREE.MeshBasicMaterial({ map: ctx.tex(bladeArt), transparent: true, alphaTest: .5, depthTest: false, depthWrite: false }));
-  blade.renderOrder = 21; blade.visible = false; scene.add(blade);
+  // the sword in her hand: the picture is drawn diagonally (grip bottom left, tip top right), so the card is shifted until
+  // the grip sits on the pivot, and the pivot (her hand) is what turns
+  const bladeArt = ART.toolIcon('zwaard'), BW = bladeArt.width / 17, BH = bladeArt.height / 17;
+  const bladeCard = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: ctx.tex(bladeArt), transparent: true, alphaTest: .5, depthTest: false, depthWrite: false }));
+  bladeCard.position.set(-(1.5 / bladeArt.width - .5) * BW, -(.5 - 6.5 / bladeArt.height) * BH, 0); bladeCard.renderOrder = 21;
+  const blade = new THREE.Group(); blade.add(bladeCard); blade.visible = false; scene.add(blade);
   let sw = null, cool = 0, count = 0;
   const regrow = [];
   const hidden = new THREE.Matrix4().makeScale(0, 0, 0), tmp = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), s = new THREE.Vector3();
@@ -41,7 +45,7 @@ export function createSword(ctx, { camera, cuttables, lastDir }) {
   function swing(to) {
     if (!Q.hasTool('zwaard') || cool > 0) return false;
     const d = dirNow(to); if (Math.abs(d.x) > .2) kid.face = Math.sign(d.x);
-    sw = { t: 0, d, hit: false }; cool = T + .06; count++; kid.hop = Math.max(kid.hop || 0, .22); sfx.swish();
+    sw = { t: 0, d, hit: false }; cool = T + .06; count++; kid.squash = Math.max(kid.squash || 0, .25); sfx.swish();
     arc.visible = blade.visible = true; return true;
   }
   /** everything in the arc gets it */
@@ -76,17 +80,19 @@ export function createSword(ctx, { camera, cuttables, lastDir }) {
     update(dt) {
       cool = Math.max(0, cool - dt);
       if (sw) {
-        sw.t += dt; const k = Math.min(1, sw.t / T), d = sw.d;
+        if (!sw.hold) sw.t += dt; const k = Math.min(1, sw.t / T), d = sw.d;
         if (!sw.hit && k > .3) { sw.hit = true; strike(d); }
         // the arc: in front of her, turned towards the slash, it grows and fades
         const ang = Math.atan2(-d.z, d.x), y = .42 + (kid.lift || 0);
         arc.position.set(kid.pos.x + d.x * .55, y + Math.max(0, -d.z) * .15, kid.pos.z + d.z * .45 + .2);
         arc.quaternion.copy(camera.quaternion); arc.rotateZ(ang);
         arc.material.opacity = k < .35 ? k / .35 : 1 - (k - .35) / .65; arc.scale.setScalar(.65 + .45 * Math.min(1, k / .4));
-        // the blade sweeps through the arc, from above her shoulder down the other side
-        const a = ang + (1.5 - 3 * Math.min(1, k * 1.25));
-        blade.position.set(kid.pos.x + Math.cos(a) * .5, y + Math.sin(a) * .42, kid.pos.z + .25);
-        blade.quaternion.copy(camera.quaternion); blade.rotateZ(a - Math.PI / 2);
+        // she holds it by the grip and slashes: her hand stays at her side, the blade turns round it from up high
+        // down through the arc (always top to bottom, whichever way she faces)
+        const down = Math.cos(ang) >= 0 ? 1 : -1, e = 1 - Math.pow(1 - Math.min(1, k * 1.3), 3);
+        const a = ang + down * (1.7 - 3.2 * e);
+        blade.position.set(kid.pos.x + kid.face * .16 + d.x * .08, y - .04 + d.z * -.04, kid.pos.z + .25);
+        blade.quaternion.copy(camera.quaternion); blade.rotateZ(a - Math.PI / 4);
         if (k >= 1) { sw = null; arc.visible = blade.visible = false; }
       }
       // cut grass grows back: a little later it pops up again
@@ -98,6 +104,8 @@ export function createSword(ctx, { camera, cuttables, lastDir }) {
         if (r.k >= 1) { r.e.cut = false; regrow.splice(i, 1); }
       }
     },
+    /** tests: hold the slash still at k (0..1) to look at it; pose(null) lets it go */
+    pose(k) { if (k == null) { if (sw) sw.hold = false; return; } sw = { t: k * T, d: dirNow(), hit: true, hold: true }; arc.visible = blade.visible = true; },
     /** tests: grow everything back at once */
     regrowNow() { for (const r of regrow) r.at = 0; },
   };

@@ -26,7 +26,7 @@ export default async function (t) {
   // up onto the stump in the forest, and down again
   await t.ev(`__w.Q._reset({ stage: 'zoek' }); __w.placeAt(24.5, 10.5); 0`); await t.sleep(800);
   ok(await t.ev(`__w.tops.has(__w.M.I(26, 10))`), 'the stump is something to stand on');
-  await t.ev(`__w.kid.face = 1; __w.jump()`); ok(await until(`!!__w.perch()`, 2000), 'a jump next to the stump: she stands on top of it'); await t.sleep(500); await t.shot('tmp-shots/j-2-stump.png');
+  await t.ev(`__w.kid.face = 1; __w.leapNow()`); ok(await until(`!!__w.perch()`, 2000), 'a jump next to the stump: she stands on top of it'); await t.sleep(500); await t.shot('tmp-shots/j-2-stump.png');
   ok(await t.ev(`__w.kid.lift > .2`), 'up high');
   await t.key('ArrowRight', 500); ok(await until(`!__w.perch() && __w.kid.lift === 0`, 2000), 'walking off jumps her down'); await t.sleep(300);
   // tapping the stump from nearby jumps her onto it
@@ -35,7 +35,7 @@ export default async function (t) {
   // off an animal's back
   await t.ev(`__w.placeAt(38.5, 45.5)`); await t.sleep(400);
   const dog = await t.ev(`__w.animals.findIndex(a => a.name === 'Hondje')`);
-  await t.ev(`(a => { a.pos.set(40.3, 0, 45.5); a.path = []; a.wait = 30; a.way = null; })(__w.animals[${dog}]); __w.stick(1, 0)`); await t.sleep(150); await t.ev(`__w.jump(); __w.stick(0, 0)`);
+  await t.ev(`(a => { a.pos.set(40.3, 0, 45.5); a.path = []; a.wait = 30; a.way = null; })(__w.animals[${dog}]); __w.stick(1, 0)`); await t.sleep(150); await t.ev(`__w.leapNow(); __w.stick(0, 0)`);
   ok(await until(`__w.animals[${dog}].squash > 0`, 1500), 'jumping at the dog: she bounces off its back'); await t.sleep(150); await t.shot('tmp-shots/j-3-bounce.png');
   ok(await until(`__w.info().pos[0] > 40.6 && !__w.kid.path.length`, 3000), 'and lands on the other side ' + await pos());
 
@@ -57,7 +57,7 @@ export default async function (t) {
   ok(await until(`__w.walkable(35, 113) && __w.walkable(35, 114)`, 4000), 'and the gate sinks'); await t.sleep(300); await t.shot('tmp-shots/j-6-open.png');
   ok(await t.ev(`__w.walkTo(41, 113)`) && await until(`__w.info().pos[0] > 40`, 8000), 'into the back room with the egg'); await t.sleep(800); await t.shot('tmp-shots/j-7-eggroom.png');
   // the crate can be jumped on
-  await t.ev(`__w.placeAt(${pz.box[0] - .5}, ${pz.box[1] + .5}); __w.kid.face = 1; __w.jump()`); ok(await until(`!!__w.perch()`, 2000), 'she can jump on top of the crate'); await t.sleep(400); await t.shot('tmp-shots/j-8-on-crate.png');
+  await t.ev(`__w.placeAt(${pz.box[0] - .5}, ${pz.box[1] + .5}); __w.kid.face = 1; __w.leapNow()`); ok(await until(`!!__w.perch()`, 2000), 'she can jump on top of the crate'); await t.sleep(400); await t.shot('tmp-shots/j-8-on-crate.png');
   // a fresh start: the gate stays open
   await t.go(URL); await t.sleep(2000); ok(await t.ev(`__w.rooms.puzzle().open && __w.walkable(35, 113)`), 'after a reload the gate is still open');
   console.log(fail ? 'JUMP FAILED ' + fail : 'JUMP OK');

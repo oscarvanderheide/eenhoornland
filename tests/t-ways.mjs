@@ -50,7 +50,7 @@ export default async function (t) {
   if (run('strand')) {
     await meet('Krab'); await tap('Krab'); await t.sleep(900); ok(await doing('Krab', 'krab'), 'the crab dances'); await shot('15-crab-dance'); await t.sleep(1500); await shot('16-crab-sand');
     await until(`!!${A('Krab')}.own`, 8000); await tap('Krab'); ok(await until(`!${A('Krab')}.way`, 3000), 'a tap gets it out of the sand');
-    await tap('Krab'); await t.sleep(500); await t.ev('__w.jump()'); ok(await until(`${A('Krab')}.hop > 0`, 1500), 'she jumps: the dancing crab jumps along'); await t.sleep(1500);
+    await tap('Krab'); await t.sleep(500); await t.ev('__w.leapNow()'); ok(await until(`${A('Krab')}.hop > 0`, 1500), 'she jumps: the dancing crab jumps along'); await t.sleep(1500);
     await meet('Meeuw'); await tap('Meeuw'); ok(await doing('Meeuw', 'vis'), 'the gull flies off to fish'); await t.sleep(1300); await shot('17-gull-dives');
     ok(await until(`!${A('Meeuw')}.way`, 9000), 'and comes back'); ok(await t.ev(`__w.Q.gotToday('meeuwvis')`), 'with a fish for her'); await shot('18-gull-back');
   }

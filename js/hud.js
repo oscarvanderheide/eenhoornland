@@ -11,8 +11,8 @@ import { state } from './state.js';
 import { openSaves, slotIcon } from './saves.js';
 
 const CSS = `
-#quest{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));top:calc(50px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;gap:6px;max-width:min(70vw,420px);align-items:center}
-.qchip{font-family:var(--f-pixel);font-weight:700;font-size:1.1rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:6px;min-height:46px;padding:4px 10px 4px 7px;
+#quest{display:flex;flex-wrap:wrap;gap:6px;max-width:min(60vw,420px);align-items:center}
+.qchip{font-family:var(--f-pixel);font-weight:700;font-size:1.1rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:6px;height:48px;padding:4px 10px 4px 7px;
   background:var(--paper);border:3px solid var(--ink);border-radius:8px;box-shadow:inset -3px -3px 0 var(--paper2),0 3px 0 var(--ink)}
 .qchip:active{transform:translateY(2px)}
 .qchip canvas{image-rendering:pixelated;display:block}
@@ -34,11 +34,11 @@ const CSS = `
 .kaart-pin canvas{image-rendering:pixelated}
 .kaart-me{position:absolute;transform:translate(-50%,-85%);pointer-events:none;animation:bob 1s ease-in-out infinite;z-index:2}
 .kaart-egg{position:absolute;transform:translate(-50%,-50%);pointer-events:none;animation:qpulse 1s ease-in-out infinite;font-family:var(--f-pixel);font-weight:700;font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink)}
-#stick{position:absolute;z-index:6;left:max(18px,env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:132px;height:132px;border-radius:50%;background:rgba(255,248,230,.38);border:3px solid rgba(58,42,61,.55);box-shadow:inset 0 0 0 6px rgba(255,255,255,.25);touch-action:none;cursor:grab}
+#stick{position:absolute;z-index:6;left:max(18px,env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px) * .35);width:132px;height:132px;border-radius:50%;background:rgba(255,248,230,.38);border:3px solid rgba(58,42,61,.55);box-shadow:inset 0 0 0 6px rgba(255,255,255,.25);touch-action:none;cursor:grab}
 #stick .knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);box-shadow:inset -4px -4px 0 var(--paper2),0 3px 0 var(--ink);pointer-events:none;transition:transform .12s}
 #stick.on .knob{transition:none}
 #stick.on{background:rgba(255,248,230,.55)}
-#pad{position:absolute;z-index:5;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));width:200px;height:200px;pointer-events:none;--b:66px}
+#pad{position:absolute;z-index:5;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px) * .35);width:200px;height:200px;pointer-events:none;--b:66px}
 #pad .hbtn{position:absolute;width:var(--b);height:var(--b);border-radius:50%;padding:0;pointer-events:auto;touch-action:none}
 #pad .hbtn canvas{width:auto;max-width:calc(var(--b) - 20px);max-height:calc(var(--b) - 20px)}
 #pad .hbtn.off{visibility:hidden}
@@ -53,22 +53,22 @@ const CSS = `
 #b-jump.ctx{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-jump.bump{animation:qbump .35s cubic-bezier(.22,1,.36,1)}
 #b-jump{touch-action:none}
-#b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:64px;height:64px;border-radius:50%;padding:0;background:#FFE3F1}
+#b-ride{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(12px + env(safe-area-inset-bottom,0px) * .35);width:64px;height:64px;border-radius:50%;padding:0;background:#FFE3F1}
 #b-ride.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #FF7EB6,0 3px 0 var(--ink)}
 #b-ride.on{background:var(--sun);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-ride canvas{width:52px}
-#b-fly{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(88px + env(safe-area-inset-bottom,0px));width:64px;height:64px;border-radius:50%;padding:0;background:#E3F1FF}
+#b-fly{position:absolute;z-index:5;right:calc(max(14px,env(safe-area-inset-right,0px)) + 214px);bottom:calc(86px + env(safe-area-inset-bottom,0px) * .35);width:64px;height:64px;border-radius:50%;padding:0;background:#E3F1FF}
 #b-fly.call{animation:qpulse .9s ease-in-out infinite;box-shadow:0 0 0 5px #7EC3FF,0 3px 0 var(--ink)}
 #b-fly.on{background:#FFF3C4;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #b-fly canvas{width:50px}
-#who{position:absolute;z-index:5;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(218px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:row;gap:8px;align-items:center}
-#who .who{width:56px;height:56px;border-radius:50%;padding:0;opacity:.55;transform:scale(.82);transition:transform .15s,opacity .15s}
+#who{display:flex;flex-direction:row;gap:6px;align-items:center}
+#who .who{width:48px;height:48px;border-radius:50%;padding:0;opacity:.55;transform:scale(.82);transition:transform .15s,opacity .15s}
 #who .who.on{opacity:1;transform:scale(1);box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink)}
 #who canvas{image-rendering:pixelated}
-#tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(166px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}
+#tools{position:absolute;z-index:5;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(162px + env(safe-area-inset-bottom,0px) * .35);display:flex;gap:6px}
 .kaart-goal{position:absolute;transform:translate(-50%,-50%);cursor:pointer;animation:qpulse 1s ease-in-out infinite;z-index:3;padding:5px;background:#FFF3C4;border:3px solid var(--ink);border-radius:50%;line-height:0;box-shadow:0 0 0 4px #FFD43B,0 3px 0 var(--ink);display:flex;align-items:center;font-family:var(--f-pixel);font-weight:700;font-size:1.2rem}
 .kaart-gate{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:1;line-height:0}
-@media (max-width:640px),(max-height:480px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(148px + env(safe-area-inset-bottom,0px))}#pad{width:162px;height:162px;--b:56px}#b-ride{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px)}#b-ride canvas{width:40px}#b-fly{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px);bottom:calc(76px + env(safe-area-inset-bottom,0px))}#b-fly canvas{width:40px}#who{bottom:calc(176px + env(safe-area-inset-bottom,0px))}#who .who{width:44px;height:44px}#quest{top:calc(60px + env(safe-area-inset-top,0px));max-width:92vw}.qchip{min-height:40px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
+@media (max-width:640px),(max-height:480px){#stick{width:118px;height:118px}#stick .knob{width:54px;height:54px;margin:-27px 0 0 -27px}#tools{bottom:calc(144px + env(safe-area-inset-bottom,0px) * .35)}#pad{width:162px;height:162px;--b:56px}#b-ride{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px)}#b-ride canvas{width:40px}#b-fly{width:54px;height:54px;right:calc(max(14px,env(safe-area-inset-right,0px)) + 172px);bottom:calc(74px + env(safe-area-inset-bottom,0px) * .35)}#b-fly canvas{width:40px}#who .who{width:42px;height:42px}#quest{max-width:46vw}.qchip{height:42px;font-size:1rem;padding:3px 7px 3px 5px}.kaart-pin span{display:none}}
 `;
 const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.width, cv.height))); const c = PX.domSprite(cv, s); return c; };
 
@@ -76,8 +76,10 @@ const fit = (cv, px) => { const s = Math.max(1, Math.floor(px / Math.max(cv.widt
 export function createHud(getWorld) {
   const game = document.getElementById('game');
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
-  const panel = document.createElement('div'); panel.id = 'quest'; game.appendChild(panel);
+  // top left, in the same row as the buttons top right: coins (and the bed when it is bedtime)
+  const panel = document.createElement('div'); panel.id = 'quest'; document.querySelector('.hud.tl').appendChild(panel);
   const night = document.getElementById('b-night'); if (night) night.hidden = true;
+  const music = document.getElementById('b-music'); if (music) music.hidden = true;                // the sound is the phone's or laptop's job
   const voice = document.getElementById('b-voice'); if (voice) voice.hidden = true;                 // there is no voice (see audio.js)     // evening now comes by itself when the wishes are done
   // top right: the three saves (the map has no button of its own: a goal chip opens it)
   const saveBtn = document.createElement('button'); saveBtn.className = 'hbtn'; saveBtn.id = 'b-save'; saveBtn.setAttribute('aria-label', 'Ander spel'); saveBtn.appendChild(PX.domSprite(slotIcon(), 3));
@@ -103,15 +105,15 @@ export function createHud(getWorld) {
   const hopBtn = padBtn('b-hop', 'Springen', 'o', ART.jumpIcon(), w => w.leapNow());
   const swordBtn = padBtn('b-sword', 'Zwaard', 'sq', ART.toolIcon('zwaard'), w => w.slash());
   const hookBtn = padBtn('b-hook', 'Haak', 'tri', ART.toolIcon('haak'), w => w.hook && w.hook());
-  let actKey = '';
+  let actKey = '', actIcon = null;
   function syncAct(force) {
     const w = getWorld(), a = w && w.action ? w.action() : null, key = a ? a.key : actKey, up = !!(w && w.flying && w.flying());
     pad.style.visibility = up ? 'hidden' : '';                                   // up in the sky the wing button is the one that lands
     swordBtn.classList.toggle('off', !Q.hasTool('zwaard'));
     hookBtn.classList.toggle('off', !Q.hasTool('haak'));
-    if (key === actKey && !force) return;
-    if (a && key !== actKey) {
-      actKey = key; const idle = key === 'jump';                                  // nothing here: ✕ just hops, so it shows an empty hand
+    if (key === actKey && (!a || a.icon === actIcon) && !force) return;
+    if (a && (key !== actKey || a.icon !== actIcon)) {
+      actKey = key; actIcon = a.icon; const idle = key === 'jump' || key === 'none';                // nothing here: ✕ does nothing, so it shows an empty hand
       setArt(jumpBtn, idle ? ART.handIcon() : a.icon); jumpBtn.classList.toggle('idle', idle);
       jumpBtn.classList.toggle('ctx', !idle); jumpBtn.classList.remove('bump'); void jumpBtn.offsetWidth; jumpBtn.classList.add('bump');
     }
@@ -153,8 +155,8 @@ export function createHud(getWorld) {
     if (sig !== rideSig) {
       rideSig = sig; rideBtn.innerHTML = ''; rideBtn.appendChild(PX.domSprite(m === 'fiets' ? ART.bike() : ART.uniSprite(Q.companionLook(), 'idle', false, { baby: true }), 3)); }
   }
-  // who is playing: the sisters tap their own face when they swap seats
-  const whoRow = document.createElement('div'); whoRow.id = 'who'; game.appendChild(whoRow);
+  // who is playing: the sisters tap their own face when they swap seats (top right, next to the saves)
+  const whoRow = document.createElement('div'); whoRow.id = 'who'; tr.insertBefore(whoRow, saveBtn);
   const head = (cv, rows) => { const c = document.createElement('canvas'); c.width = cv.width; c.height = rows; c.getContext('2d').drawImage(cv, 0, 0); return PX.domSprite(c, 3); };
   const whoBtn = {};
   for (const [id, rows] of [['anna', 9], ['fenna', 11]]) {
@@ -180,9 +182,7 @@ export function createHud(getWorld) {
     panel.innerHTML = ''; toolRow.innerHTML = '';
     for (const id of Object.keys(Q.TOOLS)) if (Q.hasTool(id) && id !== 'zwaard' && id !== 'haak') chip('', ART.toolIcon(id), '', () => speak(TOOL_SAY[id]), 'tool' + id, toolRow);
     if (Q.bedtime()) chip('bed', ART.bedIcon(), 'Slapen', goToBed, 'bed'); else delete lastSig.bed;
-    // what to do now, as pictures: the first chip is the goal of this moment, a second one shows what comes after it.
-    // Nobody can read yet and there is no voice, so tapping a chip opens the map, where the goal is marked.
-    Q.wishes().forEach((w, i) => chip(i ? 'next' : 'now', goalIcon(w), w.t === 'egg' || w.t === 'tool' ? '?' : '', () => { speak(Q.wishText(w)); openMap(); }, Q.quest.stage + w.t));
+    // no goal chips (Oscar: they find out for themselves what comes next); the map is still there for tests (openMap)
     chip('coins', ART.coin(), String(Q.quest.coins), () => { speak('Met muntjes en met alles wat je vindt kun je bij de kraam in het dorp iets moois ruilen.'); const w = getWorld(); if (w && !ui.activityOpen()) (w.travel ? w.travel(MAP.STALL.x, MAP.STALL.z + 1) : w.walkToTile(MAP.STALL.x, MAP.STALL.z + 1)); }, 'coins');   // coins are for the stall: she walks there
     syncRide();
   }

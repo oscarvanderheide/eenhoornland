@@ -19,6 +19,8 @@ export default async function (t) {
   await t.ev(`__w.walkTo(31, 44)`); await t.sleep(4000); ok(await t.ev(`Math.hypot(__w.animals[${i}].pos.x - __w.kid.pos.x, __w.animals[${i}].pos.z - __w.kid.pos.z) < 4`), 'and walks along'); await t.shot('tmp-shots/u-1-along.png');
   await t.ev(`__w.life.tapAnimal(__w.animals[${i}])`); ok(await until(`__w.life.info().power === 'bos'`, 10000), 'a second tap: the forest power'); await t.sleep(900); await t.shot('tmp-shots/u-2-bos.png');
   // the flower unicorn: flowers in her footsteps
+  { const p = await J(`(a => [a.pos.x, a.pos.z])(__w.animals[${i}])`); await t.ev(`__w.placeAt(${p[0] + .6}, ${p[1]})`); await t.sleep(300);
+    const k = await t.ev('__w.action().key'); ok(!/^hallo/.test(k), 'next to the old unicorn walking along, ✕ is not for her (' + k + ')'); }
   i = await come('bloem'); await until(`__w.animals[${i}].friend`, 15000); ok(await t.ev(`__w.animals.filter(a => a.uniKind && a.friend).length`) === 1, 'one old unicorn at a time');
   await t.ev(`__w.life.tapAnimal(__w.animals[${i}])`); await t.sleep(300); await t.ev(`__w.walkTo(30, 45)`); await t.sleep(5000); ok(await t.ev('__w.life.info().blooms') > 3, 'the flower power: flowers grow where she walks'); await t.shot('tmp-shots/u-3-bloem.png');
   // the rainbow unicorn: a rainbow slide to somewhere further on

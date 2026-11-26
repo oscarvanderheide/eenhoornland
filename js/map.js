@@ -274,18 +274,18 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const nearBridge = (x, z) => { for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (inb(x + dx, z + dz) && bridgeTiles.has(I(x + dx, z + dz))) return true; return false; };
   for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
     const i = I(x, z), g = ground[i]; if (block[i] || keepSet.has(i) || !plain(g) || inPen(x, z) || nearBridge(x, z)) continue;
-    const zn = zone[i], beach = zn === 'strand' || zn === 'eiland'; let kind = null;
+    const zn = zone[i], beach = zn === 'strand' || zn === 'eiland'; let kind = null, rimRock = false;
     const r = zn === 'dorp' ? rDorp : rOut;
     const inFront = [[0, -1], [0, -2], [0, -3], [-1, -1], [1, -1], [-1, -2], [1, -2]].some(([dx, dz]) => inb(x + dx, z + dz) && pd[I(x + dx, z + dz)] === 0);   // a tree here would hide whoever walks the trail behind it
     // every island has plants of its own (VEG): nothing grows on two islands
-    if (g === SA) { if (rim[i]) { if (r() < (beach ? .22 : zn === 'bos' ? .5 : .34)) kind = 'rots-' + (zn === 'eiland' || zn === 'zee' ? 'eiland' : zn); } else if (zn === 'strand' && !nearBusy(x, z, 1) && r() < .1) kind = r() < .55 ? 'palm' : 'helm'; else if (zn === 'eiland' && !nearBusy(x, z, 1) && r() < .05) kind = 'kristalbloem'; }
+    if (g === SA) { if (rim[i]) { if (r() < (beach ? .22 : zn === 'bos' ? .5 : .34)) { kind = 'rots-' + (zn === 'eiland' || zn === 'zee' ? 'eiland' : zn); rimRock = true; } } else if (zn === 'strand' && !nearBusy(x, z, 1) && r() < .1) kind = r() < .55 ? 'palm' : 'helm'; else if (zn === 'eiland' && !nearBusy(x, z, 1) && r() < .05) kind = 'kristalbloem'; }
     else if (g === FO) { if (r() < (inFront ? .03 : pd[i] <= 2 ? .13 : .58)) kind = r() < .55 ? 'pine' : 'berk'; }
     else if (zn === 'bos') { /* clearings stay open */ }
     else if (zn === 'dorp') { if (!nearBusy(x, z, 1) && !inFront && r() < .17) kind = r() < .35 ? 'bol' : 'tree'; }
     else if (zn === 'wei') { if (!nearBusy(x, z, 1) && !inFront && r() < .06) kind = r() < .5 ? 'bloesem' : 'zonnebloemen'; }
     else if (zn === 'kasteel') { if (!nearBusy(x, z, 1) && !inFront && r() < .12) kind = r() < .4 ? 'rose' : r() < .6 ? 'cipres' : 'lavendel'; }
     else if (zn === 'eiland') { if (!nearBusy(x, z, 1) && r() < .1) kind = r() < .45 ? 'lolly' : 'wolkstruik'; }
-    if (kind) { trees.push({ kind, x, z, seed: Math.floor(r() * 6) + 1 }); block[i] = 1; }
+    if (kind) { trees.push({ kind, x, z, seed: Math.floor(r() * 6) + 1, ...(rimRock ? { rim: true } : {}) }); block[i] = 1; }
   }
 
   const r = rOut;
@@ -378,6 +378,22 @@ export function _build({ solids = [], keep = [], seed = 0 } = {}) {
   const hidden = zn => pick(7, (x, z, g, zo) => plain(g) && zo === zn && at(need[zn], x, z) && farFromStart(x, z) && !nearBridge(x, z) && nextTo(x, z, isTree) && !hides(x, z + 2), 5);
   const eggSpots = { dorp: hidden('dorp'), bos: [ROOMS.grot.egg], wei: hidden('wei'), strand: hidden('strand'), eiland: hidden('eiland') };   // a forest egg always lies in the cave
 
+  // last of all (so nothing picked above moves in an existing save): the rocks along the shores look just like big stones, so the ones she can walk up to are big stones too (Oscar: on the
+  // other islands the stones could not be lifted). Only where lifting one cannot open a new way: every open tile round it
+  // must be reachable with the same tools (so no gate is skipped), and they must hang together round it (the same ring
+  // rule as ctx.solid in world.js, so the stone can lie there at runtime too)
+  const tier = j => reach[j] + 2 * reach0[j] + 4 * reach1[j] + 8 * reach2[j];
+  const AROUND = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]];
+  for (let k = trees.length - 1; k >= 0; k--) {
+    const t = trees[k]; if (!t.rim) continue; const { x, z } = t;
+    const ring = AROUND.map(([dx, dz]) => free(x + dx, z + dz)); if (!ring.some(Boolean)) continue;
+    const tiers = new Set(AROUND.filter((d, n) => ring[n]).map(([dx, dz]) => tier(I(x + dx, z + dz)))); if (tiers.size !== 1 || !reach[I(x + AROUND[ring.indexOf(true)][0], z + AROUND[ring.indexOf(true)][1])]) continue;
+    for (let n = 1; n < 8; n += 2) if (ring[n] && !ring[n - 1] && !ring[(n + 1) % 8]) ring[n] = false;
+    let runs = 0; for (let n = 0; n < 8; n++) if (ring[n] && !ring[(n + 7) % 8]) runs++; if (runs !== 1) continue;
+    const j = I(x, z), from = I(x + AROUND[ring.indexOf(true)][0], z + AROUND[ring.indexOf(true)][1]);
+    block[j] = 0; reach[j] = reach[from]; reach0[j] = reach0[from]; reach1[j] = reach1[from]; reach2[j] = reach2[from]; keepSet.add(j);
+    trees.splice(k, 1); bigStones.push([x, z, t.kind.slice(5), 'rim']);
+  }
   return { W, H, seed, ground, block, deck, zone, inland, trees, obstacles, puddles, stones, bigStones, toolSpots, starSpots, spawns, eggSpots, reach, reach0, reach1, reach2, I, inb, free };
 }
 

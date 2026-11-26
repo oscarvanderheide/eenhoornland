@@ -16,7 +16,7 @@ export default async function (t) {
 
   await force('herfst'); ok(await t.ev('__w.weather.info().piles') === 8, 'autumn: piles of leaves');
   const p = await J('__w.weather.piles()[3]'); await t.ev(`__w.placeAt(${p[0]} - 1.6, ${p[1]})`); await t.sleep(1500); await t.shot('tmp-shots/w-2-herfst.png');
-  await t.ev(`__w.placeAt(${p[0]}, ${p[1]})`); await t.sleep(300); await t.ev('__w.jump()'); await t.sleep(500);
+  await t.ev(`__w.placeAt(${p[0]}, ${p[1]})`); await t.sleep(300); await t.ev('__w.leapNow()'); await t.sleep(500);
   ok(await t.ev('__w.weather.info().piles') === 7, 'jumping in a pile: leaves everywhere'); await t.shot('tmp-shots/w-3-jump.png');
   ok(await t.ev(`Math.hypot(__w.animals.find(a => a.name === 'Egel').pos.x - ${p[0]}, __w.animals.find(a => a.name === 'Egel').pos.z - ${p[1]}) < 1.5`), 'a hedgehog was sleeping in it');
   ok(await t.ev('__w.Q.pileGone(3)'), 'the pile stays flat (saved)');

@@ -25,6 +25,7 @@ const ACTS = {
 const params = new URLSearchParams(location.search); // dev only: ?act=atelier opens an activity directly
 let world = null;
 const hud = createHud(() => world);
+if (new URLSearchParams(location.search).has('debug')) window.__hud = hud;   // tests open the map with __hud.openMap()
 initGamepad(() => world);   // a game controller plays through the same buttons (gamepad.js)
 // evening falls by itself when the unicorn has come home; a night's sleep brings the morning (and a new dream)
 let musicStarted = false;
@@ -70,9 +71,8 @@ async function enter(id) {
 }
 $('#act-close').onclick = () => { sfx.pop(); ui.closeActivity(); };
 $('#b-night').onclick = () => { state.night = !state.night; save(); setNightIcon(); world && world.setNight(state.night); setMood(state.night ? 'night' : 'day'); sfx.sparkle(); speak(state.night ? 'Welterusten! Het is nacht.' : 'Goedemorgen! Het is dag.'); };
-// whoever switches the music off wants it to stay off, also tomorrow
-$('#b-music').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setMusic(on); state.extra.music = on; save(); };
-if (state.extra.music === false) { $('#b-music').setAttribute('aria-pressed', 'false'); setMusic(false); }
+// no music button: the sound is turned down on the phone or laptop itself (an old 'music off' is forgotten)
+if (state.extra.music === false) delete state.extra.music;
 $('#b-voice').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); setVoice(on); };
 
 /** the first seconds of a morning: just her, her house and the morning light; the goal shows up after a little while */

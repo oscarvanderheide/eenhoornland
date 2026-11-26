@@ -31,7 +31,7 @@ export default async function (t) {
   ok(await t.ev('__w.M.puddles.length') === 0, 'no rain puddles lie around');
   const P = await J('__w.MAP.POND'); await t.ev(`__w.placeAt(${P.cx + P.rx + .9}, ${P.cz + .2})`); await t.sleep(1200); await t.ev('__w.jump()');
   ok(await until(`__w.life.dipping()`, 1500), 'a jump next to the duck pond: in she goes, at once'); await t.sleep(1800); await t.shot('tmp-shots/p-7-pond.png');
-  await t.sleep(3000); ok(await t.ev(`__w.life.dipping() && !__w.busy() && __w.action().key === 'splash'`), 'and stays in, free to play (the button splashes)');
+  await t.sleep(3000); ok(await t.ev(`__w.life.dipping() && !__w.busy() && __w.action(true).key === 'splash'`), 'and stays in, free to play (○ splashes)');
   const before = await J('__w.info().pos'), wp = await J(`__w.screen(${P.cx - .8},0,${P.cz})`); await t.click(wp[0], wp[1]); await t.sleep(1500);
   const after = await J('__w.info().pos'); ok(after[0] < before[0] - .5 && await t.ev('__w.life.dipping()'), 'a tap in the water: she swims there ' + before + ' -> ' + after); await t.shot('tmp-shots/p-7a-swim.png');
   await t.key('ArrowDown', 1600); ok(await until(`!__w.life.dipping()`, 2000), 'walking against the edge hops her out'); await t.sleep(500); await t.shot('tmp-shots/p-7b-wet.png');
@@ -39,7 +39,7 @@ export default async function (t) {
   const land = await J(`__w.screen(${P.cx},0,${P.cz + P.rz + 2.5})`); await t.click(land[0], land[1]); ok(await until(`!__w.life.dipping()`, 2500), 'a tap on land: out she hops'); ok(await until(`Math.abs(__w.info().pos[1] - ${P.cz + P.rz + 2.5}) < .8`, 4000), 'and walks on to where the tap was');
   const F = await J('__w.MAP.FOUNT'); await t.ev(`__w.placeAt(${F.cx + .5}, ${F.cz + 2.3})`); await t.sleep(1000); ok(await t.ev(`__w.action().key`) !== 'dip', 'by the fountain the button does not jump her in'); await t.key('ArrowUp', 900); await t.sleep(600); ok(!(await t.ev('__w.life.dipping()')), 'and walking into it does not either'); await t.shot('tmp-shots/p-7c-fountain.png');
   // the jump button is the action button: it shows and does what fits right here
-  await t.ev(`__w.placeAt(40.5, 47.5)`); await t.sleep(800); ok(await t.ev(`__w.action().key`) === 'jump', 'with nothing around the button jumps: ' + await t.ev(`__w.action().key`));
+  await t.ev(`__w.placeAt(40.5, 47.5)`); await t.sleep(800); ok(await t.ev(`__w.action().key`) === 'none' && await t.ev(`__w.action(true).key`) === 'jump', 'with nothing around ✕ does nothing (○ jumps): ' + await t.ev(`__w.action().key`));
   await t.ev(`(a=>{a.fly=null;a.swim=null;a.pos.set(41.3,0,47.5);a.path=[];a.wait=30;a.wayAt=performance.now()})(__w.animals[${info.i}])`); await t.sleep(300);
   ok((await t.ev(`__w.action().key`)).startsWith('pet'), 'next to an animal it is a tap on it (hello, then up): ' + await t.ev(`__w.action().key`)); await t.shot('tmp-shots/p-7d-act-lift.png');
   const jb = await J(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.getElementById('b-jump').getBoundingClientRect())`); await t.click(jb[0], jb[1]); await t.sleep(400);

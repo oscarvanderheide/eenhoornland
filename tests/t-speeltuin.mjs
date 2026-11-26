@@ -16,8 +16,8 @@ export default async function (t) {
   for (let i = 0; i < 80; i++) { const om = await t.ev('__w.park.info().om'); await t.ev(`__w.stick(${om >= 0 ? 1 : -1}, 0)`); await t.sleep(100); }
   await t.ev('__w.stick(0, 0)'); const timed = (await J('__w.park.info()')).amp; ok(timed > 1, 'pushing in time takes her high: ' + timed);
   await t.shot('tmp-shots/sp-1-high.png');
-  ok(await t.ev('__w.action().key') === 'jump', 'on the swing the button jumps off');
-  await t.ev('__w.action().run()'); ok(await until(`__w.park.mode() === null`, 3000), 'she flies off and lands');
+  ok(await t.ev('__w.action().key') === 'none' && await t.ev('__w.action(true).key') === 'jump', 'on the swing ✕ does nothing, ○ jumps off');
+  await t.ev('__w.leapNow()'); ok(await until(`__w.park.mode() === null`, 3000), 'she flies off and lands');
   const L = await J(`[__w.kid.pos.x, __w.kid.pos.z, __w.kid.lift, __w.walkable(Math.floor(__w.kid.pos.x), Math.floor(__w.kid.pos.z))]`);
   ok(L[3] && L[2] === 0 && Math.abs(L[0] - (S.SW.x + .5)) > 1.5, 'on her feet, clear of the frame: ' + L);
   // 2. holding one way gets nowhere; down hops her off
