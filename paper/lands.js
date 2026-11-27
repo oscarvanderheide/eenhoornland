@@ -16,7 +16,7 @@ export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K -
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
  *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
-export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog', 'kasteel', 'grot', 'hol', 'winkel', 'boomhut', 'blokhut', 'kasteelzaal']];
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog', 'kasteel', 'grot', 'hol', 'winkel', 'boomhut', 'blokhut', 'kasteelzaal', 'sneeuw']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -92,3 +92,10 @@ ORIGIN.hol = [-260, 140];
 
 /** rooms far beside the world, each in through a door: the clothes shop in the village, the room up in the treehouse, the log cabin's workshop */
 ORIGIN.winkel = [-260, 210]; ORIGIN.boomhut = [-260, 260]; ORIGIN.blokhut = [-260, 310]; ORIGIN.kasteelzaal = [-260, 370];
+
+/** the snow island: a bonus far out in the north, beyond the forest, over open sea (only the flying unicorn gets there, and
+ *  Santa's sleigh brings her back). Made at its real size (set-sneeuw.js) */
+ORIGIN.sneeuw = [ORIGIN.bos[0] + 6, ORIGIN.bos[1] - 62];
+export function sneeuwLand() {
+  return { SNOW: blob(0, 0, 17.5, 12.5, 901, 110, .04), ICE: blob(0, .2, 16.6, 11.6, 902, 110, .04) };
+}

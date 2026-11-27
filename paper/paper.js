@@ -22,6 +22,7 @@ import grot from './set-grot.js';
 import hol from './set-hol.js';
 import winkel from './set-winkel.js';
 import kasteelzaal from './set-kasteelzaal.js';
+import sneeuw from './set-sneeuw.js';
 import boomhut from './set-boomhut.js';
 import blokhut from './set-blokhut.js';
 import { EGG } from './quest.js';
@@ -29,7 +30,7 @@ import { CARDS3 } from './cards3.js';
 import { openShop } from './shopui.js';
 import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut, kasteelzaal };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut, kasteelzaal, sneeuw };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -307,7 +308,7 @@ function buildSet(def) {
     findEgg: (x, z) => { coins.reward('ei', x, 1, z); quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
     eggAt: () => [eggF.x, eggF.z],
     hatch: (x, z) => { coins.reward('uitgekomen', x, 1, z); quest.stage = 'baby'; eggShow = 0; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
-    water: (h, pts) => { s.floors.push({ h, pts: pts.map(W), swim: true }); },   // light water: a floor only for somebody with a snorkel, and she swims on it
+    water: (h, pts, open = false) => { s.floors.push({ h, pts: pts.map(W), swim: true, open }); },   // light water: a floor only for somebody with a snorkel, and she swims on it (`open`: a bathing place, anyone may swim)
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
@@ -997,7 +998,7 @@ function stepDoors(dt) {
  *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
 function floorAt(x, z) {
   let best = null;
-  for (const s of sets) if (!s.sunk && x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
+  for (const s of sets) if (!s.sunk && x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || f.open || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
   return best;
 }
 const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
