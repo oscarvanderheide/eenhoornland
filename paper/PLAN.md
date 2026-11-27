@@ -88,6 +88,15 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - **Treehouse:** coming near the oak the camera already sinks to the ground and looks up; she climbs from anywhere close, in front of the ladder.
 - **A livelier sea:** little sailboats tacking round the islands, fish leaping, gulls gliding and dipping, a whale that surfaces and blows now and then (`buildSeaLife` in `paper.js`).
 
+**The voyage round, 2026-11-27 (late night):**
+
+- **Asleep in bed** the blanket and the pillow are part of the girls' own drawing (kids.js poses `bedL` / `bedR`): tucked in to the chin, no 3D pillow over the head.
+- **The shop** is a real little shop on the village green with a shopkeeper behind her counter (people.js `winkelier`); at the counter a sheet opens with a mirror and a card per thing, prices in coins (shopui.js). New for sale: **the pink unicorn onesie** (hood, ears, golden horn, rainbow mane and tail). The washing line is gone; so is the home button to the pixel game.
+- **The treehouse ladder** is climbed by hand: hold up (stick, arrow, finger above her), hold down to come down. A tree between the camera and her is taken away while it stands there (any island).
+- **The voyage:** the candy island lies 50 steps out at sea (lands.js `VOYAGE`), bigger than before, and she steers the boat herself (stick, arrows, a tap or a held finger on the water); near a jetty it glides in. On the way (voyage.js): seven rings to row through (a coin for all seven), a whale that rises and blows, dolphins alongside, a bottle with a note, a bell buoy, a turtle. The castle's island is bigger too.
+- **Game houses** on the candy island (games.js): memory (six pairs of paper animals), stamps (eight stamps, eight inks; her picture hangs on the house), and a xylophone with a parrot that plays a tune to play back, one note longer each time.
+- **The farm:** four rows of paper vegetables (veg.js: carrots, tomatoes, cabbages, pumpkins), each plant grown on its own; a tap on her puts down what she holds, and the pig comes out of its mud to eat a vegetable on the ground. The well's water is paper. The scarecrow's birds only fly up when she rocks it.
+
 ## Every island its own (Oscar, 2026-11-27)
 
 "all the areas need to feel unique. now i see like all the same elements like the flowers and mills and grass tufts everywhere. that doesnt make it feel like exploring a new area." So: **nothing grows or stands on two islands.** A shared maker is fine for how a thing works, not for how an island looks. What each has (`flora.js` holds everything that is not the village's):
