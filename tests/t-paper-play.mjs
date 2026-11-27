@@ -521,14 +521,15 @@ export default async function (t) {
     await open('?set=bos', LAND); await t.sleep(1500);
     const toy = () => t.ev(`__p.toy('boomhut')`), b = await t.ev(`__p.places('bos')`);
     await t.ev(`__p.placeAt(${b.oak[0] - 1.4}, ${b.oak[1] + 1.6})`); await t.sleep(2600); await t.shot('tmp-shots/y-treehouse-land.png');
-    await t.ev(`__p.tap('ladder')`); await t.sleep(2600); ok((await toy()).mode === 'up', 'a tap on the rope ladder: she climbs up'); await t.shot('tmp-shots/y-treehouse-climb-land.png');
-    ok(await until(`__p.toy('boomhut').up`, 5), 'and is up on the deck'); await t.sleep(1600); await t.shot('tmp-shots/y-treehouse-top-land.png');
+    await t.ev(`__p.tap('ladder')`); ok(await until(`__p.toy('boomhut').mode === 'ladder'`, 5), 'a tap on the rope ladder: she walks over and takes hold'); await t.sleep(1500); ok((await toy()).h === 0, 'she does not climb by herself');
+    await t.ev(`__p.keys(['w'])`); await t.sleep(1200); await t.ev('__p.keys([])'); const h1 = (await toy()).h; await t.sleep(800); ok(h1 > .8 && (await toy()).h === h1, `holding up she climbs, letting go she hangs there (${h1.toFixed(1)})`); await t.shot('tmp-shots/y-treehouse-climb-land.png');
+    await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('boomhut').up`, 6), 'holding up again: up on the deck'); await t.ev('__p.keys([])'); await t.sleep(1600); await t.shot('tmp-shots/y-treehouse-top-land.png');
     const [sx, sy] = await t.ev(`__p.point(${b.oak[0] + .8}, 4.6, ${b.oak[1] - .65})`); await t.click(sx, sy); ok(await until(`__p.toy('boomhut').view === 0`, 2), 'a real tap on the telescope: she looks out to another island');
     await t.sleep(2200); await t.shot('tmp-shots/y-treehouse-view-land.png'); ok(await until(`__p.toy('boomhut').view === -1`, 3) && (await toy()).up, 'and a moment later the picture comes back to her, still up there');
     await t.ev(`__p.tap('telescope')`); await t.sleep(300); ok((await toy()).view === 1, 'the next look shows the next island'); await t.sleep(3600);
-    await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('boomhut').mode === null`, 5), 'a touch: she climbs down again');
+    await t.ev(`__p.keys(['s'])`); ok(await until(`__p.toy('boomhut').mode === 'ladder'`, 2), 'holding down up there: onto the ladder'); ok(await until(`__p.toy('boomhut').mode === null`, 7), 'and down, and off at the foot'); await t.ev('__p.keys([])');
     // the zipline: up again, a tap on the hand-bar, and down the cable to the village
-    await t.ev(`__p.tap('ladder')`); ok(await until(`__p.toy('boomhut').up`, 6), 'up the ladder again'); await t.sleep(1200);
+    await t.ev(`__p.tap('ladder')`); await until(`__p.toy('boomhut').mode === 'ladder'`, 5); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('boomhut').up`, 6), 'up the ladder again'); await t.ev('__p.keys([])'); await t.sleep(1200);
     await t.ev(`__p.tap('zipline')`); ok(await until(`__p.toy('boomhut').mode === 'zip'`, 2), 'a tap on the zipline\'s bar: she takes hold and off she goes'); await t.sleep(2400); await t.shot('tmp-shots/y-zipline-land.png');
     ok(await until(`__p.toy('boomhut').mode === null`, 8), 'and lets go at the end'); ok(await until(`__p.coins() >= 1`, 3), 'the first ride: a coin'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
   }

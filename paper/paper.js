@@ -852,6 +852,27 @@ const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidP
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
 let playing = null, playAct = false;
 function play(toy) { if (ride.on) dismount(true); playing = toy; target = null; playAct = false; }
+/* a tree between the camera and her is taken away while it stands there (Oscar, at the treehouse: "there is a tree in front
+   of the camera which makes it look buggy"): low shots look along the ground, and a pine close to the lens filled the picture.
+   A tree hides when the line from the camera to her passes through it below its top, and comes back when it no longer does */
+const treesHidden = new Set();
+function hideTreesInFront() {
+  const now = new Set(), cx = camera.position.x, cz = camera.position.z, cy = camera.position.y, gy = girl.y + (girl.lift || 0) + .5;
+  const sx = (playing && playing.look ? playing.look[0] : girl.x) - cx, sz = (playing && playing.look ? playing.look[1] : girl.z) - cz, d = Math.hypot(sx, sz) || 1;
+  const hx = girl.x - cx, hz = girl.z - cz, dh = Math.hypot(hx, hz) || 1;
+  for (const q of [set]) for (const t of q.trees) {
+    if (!t.g.visible && !treesHidden.has(t)) continue;
+    const tx = t.x + q.ox - cx, tz = t.z + q.oz - cz, r = t.kind === 'pine' ? 1.0 : 1.3;
+    for (const [ux, uz, L] of [[sx / d, sz / d, d], [hx / dh, hz / dh, dh]]) {
+      const a = tx * ux + tz * uz; if (a < -r || a > L - .5) continue;
+      const side = Math.abs(tx * uz - tz * ux); if (side > r) continue;
+      const rayY = cy + (gy - cy) * Math.max(0, a) / L; if (rayY < (t.g.position.y || 0) + t.top * (t.kind === 'pine' ? 1.6 : 1.25) + .3) { t.q = q; now.add(t); break; }
+    }
+  }
+  for (const t of treesHidden) if (!now.has(t)) t.g.visible = !(t.q && t.q.farTrees && t.q !== set);
+  for (const t of now) t.g.visible = false;
+  treesHidden.clear(); for (const t of now) treesHidden.add(t);
+}
 function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; uni.busy = false; uni.lift = 0; uni.lean = 0; }
 /** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
 function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = goTo(x, z, { then, near }); }
@@ -1333,8 +1354,9 @@ function frame(now) {
   if (hold && !flight.landing && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
   if (playing) {
     let px = Math.abs(pad.move[0]) > .5 ? Math.sign(pad.move[0]) : 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
-    if (hold) { const [hx] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
-    const act = playAct; playAct = false; playing.step(dt, { x: px, act }); ix = iz = 0; target = null;
+    let py = Math.abs(pad.move[1]) > .5 ? Math.sign(pad.move[1]) : 0; if (keys.has('arrowup') || keys.has('w')) py -= 1; if (keys.has('arrowdown') || keys.has('s')) py += 1;   // (up and down: a ladder; y is down on the screen)
+    if (hold) { const [hx, hy] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (Math.abs(hold.y - hy) > 30) py = Math.sign(hold.y - hy); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
+    const act = playAct; playAct = false; playing.step(dt, { x: px, y: py, act }); ix = iz = 0; target = null;
   }
   if (target && !ix && !iz) {
     while (target.way && target.way.length > 1 && Math.hypot(target.way[0][0] - girl.x, target.way[0][1] - girl.z) < .12) target.way.shift();   // a corner reached: on to the next
@@ -1455,6 +1477,7 @@ function frame(now) {
     camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
     camera.position.copy(camPos); camera.lookAt(camLook);
     camYaw = Math.atan2(camPos.x - camLook.x, camPos.z - camLook.z);
+    hideTreesInFront();
     if (shadowFollow) {   // the shadow sheet goes where the camera looks, in whole stitches of its own weave, so shadows never crawl
       const d = sunDir.copy(sun3).normalize(), rt = sunRight.crossVectors(UP, d).normalize(), up = sunUp.crossVectors(d, rt), st = 2 * shadowFollow / key.shadow.mapSize.x;
       const a = Math.round(camLook.dot(rt) / st) * st, b = Math.round(camLook.dot(up) / st) * st, c = camLook.dot(d);
