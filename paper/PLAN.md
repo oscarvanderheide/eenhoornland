@@ -72,11 +72,21 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 
 - **Growing:** the rainbow tree in the rainbow island's middle (pastel crown, rainbow fruit hanging under it; `rainbowTree` in `wonders.js`). Shaken, it drops a rainbow fruit; given to the baby unicorn she grows into the big unicorn (a moment with the camera close). The story stage stays `'baby'`; growing, wings and feathers live in `gear` (`grown`, `wings`, `feathers`), saved with the rest.
 - **Riding:** with the big unicorn, a round button bottom right (her head) puts the girl on its back and takes her off again; riding is a way of walking (faster), not a toy; a toy or a door gets her off first.
-- **The wings:** once grown, the owl (forest), the gull (beach) and the peacock (castle) each let a feather drift down at a tap (again while it is still missing); feathers she has show after her coins; the witch, her potion done, wants all three and brews them into wings (`FIGS.groot` has no wing, `FIGS.grown` its folded wing).
+- **The wings:** once grown, the owl (forest), the gull (beach) and the parrot (rainbow island; the castle is reached only by flying, so its feather could not be there) each let a feather drift down at a tap (again while it is still missing); feathers she has show after her coins; the witch, her potion done, wants all three and brews them into wings (`FIGS.groot` has no wing, `FIGS.grown` its folded wing).
 - **Flying:** riding with wings, a second button (the wings) takes them up high with big paper wings beating, the camera wide; in the air a tap is only where to fly, over the water too, over the outdoor islands only, no doors; the same button lands on the nearest ground. While flying it is the only button.
 - `?set=...` links start with a grown, winged unicorn, so flying can be tried at once.
 
 - Still ideas: a lagoon at the beach out to the seal's rock; a spot of bubbles where she dives into a cut-paper sea seen from the side; more things for the hookshot to catch (he said it would be funny if it works out: tell me what it should grab).
+
+**The late round, 2026-11-27 (night):**
+
+- **Riding looks like riding:** the big unicorn walks (legs going), with front and back views as the girls have, riding and flying; the ride and fly buttons are paper drawings (her head, a cut-paper wing).
+- **Islands with a look of their own:** the meadow as a patchwork of fields with hay bales and umbrella trees; the castle on gravel with parterres; the rainbow island as candy land.
+- **The boat is back** (as in the pixel game): no bridge to the rainbow island, a jetty on each side and a rowing boat (`boat.js`); she rows across with her unicorn; waiting on the far jetty, the boat comes to fetch her.
+- **The castle is ringed by mountains** (null floors): only the flying unicorn gets her there.
+- **A PlayStation controller** (as the pixel game): stick walks, ✕ does the nearest thing (so nothing needs a tap from afar), ○ hop / off a toy, △ the toy's second thing or hello to the unicorn, L1 the other sister, L2 on/off the unicorn, R2 fly, R1 sun/moon, Options the saves. Test part `pad`.
+- **Treehouse:** coming near the oak the camera already sinks to the ground and looks up; she climbs from anywhere close, in front of the ladder.
+- **A livelier sea:** little sailboats tacking round the islands, fish leaping, gulls gliding and dipping, a whale that surfaces and blows now and then (`buildSeaLife` in `paper.js`).
 
 ## Every island its own (Oscar, 2026-11-27)
 

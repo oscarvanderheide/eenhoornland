@@ -535,17 +535,18 @@ export default async function (t) {
   /* ---------------- shaking a tree: what falls out ---------------- */
   if (!only || only === 'shake') {
     await open('?set=dorp', LAND); await t.sleep(1500);
-    const fall = () => t.ev('__p.fallen()'), d = await t.ev(`__p.places('dorp')`);
+    const fall = () => t.ev(`__p.fallen().filter(o => o.kind !== 'munt')`), d = await t.ev(`__p.places('dorp')`);   // (coins lying about are in the same list)
     await t.ev(`__p.placeAt(${d.bench[0] - 5}, ${d.bench[1] + 9})`); await t.sleep(300);
     const tr = await t.ev('__p.tree()'); await t.ev(`__p.placeAt(${tr[0] - 1.6}, ${tr[2] + 1.6})`); await t.sleep(2600);
     const [sx, sy] = await t.ev(`__p.point(${tr[0]}, ${tr[1]}, ${tr[2]})`); await t.click(sx, sy); await t.sleep(1800);
     const f1 = await fall(); ok(f1.length === 1 && ['appel', 'denappel'].includes(f1[0].kind) && f1[0].mode === 'lie', `a real tap shakes the tree: out drops ${f1[0] ? f1[0].kind : 'nothing'}`); await t.shot('tmp-shots/y-shake-apple-land.png');
     await t.click(sx, sy); await t.sleep(600); ok((await fall()).length === 1, 'shaken again straight away: nothing more yet');
-    await t.ev(`__p.tap('val-${f1[0].kind}')`); ok(await until(`__p.fallen()[0] && __p.fallen()[0].mode === 'held'`, 5), 'a tap on it: she picks it up');
+    await t.ev(`__p.tap('val-${f1[0].kind}')`); ok(await until(`__p.fallen().some(o => o.kind !== 'munt' && o.mode === 'held')`, 5), 'a tap on it: she picks it up');
     await t.sleep(400); await t.ev(`__p.tap('unicorn')`); await t.sleep(300); ok((await fall()).length === 0, 'a tap on her unicorn: it gets it');
-    await t.ev(`__p.drop('rups')`); await t.sleep(2000); ok((await fall())[0].mode === 'hang', 'a caterpillar comes down on its thread'); await t.shot('tmp-shots/y-shake-rups-land.png');
-    await t.ev(`__p.tap('val-rups')`); ok(await until(`__p.fallen().length === 0`, 3), 'a tap: up it climbs again');
-    await t.ev(`__p.drop('sok')`); await t.sleep(700); await t.shot('tmp-shots/y-shake-sok-land.png'); ok(await until(`__p.fallen()[0].mode === 'lie'`, 4), 'a sock flutters down');
+    await t.ev(`__p.drop('rups')`); await t.sleep(2000); ok((await fall()).some(o => o.kind === 'rups' && o.mode === 'hang'), 'a caterpillar comes down on its thread'); await t.shot('tmp-shots/y-shake-rups-land.png');
+    await t.ev(`__p.tap('val-rups')`); ok(await until(`!__p.fallen().some(o => o.kind === 'rups')`, 3), 'a tap: up it climbs again');
+    await t.ev(`__p.drop('laars')`); ok(await until(`__p.fallen().some(o => o.kind === 'laars' && o.mode === 'lie')`, 4), 'a boot drops');
+    await t.ev(`__p.drop('sok')`); await t.sleep(700); await t.shot('tmp-shots/y-shake-sok-land.png'); ok(await until(`__p.fallen().some(o => o.kind === 'sok' && o.mode === 'lie')`, 4), 'a sock flutters down');
     await t.ev(`__p.drop('vogelaar')`); await t.sleep(1300); ok((await fall()).some(o => o.kind === 'vogelaar' && o.mode === 'dazed'), 'and once in a while, a birdwatcher tumbles out'); await t.shot('tmp-shots/y-shake-man-land.png');
     ok(await until(`!__p.fallen().some(o => o.kind === 'vogelaar')`, 8), 'he waves, and wanders off');
   }

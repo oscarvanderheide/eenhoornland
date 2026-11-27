@@ -14,6 +14,7 @@ import { THINGS } from './things.js';
 import { piece, line, S as S2 } from './cut.js';
 import { SNORKEL } from './gear.js';
 import { PROPS, PEOPLE } from './people.js';
+import { ANIMALS2 } from './animals2.js';
 import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
 import kasteel from './set-kasteel.js';
@@ -215,6 +216,50 @@ function buildSea() {
     }
   }
   if (BAKE) seaBaked = bakeSea(seaRows, seaRoot);
+  buildSeaLife(land, x0, x1, z0, z1);
+}
+/* ---------------- life on the sea (Oscar: "the sea also feels kinda boring") ----------------
+   Out on the water, away from the islands: little sailboats drifting slowly round, rocking; now and then a fish leaps
+   out in an arc with a splash; gulls glide in wide circles; and once in a while, far out, a whale's back rises and it
+   blows a spout. Seen from the boat, the zipline, the telescope, and above all from her flying unicorn */
+const seaLife = { boats: [], fish: [], gulls: [], whale: null, figs: null };
+function buildSeaLife(land, x0, x1, z0, z1) {
+  // (close enough to the islands to be seen from them: between `far` and far + 9 steps from the nearest shore)
+  const R = rng(915), near = (x, z) => Math.min(...land.map(p => inPoly(p, x, z) ? -1 : edgeDist(p, x, z))), out = (x, z, far) => { const d = near(x, z); return d >= far && d < far + 9; };
+  let turn = 0;   // round the islands in turn, so every island has some life on the water by it
+  const spot = far => { const p = land[turn++ % land.length]; let bx0 = 1e9, bz0 = 1e9, bx1 = -1e9, bz1 = -1e9; for (const [x, z] of p) { bx0 = Math.min(bx0, x); bz0 = Math.min(bz0, z); bx1 = Math.max(bx1, x); bz1 = Math.max(bz1, z); }
+    for (let i = 0; i < 400; i++) { const x = bx0 - far - 8 + R() * (bx1 - bx0 + 2 * far + 16), z = bz0 - far - 8 + R() * (bz1 - bz0 + 2 * far + 16); if (x > x0 && x < x1 && z > z0 && z < z1 && out(x, z, far)) return [x, z]; } return null; };
+  if (!seaLife.figs) {   // the figures are made once; each new sea only finds them new places
+    seaLife.figs = { fish: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const f = makeFigure('zeevis' + i, PROPS.vis); f.thing = true; f.g.scale.setScalar(2.2); f.g.visible = false; return f; }),
+      gulls: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const f = makeFigure('zeemeeuw' + i, ANIMALS2.meeuw); f.thing = true; f.g.scale.setScalar(1.15); f.act = tick => f.setFrame(1 + (Math.floor(tick / 3 + i) % 2)); return f; }) };
+  }
+  seaLife.boats = []; for (let i = 0; i < 12; i++) { const c = spot(4); if (!c) continue; const g = new THREE.Group(); g.scale.setScalar(1.3); seaRoot.add(g);
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(.42, .3, .26, 12, 1, false, 0, Math.PI), paper(['#e98f8f', '#8fc3e0', '#f2c65c', '#fbf5ea'][i % 4])); hull.rotation.z = Math.PI / 2; hull.rotation.y = Math.PI / 2; hull.scale.set(1, 2.2, 1); hull.position.y = .1; g.add(hull);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, 1.3, 5), paper('#8d6a48')); mast.position.y = .75; g.add(mast);
+    const sail = card([[0, 0], [0, 1.05], [.62, .08]], .01, paper(i % 2 ? '#fbf5ea' : '#f8dde4', { side: THREE.DoubleSide })); sail.position.set(.03, .2, 0); g.add(sail);
+    const jib = card([[0, 0], [0, .85], [-.4, .06]], .01, paper(['#f4a6c4', '#9ed9cf', '#f2c65c', '#bba6ea'][i % 4], { side: THREE.DoubleSide })); jib.position.set(-.03, .2, 0); g.add(jib);
+    for (const o of g.children) o.castShadow = true;
+    seaLife.boats.push({ g, cx: c[0], cz: c[1], r: 2 + R() * 2.5, a: R() * 6.28, sp: (.04 + R() * .04) * (R() < .5 ? -1 : 1), ph: R() * 6 }); }
+  seaLife.fish = seaLife.figs.fish.map(f => ({ f, at: spot(3), t: -1 - R() * 5 })).filter(q => q.at);
+  seaLife.gulls = seaLife.figs.gulls.map((f, i) => { const c = spot(2) || [0, 0]; return { f, cx: c[0], cz: c[1], r: 4 + R() * 3, a: R() * 6.28, sp: (.18 + R() * .1) * (i % 2 ? 1 : -1), h: 3 + R() * 1.5 }; });
+  { const c = spot(7); if (c) { const g = new THREE.Group(); g.visible = false; seaRoot.add(g); const back = new THREE.Mesh(new THREE.SphereGeometry(1.1, 18, 10, 0, 6.283, 0, Math.PI / 2), paper('#5f7f9a')); back.scale.set(1.8, .55, 1); back.castShadow = true; g.add(back);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(.5, 12, 8, 0, 6.283, 0, Math.PI / 2), paper('#9fb6c8')); belly.scale.set(1.6, .4, 1); belly.position.set(.9, .05, .3); g.add(belly);
+    const tail = card([[0, 0], [-.5, .55], [-.15, .3], [0, .7], [.15, .3], [.5, .55]], .03, paper('#5f7f9a', { side: THREE.DoubleSide })); tail.position.set(-2.2, .1, 0); g.add(tail);
+    seaLife.whale = { g, x: c[0], z: c[1], t: -6 }; } else seaLife.whale = null; }
+}
+function stepSeaLife(dt) {
+  for (const b of seaLife.boats) { b.a += b.sp * dt; const x = b.cx + Math.cos(b.a) * b.r, z = b.cz + Math.sin(b.a) * b.r * .6; b.g.position.set(x, WATER_Y - .02 + Math.sin(time * 1.6 + b.ph) * .04, z); b.g.rotation.set(Math.sin(time * 1.3 + b.ph) * .06, -b.a - Math.sign(b.sp) * Math.PI / 2, Math.sin(time * 1.1 + b.ph) * .05); }
+  for (const q of seaLife.fish) { q.t += dt; const f = q.f;
+    if (q.t < 0) { f.g.visible = false; continue; }
+    const k = q.t / 1.1; if (k >= 1) { q.t = -3 - Math.random() * 6; f.g.visible = false; confetti(f.x, WATER_Y + .1, f.z, ['#cfeaf0', '#f6efe2'], 5, undefined, 1.2); continue; }
+    if (k === q.t / 1.1 && q.t - dt < 0) confetti(q.at[0], WATER_Y + .1, q.at[1], ['#cfeaf0', '#f6efe2'], 5, undefined, 1.2);
+    f.g.visible = true; f.x = q.at[0] + (k - .5) * 1.6; f.z = q.at[1]; f.floatY = f.y = WATER_Y - .1 + Math.sin(k * Math.PI) * 1.1; f.face = 1; f.lean = (.5 - k) * 2.2; }
+  for (const q of seaLife.gulls) { q.a += q.sp * dt; const f = q.f; f.x = q.cx + Math.cos(q.a) * q.r; f.z = q.cz + Math.sin(q.a) * q.r * .6; f.floatY = f.y = q.h + Math.sin(time * .9 + q.r) * .25; f.face = -Math.sin(q.a) * Math.sign(q.sp) > 0 ? 1 : -1; }
+  const w = seaLife.whale; if (w) { w.t += dt; const g = w.g;
+    if (w.t < 0) g.visible = false;
+    else { const up = w.t < .9 ? w.t / .9 : w.t < 3.6 ? 1 : Math.max(0, 1 - (w.t - 3.6) / .9); g.visible = up > 0; g.position.set(w.x, WATER_Y - .6 + up * .55, w.z);
+      if (w.t > 1.0 && w.t - dt <= 1.0) { sfx.splash(); confetti(w.x + .3, WATER_Y + 1.2, w.z, ['#fbf7ee', '#cfeaf0', '#e8f4f6'], 22, undefined, 3.4, true); }   // the spout
+      if (w.t > 4.5) w.t = -10 - Math.random() * 10; } }
 }
 /** build one set at its place in the world */
 function buildSet(def) {
@@ -626,7 +671,7 @@ function shake(t) {
 function dropFrom(kind, p, top, tree = 'leaf') {
   const side = Math.random() < .5 ? -1 : 1; let x = p.x + side * (.45 + Math.random() * .3), z = p.z + .35 + Math.random() * .3;
   if (heightAt(x, z) === null) { x = p.x; z = p.z + .4; }
-  const f = makeFigure('val-' + kind, kind === 'laars' ? PEOPLE.laars : THINGS[kind]); f.thing = kind !== 'vogelaar'; f.face = side;
+  const f = makeFigure('val-' + kind, kind === 'laars' ? PROPS.laars : THINGS[kind]); f.thing = kind !== 'vogelaar'; f.face = side;
   const o = { f, kind, x, z, y: top, vy: 0, mode: kind === 'rups' ? 'down' : 'fall', t: 0, age: 0, ground: heightAt(x, z) ?? p.y, top, bounced: false, thread: null };
   if (kind === 'rups') { o.x = p.x + side * .3; o.z = p.z + (tree === 'pine' ? .72 : .35);   // (in front of a pine's cone, not inside it)
     o.ground = heightAt(o.x, o.z) ?? p.y; o.thread = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1, 3), threadMat); scene.add(o.thread); }
@@ -1316,7 +1361,7 @@ function frame(now) {
     else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
-  stepMask(dt); stepSister(); stepEgg(dt); stepFallen(dt, tick);
+  stepMask(dt); stepSister(); stepEgg(dt); stepFallen(dt, tick); stepSeaLife(dt);
   // figures: smooth positions, poses that step like stop motion
   for (const f of figures) {
     const ground = f.floatY ?? heightAt(f.x, f.z) ?? f.y;
@@ -1430,6 +1475,7 @@ window.__p = {
   walkTo(x, z) { target = goTo(x, z); },
   /** what fell from trees, and (for tests) let the tree nearest her drop this: 'appel', 'rups', 'sok', 'laars', 'vogelaar' */
   coins: () => purse.coins,
+  seaLife: () => ({ boats: seaLife.boats.map(b => [+b.g.position.x.toFixed(1), +b.g.position.z.toFixed(1), b.g.visible, b.g.parent && b.g.parent.visible]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
   /** riding: whether she is on it, flying, and the unicorn's state */
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
   mount: () => (ride.on ? dismount() : mount(), ride.on),
