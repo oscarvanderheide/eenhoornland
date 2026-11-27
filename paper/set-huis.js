@@ -68,7 +68,7 @@ export default {
       // her blanket, drawn on paper and standing at the bed's front: lying flat when the bed is empty, drawn up over whoever lies here
       const [bc, bl] = quilt === 'pink' ? ['#ef9fb8', '#f8c6d6'] : ['#efcb58', '#f7e29a'];
       const flat = new THREE.Group(), flap = new THREE.Group(); flat.userData.live = flap.userData.live = true; flap.visible = false; g.add(flat, flap);
-      { const m = blanketCard(bc, bl, s < 0, false, 1.2, .46); m.position.set(-s * .27, .44, .47); flat.add(m); const u = blanketCard(bc, bl, s < 0, true, 1.24, .74); u.position.set(-s * .29, .62, .5); flap.add(u); }
+      { const m = blanketCard(bc, bl, s < 0, false, 1.08, .3); m.position.set(-s * .27, .5, .46); flat.add(m); const u = blanketCard(bc, bl, s < 0, true, 1.06, .54); u.position.set(-s * .27, .64, .46); flap.add(u); }   // (over the mattress's front edge, up to a soft hump at her chest; her head on the pillow stays out)
       beds[who] = { g, flap, flat, x: s * 1.72, z: -D / 2 + .62, side: s };
     }
     put(box(.5, .46, .42, 'wood'), 0, .23, -D / 2 + .3); S.wall(0, -D / 2 + .3, .3, .26);
@@ -85,10 +85,10 @@ export default {
     S.door('voordeur', [-W / 2, D / 2 - .3, W / 2, D / 2 + .1], [0, D / 2 - .95], [0, 1]);   // walking down off the front of the room, anywhere along it, is the way out (the mat only shows it)
 
     /* ---------------- a bed is a toy: she hops on and shuts her eyes; any push or a touch and she is up again ---------------- */
-    const theDream = dream(S, [0, 1.52, -D / 2 + .5]), LIE = { feet: .5, lift: .64 };   // (how a sleeper lies: her feet that far towards the room's middle, that high)
+    const theDream = dream(S, [0, 1.74, -D / 2 + .5]), LIE = { feet: .5, lift: .6 };   // (how a sleeper lies: her feet that far towards the room's middle, that high)
     const bedToy = b => {
       let mode = 'on', t = 0; const [bx, bz] = S.at([b.x, b.z]);
-      const toy = { look: S.at([b.x * .5, 0]), step(dt, inp) {
+      const toy = { look: S.at([b.x * .5, 0]), get shot() { return theDream.on() ? { ly: .55, span: 7.8, tall: 5.9, rise: .3, riseTall: .46 } : null; }, step(dt, inp) {   // (while they dream the camera looks up a little, to the cloud)
         t += dt;
         if (mode === 'on') { const k = Math.min(1, t / .32); girl.x = bx - b.side * .25; girl.z = bz + (1 - k) * .75; girl.lift = .5 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = -b.side; if (k >= 1) { mode = 'bed'; t = 0; sfx.hop(); } return; }
         if (mode === 'bed') { const dreaming = S.quest.stage === 'dream'; girl.asleep = dreaming || t > 1.1; girl.z = bz;

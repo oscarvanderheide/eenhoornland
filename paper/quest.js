@@ -33,10 +33,15 @@ export const EGG = { w: 124, h: 150, frames: 4, size: .56, thing: true, draw(g, 
 export function dream(S, at) {
   const g = new THREE.Group(); g.position.set(...at); g.visible = false; g.userData.live = true; S.root.add(g);
   const lit = c => paper(c, { extra: { emissive: c, emissiveIntensity: .55 } });
-  const cloud = () => { const p = []; for (let i = 0; i < 70; i++) { const a = i / 70 * 6.283, k = 1 + .09 * Math.cos(a * 8); p.push([Math.cos(a) * 1.55 * k, Math.sin(a) * .66 * (1 + .14 * Math.cos(a * 8))]); } return p; };
+  // a soft cloud: the outline of a few big round puffs together (Oscar: the wavy one was "too spiky"), flat-ish underneath
+  const PUFFS = [[-1.05, -.05, .5], [-.5, .22, .62], [.2, .3, .68], [.88, .1, .55], [1.25, -.12, .38], [-.2, -.2, .55], [.55, -.22, .5], [-.9, -.25, .4]];
+  const cloud = () => { const p = []; for (let i = 0; i < 90; i++) { const a = i / 90 * 6.283, dx = Math.cos(a), dy = Math.sin(a); let r = 0;
+    for (const [cx, cy, cr] of PUFFS) { const b = dx * cx + dy * cy, c = cx * cx + cy * cy - cr * cr, d = b * b - c; if (d >= 0) r = Math.max(r, b + Math.sqrt(d)); }
+    p.push([dx * r, Math.max(dy * r, -.62)]); } return p; };
   { const back = card(cloud().map(([x, y]) => [x * 1.05, y * 1.1]), .03, lit('#fbf7ee')); back.position.set(0, -.1, -.05); g.add(back); const front = card(cloud(), .03, lit('#bfcdf0')); front.position.set(0, -.1, -.02); g.add(front); }
   // little puffs down to each sleeper: they share it
-  for (const [x, y, r] of [[-1.05, -.82, .14], [-1.38, -1.06, .085], [1.05, -.82, .14], [1.38, -1.06, .085]]) { const b = card(circlePts(r + .025, 3, 16), .03, lit('#fbf7ee')); b.position.set(x, y, -.05); g.add(b); const f = card(circlePts(r, 3, 16), .03, lit('#bfcdf0')); f.position.set(x, y, -.02); g.add(f); }
+  // (they step down to the sleepers' heads, above the beds)
+  for (const [x, y, r] of [[-1.5, -.66, .13], [-1.78, -.84, .09], [-1.97, -.95, .06], [1.5, -.66, .13], [1.78, -.84, .09], [1.97, -.95, .06]]) { const b = card(circlePts(r + .025, 3, 16), .03, lit('#fbf7ee')); b.position.set(x, y, -.05); g.add(b); const f = card(circlePts(r, 3, 16), .03, lit('#bfcdf0')); f.position.set(x, y, -.02); g.add(f); }
   const egg = S.figure('droomei', EGG), baby = S.figure('droomeenhoorn', FIGS.baby), [wx, wz] = S.at([at[0], at[2]]);
   for (const f of [egg, baby]) { f.g.visible = false; f.z = wz + .08; f.thing = true; } egg.g.scale.setScalar(1.7); baby.g.scale.setScalar(.72);
   const glow = f => { if (f.mat.emissiveMap !== f.mat.map) { f.mat.emissiveMap = f.mat.map; f.mat.emissive.set('#ffffff'); f.mat.emissiveIntensity = .5; f.mat.needsUpdate = true; } };
@@ -48,10 +53,11 @@ export function dream(S, at) {
     step(dt) {
       if (t < 0) return; t += dt > 0 ? Math.min(dt, .05) : 0;
       const k = t < .9 ? t / .9 : t > 8.2 ? Math.max(0, 1 - (t - 8.2) / .7) : 1; g.scale.setScalar(Math.max(.01, k * (1 + Math.sin(t * 1.3) * .015)));
-      frame = t < 3 ? 0 : t < 4.6 ? 1 : t < 5.1 ? 2 : 3;
-      egg.g.visible = k > .6; egg.x = wx - (t > 5.1 ? .42 : 0) * Math.min(1, (t - 5.1) / .4); egg.floatY = egg.y = at[1] - .56;
-      if (t > 4.6 && !popped) { popped = true; baby.hopV = 2.6; S.sfx.hello(); S.confetti(wx, at[1] + .2, wz + .1, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 20, S.starGeo, 2.2); }
-      baby.g.visible = popped && k > .6; baby.x = wx + .38 * Math.min(1, Math.max(0, (t - 4.6) / .5)); baby.floatY = baby.y = at[1] - .5; if (popped && t > 5.6 && !(baby.hop > 0) && Math.floor(t * 1.2) % 2 === 0) baby.hopV = 1.4;
+      // the egg wobbles, cracks, and then (Oscar: "just let the egg hatch and then some confetti and then the egg dissapears and the baby unicorn appears") a burst of confetti: the egg is gone and the baby is there
+      frame = t < 3 ? 0 : 1;
+      egg.g.visible = k > .6 && !popped; egg.x = wx; egg.floatY = egg.y = at[1] - .56;
+      if (t > 4.6 && !popped) { popped = true; baby.hopV = 2.6; S.sfx.hello(); S.confetti(wx, at[1] - .2, wz + .1, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a', '#fbf5ea'], 26, S.starGeo, 2.4); }
+      baby.g.visible = popped && k > .6; baby.x = wx; baby.floatY = baby.y = at[1] - .5; if (popped && t > 5.6 && !(baby.hop > 0) && Math.floor(t * 1.2) % 2 === 0) baby.hopV = 1.4;
       if (t > 8.9) { t = -1; g.visible = egg.g.visible = baby.g.visible = false; dark(egg); dark(baby); if (done) done(); }
     } };
 }
