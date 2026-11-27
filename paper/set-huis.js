@@ -6,6 +6,26 @@ import { dream } from './quest.js';
 
 const W = 5.4, D = 3.3, H = 2.7;   // the room: wide, deep, high
 const COL = { floor: '#cda97c', wall: '#bfd9cf', wall2: '#a9c9be', skirt: '#f4ecdc', dark: '#43363a', wood: '#b9875a', wood2: '#9a6e47', sheet: '#fbf5ea', pink: '#f4a6c4', yellow: '#f2c65c', rug: '#e98f8f', rug2: '#f6dfc4', sky: '#9fcfd8', frame: '#f4ecdc', mat: '#b98f5c', shade: '#f6dfa6' };
+/** a blanket drawn on paper (Oscar: the boxes "like a 3d sheet on them" were "weird and ugly"): her colour, a patchwork of
+ *  lighter squares with little stitches, a white folded hem at the pillow's end, and a scalloped edge that hangs over the
+ *  side of the bed; cut out with a white border like every other card. `up`: somebody lies under it (a soft hump), or it
+ *  lies flat. `headLeft`: the pillow is on the left */
+function blanketCard(col, light, headLeft, up, w, h) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const g = c.getContext('2d'), CW = c.width, CH = c.height;
+  if (!headLeft) { g.translate(CW, 0); g.scale(-1, 1); }
+  const top = x => { const k = x / CW; return up ? CH * (.1 + .2 * (1 - Math.sin(Math.PI * Math.min(1, Math.max(0, (k - .14) / .8))) ) + .05 * k) : CH * (.42 + .02 * Math.sin(k * 9)); };
+  const shape = () => { g.beginPath(); g.moveTo(14, top(14)); for (let x = 14; x <= CW - 14; x += 8) g.lineTo(x, top(x));
+    const bot = CH - 16, n = 9; g.lineTo(CW - 14, bot - 10); for (let i = n; i > 0; i--) { const x0 = 14 + (CW - 28) * i / n, x1 = 14 + (CW - 28) * (i - 1) / n; g.quadraticCurveTo((x0 + x1) / 2, bot + 14, x1, bot - 10); } g.closePath(); };
+  g.lineJoin = 'round'; shape(); g.lineWidth = 22; g.strokeStyle = '#fbf7ee'; g.stroke(); g.fillStyle = '#fbf7ee'; g.fill();
+  g.save(); shape(); g.clip(); g.fillStyle = col; g.fillRect(0, 0, CW, CH);
+  const sq = 44; for (let y = 0; y < CH + sq; y += sq) for (let x = 0; x < CW + sq; x += sq) if (((x + y) / sq) % 2 === 0) { g.fillStyle = light; g.fillRect(x, y, sq, sq); }
+  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 2.5; g.setLineDash([7, 6]); for (let y = sq; y < CH; y += sq) { g.beginPath(); g.moveTo(0, y); g.lineTo(CW, y); g.stroke(); } for (let x = sq; x < CW; x += sq) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, CH); g.stroke(); } g.setLineDash([]);
+  g.fillStyle = '#fbf7ee'; g.fillRect(0, 0, 58, CH); g.fillStyle = 'rgba(0,0,0,.07)'; g.fillRect(54, 0, 8, CH);   // the folded-back hem at the pillow's end
+  g.restore();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, transparent: false, roughness: .95, side: THREE.DoubleSide }));
+  m.castShadow = true; m.receiveShadow = true; return m;
+}
 const bulbMat = new THREE.MeshStandardMaterial({ color: '#fff3d6', emissive: '#ffcf86', emissiveIntensity: 1.6 });
 
 export default {
@@ -43,12 +63,13 @@ export default {
       add(box(1.6, .26, .9, 'wood'), 0, .2, 0); for (const lx of [-.72, .72]) for (const lz of [-.38, .38]) add(box(.09, .14, .09, 'wood2'), lx, .07, lz);
       add(box(.1, .78, .94, 'wood2'), s * .8, .46, 0);                                                    // the headboard, at the wall's end
       add(box(1.52, .12, .84, 'sheet'), 0, .39, 0);
-      add(box(1.0, .1, .88, quilt), -s * .27, .43, 0);                                                    // the quilt, in her colour
       const pil = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), P('sheet')); pil.scale.set(1.25, .45, 1.5); pil.castShadow = true; add(pil, s * .5, .5, 0);
       S.wall(s * 1.72, -D / 2 + .62, .86, .5);
-      // a blanket drawn up over whoever lies here (only then): she is tucked in, her head on the pillow
-      const flap = new THREE.Group(); flap.visible = false; flap.userData.live = true; g.add(flap); { const m = box(1.08, .26, .07, quilt); m.position.set(-s * .3, .58, .2); flap.add(m); const top = box(1.08, .05, .5, quilt); top.position.set(-s * .3, .71, -.03); flap.add(top); }
-      beds[who] = { g, flap, x: s * 1.72, z: -D / 2 + .62, side: s };
+      // her blanket, drawn on paper and standing at the bed's front: lying flat when the bed is empty, drawn up over whoever lies here
+      const [bc, bl] = quilt === 'pink' ? ['#ef9fb8', '#f8c6d6'] : ['#efcb58', '#f7e29a'];
+      const flat = new THREE.Group(), flap = new THREE.Group(); flat.userData.live = flap.userData.live = true; flap.visible = false; g.add(flat, flap);
+      { const m = blanketCard(bc, bl, s < 0, false, 1.2, .46); m.position.set(-s * .27, .44, .47); flat.add(m); const u = blanketCard(bc, bl, s < 0, true, 1.24, .74); u.position.set(-s * .29, .62, .5); flap.add(u); }
+      beds[who] = { g, flap, flat, x: s * 1.72, z: -D / 2 + .62, side: s };
     }
     put(box(.5, .46, .42, 'wood'), 0, .23, -D / 2 + .3); S.wall(0, -D / 2 + .3, .3, .26);
     const lampG = new THREE.Group(); lampG.position.set(0, .46, -D / 2 + .3); root.add(lampG);
@@ -86,7 +107,7 @@ export default {
     return {
       start: [0, D / 2 - .95], uni: [.9, D / 2 - .8],
       shadow: { follow: 20 },
-      step({ dt }) { light.intensity += ((lit ? 1.9 : 0) - light.intensity) * Math.min(1, dt * 6); bulbMat.emissiveIntensity = lit ? 1.6 : .15; theDream.step(dt); for (const [who, b] of Object.entries(beds)) b.flap.visible = S.sister() === who || (Math.abs(girl.lean || 0) > 1 && Math.abs(girl.x - S.at([b.x, b.z])[0]) < 1.2); },
+      step({ dt }) { light.intensity += ((lit ? 1.9 : 0) - light.intensity) * Math.min(1, dt * 6); bulbMat.emissiveIntensity = lit ? 1.6 : .15; theDream.step(dt); for (const [who, b] of Object.entries(beds)) b.flat.visible = !(b.flap.visible = S.sister() === who || (Math.abs(girl.lean || 0) > 1 && Math.abs(girl.x - S.at([b.x, b.z])[0]) < 1.2)); },
       // for the stage: where each sister lies ([x, z, which way she faces]), and the game's start: asleep, the dream, then morning
       beds: Object.fromEntries(Object.entries(beds).map(([who, b]) => [who, [...S.at([b.x - b.side * LIE.feet, b.z]), -b.side * Math.PI / 2]])), bedY: 0, lie: LIE.lift,
       sleep(who) { lit = false; beds[who].sleep(); theDream.start(() => { if (S.quest.stage === 'dream') S.quest.stage = 'zoek'; S.morning(); lit = false; }); },
