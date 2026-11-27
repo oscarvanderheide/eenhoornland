@@ -4,7 +4,7 @@
 //   who lives here  the peacock on the lawn (its tail opens into a fan), the baby dragon asleep by its rock (smoke rings, then fireworks)
 //   a fountain in the court, two flower beds planted in rows, lanterns, benches
 // The castle stands in the north, behind everything.
-import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, sandMap, sandBump, grassMap, grassBump } from './kit.js';
 import { shore, meadow, bouquet, flowerBed, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
 import { castle, carousel } from './castle.js';
 import { peacock, dragon } from './critters2.js';
@@ -15,7 +15,7 @@ import { kasteelLand, BACK } from './lands.js';
 import { cypress, topiary, roseHedge, pennant, goldBall } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
-const COL = { plank: '#c9a878', post: '#8d6a48', path: '#efe6dc', court: '#e6ddd2', rock: '#bdb6c9', rock2: '#cbc5d6' };
+const COL = { plank: '#c9a878', post: '#8d6a48', path: '#f7f2e9', court: '#efe8dc', rock: '#bdb6c9', rock2: '#cbc5d6' };
 
 export default {
   name: 'kasteel',
@@ -24,7 +24,9 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
     const { SAND, GRASS, bridge: BR } = kasteelLand();
 
-    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.grass]]);
+    // the castle's own look (Oscar: the islands felt alike): 'the royal garden', pale gravel underfoot and on it formal lawns in box hedges
+    const GRAVEL = paper('#e4dac6', { map: sandMap, bump: sandBump });
+    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GRAVEL]]);
     for (let x = BR.x0; x < BR.x1; x += .32) root.add(slab(rect(x, BR.z0 - .05, x + .28, BR.z1 + .05), DECK, .06, P('plank'), edgeMat));
     for (let x = BR.x0 + 1.2; x < BR.x1 - .6; x += 1.7) for (const z of [BR.z0, BR.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), P('post')); m.castShadow = true; m.position.set(x, DECK - .6, z); root.add(m); }
     S.sea({ land: [SAND], x0: -40, x1: 32, z0: -24, z1: 26, deep: [230, 180, 0, 0], fine: 1.8 });
@@ -57,12 +59,26 @@ export default {
     const keepOff = [[-5.2, -6.6, 5.2, 7.8], [3.4, -.2, 9.6, 7.6], [-9.2, -4.4, -4.2, 7.4], [BR.x1 - 1, -2.2, -7.6, 2.2]];
     // cypresses stand in rows, as in a castle's garden: three stepping up on each side of the castle, a pair by the east shore
     [[-5.7, -5.7, 3.0], [-6.9, -5.1, 2.6], [-8.1, -4.3, 2.2], [5.7, -5.7, 3.0], [6.9, -5.1, 2.6], [8.1, -4.3, 2.2], [9.5, -2.0, 2.4], [9.7, -.5, 2.1]].forEach(([x, z, h], k) => cypress(S, x, H_GRASS, z, h, k % 2 ? '#5f8665' : '#6f9670'));
-    const grass = meadow(S, 0, R2 => {
-      const x = -10.6 + R2() * 21.2, z = -7.8 + R2() * 15.6;
-      if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;
-      if (Math.abs(x) < 4.2 && z < -1.6 || Math.hypot(x - 6.4, z - 3.0) < 2.7) return null;   // (clear ground before the castle and round the carousel)
-      return [x, H_GRASS, z];
-    }, 762, 3, undefined, bunch);
+    // the parterres: lawns cut in clean shapes, each with a low clipped box hedge round it; the peacock's is a checkerboard
+    const LAWN = paper('#9fcf73', { map: grassMap, bump: grassBump }), LAWN2 = paper('#78ad52', { map: grassMap, bump: grassBump }), BOX = paper('#4f7a4f'), BOX2 = paper('#5f8a58');
+    const roundRect = (cx, cz, w, d, r) => { const p = []; for (let i = 0; i < 40; i++) { const a = i / 40 * 6.283, sx = Math.sign(Math.cos(a)) * (w / 2 - r) + Math.cos(a) * r, sz = Math.sign(Math.sin(a)) * (d / 2 - r) + Math.sin(a) * r; p.push([cx + sx, cz + sz]); } return p; };
+    const hedgeRing = (outer, inner) => { const m = slab(outer, H_GRASS + .14, .14, BOX, BOX2, [inner.slice().reverse()]); m.castShadow = true; root.add(m); };
+    const spots = [], RR = rng(771);
+    const parterre = (cx, cz, w, d, kind) => {
+      const rr = kind === 'lawn' ? Math.min(w, d) / 2 - .01 : .2;   // (the round lawn is round)
+      hedgeRing(roundRect(cx, cz, w + .32, d + .32, rr + .15), roundRect(cx, cz, w, d, rr));
+      root.add(slab(roundRect(cx, cz, w, d, rr), H_GRASS + .02, .02, LAWN, LAWN));
+      if (kind === 'checker') { const n = Math.round(w / .7), m = Math.round(d / .7), tw = w / n, td = d / m; for (let a = 0; a < n; a++) for (let b = 0; b < m; b++) if ((a + b) % 2) root.add(slab([[cx - w / 2 + a * tw, cz - d / 2 + b * td], [cx - w / 2 + (a + 1) * tw, cz - d / 2 + b * td], [cx - w / 2 + (a + 1) * tw, cz - d / 2 + (b + 1) * td], [cx - w / 2 + a * tw, cz - d / 2 + (b + 1) * td]], H_GRASS + .024, .004, LAWN2, LAWN2)); }
+      if (kind === 'cross') {   // a cross of low hedge through the middle, roses in the four quarters
+        root.add(slab(roundRect(cx, cz, w, .18, .06), H_GRASS + .12, .1, BOX, BOX2)); root.add(slab(roundRect(cx, cz, .18, d, .06), H_GRASS + .12, .1, BOX, BOX2));
+        for (const [qx, qz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let k = 0; k < 7; k++) spots.push([cx + qx * (w / 4 + (RR() - .5) * w / 4.5), H_GRASS + .02, cz + qz * (d / 4 + (RR() - .5) * d / 4.5), { kind: 'rose', col: null, big: 1.1 }]); }
+      if (kind === 'roses') for (let k = 0; k < Math.round(w * d * 5); k++) spots.push([cx + (RR() - .5) * (w - .4), H_GRASS + .02, cz + (RR() - .5) * (d - .4), { kind: 'rose', col: null, big: 1.05 }]);
+    };
+    parterre(-4.5, 4.6, 3.6, 2.2, 'checker');    // the peacock's lawn: a checkerboard
+    parterre(0, 5.5, 4.2, 2.0, 'cross');         // before the court: a cross of hedge and roses
+    parterre(-8.0, 4.4, 1.8, 1.8, 'lawn'); topiary(S, -8.0, H_GRASS + .02, 4.4, 'two');   // a round lawn in the west, a clipped bush of two balls in its middle
+    parterre(7.2, -2.7, 2.2, 1.3, 'roses');      // a bed of roses east of the castle
+    let si = 0; const grass = meadow(S, spots.length, () => spots[si++] || null, 762, 0, undefined, bunch);
 
     return {
       start: [BR.x1 + 1.2, 0], uni: [BR.x1 + .4, .6],
