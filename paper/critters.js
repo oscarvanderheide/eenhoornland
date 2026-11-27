@@ -63,17 +63,29 @@ export function owl(S, x, z, up) {
   f.act = () => f.setFrame(woke > 2.5 ? 2 : woke > 0 || eve > .5 ? 0 : 1);
   return { f, state: () => ({ frame: f.frame }), step({ dt, eve: e }) { eve = e; if (woke > 0) woke -= dt; } };
 }
-/** the squirrel sits at the foot of the oak. A tap: up the trunk it runs, and comes down with an acorn */
-export function squirrel(S, x, z, high, name = 'eekhoorn') {
-  const { sfx, girl } = S, f = make(S, 'eekhoorn', x, z, name), g = guest(S, f, 4.6); let t = -1, busy = false; f.face = -1;
-  f.onTap = () => { if (t >= 0) return; t = 0; sfx.peep(); };
-  f.act = tick => f.setFrame(busy ? (f.walking ? 1 + (Math.floor(tick / 2) % 2) : 3) : t >= 0 && t < 1.7 ? 1 + (Math.floor(tick / 2) % 2) : t >= 1.7 ? 3 : 0);
-  return { f, guest: g, state: () => ({ frame: f.frame, lift: f.lift || 0, busy: t >= 0, there: g.there() }), step({ dt }) {
-    busy = g.mind(dt); if (busy) { t = -1; f.lift = 0; if (g.there()) look(f, girl); return; }
+/** the squirrel sits by the foot of its tree (`trunk`: [x, z, r] in the set's measure, the trunk's middle and how thick it
+ *  is). A tap: it scampers to the trunk, turns with its feet on the bark and runs up head first, rustles about in the
+ *  leaves, turns round and comes down head first, and hops off with an acorn */
+export function squirrel(S, x, z, high, name = 'eekhoorn', trunk = [x + .8, z - .6, .45]) {
+  const { sfx, girl } = S, f = make(S, 'eekhoorn', x, z, name), g = guest(S, f, 4.6), [kx, kz] = S.at([trunk[0], trunk[1]]), home = [f.x, f.z];
+  const side = Math.sign(f.x - kx) || -1, W = f.H * 160 / 124 * .5, bark = kx + side * trunk[2], foot = bark + side * W * .9;   // which side of the tree it lives on; half its card's width; the bark; where it stands to start up
+  let t = -1, busy = false, rustle = 0; f.face = -side;
+  const ease = k => k * k * (3 - 2 * k), Q = Math.PI / 2;
+  f.onTap = () => { if (t >= 0 || busy) return; t = 0; sfx.peep(); };
+  f.act = tick => { const run = 1 + (Math.floor(tick / 2) % 2); f.setFrame(busy ? (f.walking ? run : 3) : t < 0 ? 0 : t < 2.55 ? (t > 1.3 && t < 1.8 ? 1 : run) : t < 4.1 ? 3 : run); };
+  return { f, guest: g, state: () => ({ frame: f.frame, lift: f.lift || 0, climbing: t >= .5 && t < 2.5, busy: t >= 0, there: g.there() }), step({ dt }) {
+    busy = g.mind(dt); if (busy) { t = -1; f.lift = 0; f.lean = 0; if (g.there()) look(f, girl); return; }
     if (t < 0) return; t += dt;
-    f.lift = t < .7 ? high * t / .7 : t < 1.0 ? high : t < 1.7 ? high * (1.7 - t) / .7 : 0;   // up, a rummage in the leaves, down again
-    if (t > 1.7 && t - dt <= 1.7) { sfx.hop(); S.confetti(f.x, f.y + .4, f.z, ['#8d6a48', '#c79a66', '#7a5a3e'], 6, undefined, 1.5); }
-    if (t > 4) { t = -1; f.lift = 0; }
+    const Z = home[1] + (kz + .25 - home[1]) * Math.min(1, t / .35) * (t < 4.1 ? 1 : Math.max(0, 1 - (t - 4.1) / .5));   // a little in front of the trunk while it is on it
+    if (t < .35) { const k = ease(t / .35); f.x = home[0] + (foot - home[0]) * k; f.z = Z; f.face = -side; f.lift = 0; f.lean = 0; }                       // to the tree
+    else if (t < .5) { const k = ease((t - .35) / .15); f.x = foot + (bark - foot) * k; f.lift = W * k; f.lean = -side * Q * k; }                            // turns: feet on the bark
+    else if (t < 1.3) { f.x = bark; f.lift = W + high * ease((t - .5) / .8); f.lean = -side * Q; }                                                           // up, head first
+    else if (t < 1.8) { f.lift = W + high + Math.sin((t - 1.3) * 26) * .03; if (t - dt < 1.3) { sfx.rustle(); S.confetti(f.x, f.y + f.lift + .3, f.z, ['#7fa676', '#93b071', '#c79a66'], 7, undefined, 1.2); } if (t > 1.55) f.face = side; }   // a rummage in the leaves, and round
+    else if (t < 2.5) { f.lift = W + high * (1 - ease((t - 1.8) / .7)); }                                                                                     // down, head first
+    else if (t < 2.65) { const k = ease((t - 2.5) / .15); f.x = bark + (foot - bark) * k; f.lift = W * (1 - k); f.lean = -side * Q * (1 - k); f.face = side; if (t - dt < 2.5) { sfx.hop(); S.confetti(f.x, f.y + .4, f.z, ['#8d6a48', '#c79a66', '#7a5a3e'], 6, undefined, 1.5); } }   // off the trunk, with its acorn
+    else if (t < 4.1) { f.x = foot; f.lift = 0; f.lean = 0; }
+    else { const k = ease(Math.min(1, (t - 4.1) / .5)); f.x = foot + (home[0] - foot) * k; f.face = side; if (k >= 1) { t = -1; f.face = -side; } }          // and home again
+    if (t >= 0) f.z = Z;
   } };
 }
 
