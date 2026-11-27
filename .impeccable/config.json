@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.3, 1.5, .5, 1)",
+        "createdAt": "2026-11-27T18:29:15.816Z",
+        "reason": "Claude: the shop mirror's hop when she puts something on is a deliberate squash-and-stretch toy bounce in a game for small children; the same hop exists in the pixel game's shop and the coin pop"
+      }
+    ]
+  }
+}
