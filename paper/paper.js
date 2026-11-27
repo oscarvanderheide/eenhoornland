@@ -305,6 +305,7 @@ function buildSet(def) {
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
     glue: group => bake(group),   // a thing that moves as a whole (a windmill's sails): glue its pieces into one, so it is one draw
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
+    dry: (x, z) => { const f = floorAt(x, z); return !!f && !f.swim; },   // is there ground here (any island's, a jetty, a mountain), not water? (the boat keeps off it)
     land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
     where: () => set.name,   // the set she stands on now
     world: obj => { scene.add(obj); return obj; },
@@ -873,7 +874,7 @@ function hideTreesInFront() {
   for (const t of now) t.g.visible = false;
   treesHidden.clear(); for (const t of now) treesHidden.add(t);
 }
-function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; uni.busy = false; uni.lift = 0; uni.lean = 0; }
+function stopPlay() { steerTo = null; playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; uni.busy = false; uni.lift = 0; uni.lean = 0; }
 /** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
 function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = goTo(x, z, { then, near }); }
 
@@ -919,6 +920,7 @@ const herOnScreen = () => { const v = new THREE.Vector3(girl.x, girl.y + (girl.l
    The picture dips to dark for a moment, as when you step through a doorway, and she stands at the other door. Nothing is
    built: both sides exist already. She has to step out of a door's zone before it takes her again. */
 let doorArmed = true, through = null, push = [0, 0];
+let steerTo = null;   // where she steers a toy to (the boat): a tap on the water
 const fadeEl = document.body.appendChild(document.createElement('div'));
 fadeEl.style.cssText = 'position:fixed;inset:0;background:#2c2226;opacity:0;pointer-events:none;z-index:4;transition:opacity .13s linear';
 function goThrough(d) { if (ride.on) dismount(true); const twin = sets.flatMap(q => q.doors).find(q => q.name === d.name && q !== d); if (!twin || through) return; through = { twin, t: 0, done: false }; fadeEl.style.opacity = 1; sfx.door(1); }
@@ -1356,7 +1358,15 @@ function frame(now) {
     let px = Math.abs(pad.move[0]) > .5 ? Math.sign(pad.move[0]) : 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
     let py = Math.abs(pad.move[1]) > .5 ? Math.sign(pad.move[1]) : 0; if (keys.has('arrowup') || keys.has('w')) py -= 1; if (keys.has('arrowdown') || keys.has('s')) py += 1;   // (up and down: a ladder; y is down on the screen)
     if (hold) { const [hx, hy] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (Math.abs(hold.y - hy) > 30) py = Math.sign(hold.y - hy); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
-    const act = playAct; playAct = false; playing.step(dt, { x: px, y: py, act }); ix = iz = 0; target = null;
+    // a toy she steers (the boat): which way in the world. The stick and the keys, as when she walks; or a finger on the water: a
+    // tap is a place to go there, a finger held down steers towards it
+    let move = null;
+    if (playing.steer) {
+      if (ix || iz) { const l = Math.hypot(ix, iz); move = [ix / l, iz / l]; steerTo = null; }
+      else { if (hold) { const p = groundPoint(hold.x, hold.y); if (p) steerTo = [p.x, p.z]; }
+        if (steerTo) { const [bx, bz] = playing.at ? playing.at() : [girl.x, girl.z], dx = steerTo[0] - bx, dz = steerTo[1] - bz, d = Math.hypot(dx, dz); if (d < 1.2) steerTo = null; else move = [dx / d, dz / d]; } }
+    }
+    const act = playAct; playAct = false; playing.step(dt, { x: px, y: py, act, move }); ix = iz = 0; target = null;
   }
   if (target && !ix && !iz) {
     while (target.way && target.way.length > 1 && Math.hypot(target.way[0][0] - girl.x, target.way[0][1] - girl.z) < .12) target.way.shift();   // a corner reached: on to the next
@@ -1562,6 +1572,8 @@ window.__p = {
   /** the named places of the set she stands on, or of the set called `name` */
   places(name) { return (sets.find(q => q.name === name) || set).places; },
   names: () => sets.map(q => [q.name, Object.keys(q.names)]),
+  /** steer the toy she is on (the boat) towards a place in the world, as a tap on the water does */
+  sail(x, z) { steerTo = [x, z]; },
   /** does a finger at this spot on the screen land on something that answers a tap (without the finger's-width margin)? */
   direct(x, y) { const h = pickAt(x, y); return !!(h && h.object.userData.tap); },
   /** whose tap a finger at this spot would get through the margin alone: a figure's name, 'thing', or null */

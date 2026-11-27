@@ -676,10 +676,16 @@ export default async function (t) {
     await open('?set=strand', LAND); await t.sleep(1500);
     const b = () => t.ev(`__p.toy('boot')`), s0 = await b();
     ok(!(await t.ev(`__p.canReach(${s0.stands[1][0]}, ${s0.stands[1][1]})`)), 'the rainbow island cannot be walked to');
-    await t.ev(`__p.placeAt(${s0.stands[0][0] - 2.5}, ${s0.stands[0][1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'row'`, 6), 'a tap on the boat: she walks out on the jetty, climbs in, and they row');
-    await t.sleep(2500); await t.shot('tmp-shots/y-boat-land.png'); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 10), 'across, and out onto the rainbow island\'s jetty');
+    await t.ev(`__p.placeAt(${s0.stands[0][0] - 2.5}, ${s0.stands[0][1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'sail'`, 6), 'a tap on the boat: she walks out on the jetty and climbs in');
+    await t.sleep(1500); ok((await b()).v < .1, 'it waits for her to steer');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(3200); await t.ev('__p.keys([])'); const s1 = await b(); ok(Math.hypot(s1.boat[0] - s0.moors[0][0], s1.boat[1] - s0.moors[0][1]) > 2, `the arrow turns it round and rows it out (${s1.boat.map(v => v.toFixed(1))})`);
+    const v0 = await t.ev(`__p.toy('voyage')`); let through = 0;
+    for (const r of v0.ringsAt) { await t.ev(`__p.sail(${r[0]}, ${r[1]})`); for (let i = 0; i < 40; i++) { await t.sleep(300); const q = await b(); if (Math.hypot(q.boat[0] - r[0], q.boat[1] - r[1]) < 1.2) break; } if (!through) { await t.sleep(400); await t.shot('tmp-shots/y-boat-land.png'); } through++; }
+    const v1 = await t.ev(`__p.toy('voyage')`); ok(v1.passed === 7, `a tap on the water rows there: through all seven rings (${v1.passed})`); ok(v1.whale.blows > 0, 'the whale came up and blew');
+    await t.ev(`__p.sail(${v1.bottle[0]}, ${v1.bottle[1]})`); ok(await until(`__p.toy('voyage').fished`, 14), 'rowing up to the bottle: she fishes it out');
+    await t.ev(`__p.sail(${s0.moors[1][0]}, ${s0.moors[1][1]})`); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 30), 'near the island\'s jetty it glides in, and out she steps');
     const i1 = await t.ev('__p.info()'); ok(i1.lift === 0 && Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.5, 'her unicorn came along');
-    await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'row'`, 6), 'and back again'); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'strand'`, 12), 'on the beach');
-    await t.ev(`__p.placeAt(${s0.stands[1][0]}, ${s0.stands[1][1]})`); await t.sleep(400); ok(await until(`__p.toy('boot').empty`, 3), 'she waits on the far jetty: the boat comes over by itself'); ok(await until(`__p.toy('boot').at === 1 && !__p.toy('boot').empty`, 8), 'and lies there for her');
+    await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'sail'`, 6), 'in again'); await t.ev(`__p.sail(${s0.moors[0][0]}, ${s0.moors[0][1]})`); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'strand'`, 40), 'and all the way back to the beach');
+    await t.ev(`__p.placeAt(${s0.stands[1][0]}, ${s0.stands[1][1]})`); await t.sleep(400); ok(await until(`__p.toy('boot').empty`, 3), 'she waits on the far jetty: the boat comes over by itself'); ok(await until(`__p.toy('boot').at === 1 && !__p.toy('boot').empty`, 25), 'and lies there for her');
   }
 }

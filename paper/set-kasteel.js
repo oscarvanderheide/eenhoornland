@@ -32,8 +32,8 @@ export default {
        and the sides, low rocky hills at the front so the garden shows over them. They are not ground to stand on: she can
        only come down inside, in the garden, on her winged unicorn */
     const peaks = [], MR = rng(781);
-    for (let a = 0; a < 6.283; a += .2) {
-      const south = Math.sin(a) > .45, x = Math.cos(a) * 11.7, z = -.1 + Math.sin(a) * 8.7, back = Math.sin(a) < -.3;
+    for (let a = 0; a < 6.283; a += .15) {   // (the island is bigger now: the ring with it, the peaks closer together)
+      const south = Math.sin(a) > .45, x = Math.cos(a) * 15.5, z = -.1 + Math.sin(a) * 11.6, back = Math.sin(a) < -.3;
       const h = south ? .9 + MR() * .5 : back ? 3.4 + MR() * 1.8 : 2.2 + MR() * 1.2, r = south ? 1.25 + MR() * .3 : 1.55 + MR() * .45;
       const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5 + Math.floor(MR() * 3)), paper(['#b7aed0', '#a99fc6', '#c3bbd8'][peaks.length % 3], { extra: { flatShading: true } })); m.position.set(x, h / 2 - .3, z); m.rotation.y = MR() * 6.28; m.castShadow = m.receiveShadow = true; root.add(m);
       if (!south) { const cap = new THREE.Mesh(new THREE.ConeGeometry(r * .32, h * .3, 5), paper('#fbf7ee')); cap.position.set(x, h - .3 - h * .15 + .02, z); cap.rotation.y = m.rotation.y; root.add(cap); }

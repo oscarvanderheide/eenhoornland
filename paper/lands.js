@@ -62,12 +62,16 @@ export function strandLand() {
   };
 }
 
-/** the rainbow island, east of the beach over a long bridge (its own, running west). Made at its real size */
-ORIGIN.regenboog = [ORIGIN.strand[0] + 15.0 + 12 + 11.2, ORIGIN.strand[1]];
+/** the rainbow island, far out at sea south-east of the beach (Oscar: "candy island shouldnt be so close. we need to travel
+ *  further over sea and encounter things"; "candy island is also very small"). She gets there in the boat, steering it
+ *  herself (boat.js), past the things of the voyage (voyage.js). Made at its real size, and bigger than it was.
+ *  `bridge`: where its jetty runs out to the west (no bridge any more; the name is kept for the jetty and its shot) */
+export const VOYAGE = 50;   // how far the island's shore lies from the beach's, over the water
+ORIGIN.regenboog = [ORIGIN.strand[0] + 15.0 + VOYAGE + 15.0, ORIGIN.strand[1] + 20];
 export function regenboogLand() {
   return {
-    SAND: blob(0, 0, 11.6, 8.2, 601, 80, .04), GRASS: blob(0, -.1, 10.8, 7.4, 602, 80, .04), POND: blob(6.6, 2.6, 1.9, 1.3, 603, 32, .06),
-    bridge: { x0: -(11.2 + 12 + .7), x1: -10.6, z0: -.6, z1: .6 },
+    SAND: blob(0, 0, 15.8, 11.4, 601, 96, .04), GRASS: blob(0, -.1, 15.0, 10.6, 602, 96, .04), POND: blob(6.6, 2.6, 1.9, 1.3, 603, 32, .06),
+    bridge: { x0: -18.0, x1: -14.6, z0: -.6, z1: .6 },
   };
 }
 
@@ -75,7 +79,7 @@ export function regenboogLand() {
 ORIGIN.kasteel = [ORIGIN.wei[0] + 30.7 + 12 + 10.9, ORIGIN.wei[1] - 2.1];
 export function kasteelLand() {
   return {
-    SAND: blob(0, 0, 11.4, 8.6, 701, 80, .04), GRASS: blob(0, -.1, 10.6, 7.8, 702, 80, .04),
+    SAND: blob(0, 0, 15.2, 11.6, 701, 96, .04), GRASS: blob(0, -.1, 14.4, 10.8, 702, 96, .04),   // (bigger: Oscar found it cramped)
     bridge: { x0: -(10.9 + 12 + .2), x1: -10.3, z0: -.6, z1: .6 },
   };
 }
