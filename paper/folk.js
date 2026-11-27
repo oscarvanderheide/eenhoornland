@@ -113,7 +113,7 @@ export function musician(S, name, spec, note, x, z, o) {
     if (sit === 'on') { const k = Math.min(1, st / .3); girl.x = sx; girl.z = sz; girl.lift = Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = Math.sign(f.x - sx) || 1;
       if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); L.guests.forEach((q, i) => q.guest.invite(seats[i % seats.length])); mode = 'play'; t = 0; next = .25; again = L.loop; plays++; o.sound(); } return; }
     if (sit === 'sit') { girl.lift = 0; girl.poseName = 'sit';
-      if (!cheered && L.guests.every(q => q.guest.there())) { cheered = true; S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
+      if (!cheered && L.guests.every(q => q.guest.there())) { cheered = true; S.coins.reward('harp', f.x, (f.y || 0) + 1.6, f.z); S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
       if (inp.act || inp.x) { sit = 'off'; st = 0; L.guests.forEach(q => q.guest.leave()); mode = 'end'; t = 0; f.hopV = 1.2; } return; }
     const k = Math.min(1, st / .28); girl.lift = Math.sin(k * Math.PI) * .2; girl.poseName = null; if (k >= 1) { girl.lift = 0; sit = null; S.stopPlay(); }
   } };
@@ -187,7 +187,7 @@ export function witch(S, x, z) {
     const on = show > 0;
     const missing = Object.keys(wishes).filter(k => !have[k]); Object.entries(wishes).forEach(([k, w]) => { const i = missing.indexOf(k); w.g.visible = on && here && !made && i >= 0; if (w.g.visible) { w.x = wpx + (i - (missing.length - 1) / 2) * .72; w.floatY = w.y = y0 + 1.5 + Math.sin(time * 3 + i) * .04; } });
     if (!mode) return; t += dt;
-    if (mode === 'brew') { if (Math.floor(t * 6) !== Math.floor((t - dt) * 6)) S.confetti(wpx, y0 + 1.0, wpz, COLS, 3, S.starGeo, 1.8); if (t > 2.0 && !S.playing()) { made = true; mode = 'glad'; t = 0; sfx.chime(); present([wpx, y0 + 1.0, wpz], () => { S.gear.potion = true; }); } }
+    if (mode === 'brew') { if (Math.floor(t * 6) !== Math.floor((t - dt) * 6)) S.confetti(wpx, y0 + 1.0, wpz, COLS, 3, S.starGeo, 1.8); if (t > 2.0 && !S.playing()) { made = true; mode = 'glad'; t = 0; sfx.chime(); present([wpx, y0 + 1.0, wpz], () => { S.gear.potion = true; S.coins.reward('drankje', f.x, y0 + 1.4, f.z); }); } }
     else if (t > (mode === 'ask' ? 2.8 : 1.6)) mode = null;
   } };
 }

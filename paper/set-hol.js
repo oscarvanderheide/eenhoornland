@@ -53,7 +53,7 @@ export default {
     for (const x of GX) for (const s of [-1, 1]) { const len = D / 2 + .4 - G, mid = s * (G + len / 2), tall = s < 0 ? 3.6 : 1.5;
       const m = card(wavy(len + .2, tall, 7 + x + s, .15), .5, P(s < 0 ? 'rock' : 'rock2'), edgeMat); m.rotation.y = Math.PI / 2; m.position.set(x, 0, mid); root.add(m); S.wall(x, mid, .3, len / 2); }
     const walls = GX.map(x => S.wall(x, 0, .26, G + .05)), open = [0, 0, 0], opened = [false, false, false];
-    const unlock = i => { if (opened[i]) return; opened[i] = true; walls[i][2] = 0; sfx.hello(); S.confetti(...at(GX[i], 1.2, 0), ['#f6e3a0', '#bfe9c9', '#fbf5ea'], 16, S.starGeo, 2.2); };
+    const unlock = i => { if (opened[i]) return; opened[i] = true; walls[i][2] = 0; sfx.hello(); S.coins.reward('hol' + i, ...at(GX[i] - 1, 1.4, 0)); S.confetti(...at(GX[i], 1.2, 0), ['#f6e3a0', '#bfe9c9', '#fbf5ea'], 16, S.starGeo, 2.2); };
     // 1: a curtain of vines hanging from a root
     const vines = new THREE.Group(); vines.position.set(GX[0], 0, 0); vines.userData.live = true; root.add(vines);
     { const beam = new THREE.Mesh(new THREE.CylinderGeometry(.09, .11, 2 * G + .6, 7), P('twig')); beam.rotation.x = Math.PI / 2; beam.position.y = 2.35; beam.castShadow = true; vines.add(beam);

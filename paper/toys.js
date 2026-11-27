@@ -224,7 +224,7 @@ export function seesaw(S, x, y, z) {
     else if (psi < 1) {
       om += G * dt; psi += om * dt;
       if (psi <= -1) { const v = -om; psi = -1; om = 0; uwait = .16; sfx.thud(); airV = v * .5 + streak * .3; }                    // bump: she leaves her seat
-      else if (psi >= 1) { const v = om; psi = 1; om = 0; land = 0; sfx.thud(); uairV = 1.2 + v * .35 + streak * .75; uT = 2 * uairV / 9.8; if (streak >= 3) { flip = 1; flips++; sfx.hello(); S.confetti(uni.x, y + 1.6, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, S.starGeo, 2.6); } }   // her end lands: the unicorn is thrown up
+      else if (psi >= 1) { const v = om; psi = 1; om = 0; land = 0; sfx.thud(); uairV = 1.2 + v * .35 + streak * .75; uT = 2 * uairV / 9.8; if (streak >= 3) { flip = 1; flips++; sfx.hello(); S.coins.reward('salto', uni.x, y + 2, uni.z); S.confetti(uni.x, y + 1.6, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, S.starGeo, 2.6); } }   // her end lands: the unicorn is thrown up
     }
     if (air > 0 || airV > 0) { air += airV * dt; airV -= 9.8 * dt; if (air <= 0) { air = 0; airV = 0; } }
     if (uair > 0 || uairV > 0) { uair += uairV * dt; uairV -= 9.8 * dt; if (uair <= 0) { uair = 0; uairV = 0; flip = 0; } else if (flip > 0) flip = Math.max(.001, flip - dt / Math.max(.3, uT)); }

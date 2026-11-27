@@ -87,7 +87,7 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
       const k = Math.min(1, t / .4), [mx, mz] = end.at, h0 = at(.987); girl.x = h0.x + (mx - h0.x) * k; girl.z = h0.z + .05 + (mz - h0.z - .05) * k; girl.lean = 0;
       girl.lift = Math.max(0, (h0.y - .62 - 1.2 - girl.y) * (1 - k) + Math.sin(k * Math.PI) * .3); girl.poseName = k < .6 ? 'up' : null;
       if (uni && !uni.away) { uni.x = mx - 1.0; uni.z = mz + .2; uni.lift = Math.max(0, uni.lift * (1 - k)); }
-      if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; sfx.thud(); girl.hopV = 2.4; S.confetti(girl.x, girl.y + .6, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 14, S.starGeo, 2.2); if (uni && !uni.away) { uni.lift = 0; uni.hopV = 3; } back = 0; toy.shot = null; S.stopPlay(); } return; }
+      if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; sfx.thud(); S.coins.reward('tokkel', girl.x, girl.y + 1.2, girl.z); girl.hopV = 2.4; S.confetti(girl.x, girl.y + .6, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 14, S.starGeo, 2.2); if (uni && !uni.away) { uni.lift = 0; uni.hopV = 3; } back = 0; toy.shot = null; S.stopPlay(); } return; }
     if (mode === 'up') {   // rung by rung: her back to us, the ladder swaying; the camera low on the grass, looking up
       const k = Math.min(1, t / 3.4); girl.view = 'back'; girl.x = foot[0]; girl.z = foot[1] - .45; girl.lift = DECK * k; girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
       if (Math.floor(t / .24) !== Math.floor((t - dt) / .24)) sfx.click();

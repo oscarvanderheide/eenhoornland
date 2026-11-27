@@ -1192,6 +1192,7 @@ window.__p = {
   placeAt(x, z) { girl.x = x; girl.z = z; uni.x = x; uni.z = z - .9; if (heightAt(uni.x, uni.z) === null) { uni.x = x - 1; uni.z = z; } target = null; },
   walkTo(x, z) { target = goTo(x, z); },
   /** what fell from trees, and (for tests) let the tree nearest her drop this: 'appel', 'rups', 'sok', 'laars', 'vogelaar' */
+  coins: () => purse.coins,
   fallen: () => fallen.map(o => ({ kind: o.kind, mode: o.mode, at: [o.x, o.z], y: o.y })),
   drop(kind) { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); dropFrom(kind, p, p.y + t.top, t.kind); },
   tree() { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); return [p.x, p.y + t.top, p.z, t.kind]; },

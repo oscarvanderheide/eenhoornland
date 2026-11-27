@@ -274,7 +274,7 @@ export default async function (t) {
     ok(await until(`__p.toy('wip').psi === 1`, 4), 'the unicorn kicks off in its turn and she comes down again'); ok(await until(`__p.toy('wip').uair > .2`, 1), 'her end lands: the unicorn is thrown up');
     // kick off just as she lands, four times: the streak grows and the unicorn turns a somersault
     for (let k = 0; k < 4; k++) { await key(); await until(`__p.toy('wip').psi < 0`, 2); await until(`__p.toy('wip').psi === 1`, 4); }
-    await t.sleep(250); const s1 = await toy(); ok(s1.best >= 3 && s1.flips >= 1, `kicking off just as she lands: higher each time, and a somersault (streak ${s1.best}, ${s1.flips} flips)`); await t.shot('tmp-shots/y-wip-flip-land.png');
+    await t.sleep(250); const s1 = await toy(); ok(s1.best >= 3 && s1.flips >= 1, `kicking off just as she lands: higher each time, and a somersault (streak ${s1.best}, ${s1.flips} flips)`); ok(await until(`__p.coins() >= 1`, 3), 'the first somersault: a coin'); await t.shot('tmp-shots/y-wip-flip-land.png');
     await t.sleep(1500); await space(); ok(await until(`__p.toy('wip').mode === null`, 4), 'a touch on her: off they hop'); ok(!(await toy()).sister, 'and her sister runs home to bed'); await t.sleep(600);
     const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
   }
@@ -429,7 +429,7 @@ export default async function (t) {
       await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('hol').stone[0] > ${plate[0] - .06}`, 8), 'walking into the stone: it rolls the way she walks'); await t.ev(`__p.keys([])`); await t.sleep(300);
       const s1 = await st(); ok(!(await hol()).onPlate, 'level with the plate, but not on it yet');
       await t.ev(`__p.placeAt(${s1[0] + off[0]}, ${s1[1] + off[1] + 1.0})`); await t.sleep(1500); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('hol').onPlate`, 8), 'from below it, walking up: onto the plate it rolls'); await t.ev(`__p.keys([])`); }
-    ok((await hol()).opened[1], 'and the stone door sinks'); await t.sleep(900);
+    ok((await hol()).opened[1], 'and the stone door sinks'); ok(await until(`__p.coins() >= 2`, 3), 'each puzzle worked out the first time: a coin'); await t.sleep(900);
     await t.ev(`__p.placeAt(${pl.three[0] - 1.5}, ${pl.three[1]})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-3-land.png'); await tapSpot('kristal2'); await t.sleep(900); ok((await hol()).dir === 1 && !(await hol()).opened[2], 'a tap turns the crystal: the beam swings to the bud (a flower opens, the door stays)'); await t.shot('tmp-shots/y-hol-3b-land.png');
     await tapSpot('kristal2'); await t.sleep(1000); ok((await hol()).dir === 2 && (await hol()).opened[2], 'again: the beam is on the sun-stone, and the petal door opens'); await t.sleep(900); await t.shot('tmp-shots/y-hol-3c-land.png');
     await t.ev(`__p.placeAt(${pl.nest[0] - .9}, ${pl.nest[1] + .5})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-4-land.png'); await t.ev(`__p.tap('nestei')`); ok(await until(`__p.quest().stage === 'ei'`, 9), 'a tap on the egg in its nest: she takes it, and it is hers'); await t.sleep(600); await t.shot('tmp-shots/y-hol-egg-land.png');
@@ -475,7 +475,7 @@ export default async function (t) {
     const c0 = (await toy('boerderij')).can; await t.ev(`__p.placeAt(${c0[0] - 1.2}, ${c0[1] + 1})`); await t.sleep(2400); await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'she picks up the watering can');
     await t.ev(`__p.placeAt(${d.fountain[0] + 2.2}, ${d.fountain[1]})`); await t.sleep(2400); await tapAt(d.fountain[0], .6, d.fountain[1] - 2.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'and fills it at the fountain');
     await toWitch(); await t.ev(`__p.tap('heks')`); ok(await until(`__p.toy('heks').have.water`, 8), 'a tap on the witch with the full can: she pours it into the pot'); await t.sleep(700); await t.shot('tmp-shots/y-witch-brew-land.png');
-    ok(await until(`__p.toy('heks').potion`, 9), 'the pot boils over, and the potion is hers'); await t.sleep(500); await t.shot('tmp-shots/y-witch-potion-land.png');
+    ok(await until(`__p.toy('heks').potion`, 9), 'the pot boils over, and the potion is hers'); { const c0 = await t.ev('__p.coins()'); await t.sleep(1800); ok(await t.ev('__p.coins()') > c0 || c0 >= 1, 'and a coin for it'); } await t.sleep(500); await t.shot('tmp-shots/y-witch-potion-land.png');
     await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); ok(await until(`__p.toy('braam').open`, 8), 'a tap on the brambles with the potion: they bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-bloom-land.png');
     ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and the meadow can be walked to');
   }
@@ -529,7 +529,7 @@ export default async function (t) {
     // the zipline: up again, a tap on the hand-bar, and down the cable to the village
     await t.ev(`__p.tap('ladder')`); ok(await until(`__p.toy('boomhut').up`, 6), 'up the ladder again'); await t.sleep(1200);
     await t.ev(`__p.tap('zipline')`); ok(await until(`__p.toy('boomhut').mode === 'zip'`, 2), 'a tap on the zipline\'s bar: she takes hold and off she goes'); await t.sleep(2400); await t.shot('tmp-shots/y-zipline-land.png');
-    ok(await until(`__p.toy('boomhut').mode === null`, 8), 'and lets go at the end'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
+    ok(await until(`__p.toy('boomhut').mode === null`, 8), 'and lets go at the end'); ok(await until(`__p.coins() >= 1`, 3), 'the first ride: a coin'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
   }
 
   /* ---------------- shaking a tree: what falls out ---------------- */

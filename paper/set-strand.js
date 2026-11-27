@@ -71,6 +71,7 @@ export default {
     const lamps = [];   // (the lighthouse is the beach's light)
     rowboat(S, 10.6, H_SAND, 4.4, .5); driftwood(S, -11.2, H_SAND, 5.4, .4); driftwood(S, 4.4, H_SAND, -5.6, -.3, 1.1); driftwood(S, -1.6, H_SAND, 7.4, 1.1, .9);
     const mills = [];
+    for (const [cx, cz] of [[-7.6, -2.0], [9.4, -.8], [2.4, 15.4], [-5.0, 7.8]]) S.coinAt(cx, cz);   // coins lying about: on the dune, by the lighthouse, at the end of the pier, by the turtle
     const live = {
       krab: befriend(S, crab(S, 5.2, 3.6, [[5.2, 3.6], [8.2, 5.0], [3.9, 1.2]]), { speed: 2.4, hop: .8, gap: 1.0, hello: () => S.sfx.click() }),   // the beach's companion: it scuttles after her (companion.js)
       schildpad: turtle(S, -6.2, 6.4, [[-6.2, 6.4], [-2.6, 7.2], [-10.2, 5.2]]),

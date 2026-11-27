@@ -70,7 +70,7 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0 }) {
     S.tap(bed, hit => { const p = hit && hit.point ? [hit.point.x, hit.point.z] : [girl.x, girl.z]; tapRow(rows.slice().sort((a, b) => Math.hypot(a.mid[0] - p[0], a.mid[1] - p[1]) - Math.hypot(b.mid[0] - p[0], b.mid[1] - p[1]))[0]); }); }
   let pour = null, flying = null, pulled = 0, watered = 0, held = false, fed = 0;
   const me = {}, letGo = () => { held = false; carrot.g.visible = false; girl.poseName = null; };   // (put down, it is simply gone: there are more)
-  S.offer(who => { if (!held) return false; letGo(); S.hands.free(me); fed++; who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); return 'wortel'; });
+  S.offer(who => { if (!held) return false; letGo(); S.hands.free(me); fed++; S.coins.reward('wortel', who.x, (who.y || 0) + 1, who.z); who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); return 'wortel'; });
   function tapRow(row) {
     if (S.playing() || pour) return;
     if (row.stage === 2 && row.left > 0) { S.walkThen(row.at[0], row.at[1], () => pull(row), 1.1); return; }

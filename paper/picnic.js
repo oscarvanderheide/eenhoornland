@@ -34,7 +34,7 @@ export function picnic(S, x, y, z, guests) {
     if (mode === 'on') { const k = Math.min(1, t / .3); girl.x = wx - .1; girl.z = wz + .35 + (1 - k) * .6; girl.lift = .03 * k + Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1;
       if (k >= 1) { mode = 'sit'; t = 0; sits++; cheered = false; sfx.hop(); guests.forEach((q, i) => q.guest.invite(seats[i % seats.length])); } return; }
     if (mode === 'sit') { girl.lift = .03; girl.poseName = 'sit'; stepEat(dt);
-      if (!cheered && guests.every(q => q.guest.there())) { cheered = true; sfx.chime(); S.confetti(wx, y + .9, wz, ['#f4a6c4', '#f8dde4', '#f2c65c'], 12, undefined, 2.2); }   // everybody is here
+      if (!cheered && guests.every(q => q.guest.there())) { cheered = true; S.coins.reward('picknick', wx, y + 1.1, wz); sfx.chime(); S.confetti(wx, y + .9, wz, ['#f4a6c4', '#f8dde4', '#f2c65c'], 12, undefined, 2.2); }   // everybody is here
       if (inp.act || inp.x) { mode = 'off'; t = 0; guests.forEach(q => q.guest.leave()); if (eat) { (eat.kind === 'appel' ? appleF : nutF).g.visible = false; eat = null; } } return; }
     const k = Math.min(1, t / .28); girl.z = wz + .35 + k * .65; girl.lift = Math.sin(k * Math.PI) * .2; girl.poseName = null; if (k >= 1) { girl.lift = 0; mode = null; S.stopPlay(); }
   } };

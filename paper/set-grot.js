@@ -46,7 +46,7 @@ export default {
     box(.84, .14, .54, 'wood2', 0, .07, .25, lid); for (const sx of [-.3, .3]) box(.07, .16, .56, 'gold', sx, .07, .25, lid); S.glue(lid);
     S.solid({ x: 0, z: -.55, r: .5 });
     const [cx, cz] = S.at([0, -.55]), present = gift(S, 'haak', HOOK); let open = 0, opened = false, busy = false;
-    S.tap(chest, () => { if (S.playing() || opened || busy) return; busy = true; S.walkThen(cx, cz + 1.0, () => { opened = true; sfx.click(); setTimeout(() => { if (!S.gear.hook) present([cx, .7, cz], () => { S.gear.hook = true; }); }, 450); }, 1.2); });
+    S.tap(chest, () => { if (S.playing() || opened || busy) return; busy = true; S.walkThen(cx, cz + 1.0, () => { opened = true; sfx.click(); setTimeout(() => { if (!S.gear.hook) present([cx, .7, cz], () => { S.gear.hook = true; S.coins.reward('haak', S.girl.x, S.girl.y + 1.1, S.girl.z); }); }, 450); }, 1.2); });
 
     return {
       start: [0, D / 2 - 1.15], uni: [.9, D / 2 - 1.0],
