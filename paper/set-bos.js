@@ -4,6 +4,8 @@
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
 import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora.js';
+import { musician } from './folk.js';
+import { PEOPLE2, PROPS2 } from './people2.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
@@ -62,6 +64,9 @@ export default {
     // (Oscar, 2026-11-27: "it should be more like within the forest in some area surrounded by trees not with paths")
     const [gx, gz] = [-9.2, 3.5]; lay(blob(gx, gz, 2.5, 1.8, 237, 40, .06), GROUND.grass);
     for (let i = 0; i < 10; i++) { const a = (-172 + i * 18.2) / 180 * Math.PI, x = gx + Math.cos(a) * (3.35 + (i % 2) * .5), z = gz + Math.sin(a) * (2.5 + (i % 3) * .35); S.pine(x, z, H_GRASS, 1.9 + (i % 3) * .5, ['#5f8665', '#6f9670', '#547a5c'][i % 3]); }
+    // the harp's glade: hidden far in the east of the forest, off every path, pines all round it but for a gap in front
+    const [hx, hz] = [17.8, 4.9]; lay(blob(hx, hz, 2.1, 1.5, 238, 36, .06), GROUND.grass);
+    for (let i = 0; i < 12; i++) { const a = (-200 + i * 20) / 180 * Math.PI, x = hx + Math.cos(a) * (2.9 + (i % 2) * .45), z = hz + Math.sin(a) * (2.1 + (i % 3) * .3); S.pine(x, z, H_GRASS, 2.0 + (i % 3) * .55, ['#547a5c', '#5f8665', '#6f9670'][i % 3]); }
 
     /* ---------------- things, in grey: the atelier, the bushes somebody hides in, the big oak with the treehouse ---------------- */
     const theCabin = cabin(S, ax, H_GRASS, az);   // a cabin of logs where the pixel game had the atelier (Oscar: a log cabin, not a normal house)
@@ -71,7 +76,7 @@ export default {
     for (const [x, z] of [[tx - 1.3, tz - .9], [tx + 1.2, tz - .6], [tx + .2, tz - 1.5]]) S.lollipop(x, z, 3.3, 1.05, '#7fa676', '#a3c08c', 260 + Math.round(x), .5);
 
     /* ---------------- trees: a forest's worth ---------------- */
-    const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
+    const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [hx, hz], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
     const greens = [['#7fa676', '#a3c08c'], ['#93b071', '#b3c98d'], ['#6f9670', '#8fb089']], R = rng(271); let n = 0;
     for (let i = 0; i < 3600 && n < 84; i++) {
       const x = (-15 + R() * 35) * K, z = (-7.6 + R() * 15.2) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
@@ -108,12 +113,13 @@ export default {
       // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.6, 'eekhoorn2'), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.5, 'eekhoorn3') };
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
+    const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5 });   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); },
-      toys: { ...live, ...flies, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); },
+      toys: { ...live, ...flies, harpist: harp, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
@@ -121,7 +127,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

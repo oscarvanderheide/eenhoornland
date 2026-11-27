@@ -427,4 +427,15 @@ export default async function (t) {
     await t.ev(`__p.walkTo(${pl.two[0]}, ${pl.two[1]})`); await t.sleep(3500); const w = await t.ev('__p.who()'), g = await t.ev('__p.info()'); ok(Math.hypot(w.egg[0] - g.girl[0], w.egg[1] - g.girl[1]) < 2.2, 'the egg hops along behind her'); await t.shot('tmp-shots/y-hol-follow-land.png');
     await t.ev(`__p.walkTo(${pl.start[0] + .4}, ${pl.start[1] + .95})`); ok(await until(`__p.info().set === 'bos'`, 14), 'and out into the forest again'); await t.sleep(1200); const w2 = await t.ev('__p.who()'), g2 = await t.ev('__p.info()'); ok(Math.hypot(w2.egg[0] - g2.girl[0], w2.egg[1] - g2.girl[1]) < 2.6, 'the egg came out with her'); await t.shot('tmp-shots/y-egg-forest-land.png');
   }
+
+  /* ---------------- the other musicians: guitar on the beach, harp hidden in the forest, flute on the hill, the herald at the castle ---------------- */
+  if (!only || only === 'music') {
+    await open('?set=wei', LAND); await t.sleep(1500); await t.ev('__p.open()');
+    const toy = n => t.ev(`__p.toy('${n}')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`);
+    for (const [n, dx, dz] of [['fluitist', 1.6, 1.0], ['harpist', -1.9, 1.4], ['gitarist', 1.8, 1.2], ['trompetter', 2.4, 2.6]]) {
+      const [x, z] = await at(n); ok(await t.ev(`__p.canReach(${x + dx}, ${z + dz})`), `she can walk to the ${n}`); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2500);
+      ok(!(await toy(n)).playing, `the ${n} is silent until asked`); await t.ev(`__p.tap('${n}')`); await t.sleep(1700); const m = await toy(n); ok(m.playing && m.notes > 0, `a tap: the ${n} plays, and notes float up`); await t.shot(`tmp-shots/y-${n}-land.png`);
+      ok(await until(`!__p.toy('${n}').playing`, 7), 'and stops again');
+    }
+  }
 }

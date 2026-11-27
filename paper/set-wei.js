@@ -10,7 +10,8 @@ import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDis
 import { cottage, shore, meadow, bouquet, pinwheel, bench, lantern, dandelion, GROUND } from './props.js';
 import { kite, balloon } from './toys.js';
 import { butterfly } from './critters.js';
-import { baker, painter } from './folk.js';
+import { baker, painter, musician } from './folk.js';
+import { PEOPLE2, PROPS2 } from './people2.js';
 import { sheep, lamb, otter } from './critters2.js';
 import { gift, SNORKEL } from './gear.js';
 import { scatter, goldGrass } from './flora.js';
@@ -78,7 +79,7 @@ export default {
     const bakery = cottage(S, 3.2, H_GRASS, -5.7, null, { wall: '#f6e7c8', roof: '#5f8fb0', door: '#b9675a' });
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
     let found = 0; const present = gift(S, 'duikbril', SNORKEL);   // how often the otter brought something up for her; the moment it is hers
-    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9) };   // the baker by his door, the painter painting the waterfall (folk.js)
+    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.flute(), play: [0, 1], rest: 2, end: 3, from: [.45, .98] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
     const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [21.6, -4.3]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];

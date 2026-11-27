@@ -13,6 +13,8 @@ import { strandLand, BACK } from './lands.js';
 import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
 import { frisbee } from './toys.js';
+import { musician } from './folk.js';
+import { PEOPLE2, PROPS2 } from './people2.js';
 
 const H_SAND = -.32, H_DUNE = 0, H_ROCK = -.02, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', rock: '#bdb6c9', rock2: '#cbc5d6', path: '#f3e6c4' };
@@ -36,6 +38,8 @@ export default {
     for (let z = BR.z0; z < BR.z1; z += .32) { const pl = slab(rect(BR.x0 - .05, z, BR.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat); if (z > GAP[0] - .1 && z < GAP[1] - .2) spare.add(pl); else root.add(pl); }
     for (let z = BR.z1 - 1.2; z > BR.z0 + .6; z -= 1.7) if (z < GAP[0] - .4 || z > GAP[1] + .4) for (const x of [BR.x0, BR.x1]) post(x, z);
     const gap = hookGap(S, 0, GAP[0], GAP[1], DECK, spare);
+    { const st = new THREE.Mesh(new THREE.CylinderGeometry(.27, .3, .3, 9), P('#d9cfc2')); st.position.set(8.1 - .24, H_SAND + .15, 1.55); st.castShadow = true; root.add(st); }
+    const guitar = musician(S, 'gitarist', PEOPLE2.gitarist, PROPS2.noot2, 8.1, 1.6, { sound: () => S.sfx.strum(), play: [0, 1], rest: 2, end: 3, from: [-.05, .6] });   // she plays the guitar under the parasol (folk.js)
     const disc = frisbee(S, -1.0, H_SAND, 5.5);   // a frisbee on the sand: she throws, the unicorn fetches (toys.js)
     for (let z = PIER.z0; z < HEAD.z0; z += .32) root.add(slab(rect(PIER.x0 - .05, z, PIER.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
     for (let z = HEAD.z0; z < HEAD.z1; z += .32) root.add(slab(rect(HEAD.x0 - .05, z, HEAD.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
@@ -89,10 +93,10 @@ export default {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
-        light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e);
+        light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal

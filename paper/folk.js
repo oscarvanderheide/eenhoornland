@@ -97,7 +97,7 @@ export function player(S, x, z) {
  *  ([dx, dy] from the card's middle bottom), and they end with frame `o.end` (a bow, a wave). At rest: frame `o.rest`.
  *  `o.sound` makes the music (one of the stage's soft instruments); `o.lift` seats them on something. */
 export function musician(S, name, spec, note, x, z, o) {
-  const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face;
+  const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face; if (o.sink) f.sink = o.sink;
   const notes = [0, 1, 2].map(i => { const n = S.figure(name + 'noot' + i, note); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
   const from = o.from || [.3, 1.1], long = o.long || 4.8; let mode = null, t = 0, plays = 0, next = 0, sent = 0;
   f.onTap = () => { if (mode) return; mode = 'play'; t = 0; next = .25; plays++; o.sound(); };
