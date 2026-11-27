@@ -4,7 +4,7 @@
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
 import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora.js';
-import { musician } from './folk.js';
+import { musician, witch } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { picnic } from './picnic.js';
@@ -76,7 +76,7 @@ export default {
     for (const [x, z] of [[tx - 1.3, tz - .9], [tx + 1.2, tz - .6], [tx + .2, tz - 1.5]]) S.lollipop(x, z, 3.3, 1.05, '#7fa676', '#a3c08c', 260 + Math.round(x), .5);
 
     /* ---------------- trees: a forest's worth ---------------- */
-    const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [hx, hz], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
+    const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [hx, hz], [cx - .2, cz - .25], [cx - 2.1, cz - .25], [cx + 1.7, cz - .25], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
     const greens = [['#7fa676', '#a3c08c'], ['#93b071', '#b3c98d'], ['#6f9670', '#8fb089']], R = rng(271); let n = 0;
     for (let i = 0; i < 3600 && n < 84; i++) {
       const x = (-15 + R() * 35) * K, z = (-7.6 + R() * 15.2) * K, pineTree = R() < .62, c = greens[Math.floor(R() * greens.length)];
@@ -113,13 +113,14 @@ export default {
       // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.6, 'eekhoorn2'), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.5, 'eekhoorn3') };
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
+    const heks = witch(S, cx - .7, cz - .25);   // the witch and her pot, in the clearing where the paths meet (folk.js)
     const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5 });   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); },
-      toys: { ...live, ...flies, harpist: harp, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); },
+      toys: { ...live, ...flies, heks, harpist: harp, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
@@ -127,7 +128,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], witch: [cx - 1.0, cz + 1.1], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

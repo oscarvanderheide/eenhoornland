@@ -14,6 +14,7 @@ import { farm, well, scarecrow } from './farm.js';
 import { grandma, gardener, fisher, player } from './folk.js';
 import { dolphin } from './critters2.js';
 import { findSpots, inOval } from './flora.js';
+import { STORY } from './story.js';
 import { dorpLand, bosLand, weiLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile, spread out by SPREAD) */
@@ -140,7 +141,10 @@ export default {
 
     /* ---------------- single things: the sword's stone, the zipline's pole, the bike, the mud ---------------- */
     // the brambles that shut the bridge to the meadow: watered, they bloom into roses and curl aside (props.js). The fountain fills the can as well as the well
-    const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, theFarm);
+    // (they open for the witch's potion, not for the watering can: the can is there from the start, the potion is the story's. Oscar, 2026-11-27)
+    const potion = { holding: () => S.gear.potion, full: () => S.gear.potion, hint() { }, pourThen(done) { S.sfx.swish(3); const h = S.hand(); S.confetti(h.x + S.girl.face * .5, h.y + .2, h.z, ['#f4a6c4', '#f8dde4', '#bba6ea', '#f2c65c'], 18, S.starGeo, 2.4); setTimeout(done, 650); return true; } };
+    S.shared.can = theFarm;
+    const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, potion, STORY.drankje, 0);
     // the people of the village (folk.js): grandma knitting on the square's bench, the accordion player on the square, the gardener asleep
     // in his wheelbarrow by the carrots, the fisherman at the pond
     const folk = { oma: grandma(S, SQ[0] + 2.3, SQ[1] - 3.0, benches[2]), muzikant: player(S, SQ[0] - 2.35, SQ[1] - 1.25), tuinman: gardener(S, F[0] - 4.4, F[1] - 2.9, theFarm), visser: fisher(S, pcx + 2.62, pcz - .4, -1) };

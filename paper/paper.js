@@ -226,11 +226,14 @@ function buildSet(def) {
     hands,   // one thing in her hands at a time (see `hands`)
     gear,    // her tools (gear.js)
     quest,   // where the story stands (quest.js)
+    shared,  // what one set lets another use (the farm's watering can, for the witch in the forest)
+    give: f => give(f),
+    eggFrame: n => { eggShow = n; },   // the egg's card as it cracks (0 whole, 1 cracked, 2 open)
     sister: () => zus.kid,   // which of the two is at home asleep
     morning: () => { eveTarget = 0; skyIcon(false); },
     findEgg: (x, z) => { quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
     eggAt: () => [eggF.x, eggF.z],
-    hatch: (x, z) => { quest.stage = 'baby'; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
+    hatch: (x, z) => { quest.stage = 'baby'; eggShow = 0; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
     water: (h, pts) => { s.floors.push({ h, pts: pts.map(W), swim: true }); },   // light water: a floor only for somebody with a snorkel, and she swims on it
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
@@ -292,7 +295,7 @@ function loadWorld(name) {
   // the theatre stands behind everything that exists
   theatre.position.z = Math.min(...sets.map(s => s.back || 0)); { const k = Math.max(...sets.map(s => s.sky || 1)); sky.scale.set(k, 1, k); }
   [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni; uni.face = 1;
-  gear.snorkel = gear.hook = name !== group[0]; quest.stage = 'baby'; uni.away = false;
+  gear.snorkel = gear.hook = gear.potion = name !== group[0]; quest.stage = 'baby'; uni.away = false; eggShow = 0;
   if (name !== group[0]) openGates();   // started beyond the village (a look at one island): the ways there are open
   // a new world is a cut: the camera is there at once
   shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
@@ -351,7 +354,7 @@ const uni = fig('unicorn', 'baby');
 for (const f of [girl, uni]) tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots);
 /* the egg: once she has found it (quest.stage 'ei') it hops along behind her, as the unicorn will */
 const eggF = makeFigure('ei', EGG); eggF.g.visible = false; eggF.onTap = () => { eggF.hopV = 2.4; sfx.peep(); }; tapTarget(eggF.g, () => tapFigure(eggF), baseTaps, baseSpots);
-eggF.act = tick => { eggF.setFrame(0); eggF.tilt = eggF.hop > 0 ? Math.sin(tick * 1.4) * .16 : 0; };
+eggF.act = tick => { eggF.setFrame(eggShow); eggF.tilt = eggF.hop > 0 ? Math.sin(tick * 1.4) * .16 : 0; };
 function stepEgg(dt) {
   const on = quest.stage === 'ei'; eggF.g.visible = on; eggF.follows = on; if (!on || playing) return;
   const dx = girl.x - eggF.x, dz = girl.z - eggF.z, d = Math.hypot(dx, dz); if (d < 1.25) return;
@@ -548,9 +551,9 @@ function stepWater(dt) {
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
 /** Where the story stands (quest.js): 'dream' at the very start, 'zoek' while the egg is to be found, 'baby' once the unicorn is with her */
-const quest = { stage: 'baby' };
+const quest = { stage: 'baby' }, shared = {}; let eggShow = 0;
 /** Her tools (gear.js): what she has for good. A start somewhere beyond the village has them all, like the open gates */
-const gear = { snorkel: false, hook: false };
+const gear = { snorkel: false, hook: false, potion: false };
 /** the cards that are things, not somebody: nobody gives them a flower (the scarecrow and its birds do count as somebody) */
 const LIFELESS = new Set([...Object.entries(THINGS).filter(([n]) => n !== 'vogelverschrikker' && n !== 'vogel').map(([, v]) => v), ...Object.values(PROPS)]);
 /* Her hands: she carries one thing at a time. Whatever she takes says so (and how to put itself down); taking the next
@@ -562,8 +565,10 @@ const hands = {
   busy(who) { return !!inHand && inHand.who !== who; },
 };
 const offers = [];   // what she is holding that can be given: each is asked when somebody else is tapped, and says true if it was given
+/** she gives what she holds to `f`: the first thing that lets itself be given says what it was ('bloem', 'appel', 'broodje'), and `f` is told */
+function give(f) { for (const o of offers) { const kind = o(f); if (kind) { if (f.onGift) f.onGift(kind); return kind; } } return null; }
 function tapFigure(f) {
-  if (f !== girl && !f.thing && offers.some(o => o(f))) return;   // (what she holds is given to the living only: not to the kite, the can or a basket)
+  if (f !== girl && !f.thing && give(f)) return;   // (what she holds is given to the living only: not to the kite, the can or a basket)
   if (f === uni) { uni.hopV = 3; sfx.neigh(); confetti(uni.x, .9, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 12, starGeo, 2.4); }
   else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
   else if (f.onTap) f.onTap();
@@ -887,7 +892,7 @@ bake(theatre); for (const g of hungs) bake(g);
 const STORY = !ASK.has('set');
 loadWorld(STORY ? 'dorp' : SETS[ASK.get('set')] ? ASK.get('set') : 'eiland');
 if (STORY) {
-  const home = sets.find(q => q.name === 'huis'); quest.stage = 'dream'; uni.away = true; uni.g.visible = false; eve = eveTarget = 1; skyIcon(true);
+  const home = sets.find(q => q.name === 'huis'); gear.potion = false; quest.stage = 'dream'; uni.away = true; uni.g.visible = false; eve = eveTarget = 1; skyIcon(true);
   [girl.x, girl.z] = home.beds[girl.kid]; girl.y = 0; standOn(home); camCut = true; home.sleep(girl.kid);
 }
 /* the button with her sister's face: a tap, and she is her sister (who was asleep at home, and now the other one is) */
@@ -1107,7 +1112,7 @@ window.__p = {
     return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
   /** open every gate of the world */
-  open: () => { openGates(); gear.snorkel = gear.hook = true; for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.mend) q.mend(); },   // (and gaps are planked over: the walk-everywhere check walks)
+  open: () => { openGates(); gear.snorkel = gear.hook = gear.potion = true; for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.mend) q.mend(); },   // (and gaps are planked over: the walk-everywhere check walks)
   /** every door of the world, and whether one would take her now */
   doors: () => ({ list: sets.flatMap(q => q.doors.map(d => [q.name, d.name, d.zone.map(v => +v.toFixed(2)), !!d.any])), armed: doorArmed, through: !!through, here: (sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z)) || {}).name || null, playing: !!playing }),
   /** where the story stands; who she is; swap the sisters (as the button does) */

@@ -18,7 +18,7 @@ export function bouquet(S) {
   const make = (o, big) => { const b = bloom(o.kind, rnd(o.seed), o.big * big, o.col); b.userData.live = true; S.root.add(b); S.glue(b); return b; };
   const drop = b => { if (!b) return; S.root.remove(b.g); b.g.traverse(q => { if (q.geometry) q.geometry.dispose(); }); };
   const me = {}, toHair = o => { drop(hair); hair = { o, g: make(o, .62) }; };
-  S.offer(who => { if (!hand) return false; drop(hand); hand = null; S.hands.free(me); gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return true; });
+  S.offer(who => { if (!hand) return false; drop(hand); hand = null; S.hands.free(me); gifts++; who.hopV = 2.8; sfx.chime(); S.confetti(who.x, (who.y || 0) + .8, who.z, ['#f4a6c4', '#f8dde4', '#e98f8f', '#f2c65c'], 14, undefined, 2.4); girl.poseName = null; return 'bloem'; });
   return {
     /** she picks the flower `o` ({ kind, seed, big, col }) that stood at x, y, z */
     add(x, y, z, o) {
@@ -308,7 +308,7 @@ function thorny(r, seed, col, spikes = 13) {
  *  a full watering can, she walks up and pours, and they turn green, bud, and bloom into roses that curl aside for good.
  *  Without water a tap only shows what is wanted: a little card of the can pops up above them. Nothing is cut (Oscar: no
  *  sword). `can` is the farm's can (farm.js: holding, full, pourThen, hint); the bridge runs east and west, `span` wide */
-export function bramble(S, x, y, z, span, can) {
+export function bramble(S, x, y, z, span, can, wishFor = THINGS.gieter, wishFrame = 1) {   // (`can`: whatever makes them bloom, with holding(), full(), pourThen(done), hint(); `wishFor`: the card they show when they want it)
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   const clump = (parent, cz, r, seed, cols, roses) => { const c = new THREE.Group(); c.position.z = cz; parent.add(c);
     [0, 1.05, 2.1].forEach((ry, k) => { const t = thorny(r * (1 - k * .08), seed + k, cols[k % cols.length]); t.rotation.y = ry; c.add(t); });
@@ -318,7 +318,7 @@ export function bramble(S, x, y, z, span, can) {
   clump(stage[2], -(span / 2 + .6), .6, 19, ['#6f9057', '#86a466', '#7f9d5e'], 5); clump(stage[2], span / 2 + .42, .32, 21, ['#6f9057', '#86a466', '#7f9d5e'], 3);   // curled aside: the big one behind the deck, a small one in front (it must not hide her)
   stage.forEach(sg => S.glue(sg));
   const wall = S.wall(x, z, .5, span / 2 + .15), [wx, wz] = S.at([x, z]), { girl, sfx } = S;
-  const wish = S.figure('wens', THINGS.gieter); wish.g.visible = false; wish.x = wx; wish.z = wz + .1; wish.act = () => wish.setFrame(1);
+  const wish = S.figure('wens', wishFor); wish.g.visible = false; wish.x = wx; wish.z = wz + .1; wish.act = () => wish.setFrame(wishFrame);
   let at = 0, t = 0, show = 0, wob = 0; const set = n => { at = n; stage.forEach((sg, i) => { sg.visible = i === n; }); }; set(0);
   S.tap(g, () => {
     if (S.playing()) return;
@@ -362,7 +362,7 @@ export function stall(S, x, z, y) {
   const basket = S.figure('mand', THINGS.mand), apple = S.figure('appel', THINGS.appel), me = {}; basket.x = wx + .3; basket.z = wz + .1; basket.floatY = basket.y = y + .66; apple.g.visible = false;
   let held = false, taken = 0, given = 0;
   const down = () => { held = false; apple.g.visible = false; girl.poseName = null; };
-  S.offer(who => { if (!held) return false; down(); S.hands.free(me); given++; who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#e98f8f', '#f6efe2', '#d9706c'], 8, undefined, 1.6); return true; });
+  S.offer(who => { if (!held) return false; down(); S.hands.free(me); given++; who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#e98f8f', '#f6efe2', '#d9706c'], 8, undefined, 1.6); return 'appel'; });
   const take = () => { if (S.playing() || held) { basket.hopV = 1.4; return; } S.walkThen(wx + .3, wz + 1.05, () => { if (held) return; girl.view = 'back'; S.hands.take(me, down); held = true; taken++; basket.hopV = 1.6; sfx.hop(); }, 1.2); };
   S.tap(g, take); basket.onTap = take;
   return { state: () => ({ held, taken, given }), step() {

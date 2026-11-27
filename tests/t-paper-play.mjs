@@ -196,12 +196,10 @@ export default async function (t) {
     const toy = n => t.ev(`__p.toy('${n}')`), d = await t.ev(`__p.places('dorp')`), w = await t.ev(`__p.places('wei')`), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
     ok(!(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`)), 'the brambles shut the bridge: the meadow cannot be walked to');
     await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2600); await t.shot('tmp-shots/y-thorns-land.png');
-    await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); await t.sleep(500); ok((await toy('braam')).wishing && !(await toy('braam')).open, 'a tap with empty hands: they shake and show the watering can'); await t.shot('tmp-shots/y-thorns-wish-land.png');
-    // fetch the can, fill it at the fountain, pour
-    const c0 = (await toy('boerderij')).can; await t.ev(`__p.placeAt(${c0[0] - 1.2}, ${c0[1] + 1})`); await t.sleep(2400); await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'she picks up the can');
-    await t.ev(`__p.placeAt(${d.fountain[0] + 2.2}, ${d.fountain[1]})`); await t.sleep(2400); await tapAt(d.fountain[0], .6, d.fountain[1] - 2.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'a tap on the fountain fills it');
-    await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]);
-    ok(await until(`__p.toy('braam').open`, 8), 'watered, the brambles bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-open-land.png');
+    await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); await t.sleep(500); ok((await toy('braam')).wishing && !(await toy('braam')).open, 'a tap without the potion: they shake and show what they want'); await t.shot('tmp-shots/y-thorns-wish-land.png');
+    // (the whole way to the potion has a part of its own, `witch`; here she simply has it)
+    await t.sleep(2600); await t.ev(`__p.gear({ potion: true })`); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]);
+    ok(await until(`__p.toy('braam').open`, 8), 'with the potion, the brambles bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-open-land.png');
     ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and now the meadow can be walked to');
     // the dolphin of the long bridge
     await t.ev(`__p.placeAt(${(d.thorns[0] + w.start[0]) / 2 - 3}, ${d.thorns[1]})`); await t.sleep(1800); ok((await toy('dolfijn')).leaps === 0, 'standing on the bridge: no dolphin yet');
@@ -437,5 +435,29 @@ export default async function (t) {
       ok(!(await toy(n)).playing, `the ${n} is silent until asked`); await t.ev(`__p.tap('${n}')`); await t.sleep(1700); const m = await toy(n); ok(m.playing && m.notes > 0, `a tap: the ${n} plays, and notes float up`); await t.shot(`tmp-shots/y-${n}-land.png`);
       ok(await until(`!__p.toy('${n}').playing`, 7), 'and stops again');
     }
+  }
+
+  /* ---------------- the witch: she wants to see the egg, then three things for her pot; her potion opens the brambles ---------------- */
+  if (!only || only === 'witch') {
+    await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    const toy = n => t.ev(`__p.toy('${n}')`), bos = await t.ev(`__p.places('bos')`), d = await t.ev(`__p.places('dorp')`), w = await t.ev(`__p.places('wei')`), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
+    const toWitch = async () => { await t.ev(`__p.placeAt(${bos.witch[0] - .9}, ${bos.witch[1] + .3})`); await t.sleep(2400); };
+    ok(!(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`)), 'the brambles shut the bridge to the meadow');
+    await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); await t.sleep(500); ok((await toy('braam')).wishing, 'a tap on them: they show a potion'); await t.shot('tmp-shots/y-thorns-potion-land.png');
+    await toWitch(); await t.shot('tmp-shots/y-witch-land.png'); await t.ev(`__p.tap('heks')`); await t.sleep(600); const h0 = await toy('heks'); ok(h0.frame === 2 && h0.wishing, 'a tap on the witch before the egg is found: she asks for something'); await t.shot('tmp-shots/y-witch-egg-land.png');
+    await t.sleep(3000); await t.ev(`__p.quest({ stage: 'ei' })`); await t.sleep(1500); await t.ev(`__p.tap('heks')`); await t.sleep(700); await t.shot('tmp-shots/y-witch-wants-land.png'); ok((await toy('heks')).wishing, 'with the egg behind her: she shows the three things her potion wants');
+    // a flower from her garden
+    const tu = (await toy('tuin')).tulips[2]; await t.ev(`__p.placeAt(${tu.at[0] + 1.2}, ${tu.at[1] + 1.8})`); await t.sleep(2400); await tapAt(tu.at[0], .48 + .45, tu.at[1]); ok(await until(`__p.toy('bos').held === 1`, 6), 'she picks a tulip in her garden');
+    await toWitch(); await t.ev(`__p.tap('heks')`); await t.sleep(500); ok((await toy('heks')).have.bloem, 'given to the witch: into the pot it goes');
+    // an apple from the stall
+    const m = await t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === 'mand'))`); await t.ev(`__p.placeAt(${m[0] - .4}, ${m[1] + 1.9})`); await t.sleep(2400); await t.ev(`__p.tap('mand')`); ok(await until(`__p.toy('kraam').held`, 6), 'she takes an apple at the stall');
+    await toWitch(); await t.ev(`__p.tap('heks')`); await t.sleep(500); ok((await toy('heks')).have.appel, 'the apple goes in too'); await t.shot('tmp-shots/y-witch-two-land.png');
+    // water from the can
+    const c0 = (await toy('boerderij')).can; await t.ev(`__p.placeAt(${c0[0] - 1.2}, ${c0[1] + 1})`); await t.sleep(2400); await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'she picks up the watering can');
+    await t.ev(`__p.placeAt(${d.fountain[0] + 2.2}, ${d.fountain[1]})`); await t.sleep(2400); await tapAt(d.fountain[0], .6, d.fountain[1] - 2.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'and fills it at the fountain');
+    await toWitch(); await t.ev(`__p.tap('heks')`); ok(await until(`__p.toy('heks').have.water`, 8), 'a tap on the witch with the full can: she pours it into the pot'); await t.sleep(700); await t.shot('tmp-shots/y-witch-brew-land.png');
+    ok(await until(`__p.toy('heks').potion`, 9), 'the pot boils over, and the potion is hers'); await t.sleep(500); await t.shot('tmp-shots/y-witch-potion-land.png');
+    await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); ok(await until(`__p.toy('braam').open`, 8), 'a tap on the brambles with the potion: they bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-bloom-land.png');
+    ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and the meadow can be walked to');
   }
 }
