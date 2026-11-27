@@ -38,7 +38,7 @@ export default {
     let rising = -1, risen = false, first = true, rises = 0;
     const [mx, mz] = S.at([0, 0]), shoreAt = i => { const [x, z] = SAND[Math.floor(i) % SAND.length]; return S.at([x, z]); };
     const riseNow = () => { risen = true; rising = -1; S.sink(false); S.raise(0); S.seaLand(true); S.gear.island = true; for (const f of S.myFigures()) { f.g.visible = true; } };
-    S.shared.island = { risen: () => risen, middle: [mx, mz],
+    S.shared.island = { risen: () => risen, middle: [mx, mz], now: () => { if (!risen) riseNow(); },
       rise: () => { if (risen || rising >= 0) return false; rising = 0; rises++; S.sink('rising'); S.sfx.whoosh(); return true; } };
     S.floorBox(DECK, J0, BR.z0, BR.x1, BR.z1);
     S.water(H_GRASS, POND); S.floor(H_GRASS, GRASS); S.floor(H_SAND, SAND, .22);
@@ -132,7 +132,7 @@ export default {
         { name: 'boog', zone: [-6.72, -7.56, 6.72, -1.68], span: 17, tall: 10, rise: .3 },   // by the rainbow: far enough back to see the whole arch
         { name: 'regenboog', span: 15, tall: 8.5, rise: .32 },
       ],
-      spots: { regenboog: [3.57, 3.57, -3.6], paddenstoel: [-10.08, 0.84, -1.5] },
+      spots: { regenboog: [2.55, 2.55, -5.04], paddenstoel: [-10.08, .6, -2.1] },
       places: { start: [BR.x1 + 1.2, 0], middle: [-0.28, 1.68], tree: [2.52, 4.2], bow: [-0.14, -3.08], paint: [-6.44, 6.44], pond: [7.28, 5.04], shrooms: [-7.84, -1.68], rabbit: [4.76, 8.26], west: [BR.x0 + 2, 0], memory: [-16.2, -2.8], candyfloss: [-10.1, 3.9], alpacas: [-12.5, 5.2], children: [12.8, 5.8], monkey: [12.2, .6], stamps: [15.7, -1.4], xylophone: [7.8, -8.4] },
     };
   },

@@ -1535,7 +1535,7 @@ window.__p = {
   /** (for tests) what a tap at this point of the screen would hit: its name or kind, where, and whether it is a tap target */
   pick(x, y) { const h = pickAt(x, y); if (!h) return null; let o = h.object, path = []; for (let q = o; q && path.length < 5; q = q.parent) path.push(q.name || q.type); return { path, at: h.point.toArray().map(v => +v.toFixed(2)), tap: !!o.userData.tap }; },
   /** (for tests) the rainbow island rises now, as after the seven rings */
-  rise() { return !!(shared.island && shared.island.rise()); },
+  rise(now = false) { if (!shared.island) return false; if (now) { shared.island.now(); return true; } return !!shared.island.rise(); },   // (now: up at once, for a test that starts on it)
   seaLife: () => ({ boats: seaLife.boats.map(b => [+b.f.x.toFixed(1), +b.f.z.toFixed(1), b.f.g.visible, true]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
   /** riding: whether she is on it, flying, and the unicorn's state */
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),

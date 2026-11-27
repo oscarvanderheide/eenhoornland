@@ -88,7 +88,7 @@ export default {
     const digOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .7 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z)) && !(x > PIER.x0 - .4 && x < PIER.x1 + .4 && z > PIER.z0 - .4);
     const spade = digging(S, -1.6, 4.0, H_SAND, [-8.8, 5.6], digOk), sealToy = sealBall(S, live.zeehond, [1.2, 14.7], DECK);
     const fishKite = kite(S, -9.6, H_DUNE, -3.2, () => true, CARDS3.viskite, 'viskite');   // (the whole beach is windy)
-    const people = { ijsverkoper: iceCream(S, -5.6, .3), badmeester: lifeguard(S, 5.7, 7.6), zonnebader: sunbather(S, 10.2, 4.0) };   // the gull's feather for the wings (paper.js)
+    const people = { ijsverkoper: iceCream(S, -5.6, .3), badmeester: lifeguard(S, 7.4, 7.0), zonnebader: sunbather(S, 10.2, 4.0) };   // the gull's feather for the wings (paper.js)
     // the boat to the rainbow island, at a short jetty where the bridge used to start (boat.js): the rainbow island's end of it is its jetty (set-regenboog.js)
     const RB = { z0: -.6, z1: .6 }, JX = 14.3, JE = JX + 2.2, RBJ = regenboogLand().bridge, rb = [ORIGIN.regenboog[0] - ORIGIN.strand[0], ORIGIN.regenboog[1] - ORIGIN.strand[1]];   // (the beach's jetty, out east where the old bridge began; the island's, far out at sea)
     for (let x = JX; x < JE; x += .32) root.add(slab([[x, RB.z0 - .05], [x + .28, RB.z0 - .05], [x + .28, RB.z1 + .05], [x, RB.z1 + .05]], -.12, .06, paper('#c9a878'), edgeMat));
@@ -125,7 +125,7 @@ export default {
         { name: 'strand', span: 15, tall: 8.5, rise: .32 },
       ],
       spots: { paal: [.82, DECK + .6, GAP[1] + .3], paalnoord: [.82, DECK + .6, GAP[0] - .3], zandkasteel: [-3.6, .08, 3.75], vuurtoren: [11.5, 1.6, -3.6], palm: [-4.2, 1.6, -6.6], bank: [-8.6, .1, 3.63] },
-      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], spade: [-1.2, 4.4], cross: [-8.8, 6.3], icecream: [-4.2, 1.2], lifeguard: [4.7, 7.9], sunbather: [10.2, 5.0], kite: [-9.2, -2.8], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
+      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], spade: [-1.2, 4.4], cross: [-8.8, 6.3], icecream: [-4.2, 1.2], lifeguard: [6.4, 7.4], sunbather: [10.2, 5.0], kite: [-9.2, -2.8], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
     };
   },
 };

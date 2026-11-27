@@ -314,7 +314,7 @@ export function frisbee(S, x, y, z) {
     if (fetch) {   // the unicorn runs to it, takes it, and brings it to her
       fetch.t += dt; const goal = fetch.phase === 'go' ? at : [girl.x, girl.z], dx = goal[0] - uni.x, dz = goal[1] - uni.z, d = Math.hypot(dx, dz) || 1;
       if (S.playing() || fetch.t > 10 || Math.hypot(girl.x - uni.x, girl.z - uni.z) > 22) { if (fetch.phase === 'bring') at = [uni.x + uni.face * .4, uni.z + .15]; uni.busy = false; fetch = null; }
-      else { uni.busy = true; const reach = fetch.phase === 'go' ? .55 : 1.3;
+      else { uni.busy = true; const stuck = fetch.t > 3 && d < 1.6, reach = fetch.phase === 'go' ? (stuck ? 1.6 : .55) : (stuck ? 2.2 : 1.3);   // (something stands between: it stretches for it)
         if (d > reach) { S.move(uni, dx / d * 3.6 * dt, dz / d * 3.6 * dt); uni.walking = true; if (Math.abs(dx) > .1) uni.face = Math.sign(dx); }
         else if (fetch.phase === 'go') { fetch.phase = 'bring'; uni.hopV = 1.6; sfx.hop(); }
         else { at = [uni.x + uni.face * .45, uni.z + .16]; fetched++; uni.busy = false; fetch = null; uni.hopV = 2.2; sfx.neigh(); } }
