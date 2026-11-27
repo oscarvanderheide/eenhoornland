@@ -233,6 +233,7 @@ function buildSet(def) {
     give: f => give(f),
     eggFrame: n => { eggShow = n; },   // the egg's card as it cracks (0 whole, 1 cracked, 2 open)
     sister: () => zus.kid,   // which of the two is at home asleep
+    zus: () => zus,   // her sister herself: a toy may ask her out to play (zus.out), and she goes back to bed when it lets her go
     morning: () => { eveTarget = 0; skyIcon(false); },
     findEgg: (x, z) => { quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
     eggAt: () => [eggF.x, eggF.z],
@@ -372,6 +373,7 @@ function stepEgg(dt) {
 /* her sister: asleep in her own bed at home while the other one is out. The button swaps the two */
 const zus = fig('zus', girl.kid === 'anna' ? 'fenna' : 'anna'); zus.g.visible = false;
 function stepSister() {
+  if (zus.out) { zus.g.visible = true; zus.asleep = false; return; }   // out playing (the seesaw)
   const home = sets.find(q => q.name === 'huis' && q.beds); zus.g.visible = !!home; if (!home) return;
   const b = home.beds[zus.kid]; zus.x = b[0]; zus.z = b[1]; zus.floatY = zus.y = home.bedY || 0; zus.lift = home.lie; zus.lean = b[2]; zus.poseName = null; zus.view = 'front'; zus.asleep = true;
 }

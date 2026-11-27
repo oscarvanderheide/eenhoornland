@@ -191,7 +191,7 @@ export function balloon(S, x, y, z) {
  *  is the kick (a finger held there keeps it going gently), a touch on her gets off.
  *  The plank is a real little sum: where it is and how fast it turns, her side a little heavier (so it rests her end down). */
 export function seesaw(S, x, y, z) {
-  const { girl, uni, sfx } = S, A = 1.45, P = .5, TMAX = Math.asin(P / A) * .94, G = 1.5, KICK = 3.0, GOOD = 3.7, UKICK = 2.0, [wx, wz] = S.at([x, z]);
+  const { girl, sfx } = S, uni = S.zus(), A = 1.45, P = .5, TMAX = Math.asin(P / A) * .94, G = 1.5, KICK = 3.0, GOOD = 3.7, UKICK = 2.0, [wx, wz] = S.at([x, z]);
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   for (const fz of [-.24, .24]) for (const s of [-1, 1]) beam(g, s * .3, 0, 0, P, fz, .08, COL.post);
   box(g, .1, .1, .6, 0, P, 0, COL.bar);
@@ -199,34 +199,39 @@ export function seesaw(S, x, y, z) {
   box(pivot, A * 2 + .3, .06, .34, 0, .07, 0, COL.chute);
   for (const s of [-1, 1]) { box(pivot, .44, .04, .37, s * (A - .05), .12, 0, COL.seat); box(pivot, .04, .26, .04, s * (A - .5), .23, 0, COL.post); box(pivot, .04, .04, .3, s * (A - .5), .36, 0, COL.post); }
   S.wall(x, z, A + .2, .26); S.solid({ x, z, r: .2 });
-  let psi = 1, om = 0, mode = null, t = 0, buf = 0, land = 9, streak = 0, best = 0, air = 0, airV = 0, uair = 0, uairV = 0, uT = 0, uwait = 0, flip = 0, flips = 0, kicks = 0, from = null, was = false, leave = false;
+  let freed = false, psi = 1, om = 0, mode = null, t = 0, buf = 0, land = 9, streak = 0, best = 0, air = 0, airV = 0, uair = 0, uairV = 0, uT = 0, uwait = 0, flip = 0, flips = 0, kicks = 0, from = null, was = false, leave = false;
   const endY = s => P + .12 + s * A * Math.sin(psi * TMAX);   // how high an end's seat is (s -1: hers, +1: the unicorn's)
   const seat = () => { girl.x = wx - (A - .05) * Math.cos(psi * TMAX); girl.z = wz + .02; girl.lift = endY(-1) + air; girl.face = 1; girl.view = 'side'; girl.poseName = air > .06 ? 'up' : 'sit'; };
-  const useat = k => { if (uni.away) return; const tx = wx + (A - .05) * Math.cos(psi * TMAX), ty = endY(1) - .12 + uair; uni.busy = true; uni.walking = false; uni.face = -1; uni.x = from[0] + (tx - from[0]) * k; uni.z = from[1] + (wz + .02 - from[1]) * k; uni.lift = ty * k + Math.sin(k * Math.PI) * .5; uni.lean = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
+  // the other end is her sister's (Oscar: "when going on the seesaw, the other girl should join"): she comes running from the side, and runs home to bed when they get off
+  const useat = k => { const tx = wx + (A - .05) * Math.cos(psi * TMAX), ty = endY(1) - .12 + uair; uni.out = true; uni.asleep = false; uni.floatY = undefined; uni.y = y; uni.walking = k < .75; uni.view = 'side'; uni.face = -1; uni.poseName = k < .75 ? null : uair > .06 ? 'up' : 'sit'; uni.x = from[0] + (tx - from[0]) * k; uni.z = from[1] + (wz + .02 - from[1]) * k; uni.lift = ty * k + Math.sin(k * Math.PI) * .5; uni.lean = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
   const toy = { look: [wx, wz + .3], step(dt, inp) {
     t += dt; pivot.rotation.z = psi * TMAX;
-    if (mode === 'on') { const k = Math.min(1, t / .35); seat(); girl.z = wz + .02 + (1 - k) * .7; girl.lift = endY(-1) * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .6 ? 'sit' : null; useat(k); if (k >= 1) { mode = 'ride'; sfx.hop(); land = 9; streak = 0; } return; }
-    if (mode === 'off') { const k = Math.min(1, t / .3); girl.z = wz + .02 + k * .75; girl.lift = endY(-1) * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null; uni.lift = (endY(1) - .12) * (1 - k) + Math.sin(k * Math.PI) * .4; uni.z = wz + .02 + k * .7; if (k >= 1) { mode = null; S.stopPlay(); } return; }
+    if (mode === 'on') { const k = Math.min(1, t / .35), k2 = Math.min(1, t / 1.1); seat(); girl.z = wz + .02 + (1 - k) * .7; girl.lift = endY(-1) * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .6 ? 'sit' : null; useat(k2 < .75 ? k2 / .75 * .8 : .8 + (k2 - .75) / .25 * .2); if (k2 >= 1) { mode = 'ride'; sfx.hop(); land = 9; streak = 0; } return; }
+    if (mode === 'off') { const k = Math.min(1, t / .3);
+      if (!freed) { girl.z = wz + .02 + k * .75; girl.lift = endY(-1) * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null; if (k >= 1) { freed = true; girl.lift = 0; S.stopPlay(); } }
+      if (k < 1) { uni.lift = (endY(1) - .12) * (1 - k) + Math.sin(k * Math.PI) * .4; uni.z = wz + .02 + k * .7; uni.poseName = null; }
+      else { const k3 = Math.min(1, (t - .3) / 1.2); uni.lift = 0; uni.poseName = null; uni.walking = k3 < 1; uni.face = 1; uni.x = wx + (A - .05) + k3 * 3.2; if (k3 >= 1) { uni.out = false; uni.walking = false; mode = null; } }   // she waves off and runs home to bed
+      return; }
     // riding
     buf = Math.max(0, buf - dt); if (inp.x && !was) buf = .28; was = !!inp.x; if (inp.act) leave = true;   // a fresh push to the side is a kick (a little early counts); a touch on her: off, once she is down
     if (psi >= 1) {   // her end is on the ground
       land += dt;
-      if (leave && uair <= 0) { leave = false; mode = 'off'; t = 0; return; }
+      if (leave && uair <= 0) { leave = false; mode = 'off'; t = 0; freed = false; sfx.hello(); return; }
       // (a finger simply held keeps it going, gently; a push in time with the landing does better)
       if (buf > 0 || (inp.x && land > .45)) { const good = buf > 0 && land < .3; streak = good ? Math.min(4, streak + 1) : 0; best = Math.max(best, streak); om = -(good ? GOOD : KICK); psi = .999; buf = 0; kicks++; sfx.hop(); S.confetti(girl.x, y + .1, girl.z + .1, ['#ecd3a0', '#f7ecd0', '#e2c58a'], good ? 9 : 4, undefined, 1.4); }
     }
-    if (psi <= -1) { uwait -= dt; if (uwait <= 0) { om = uni.away ? 0 : UKICK; psi = -.999; } }   // the unicorn's end is down: a beat, and it kicks off
+    if (psi <= -1) { uwait -= dt; if (uwait <= 0) { om = UKICK; psi = -.999; } }   // her sister's end is down: a beat, and she kicks off
     else if (psi < 1) {
       om += G * dt; psi += om * dt;
       if (psi <= -1) { const v = -om; psi = -1; om = 0; uwait = .16; sfx.thud(); airV = v * .5 + streak * .3; }                    // bump: she leaves her seat
-      else if (psi >= 1) { const v = om; psi = 1; om = 0; land = 0; sfx.thud(); uairV = 1.2 + v * .35 + streak * .75; uT = 2 * uairV / 9.8; if (streak >= 3) { flip = 1; flips++; sfx.neigh(); S.confetti(uni.x, y + 1.6, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, S.starGeo, 2.6); } }   // her end lands: the unicorn is thrown up
+      else if (psi >= 1) { const v = om; psi = 1; om = 0; land = 0; sfx.thud(); uairV = 1.2 + v * .35 + streak * .75; uT = 2 * uairV / 9.8; if (streak >= 3) { flip = 1; flips++; sfx.hello(); S.confetti(uni.x, y + 1.6, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, S.starGeo, 2.6); } }   // her end lands: the unicorn is thrown up
     }
     if (air > 0 || airV > 0) { air += airV * dt; airV -= 9.8 * dt; if (air <= 0) { air = 0; airV = 0; } }
     if (uair > 0 || uairV > 0) { uair += uairV * dt; uairV -= 9.8 * dt; if (uair <= 0) { uair = 0; uairV = 0; flip = 0; } else if (flip > 0) flip = Math.max(.001, flip - dt / Math.max(.3, uT)); }
     pivot.rotation.z = psi * TMAX; seat(); useat(1);
   } };
-  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx - A + .05, wz + .72, () => { if (S.playing()) return; mode = 'on'; t = 0; psi = 1; om = 0; air = airV = uair = uairV = 0; was = true; leave = false; from = [uni.x, uni.z]; S.play(toy); }, 1.1); });
-  return { toy, state: () => ({ mode, psi, streak, best, kicks, flips, air, uair }), step() { if (!mode) pivot.rotation.z = psi * TMAX; } };
+  S.tap(g, () => { if (S.playing() || mode) return; S.walkThen(wx - A + .05, wz + .72, () => { if (S.playing()) return; mode = 'on'; t = 0; psi = 1; om = 0; air = airV = uair = uairV = 0; was = true; leave = false; from = [wx + A + 3.2, wz + .4]; uni.x = from[0]; uni.z = from[1]; S.play(toy); }, 1.1); });
+  return { toy, state: () => ({ mode, psi, streak, best, kicks, flips, air, uair, sister: !!uni.out }), step({ dt } = {}) { if (!mode) pivot.rotation.z = psi * TMAX; if (mode === 'off' && !S.playing() && dt) toy.step(dt, {}); } };
 }
 
 /* ---------------- the paper aeroplane ---------------- */

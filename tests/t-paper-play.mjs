@@ -269,13 +269,13 @@ export default async function (t) {
     await open('?set=dorp', LAND); await t.sleep(1200);
     const toy = () => t.ev(`__p.toy('wip')`), sp = await t.ev(`__p.dbg.set.spots.wip`), key = async () => { await t.ev(`__p.keys(['d'])`); await t.sleep(70); await t.ev(`__p.keys([])`); }, space = async () => { await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); };
     await t.ev(`__p.placeAt(${sp[0] - 1}, ${sp[2] + 2})`); await t.sleep(2600); await t.shot('tmp-shots/y-wip-land.png');
-    await tapOn('wip'); ok(await until(`__p.toy('wip').mode === 'ride'`, 6), 'a tap on the seesaw: she sits on her end and the unicorn hops onto the other'); await t.sleep(300);
+    await tapOn('wip'); ok(await until(`__p.toy('wip').mode === 'ride'`, 6), 'a tap on the seesaw: she sits on her end'); ok((await toy()).sister, 'and her sister comes running and hops onto the other'); await t.sleep(300); await t.shot('tmp-shots/y-wip-sister-land.png');
     ok((await toy()).psi === 1, 'it rests with her end down'); await key(); ok(await until(`__p.toy('wip').psi < 0`, 2), 'a push to the side: she kicks off and goes up'); await t.shot('tmp-shots/y-wip-up-land.png');
     ok(await until(`__p.toy('wip').psi === 1`, 4), 'the unicorn kicks off in its turn and she comes down again'); ok(await until(`__p.toy('wip').uair > .2`, 1), 'her end lands: the unicorn is thrown up');
     // kick off just as she lands, four times: the streak grows and the unicorn turns a somersault
     for (let k = 0; k < 4; k++) { await key(); await until(`__p.toy('wip').psi < 0`, 2); await until(`__p.toy('wip').psi === 1`, 4); }
     await t.sleep(250); const s1 = await toy(); ok(s1.best >= 3 && s1.flips >= 1, `kicking off just as she lands: higher each time, and a somersault (streak ${s1.best}, ${s1.flips} flips)`); await t.shot('tmp-shots/y-wip-flip-land.png');
-    await t.sleep(1500); await space(); ok(await until(`__p.toy('wip').mode === null`, 4), 'a touch on her: off they hop'); await t.sleep(600);
+    await t.sleep(1500); await space(); ok(await until(`__p.toy('wip').mode === null`, 4), 'a touch on her: off they hop'); ok(!(await toy()).sister, 'and her sister runs home to bed'); await t.sleep(600);
     const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
   }
 
