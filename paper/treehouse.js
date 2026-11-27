@@ -50,7 +50,7 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   for (const s of [-1, 1]) add(m3(new THREE.CylinderGeometry(.015, .015, DECK, 5), '#d8c9a8'), s * .2, -DECK / 2, 0, ladder);
   const RUNGS = Math.round(DECK / .33); for (let i = 0; i < RUNGS; i++) add(m3(new THREE.BoxGeometry(.46, .04, .05), '#a97a4e'), 0, -DECK + .25 + i * (DECK - .35) / (RUNGS - 1), 0, ladder);
   S.solid({ x, z: z - .15, r: .62 });
-  const [wx, wz] = S.at([x, z]), foot = [wx, wz + DD / 2 + .45], top = [wx - .2, wz + .45];
+  const [wx, wz] = S.at([x, z]), foot = [wx, wz + DD / 2 + .45], top = [wx - .2, wz + .45], onLadder = wz + DD / 2 + .14;   // (climbing she is just in front of the ladder, not behind it)
   let mode = null, t = 0, climbs = 0, looks = 0, view = -1, sway = 0, rides = 0, back = -1;
   /* the zipline: from a post at the deck's front right corner to the village's post (set-dorp.js gives where it stands) */
   const ZT = 5.6, uni = S.uni;
@@ -89,24 +89,27 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
       if (uni && !uni.away) { uni.x = mx - 1.0; uni.z = mz + .2; uni.lift = Math.max(0, uni.lift * (1 - k)); }
       if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; sfx.thud(); S.coins.reward('tokkel', girl.x, girl.y + 1.2, girl.z); girl.hopV = 2.4; S.confetti(girl.x, girl.y + .6, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 14, S.starGeo, 2.2); if (uni && !uni.away) { uni.lift = 0; uni.hopV = 3; } back = 0; toy.shot = null; S.stopPlay(); } return; }
     if (mode === 'up') {   // rung by rung: her back to us, the ladder swaying; the camera low on the grass, looking up
-      const k = Math.min(1, t / 3.4); girl.view = 'back'; girl.x = foot[0]; girl.z = foot[1] - .45; girl.lift = DECK * k; girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
+      const k = Math.min(1, t / 3.4); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = DECK * k; girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
       if (Math.floor(t / .24) !== Math.floor((t - dt) / .24)) sfx.click();
       if (k >= 1) { mode = 'top'; t = 0; climbs++; sfx.hop(); girl.hopV = 1.6; toy.shot = { span: 22, tall: 13, rise: .5, riseTall: .68, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 }; toy.look = [wx, wz + .3]; toy.rate = 1.1; } return; }
-    if (mode === 'top') { const k = Math.min(1, t / .4); girl.x = foot[0] + (top[0] - foot[0]) * k; girl.z = foot[1] - .45 + (top[1] - foot[1] + .45) * k; girl.lift = DECK + .04; girl.poseName = null; girl.view = k < 1 ? 'back' : 'front';
+    if (mode === 'top') { const k = Math.min(1, t / .4); girl.x = foot[0] + (top[0] - foot[0]) * k; girl.z = onLadder + (top[1] - onLadder) * k; girl.lift = DECK + .04; girl.poseName = null; girl.view = k < 1 ? 'back' : 'front';
       if (view >= 0) { if (t > 3.2) { view = -1; t = .4; toy.look = [wx, wz + .3]; toy.shot = { span: 22, tall: 13, rise: .5, riseTall: .68, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 }; } return; }
       if (inp.act || inp.x) { down(); } return; }
-    if (mode === 'down') { const k = Math.min(1, t / 2.2); girl.view = 'back'; girl.x = foot[0]; girl.z = foot[1] - .45; girl.lift = DECK * (1 - k); girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
+    if (mode === 'down') { const k = Math.min(1, t / 2.2); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = DECK * (1 - k); girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
       if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; girl.z = foot[1]; S.stopPlay(); } }
   } };
   const down = () => { if (mode !== 'top') return; mode = 'down'; t = 0; view = -1; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 1.6; sfx.hop(); };
   const look = () => { const V = views(); if (mode !== 'top' || view >= 0 || !V.length) return; view = looks++ % V.length; t = 0; sfx.swish(2); girl.view = 'side'; girl.face = 1;
     const [vx, vz] = V[view]; toy.look = [vx, vz]; toy.shot = { span: 34, tall: 22, rise: .55, riseTall: .7, dof: .1, range: 8, fx: 1, fz: 1, lag: 1 }; };
-  const climb = () => { if (mode === 'top') { down(); return; } if (S.playing()) return; S.walkThen(foot[0], foot[1], () => { if (S.playing()) return; mode = 'up'; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); }, 1.0); };
+  const begin = () => { if (S.playing() || mode) return; mode = 'up'; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); };
+  const climb = () => { if (mode === 'top') { down(); return; } if (S.playing()) return; S.walkThen(foot[0], foot[1], begin, 1.0); };
   const tapsUp = new Set(); for (const o of [scope, ladder, bar]) o.traverse(m => { if (m.isMesh) tapsUp.add(m); });
   S.tap(bar, () => { if (!A) return; if (mode === 'top' && view < 0 && back < 0) { mode = 'grab'; t = 0; sfx.hop(); } else if (!mode) climb(); }, 'zipline');
   S.tap(ladder, climb, 'ladder'); S.tap(scope, () => { if (mode === 'top') look(); else climb(); }, 'telescope');
   return { toy, state: () => ({ mode, climbs, looks, view, up: mode === 'top', rides }), step({ dt, time }) {
     if (!A && !end) lay();
+    // walking into the foot of the ladder climbs it, as a tap on it does
+    if (!mode && !S.playing() && Math.hypot(girl.x - foot[0], girl.z - foot[1]) < .6) { const p = S.pushing(); if (p[1] < -.6) begin(); }
     if (back >= 0) { back += dt; const k = Math.min(1, back / 3.5); barTo(.987 - (.987 - .012) * k * k * (3 - 2 * k)); if (k >= 1) back = -1; }   // the bar slides back up by itself
     sway = Math.max(0, sway - dt * .1); ladder.rotation.x = Math.sin(time * 4) * sway; flag.rotation.y = Math.sin(time * 2.2) * .35;
   } };

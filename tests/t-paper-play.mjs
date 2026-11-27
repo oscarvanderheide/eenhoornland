@@ -317,7 +317,7 @@ export default async function (t) {
     const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('regenboog')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
     ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('strand')`)).castle[0]}, ${(await t.ev(`__p.places('strand')`)).castle[1]})`), 'the bridge joins the rainbow island to the beach');
     // paint: through the red puddle, and on
-    await t.ev(`__p.placeAt(${pl.paint[0] - 1.6}, ${pl.paint[1] - 1.2})`); await t.sleep(2200); await t.ev(`__p.keys(['d'])`); await t.sleep(1700); await t.ev(`__p.keys([])`); await t.sleep(300);
+    await t.ev(`__p.placeAt(${pl.paint[0] - 1.6}, ${pl.paint[1] - 1.2})`); await t.sleep(2200); await t.ev(`__p.keys(['d'])`); await t.sleep(2400); await t.ev(`__p.keys([])`); await t.sleep(300);
     const pa = await toy('verf'); ok(pa.dips === 1 && pa.prints >= 3, `through a puddle of paint: her steps leave prints (${pa.prints} so far, ${pa.left} to go)`); await t.shot('tmp-shots/y-paint-land.png');
     // a mushroom
     const sp = await t.ev(`__p.dbg.set.spots.paddenstoel`); await t.ev(`__p.placeAt(${sp[0] + 1.6}, ${sp[2] + .1})`); await t.sleep(2000); await t.ev(`__p.keys(['a'])`); await t.sleep(700); await t.shot('tmp-shots/y-shroom-land.png'); await t.ev(`__p.keys([])`); await t.sleep(300);

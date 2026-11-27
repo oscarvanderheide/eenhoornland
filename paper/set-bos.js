@@ -133,6 +133,7 @@ export default {
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
+        { name: 'eik', zone: [tx - 2.4, tz + .5, tx + 2.4, tz + 3.6], ax: tx, az: tz + 1.1, fx: .55, fz: .5, lag: 1, span: 9.5, tall: 7, min: 3, rise: -.16, riseTall: -.12, ly: 1.4, yaw: -.25, dof: 1.2, range: 1.4 },   // at the oak's foot the camera is already low on the grass, looking up at the treehouse
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
