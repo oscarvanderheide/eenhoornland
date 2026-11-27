@@ -13,7 +13,7 @@ export const KID = {
     head: 40, headY: 92, neck: 128, hem: 226, foot: 258, arm: 46, pony: 56 },
 };
 /** what the stall sells, per slot (the ids of quest.js SHOP) */
-export const WEAR = { head: ['strik', 'krans', 'hoed', 'kroon'], neck: ['ketting'], hand: ['knuffel', 'ballon'], dress: ['jurkgeel', 'jurkblauw', 'jurkregenboog'], back: ['vleugels'] };
+export const WEAR = { head: ['strik', 'krans', 'hoed', 'kroon'], neck: ['ketting'], hand: ['knuffel', 'ballon'], dress: ['jurkgeel', 'jurkblauw', 'jurkregenboog', 'onesie'], back: ['vleugels'] };
 /** stand and walk (twelve drawings), sitting, arms out in front to hold something, both arms up.
  *  'hold' and 'up' walk too when f is a walk drawing, so she can carry something along */
 export const POSES = ['stand', 'walk', 'sit', 'hold', 'up'];
@@ -22,6 +22,19 @@ const DRESS = { jurkgeel: ['#F7D04A', '#DDA92A'], jurkblauw: ['#7CC4EE', '#4E9CD
 const RAINBOW = ['#F2879B', '#F7A968', '#F7D76A', '#9ED9A0', '#7CC4EE', '#BBA6EA'];
 const RED = '#E8505B', RED2 = '#C23A48', GOLD = '#EBC35E', GOLD2 = '#C9993A', PEARL = '#FFFDF6', LEAF = '#7CC48A', WING = '#FFFDF8', WING2 = '#CDBDF2';
 const NONE = {};
+/* the pink unicorn onesie (Oscar: "there needs to be a pink unicorn onesie for sale"): pink all over, arms and legs too,
+   a hood with two ears and a golden horn, a rainbow mane down the hood and a rainbow tail */
+const PINK = '#F7B6CF', PINK2 = '#E690B4', MANE = ['#F2879B', '#F7D76A', '#9ED9A0', '#7CC4EE', '#BBA6EA'];
+const ones = wear => wear.dress === 'onesie';
+const arc = (x, y, r0, r1, a0, a1, n = 14) => { const out = [], inn = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; out.push([x + Math.cos(a) * r1, y + Math.sin(a) * r1]); inn.unshift([x + Math.cos(a) * r0, y + Math.sin(a) * r0]); } return P([...out, ...inn]); };
+function hornEars(g, x, y, r, tilt = 0) {
+  for (const s of [-1, 1]) { const ex = x + s * r * .62 + tilt * 4, ey = y - r * .78; piece(g, PINK, S([[ex - 9, ey + 6], [ex - 4 + s * 3, ey - 18], [ex + 9, ey + 4]]), .7); ink(g, '#FBD9E6', S([[ex - 4, ey + 3], [ex - 1 + s * 2, ey - 10], [ex + 4, ey + 2]])); }
+  const hx = x + tilt * 6, hy = y - r - 6;
+  piece(g, GOLD, P([[hx - 7, hy + 6], [hx + tilt * 5, hy - 24], [hx + 7, hy + 6]]), .9);
+  line(g, GOLD2, 1.6, [[hx - 5, hy - 1], [hx + 4, hy - 4]]); line(g, GOLD2, 1.6, [[hx - 3, hy - 9], [hx + 3, hy - 11]]);
+}
+function maneTuft(g, pts) { pts.forEach(([x, y], i) => piece(g, MANE[i % MANE.length], E(x, y, 6.5, 6.5), .5)); }
+function tail(g, x, y, d) { MANE.forEach((c, i) => piece(g, c, S([[x, y - 4 + i * 2], [x - d * (14 + i * 3), y - 10 + i * 5], [x - d * (24 + i * 2), y + 6 + i * 6], [x - d * (16 + i), y + 4 + i * 4], [x - d * 4, y + 6 + i * 2]]), .5)); }
 
 /* ---------- the rig: where her joints are in a pose ---------- */
 function rig(o, view, pose, f) {
@@ -57,6 +70,13 @@ export function kidPoints(who, view = 'side', pose = 'stand', f = 0) {
 const shoe = (g, col, [x, y], rx, toe) => piece(g, col, toe ? E(x + 5, y - 3, 7.5, rx) : E(x + 5, y + 6, rx, 7.5));
 /** the dress, a little A, with a band at the hem; a bought dress is another colour, the rainbow one is six strips */
 function dress(g, o, cx, wear) {
+  if (ones(wear)) {   // the onesie: a rounded suit with a pale belly and three heart buttons
+    const w1 = 24 + (o.hem - o.neck) * .04;
+    piece(g, PINK, S([[cx - 16, o.neck - 4], [cx + 16, o.neck - 4], [cx + 19, o.neck + 10], [cx + w1, o.hem - 8], [cx + w1 - 4, o.hem + 8], [cx, o.hem + 12], [cx - w1 + 4, o.hem + 8], [cx - w1, o.hem - 8], [cx - 19, o.neck + 10]]));
+    ink(g, '#FBD9E6', E(cx, (o.neck + o.hem) / 2 + 6, 11, (o.hem - o.neck) * .3));
+    for (let k = 0; k < 3; k++) ink(g, '#F58DB9', E(cx, o.neck + 10 + k * 13, 2.6, 2.6));
+    return;
+  }
   const w0 = 16, w1 = 29 + (o.hem - o.neck) * .07, d = DRESS[wear.dress], rainbow = wear.dress === 'jurkregenboog';
   const body = S([[cx - w0, o.neck - 4], [cx + w0, o.neck - 4], [cx + w0 + 3, o.neck + 10], [cx + w1, o.hem - 2], [cx + w1 - 2, o.hem + 4], [cx, o.hem + 8], [cx - w1 + 2, o.hem + 4], [cx - w1, o.hem - 2], [cx - w0 - 3, o.neck + 10]]);
   piece(g, rainbow ? RAINBOW[0] : d ? d[0] : o.dress, body);
@@ -64,7 +84,7 @@ function dress(g, o, cx, wear) {
     if (g.colour) { g.save(); g.beginPath(); body(g); g.clip(); const top = o.neck - 6, h = (o.hem + 10 - top) / 6; RAINBOW.forEach((c, i) => { g.fillStyle = c; g.fillRect(cx - 60, top + i * h, 120, h + 1); if (i) { g.fillStyle = 'rgba(90,60,70,.16)'; g.fillRect(cx - 60, top + i * h, 120, 1.2); } }); g.restore(); }
   } else piece(g, d ? d[1] : o.dress2, S([[cx - w1 + 3, o.hem - 9], [cx + w1 - 3, o.hem - 9], [cx + w1, o.hem - 1], [cx + w1 - 2, o.hem + 4], [cx, o.hem + 8], [cx - w1 + 2, o.hem + 4], [cx - w1, o.hem - 1]]), .6);
 }
-const dress2 = (o, wear) => wear.dress === 'jurkregenboog' ? RAINBOW[5] : DRESS[wear.dress] ? DRESS[wear.dress][1] : o.dress2;
+const dress2 = (o, wear) => ones(wear) ? PINK2 : wear.dress === 'jurkregenboog' ? RAINBOW[5] : DRESS[wear.dress] ? DRESS[wear.dress][1] : o.dress2;
 const collar = (g, o, cx) => piece(g, o.collar, S([[cx - 16, o.neck - 6], [cx + 16, o.neck - 6], [cx + 10, o.neck + 6], [cx, o.neck + 3], [cx - 10, o.neck + 6]]), .6);
 /** an eye: open, a dot with a glint; shut, a little arc */
 function eyeAt(g, x, y, r, eyes) {
@@ -124,6 +144,14 @@ export function drawWearIcon(g, id) {
   if (id === 'knuffel') { rabbit(g, 60, 26); return; }
   if (id === 'ballon') { g.save(); g.translate(20, 8); drawBalloon(g); g.restore(); return; }
   if (id === 'vleugels') { wing(g, 54, 64, -1, .9); wing(g, 66, 64, 1, .9); return; }
+  if (id === 'onesie') {
+    g.save(); g.translate(60, 64); g.scale(.92, .92); g.translate(-60, -58);
+    for (const s of [-1, 1]) { piece(g, PINK2, C(60 + s * 12, 78, 60 + s * 14, 106, 9)); piece(g, PINK, C(60 + s * 18, 50, 60 + s * 34, 74, 7, 8)); }
+    piece(g, PINK, S([[44, 42], [76, 42], [82, 70], [78, 90], [60, 94], [42, 90], [38, 70]])); ink(g, '#FBD9E6', E(60, 72, 10, 15));
+    piece(g, PINK, E(60, 30, 20, 17)); ink(g, '#FBD9E6', E(60, 33, 12, 10)); hornEars(g, 60, 34, 20); maneTuft(g, [[44, 20], [40, 30], [41, 40]]);
+    g.restore();
+    return;
+  }
   const d = DRESS[id], rb = id === 'jurkregenboog', body = S([[44, 20], [76, 20], [80, 44], [100, 104], [20, 104], [40, 44]]);
   piece(g, rb ? RAINBOW[0] : d[0], body);
   if (rb) RAINBOW.forEach((c, i) => { if (i) ink(g, c, P([[40 - i * 3, 44 + i * 10], [80 + i * 3, 44 + i * 10], [83 + i * 3, 54 + i * 10], [37 - i * 3, 54 + i * 10]])); });
@@ -136,10 +164,12 @@ function kidSide(g, o, R, wear, eyes) {
   const { cx, sh } = R, hy = o.headY, r = o.head, legR = 8;
   if (wear.back === 'vleugels') wing(g, cx - 8, sh + 2, -1, .92);
   // far leg and arm (in the shade); sitting, her legs lie on top of her dress and are drawn after it
-  const farLeg = () => { piece(g, o.skin2, C(...R.hipF, ...R.footF, legR)); shoe(g, o.shoe2, R.footF, 12, R.toe); };
-  const nearLeg = () => { piece(g, o.skin, C(...R.hipN, ...R.footN, legR)); shoe(g, o.shoe, R.footN, 13, R.toe); };
+  const on = ones(wear), sk = on ? PINK : o.skin, sk2 = on ? PINK2 : o.skin2;
+  const farLeg = () => { piece(g, sk2, C(...R.hipF, ...R.footF, legR)); shoe(g, o.shoe2, R.footF, 12, R.toe); };
+  const nearLeg = () => { piece(g, sk, C(...R.hipN, ...R.footN, legR)); shoe(g, o.shoe, R.footN, 13, R.toe); };
+  if (on) tail(g, cx - 18, o.hem - 14, 1);
   if (!R.toe) farLeg();
-  piece(g, o.skin2, C(...R.shF, ...R.handF, 6.5, 8));
+  piece(g, sk2, C(...R.shF, ...R.handF, 6.5, 8));
   // the ponytail, tied high at the back of her head: it swings out and curls down (longer for Fenna), and bounces as she walks
   { const L = o.pony, k = R.pony, bx = cx - r * .55, by = hy - r * .62;
     piece(g, o.hair, S([[bx + 6, by + 4], [bx - 14, by - 14], [bx - 38, by - 10], [bx - 50 + k, by + 10], [bx - 50 + k, by + L * .6], [bx - 40 + k, by + L + 12], [bx - 30 + k, by + L + 4],
@@ -151,7 +181,7 @@ function kidSide(g, o, R, wear, eyes) {
   if (wear.neck === 'ketting') beads(g, [0, 1, 2, 3, 4].map(i => [cx + 16 - i * 5.5, o.neck + 3 + Math.sin(i / 4 * Math.PI * .85) * 13]));
   if (wear.hand === 'knuffel') rabbit(g, R.handN[0] + 2, R.handN[1] + 3);
   // near arm with a round hand
-  piece(g, o.skin, C(...R.shN, ...R.handN, 6.5, 8));
+  piece(g, sk, C(...R.shN, ...R.handN, 6.5, 8)); if (on) piece(g, o.skin, E(...R.handN, 6, 6), .4);
   // head: the hair behind, the face, then the hair on top with a fringe
   piece(g, o.hair2, E(cx - 6, hy - 6, r + 3, r - 3));
   piece(g, o.skin, E(cx + 4, hy, r, r - 1));
@@ -161,6 +191,7 @@ function kidSide(g, o, R, wear, eyes) {
   // the clip
   { const bx = cx - r * .55, by = hy - r * .62;
     piece(g, o.clip, U(E(bx - 9, by - 7, 9, 6.5, -.9), E(bx + 3, by + 7, 9, 6.5, -.9)), .7); piece(g, o.clip, E(bx - 3, by, 5, 5), .9); }
+  if (on) { piece(g, PINK, arc(cx + 4, hy, r - 8, r + 9, Math.PI * .62, Math.PI * 1.86)); maneTuft(g, [[cx - r - 4, hy - 10], [cx - r - 2, hy + 4], [cx - r + 4, hy + 16], [cx - r + 2, hy - 24]]); hornEars(g, cx + 6, hy, r, .6); }
   if (wear.head) headwear(g, wear.head, cx + 4, hy, r, true);
   // face: two dot eyes (the far one a little smaller), rosy cheeks, a small smile
   eyeAt(g, cx + 28, hy + 6, 5, eyes); eyeAt(g, cx + 8, hy + 6, 4.3, eyes);
@@ -169,14 +200,14 @@ function kidSide(g, o, R, wear, eyes) {
 }
 /** the same girl seen walking towards us (back = false) or away from us (back = true) */
 function kidFB(g, o, R, wear, eyes, back) {
-  const { cx, sh, thigh, k } = R, hy = o.headY, r = o.head, legR = 8;
-  const arms = col => { piece(g, col, C(...R.shL, ...R.handL, 6.5, 8)); piece(g, col, C(...R.shR, ...R.handR, 6.5, 8)); };
+  const { cx, sh, thigh, k } = R, hy = o.headY, r = o.head, legR = 8, on = ones(wear);
+  const arms = col => { if (on) col = col === o.skin ? PINK : PINK2; piece(g, col, C(...R.shL, ...R.handL, 6.5, 8)); piece(g, col, C(...R.shR, ...R.handR, 6.5, 8)); };
   if (!back && wear.back === 'vleugels') { wing(g, cx + 12, sh + 2, 1); wing(g, cx - 12, sh + 2, -1); }
   // seen from the front the ponytail peeks out beside her head; it swings as she walks
   if (!back) piece(g, o.hair2, S([[cx - r * .3, hy - r * .9], [cx - r - 10 + k, hy - r * .7], [cx - r - 20 + k, hy - r * .2], [cx - r - 18 + k, hy + o.pony * .5], [cx - r - 8 + k, hy + o.pony * .7], [cx - r - 6, hy - r * .1]]));
   // legs: the one that steps lifts its foot a little
   for (const [sx, l] of R.legs) {
-    piece(g, back ? o.skin2 : o.skin, C(cx + sx, thigh, cx + sx, o.foot - 2 - l, legR));
+    piece(g, on ? (back ? PINK2 : PINK) : back ? o.skin2 : o.skin, C(cx + sx, thigh, cx + sx, o.foot - 2 - l, legR));
     piece(g, back ? o.shoe2 : o.shoe, back ? E(cx + sx, o.foot + 1 - l, 10, 7) : R.big ? E(cx + sx, o.foot + 3 - l, 11.5, 10.5) : E(cx + sx, o.foot + 4 - l, 10.5, 8));
   }
   // arms at her sides, swinging forwards and back (seen as a little longer and shorter)
@@ -197,15 +228,18 @@ function kidFB(g, o, R, wear, eyes, back) {
     piece(g, o.hair, S([[cx - 11, by + 2], [cx + 11, by + 2], [cx + 15 + k, by + o.pony * .5 + 14], [cx + 9 + k, by + o.pony + 22], [cx + k, by + o.pony + 28], [cx - 9 + k, by + o.pony + 20], [cx - 15 + k, by + o.pony * .5 + 14]]));
     ink(g, o.hair2, S([[cx - 3, by + 10], [cx + 3, by + 10], [cx + 3 + k, by + o.pony * .7 + 14], [cx - 3 + k, by + o.pony * .7 + 14]]));
     piece(g, o.clip, U(E(cx - 10, by, 9, 6.5, -.3), E(cx + 10, by, 9, 6.5, .3)), .7); piece(g, o.clip, E(cx, by + 1, 5, 5), .9);
+    if (on) { piece(g, PINK, E(cx, hy - 3, r + 8, r + 5)); maneTuft(g, [[cx, hy - r + 2], [cx, hy - r + 14], [cx, hy - 8], [cx, hy + 4], [cx, hy + 16], [cx, hy + 28]]); hornEars(g, cx, hy, r); tail(g, cx + 4, o.hem - 12, -1); }
     if (wear.head) headwear(g, wear.head, cx, hy, r, false);
     return;
   }
   // the face, straight on: hair behind at the sides, a fringe on top
+  if (on) piece(g, PINK2, E(cx, hy - 1, r + 10, r + 7));
   piece(g, o.hair2, E(cx, hy - 3, r + 4, r - 2));
   piece(g, o.skin, E(cx, hy, r, r - 1));
   piece(g, o.hair, S([[cx - r - 3, hy + 20], [cx - r - 6, hy - 10], [cx - r + 6, hy - r + 4], [cx - 14, hy - r - 6], [cx + 14, hy - r - 6], [cx + r - 6, hy - r + 4], [cx + r + 6, hy - 10], [cx + r + 3, hy + 20],
     [cx + r - 6, hy + 4], [cx + r - 10, hy - 12], [cx + 22, hy - 8], [cx + 12, hy - 18], [cx, hy - 9], [cx - 12, hy - 18], [cx - 22, hy - 8], [cx - r + 10, hy - 12], [cx - r + 6, hy + 4]]));
   piece(g, o.clip, U(E(cx - r * .62 - 8, hy - r * .78, 8, 6, -.6), E(cx - r * .62 + 4, hy - r * .9, 8, 6, -.6)), .7); piece(g, o.clip, E(cx - r * .62 - 2, hy - r * .84, 4.5, 4.5), .9);
+  if (on) { piece(g, PINK, arc(cx, hy, r - 9, r + 9, Math.PI * .92, Math.PI * 2.08)); maneTuft(g, [[cx - r - 6, hy - 14], [cx - r - 9, hy - 1], [cx - r - 8, hy + 12]]); hornEars(g, cx, hy, r); }
   if (wear.head) headwear(g, wear.head, cx, hy, r, false);
   eyeAt(g, cx - 14, hy + 8, 5, eyes); eyeAt(g, cx + 14, hy + 8, 5, eyes);
   ink(g, 'rgba(240,120,140,.45)', E(cx - 25, hy + 20, 7.5, 5)); ink(g, 'rgba(240,120,140,.45)', E(cx + 25, hy + 20, 7.5, 5));

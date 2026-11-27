@@ -189,6 +189,37 @@ function drawBakker(g, f) {
   });
 }
 
+/* ---------- the shopkeeper ---------- */
+// the lady of the clothes shop (Oscar: "we really need a shop with a vendor on the starting island"): a big curly bun of
+// red hair with a pink flower, round glasses, a lilac dress with a white collar, a tape measure round her neck and a
+// pincushion on her wrist. 0 smiles with her hands on the counter, 1 holds up a dress on its hanger, 2 waves hello
+function drawWinkelier(g, f) {
+  const cx = 100, [sk, sk2] = SKIN.sun, dress = '#BBA6EA', dress2 = '#9F88D6', hair = '#D9764A', hair2 = '#B95C36', shoe = '#8D6A48', shoe2 = '#7A5A3E', tape = '#F7D76A', pink = '#F58DB9';
+  leg(g, dress2, shoe2, [cx - 14, 270], [cx - 14, 290], [cx - 14, 306], 11);
+  leg(g, dress, shoe, [cx + 14, 270], [cx + 14, 290], [cx + 14, 307], 11);
+  arm(g, dress2, sk2, [cx + 28, 168], [cx + 46, 204], [cx + 64, 224], 10);
+  const body = S([[cx - 30, 146], [cx + 30, 146], [cx + 46, 186], [cx + 58, 262], [cx + 40, 288], [cx, 294], [cx - 40, 288], [cx - 58, 262], [cx - 46, 186]]);
+  piece(g, dress, body);
+  ink(g, dress2, S([[cx - 54, 262], [cx + 54, 262], [cx + 40, 288], [cx, 294], [cx - 40, 288]]));
+  for (let k = 0; k < 4; k++) ink(g, '#FCF8F1', E(cx - 36 + k * 24, 240, 3.2, 3.2));
+  piece(g, WHITE, S([[cx - 26, 144], [cx + 26, 144], [cx + 18, 160], [cx, 152], [cx - 18, 160]]), .6);
+  // the tape measure hanging round her neck, with its little marks
+  piece(g, tape, strip([[cx - 18, 150], [cx - 22, 190], [cx - 20, 222]], 4.5), .5); piece(g, tape, strip([[cx + 18, 150], [cx + 22, 186], [cx + 20, 210]], 4.5), .5);
+  for (let k = 0; k < 6; k++) { line(g, '#C9993A', 1.2, [[cx - 24, 160 + k * 11], [cx - 18, 160 + k * 11]]); line(g, '#C9993A', 1.2, [[cx + 17, 158 + k * 9], [cx + 23, 158 + k * 9]]); }
+  if (f === 1) {   // holding up a pink dress on its hanger
+    line(g, '#A9825A', 2.4, [[cx + 96, 92], [cx + 96, 84], [cx + 102, 80], [cx + 108, 86]]);
+    piece(g, '#A9825A', strip([[cx + 70, 108], [cx + 96, 94], [cx + 122, 108]], 3), .6);
+    piece(g, pink, S([[cx + 82, 104], [cx + 110, 104], [cx + 114, 124], [cx + 136, 176], [cx + 56, 176], [cx + 78, 124]]), .8);
+    ink(g, '#DC6A9E', S([[cx + 60, 166], [cx + 132, 166], [cx + 136, 176], [cx + 56, 176]]));
+    arm(g, dress, sk, [cx - 10, 168], [cx + 30, 160], [cx + 74, 116], 10.5, 10);
+  } else if (f === 2) arm(g, dress, sk, [cx - 10, 168], [cx - 40, 130], [cx - 34, 84], 10.5, 10);
+  else { arm(g, dress, sk, [cx - 10, 168], [cx + 8, 206], [cx + 44, 222], 10.5, 10); piece(g, pink, E(cx + 36, 212, 9, 7), .7); for (const [a, b] of [[-3, -5], [3, -6], [6, 0]]) line(g, '#7A5A3E', 1.4, [[cx + 36 + a, 210 + b], [cx + 36 + a * 1.6, 210 + b * 1.8]]); }
+  head(g, cx + 4, 104, f === 2 ? -.12 : 0, { skin: [sk, sk2], r: 44, ear: true, eyes: f === 2 ? 'glad' : 'open', mouth: f === 2 ? 'laugh' : 'smile',
+    back: () => { piece(g, hair2, E(-8, -4, 49, 45)); piece(g, hair, U(E(-18, -50, 24, 21), E(4, -60, 22, 19), E(-34, -32, 18, 18)), .8); piece(g, pink, U(E(12, -66, 8, 6, .6), E(20, -58, 8, 6, -.4), E(8, -54, 8, 6, 1.4)), .9); piece(g, '#F7D76A', E(13, -60, 3.6, 3.6)); },
+    top: (_, r) => { hairTop(g, hair, r); for (const [a, b] of [[-24, -26], [-2, -34], [20, -30]]) ink(g, hair2, E(a, b, 6, 3.5, .4)); },
+    front: () => { line(g, '#7A5A3E', 2, arc(25, 3, 9, 0, 2 * PI, 14)); line(g, '#7A5A3E', 2, arc(4, 3, 8, 0, 2 * PI, 14)); line(g, '#7A5A3E', 2, [[12, 1], [17, 1]]); } });
+}
+
 /* ---------- grandma ---------- */
 // small and round, sitting (as on a bench: her seat is PEOPLE.oma.seat): a grey bun, round glasses, a pink shawl, knitting a long
 // striped scarf that hangs from her needles. 0 and 1 knit (the needles cross one way, then the other), 2 looks up and waves,
@@ -416,6 +447,7 @@ function drawMuzikant(g, f) {
 const moved = (dy, draw) => (g, f) => { g.save(); g.translate(0, dy); draw(g, f); g.restore(); };
 /** canvas sizes (drawing units), how tall each card stands in the world (Anna is 1.2) and what each frame is */
 export const PEOPLE = {
+  winkelier: { w: 260, h: 330, draw: drawWinkelier, frames: 3, size: 1.65, does: ['smile', 'dress', 'wave'] },
   oma: { w: 204, h: 266, draw: drawOma, frames: 4, size: 1.33, does: ['knit', 'knit', 'wave', 'doze'], seat: [84, 208] },
   bakker: { w: 256, h: 350, draw: drawBakker, frames: 3, size: 1.75, does: ['tray', 'bun', 'laugh'] },
   tuinman: { w: 336, h: 300, draw: moved(16, drawTuinman), frames: 4, size: 1.5, does: ['asleep', 'snore', 'startled', 'wave'] },

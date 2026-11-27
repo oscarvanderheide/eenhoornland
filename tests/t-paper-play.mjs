@@ -559,12 +559,18 @@ export default async function (t) {
     const all = await coinsAt(); ok(all.length >= 5 && (await shop()).coins === 0, `coins lie about the islands (${all.length}), and she has none yet`);
     await t.ev('__p.open()'); for (const c of all) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);
     await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.toy('winkel').coins === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
-    const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(4.6, 5.0)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
-    await t.ev(`__p.tap('kleren-strik')`); await t.sleep(2200); ok((await shop()).own.length === 0, 'a tap on the bow with too few coins: it only wobbles');
+    const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
+    const card = id => t.ev(`document.querySelector('.shop-card[data-id=${id}]').click()`), shut = () => t.ev(`document.querySelector('.shop-x').click()`);
+    await t.ev(`__p.tap('winkel')`); ok(await until(`__p.toy('winkel').open`, 6), 'a tap on the shop: she walks to the counter and the shop opens'); await t.sleep(800); await t.shot('tmp-shots/y-shop-sheet-land.png');
+    ok((await t.ev(`__p.toy('winkel').mood`)) === 'wave', 'the shopkeeper waves');
+    ok(await t.ev(`!!document.querySelector('.shop-card[data-id=onesie]')`), 'the pink unicorn onesie is for sale');
+    await card('strik'); await t.sleep(1200); ok((await shop()).own.length === 0, 'a tap on the bow with too few coins: it only wobbles');
+    await shut(); ok(await until(`!__p.toy('winkel').open`, 2), 'the round cross closes it');
     await t.ev(`__p.placeAt(${all[1][0] - 1.2}, ${all[1][1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${all[1][0] + .6}, ${all[1][1]})`); ok(await until(`__p.toy('winkel').coins === 2`, 5), 'another coin');
-    await t.ev(`__p.placeAt(4.6, 5.0)`); await t.sleep(2200); await t.ev(`__p.tap('kleren-strik')`); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
-    await t.ev(`__p.tap('kleren-strik')`); ok(await until(`!__p.toy('winkel').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
-    await t.ev(`__p.tap('kleren-strik')`); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 4), 'and on again, for free');
+    await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(800); await t.ev(`__p.tap('winkel')`); ok(await until(`__p.toy('winkel').open`, 8), 'back at the shop'); await t.sleep(500); await card('strik'); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
+    await card('strik'); ok(await until(`!__p.toy('winkel').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
+    await card('strik'); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 4), 'and on again, for free');
+    await shut(); await t.sleep(400);
     await t.ev('__p.swap()'); await t.sleep(600); ok(!(await shop()).wearing.includes('strik'), 'her sister has her own things on');
   }
 

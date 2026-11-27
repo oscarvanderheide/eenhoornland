@@ -2,7 +2,9 @@
 import { THREE, lerp, paper, sheetOf, slab, card, edgeMat, grassMap, grassBump, sandMap, sandBump } from './kit.js';
 import { THINGS } from './things.js';
 import { drawWearIcon } from './kids.js';
-import { E, U, S as S2, piece, ink } from './cut.js';
+import { E, U, S as S2, piece, ink, cutout } from './cut.js';
+import { PEOPLE } from './people.js';
+import { SHELF } from './shopui.js';
 
 /** the printed papers the ground is cut from */
 export const GROUND = {
@@ -447,38 +449,47 @@ export function witchHouse(S, x, y, z) {
 }
 
 /* ---------------- the clothes shop on the village square ---------------- */
-/** (Oscar: "the starting area should have the shop where we can buy outfits") A wooden rack with two rails and a garland of
- *  little flags; on it hang the eleven things to wear, each a paper card with its price under it in coins (no numbers).
- *  A tap on one: she walks over; if she has the coins they fly from her row to the card, and she has it on at once.
- *  Hers already: a tap puts it on, or takes it off. Too few coins: the card gives a little wobble. A pink ribbon on a
- *  card says it is hers; a heart says she has it on. (x, z): the rack's middle, its front to the south */
-export const PRICES = { strik: 2, krans: 3, hoed: 3, kroon: 6, ketting: 3, knuffel: 3, ballon: 2, jurkgeel: 4, jurkblauw: 4, jurkregenboog: 8, vleugels: 6 };
+/** (Oscar: "the washline with clothes to buy is a cute idea but its really difficult for my kids to understand. we really
+ *  need a shop with a vendor on the starting island. and there needs to be a pink unicorn onesie for sale too.")
+ *  A little shop with a pink and white striped awning, a sign with the onesie on it, clothes hanging on the back wall, and
+ *  the shopkeeper behind her counter. A tap on the shop or on her: she walks up to the counter, the shopkeeper waves, and
+ *  the shop's sheet opens (shopui.js: a mirror with her in it, a card for every thing, its price in coins under it).
+ *  (x, z): the shop's middle, its open front to the south */
+export const PRICES = { strik: 2, krans: 3, hoed: 3, kroon: 6, ketting: 3, knuffel: 3, ballon: 2, jurkgeel: 4, jurkblauw: 4, jurkregenboog: 8, onesie: 8, vleugels: 6 };
 export function shop(S, x, z, y = 0) {
   const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
-  const RW = 3.6, add = (w, h, d, col, px, py, pz) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); g.add(m); return m; };
-  for (const s of [-1, 1]) { add(.09, 1.95, .09, '#a97a4e', s * RW / 2, .975, 0); add(.5, .06, .3, '#8d6a48', s * RW / 2, .03, 0); }
-  const RAILS = [1.78, 1.08]; for (const ry of RAILS) { const r = m3(new THREE.CylinderGeometry(.025, .025, RW, 8), '#c79a66'); r.rotation.z = Math.PI / 2; r.position.set(0, ry, 0); g.add(r); }
-  for (let i = 0; i < 13; i++) { const fl = card([[-.07, 0], [.07, 0], [0, -.13]], .01, paper(['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'][i % 4], { side: THREE.DoubleSide })); fl.position.set(-RW / 2 + .15 + i * (RW - .3) / 12, 1.98 - Math.sin(i / 12 * Math.PI) * .12, .02); g.add(fl); }
-  S.wall(x, z, RW / 2 + .1, .2);
-  const ROWS = [['strik', 'krans', 'hoed', 'kroon', 'ketting', 'knuffel', 'ballon'], ['jurkgeel', 'jurkblauw', 'jurkregenboog', 'vleugels']];
-  const cards = [];
-  ROWS.forEach((row, ri) => row.forEach((id, i) => {
-    const n = PRICES[id], spec = { w: 120, h: 160, frames: 3, size: .6, thing: true, draw(c, fr) {
-      drawWearIcon(c, id);
-      if (fr === 0) for (let k = 0; k < n; k++) { const cx = 60 + (k - (n - 1) / 2) * 13, cy = 140; piece(c, '#E0A93A', E(cx, cy, 6.5, 6.5), .3); ink(c, '#F2C65C', E(cx, cy, 4.4, 4.4)); }
-      else if (fr === 1) { piece(c, '#F4A6C4', U(E(48, 140, 11, 7, .4), E(72, 140, 11, 7, -.4)), .4); piece(c, '#E98F8F', E(60, 140, 5, 5)); }
-      else piece(c, '#E98F8F', S2([[60, 152], [44, 136], [46, 126], [54, 124], [60, 131], [66, 124], [74, 126], [76, 136]]), .5);
-    } };
-    const f = S.figure('kleren-' + id, spec), px = -RW / 2 + .4 + i * (RW - .8) / Math.max(1, row.length - 1), [wx, wz] = S.at([x + px, z + .06]);
-    f.x = wx; f.z = wz; f.floatY = f.y = y + RAILS[ri] - f.H - .02;
-    const hook = m3(new THREE.TorusGeometry(.05, .008, 4, 10, Math.PI), '#7a5a3e'); hook.position.set(px, RAILS[ri] - .015, .03); g.add(hook);
-    f.act = () => f.setFrame(S.closet.wearing(id) ? 2 : S.closet.owns(id) ? 1 : 0);
-    f.onTap = () => { if (S.playing()) return; S.walkThen(wx, wz + .95, () => {
-      girl.view = 'back';
-      if (S.closet.owns(id)) { S.closet.put(id); f.hopV = 1.6; return; }
-      if (!S.coins.spend(n, f.x, f.y + f.H * .6, f.z, () => { S.closet.buy(id); f.hopV = 2; })) { f.hopV = 1.4; f.wob = 1; sfx.peep(); }
-    }, 1.0); };
-    cards.push({ id, f });
-  }));
-  return { state: () => ({ coins: S.coins.have(), own: cards.filter(c => S.closet.owns(c.id)).map(c => c.id), wearing: cards.filter(c => S.closet.wearing(c.id)).map(c => c.id) }), places: { front: S.at([x, z + 1.1]) } };
+  const add = (w, h, d, col, px, py, pz) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); g.add(m); return m; };
+  const W = 3.6, D = 2.0, H = 2.3;
+  add(W + .2, .1, D + .2, '#e8d5b0', 0, .05, 0);                                   // the floor
+  add(W, H, .1, '#f8dde4', 0, H / 2, -D / 2);                                       // the back wall, pink
+  for (const s of [-1, 1]) add(.12, H, D, '#f4c6d4', s * W / 2, H / 2, 0);            // the side walls
+  for (let i = 0; i < 9; i++) add(W / 9 - .01, .02, D * .9, '#ecd2dc', -W / 2 + W / 18 + i * W / 9, H - .01, -.05);
+  add(W + .4, .12, D + .3, '#c79a66', 0, H + .06, -.05);                            // the roof
+  // the striped awning sloping out over the front, with a scalloped edge
+  for (let i = 0; i < 9; i++) { const st = add(W / 9 + .02, .04, 1.0, i % 2 ? '#fbf5ea' : '#f4a6c4', -W / 2 + W / 18 + i * W / 9, H - .14, D / 2 + .42); st.rotation.x = .42;
+    const sc = new THREE.Mesh(new THREE.CircleGeometry(W / 18 + .01, 14, Math.PI, Math.PI), paper(i % 2 ? '#fbf5ea' : '#f4a6c4', { side: THREE.DoubleSide })); sc.position.set(-W / 2 + W / 18 + i * W / 9, H - .35, D / 2 + .88); g.add(sc); }
+  // the sign on the roof: the onesie on a round board
+  const pic = (id, w, mat = {}) => { const t = new THREE.CanvasTexture(cutout(120, 120, c => drawWearIcon(c, id), null, 1.5)); t.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, roughness: .95, ...mat })); m.castShadow = true; g.add(m); return m; };
+  { const board = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .06, 28), paper('#fbf5ea')); board.rotation.x = Math.PI / 2; board.position.set(0, H + .7, -.1); board.castShadow = true; g.add(board);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(.5, .05, 6, 28), paper('#c79a66')); rim.position.set(0, H + .7, -.1); g.add(rim); add(.06, .4, .06, '#a97a4e', 0, H + .2, -.1); pic('onesie', .78).position.set(0, H + .7, -.06); }
+  // clothes on a rail along the back wall
+  { const r = m3(new THREE.CylinderGeometry(.025, .025, W - .5, 8), '#c79a66'); r.rotation.z = Math.PI / 2; r.position.set(0, 1.75, -D / 2 + .2); g.add(r);
+    ['jurkgeel', 'onesie', 'jurkregenboog', 'jurkblauw', 'vleugels'].forEach((id, i) => pic(id, .55).position.set(-1.2 + i * .6, 1.45, -D / 2 + .22));
+    ['kroon', 'hoed', 'strik'].forEach((id, i) => pic(id, .4).position.set(-1.35 + i * .45, .62, -D / 2 + .5));   // and hats on a low shelf
+    add(1.4, .05, .4, '#c79a66', -.9, .42, -D / 2 + .25); }
+  // the counter, with a stack of folded things and a mirror on it
+  add(2.4, .82, .5, '#d9a8b8', .3, .41, .45); add(2.55, .07, .62, '#e8d5b0', .3, .855, .45);
+  [['#f7b6cf', .9], ['#9ed9cf', .96], ['#f2c65c', .92]].forEach(([c, w], i) => add(.36 * w, .07, .28, c, 1.15, .93 + i * .075, .45));
+  // the shopkeeper behind her counter
+  const [wx, wz] = S.at([x - .5, z - .05]), keeper = S.figure('winkelier', PEOPLE.winkelier); keeper.x = wx; keeper.z = wz; keeper.floatY = keeper.y = y + .1; keeper.face = 1;
+  let mood = 'smile', moodT = 0; const FR = { smile: 0, dress: 1, wave: 2 };
+  keeper.act = () => keeper.setFrame(FR[mood] || 0);
+  const setMood = how => { mood = how; moodT = how === 'smile' ? 0 : 2.2; if (how === 'wave') keeper.hopV = 1.4; };
+  S.wall(x, z - .12, W / 2 + .12, D / 2 + .05);
+  const [fx, fz] = S.at([x - .3, z + 1.55]); let opened = 0, sheet = null;
+  const enter = () => { if (S.playing() || document.getElementById('shopbook')) return; S.walkThen(fx, fz, () => { girl.view = 'back'; opened++; sheet = S.closet.open(setMood); }, .9); };
+  S.tap(g, enter, 'winkel'); keeper.onTap = enter;
+  return { keeper, state: () => ({ coins: S.coins.have(), own: SHELF.filter(id => S.closet.owns(id)), wearing: SHELF.filter(id => S.closet.wearing(id)), open: !!document.getElementById('shopbook'), opened, mood }),
+    places: { front: S.at([x - .3, z + 1.55]) },
+    step({ dt }) { if (moodT > 0) { moodT -= dt; if (moodT <= 0) mood = 'smile'; } } };
 }

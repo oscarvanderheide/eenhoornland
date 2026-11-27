@@ -21,6 +21,8 @@ import kasteel from './set-kasteel.js';
 import grot from './set-grot.js';
 import hol from './set-hol.js';
 import { EGG } from './quest.js';
+import { openShop } from './shopui.js';
+import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
 const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol };
 
@@ -315,7 +317,7 @@ function buildSet(def) {
     coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); s.coinN = (s.coinN || 0) + 1; return coinAt(wx, wz, y, s.name + ':' + s.coinN); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
-  Object.assign(s, def.build(S));
+  { const tapped = s.names, built = def.build(S); Object.assign(s, built); s.names = { ...tapped, ...(built.names || {}) }; }   // (names the set gives keep the ones its taps gave)
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];
   s.places = Object.fromEntries(Object.entries(s.places || {}).map(([n, q]) => [n, W(q)])); s.spots = Object.fromEntries(Object.entries(s.spots).map(([n, [x, y, z]]) => [n, [x + ox, y, z + oz]]));
   { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const f of s.floors) for (const [x, z] of f.box ? [[f.box[0], f.box[1]], [f.box[2], f.box[3]]] : f.pts) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); } s.box = [x0 - 1, z0 - 1, x1 + 1, z1 + 1]; s.box3 = new THREE.Box3(new THREE.Vector3(x0 - 4, -3, z0 - 4), new THREE.Vector3(x1 + 4, 9, z1 + 4)); }   // where its floors lie: a far set is passed over quickly
@@ -735,8 +737,8 @@ function flyCoin(from, to, done) { const im = new Image(); im.src = coinImg(); i
 const coins = {
   have: () => purse.coins,
   earn(x, y, z, n = 1) { confetti(x, y + .2, z, ['#f2c65c', '#fbf5ea', '#e0a93a'], 10, starGeo, 2); for (let k = 0; k < n; k++) setTimeout(() => { sfx.peep(); flyCoin(onScreen(x, y, z), slot(purse.coins), () => { purse.coins++; showCoins(true); sfx.chime(); }); }, k * 220); },
-  /** pay n coins: they fly from her row to (x, y, z); false if she has too few */
-  spend(n, x, y, z, done) { if (purse.coins < n) return false; for (let k = 0; k < n; k++) setTimeout(() => { purse.coins--; showCoins(); flyCoin(slot(purse.coins), onScreen(x, y, z), () => { sfx.peep(); if (k === n - 1 && done) done(); }); }, k * 160); return true; },
+  /** pay n coins: they fly from her row to (x, y, z), or to a place on the screen ([sx, sy] as x); false if she has too few */
+  spend(n, x, y, z, done) { if (purse.coins < n) return false; for (let k = 0; k < n; k++) setTimeout(() => { purse.coins--; showCoins(); flyCoin(slot(purse.coins), Array.isArray(x) ? x : onScreen(x, y, z), () => { sfx.peep(); if (k === n - 1 && done) done(); }); }, k * 160); return true; },
   /** the first time this happens, a coin */
   reward(key, x, y, z) { if (purse.seen.has(key)) return; purse.seen.add(key); setTimeout(() => coins.earn(x, y, z), 700); },
 };
@@ -753,7 +755,9 @@ function takeCoin(o) { if (o.gone) return; if (o.id) takenCoins.add(o.id); remov
 const wardrobe = { own: new Set(), on: { anna: {}, fenna: {} } };
 const redressBoth = () => { girl.redress({ ...wardrobe.on[girl.kid] }); zus.redress({ ...wardrobe.on[zus.kid] }); };
 const closet = {
-  owns: id => wardrobe.own.has(id), wearing: id => Object.values(wardrobe.on[girl.kid]).includes(id),
+  owns: id => wardrobe.own.has(id), wearing: id => Object.values(wardrobe.on[girl.kid]).includes(id), worn: () => ({ ...wardrobe.on[girl.kid] }),
+  /** the shop's counter (shopui.js): the sheet with the mirror and the cards; `keeper(how)` lets the shopkeeper smile, hold up a dress or wave */
+  open(keeper = () => { }) { return openShop({ kid: () => girl.kid, worn: closet.worn, owns: closet.owns, wearing: closet.wearing, have: coins.have, pay: (n, at, done) => coins.spend(n, at, 0, 0, done), buy: id => closet.buy(id), put: id => closet.put(id), coin: coinImg(), prices: PRICES, sfx, keeper }); },
   buy(id) { wardrobe.own.add(id); closet.put(id); },
   put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
 };
@@ -999,11 +1003,13 @@ function readPad() {
   let x = gp.axes[0] || 0, y = gp.axes[1] || 0; if (Math.hypot(x, y) < .22) x = y = 0;
   if (b(PB.LEFT)) x = -1; if (b(PB.RIGHT)) x = 1; if (b(PB.UP)) y = -1; if (b(PB.DOWN)) y = 1;
   pad.move = [x, y]; if (x || y || gp.buttons.some(q => q.pressed)) pad.on = true;
-  const book = document.getElementById('savebook');
-  if (book) {   // the three saves: the stick picks one, ✕ plays it, ○ closes
-    const cards = [...book.querySelectorAll('.savecard')]; if (Math.abs(x) > .5 && performance.now() - pad.lastMove > 260) { pad.pick = (pad.pick + (x > 0 ? 1 : cards.length - 1)) % cards.length; pad.lastMove = performance.now(); }
+  const book = document.querySelector('.padbook');
+  if (book) {   // a sheet over the game (the three saves, the shop): the stick picks a card, ✕ takes it, ○ closes
+    const cards = [...book.querySelectorAll('.padcard')], cols = +book.dataset.cols || cards.length, n = cards.length;
+    if (pad.book !== book) { pad.book = book; pad.pick = 0; }
+    if ((Math.abs(x) > .5 || Math.abs(y) > .5) && performance.now() - pad.lastMove > 260) { const d = Math.abs(x) > Math.abs(y) ? Math.sign(x) : Math.sign(y) * cols; pad.pick = ((pad.pick + d) % n + n) % n; pad.lastMove = performance.now(); }
     cards.forEach((c, i) => c.classList.toggle('padsel', i === pad.pick)); pad.move = [0, 0];
-    if (press(PB.X)) cards[pad.pick]?.click(); if (press(PB.O) || press(PB.OPT)) book.remove();
+    if (press(PB.X)) cards[pad.pick]?.click(); if (press(PB.O) || press(PB.OPT)) { const xb = book.querySelector('.shop-x'); if (xb) xb.click(); else book.remove(); }
   } else {
     if (press(PB.X)) { if (playing) { if (playing.pad && playing.pad.x) playing.pad.x(); else playAct = true; } else if (!through) { const s = nearestThing(); if (s) { try { s.fn(); } catch (e) { } } else { girl.hopV = 3.2; sfx.hop(); } } }
     if (press(PB.O)) { if (playing) playAct = true; else { girl.hopV = 3.2; sfx.hop(); } }
@@ -1255,11 +1261,11 @@ function faceCut(who, px) { const sp = FIGS[who], S2 = 1.5, cv = cutout(sp.w, sp
   const out = document.createElement('canvas'); out.width = out.height = px; out.getContext('2d').drawImage(cv, (hx - r) * S2, (hy - r) * S2, 2 * r * S2, 2 * r * S2, 0, 0, px, px); return out; }
 function openSaves() {
   if (document.getElementById('savebook')) return; sfx.chime(); writeSave();
-  const veil = document.createElement('div'); veil.id = 'savebook'; const row = document.createElement('div'); row.className = 'saverow'; veil.appendChild(row); document.body.appendChild(veil);
+  const veil = document.createElement('div'); veil.id = 'savebook'; veil.className = 'padbook'; const row = document.createElement('div'); row.className = 'saverow'; veil.appendChild(row); document.body.appendChild(veil);
   const close = () => veil.remove(); veil.addEventListener('pointerdown', e => { if (e.target === veil) close(); });
   for (let n = 1; n <= SLOTS; n++) {
     const sv = peekSave(n), [col, light] = SLOT_COLS[n - 1], colEl = document.createElement('div'); colEl.className = 'savecol';
-    const b = document.createElement('button'); b.className = 'savecard' + (n === saveSlot ? ' cur' : ''); b.style.background = `linear-gradient(${light},${col})`; b.setAttribute('aria-label', 'Spel ' + n);
+    const b = document.createElement('button'); b.className = 'savecard padcard' + (n === saveSlot ? ' cur' : ''); b.style.background = `linear-gradient(${light},${col})`; b.setAttribute('aria-label', 'Spel ' + n);
     const face = document.createElement('div'); face.className = 'saveface'; if (sv) face.appendChild(faceOf(sv.who || 'anna')); b.appendChild(face); b.appendChild(savePicture(sv));
     b.onclick = () => { if (n === saveSlot) { sfx.click(); close(); } else { sfx.chime(); playSlot(n); } };
     colEl.appendChild(b);
@@ -1532,6 +1538,7 @@ window.__p = {
   pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
   /** the named places of the set she stands on, or of the set called `name` */
   places(name) { return (sets.find(q => q.name === name) || set).places; },
+  names: () => sets.map(q => [q.name, Object.keys(q.names)]),
   /** does a finger at this spot on the screen land on something that answers a tap (without the finger's-width margin)? */
   direct(x, y) { const h = pickAt(x, y); return !!(h && h.object.userData.tap); },
   /** whose tap a finger at this spot would get through the margin alone: a figure's name, 'thing', or null */

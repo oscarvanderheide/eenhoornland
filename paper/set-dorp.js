@@ -102,7 +102,7 @@ export default {
     const bunch = bouquet(S);   // the flowers she has picked, from the beds or from the grass
     const beds = [-1, 1].map(s => flowerBed(S, .3 * K + s * 3.7, H_HIGH, -5.5 * K + .15, 320 + s, bunch, 3.6, 2.0, s < 0 ? ['#e98f8f', '#f2c65c'] : ['#bba6ea', '#f4a6c4']));
     // toy windmills (his idea too): one at the outer corner of each flower bed, one by the unicorns' gate, the playground, the pond. A tap, or running past, spins them
-    const mills = [pinwheel(S, .3 * K - 5.75, H_HIGH, -5.5 * K + 1.15), pinwheel(S, .3 * K + 5.75, H_HIGH, -5.5 * K + 1.15, '#9ed9cf', '#f6efe2'), pinwheel(S, 3.4 * K - 2.3, H_GRASS, 4.3 * K - 2.5, '#bba6ea', '#f2c65c', .65),
+    const mills = [pinwheel(S, .3 * K - 5.75, H_HIGH, -5.5 * K + 1.15), pinwheel(S, .3 * K + 5.75, H_HIGH, -5.5 * K + 1.15, '#9ed9cf', '#f6efe2'), pinwheel(S, 3.4 * K - 3.7, H_GRASS, 4.3 * K - 2.3, '#bba6ea', '#f2c65c', .65),
       pinwheel(S, -5.3 * K + 3.9, H_GRASS, .3 * K + 2.9, '#e98f8f', '#f6efe2'), pinwheel(S, pcx + 3.3, H_GRASS, pcz + 2.6, '#9ed9cf', '#f4a6c4')];
     for (const dx of [-1.3, -.75, .75, 1.3]) { const [x, z] = [.3 * K + dx, -5.5 * K + 1.6]; put(cyl(.11, .2, 'dark'), x, H_HIGH + .1, z); S.solid({ x, z, r: .1 }); }   // the flower pots
     { const [x, z] = [.3 * K - 1.9, -5.5 * K + 1.7]; put(cyl(.09, .22, 'thing'), x, H_HIGH + .11, z); }                                                                    // the watering can
@@ -146,8 +146,8 @@ export default {
     const potion = { holding: () => S.gear.potion, full: () => S.gear.potion, hint() { }, pourThen(done) { S.sfx.swish(3); const h = S.hand(); S.confetti(h.x + S.girl.face * .5, h.y + .2, h.z, ['#f4a6c4', '#f8dde4', '#bba6ea', '#f2c65c'], 18, S.starGeo, 2.4); setTimeout(done, 650); return true; } };
     S.shared.can = theFarm;
     const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, potion, STORY.drankje, 0);
-    // the clothes shop: a rack on the green between the square and the unicorns' meadow (props.js shop); and coins lying about, here and there
-    const theShop = shop(S, 4.6, 3.4, H_GRASS);
+    // the clothes shop with its shopkeeper, on the green between the square and the unicorns' meadow (props.js shop); and coins lying about, here and there
+    const theShop = shop(S, 4.6, 2.4, H_GRASS);
     for (const [cx, cz] of [[-17.5, 2.0], [-8.2, 18.0], [6.2, 7.3], [13.8, -5.2], [15.0, 3.7]]) S.coinAt(cx, cz);
     // the zipline's post: where the ride from the treehouse in the forest ends (the cable and the ride are the forest's, treehouse.js)
     { const [zx, zz] = T(43.5, 35.5), zy = inPoly(HIGH, zx, zz) ? H_HIGH : H_GRASS;
@@ -189,6 +189,7 @@ export default {
       for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (grassOk(x, z)) planted.push([x, base + up, z, { tuft: true }]); } });
     findSpots(R, 9, 3.8, anywhere, grassOk, plots).forEach(([cx, cz]) => inOval(R, cx, cz, .6, .38, 5, .17, grassOk).forEach(([x, z]) => planted.push([x, yAt(x, z), z, { tuft: true }])));   // tufts in tight clumps
     for (const [x, y, z] of feet) for (const dx of [-.32, .3]) if (grassOk(x + dx, z + .18)) planted.push([x + dx, y, z + .18, { tuft: true }]);                                       // and at the foot of every tree
+    for (let i = planted.length - 1; i >= 0; i--) { const [x, , z] = planted[i]; if (Math.abs(x - 4.6) < 2.2 && z > 2.4 - 1.4 && z < 2.4 + 1.7) planted.splice(i, 1); }   // nothing grows in the shop
     for (let i = planted.length - 1; i >= 0; i--) { const [x, , z, o] = planted[i]; if (x > F[0] - 6.4 && x < F[0] - (o && o.tuft ? 1.9 : 2.8) && z > F[1] - 1.9 && z < F[1] + 2.1) planted.splice(i, 1); }   // nothing grows on the farm's dug bed (farm.js)
     let pi = 0; const grass = meadow(S, planted.length, () => planted[pi++] || null, 401, 0, undefined, bunch);
 
@@ -196,7 +197,7 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { pondLook.step(e.time); HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); thePlane.step(e); theStall.step(e); },
+      step: e => { pondLook.step(e.time); HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); thePlane.step(e); theStall.step(e); theShop.step(e); },
       toys: { winkel: theShop, ...live, ...flies, ...folk, dolfijn: flipper, vliegtuig: thePlane, kraam: theStall, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, wip: theSeesaw, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
