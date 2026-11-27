@@ -38,7 +38,7 @@ export default {
     const light = S.lamp(0, '#d9c8ff', 7.5, 1.3); light.position.set(...S.at([0, 0]).flatMap((v, k) => k ? [2.2, v] : [v]));
 
     // the chest, on a low stone in the middle
-    root.add(slab(circlePts(.75, 811, 18), .1, .1, P('rock2'), P('rock'))).position.set(0, 0, -.55);
+    { const dais = slab(circlePts(.75, 811, 18), .1, .1, P('rock2'), P('rock')); dais.position.set(0, 0, -.55); root.add(dais); }
     const chest = new THREE.Group(); chest.position.set(0, .1, -.55); root.add(chest);
     const box = (w, h, d, c, x, y, z, parent = chest) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), P(c)); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
     box(.8, .36, .5, 'wood', 0, .18, 0); for (const sx of [-.3, .3]) box(.07, .38, .52, 'gold', sx, .19, 0); box(.12, .12, .04, 'gold', 0, .26, .26);
@@ -59,7 +59,7 @@ export default {
       },
       toys: { kist: { state: () => ({ opened, hook: S.gear.hook, sung }) } },
       shots: [{ name: 'grot', ax: 0, az: -.1, fx: .3, fy: .2, fz: .25, lag: 1, span: 8.6, tall: 6.4, rise: .36, riseTall: .5 }],
-      spots: { kist: [0, .4, -.3], kristal: [-2.5, .6, -D / 2 + .5] },
+      spots: { kist: [.33, .42, -.3], kristal: [-2.5, .6, -D / 2 + .5] },
       places: { start: [0, D / 2 - 1.15], chest: [0, .6], left: [-1.6, .2] },
     };
   },

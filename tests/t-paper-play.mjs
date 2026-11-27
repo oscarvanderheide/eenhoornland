@@ -293,6 +293,7 @@ export default async function (t) {
   if (!only || only === 'beach') {
     await open('?set=strand', LAND); await t.sleep(1500);
     const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('strand')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
+    await t.ev('__p.open()');   // (the gap in the bridge is planked over for this part: the hookshot has a part of its own)
     ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('wei')`)).south[0]}, ${(await t.ev(`__p.places('wei')`)).south[1]})`), 'the bridge joins the beach to the meadow');
     await t.ev(`__p.placeAt(${pl.castle[0] + 1.6}, ${pl.castle[1] + .4})`); await t.sleep(2400);
     for (let k = 1; k <= 5; k++) { await tapOn('zandkasteel'); await until(`__p.toy('zandkasteel').stage === ${k} && !__p.toy('zandkasteel').busy`, 6); if (k === 3) await t.shot('tmp-shots/y-castle-3-land.png'); await t.sleep(250); }
@@ -375,6 +376,7 @@ export default async function (t) {
     // into the cave: swim under the fall
     await t.ev(`__p.placeAt(${w.pool[0] - .6}, ${w.pool[1] + 1.4})`); await t.sleep(2200); await t.ev(`__p.walkTo(${w.fall[0]}, ${w.fall[1] - .75})`); ok(await until(`__p.info().set === 'grot'`, 14), 'swimming under the waterfall: she is in the cave behind it'); await t.sleep(1500); await t.shot('tmp-shots/y-cave-land.png');
     await tapOn('kristal'); await t.sleep(400); ok((await toy('kist')).sung === 1, 'a tap on a crystal: it sings');
+    { const gl = await t.ev(`__p.places('grot').left`); await t.ev(`__p.placeAt(${gl[0] - .6}, ${gl[1] + .9})`); await t.sleep(900); }
     await tapOn('kist'); ok(await until(`__p.toy('kist').opened`, 7), 'a tap on the chest: it opens'); await t.sleep(1700); await t.shot('tmp-shots/y-cave-hook-land.png'); ok(await until(`__p.toy('kist').hook && __p.info().pose === null`, 6), 'and the hookshot is hers');
     const g0 = await t.ev(`__p.places('grot')`); await t.ev(`__p.walkTo(${g0.start[0]}, ${g0.start[1] + 1.2})`); ok(await until(`__p.info().set === 'wei'`, 10), 'out through the water at the front: back in the pool'); await t.sleep(800); ok((await toy('duiken')).swimming, 'swimming');
     // over the gap, and back

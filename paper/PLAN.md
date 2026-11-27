@@ -43,13 +43,14 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 2. The hookshot and the riding gates. **Try the hookshot** ("we could have the hookshot lol. we could try it it would be funny if it works out"). So: build it as a try, and judge it by playing. Nothing was said about riding; the castle bridge stays plain until he says.
 3. Is the adventure still the spine? **Yes.** The world to play in is what the adventure runs through; the thread (dream, egg, warm thing, hatching, fruit, riding, the castle's flowers, the rainbow, home) is to be put back in.
 
-**An idea of his, same day, not yet decided:** "we could have flippers + snorkel somewhere that allows us to enter some waters." Claude's proposal for it (to be judged, not agreed):
+**Built the same day, on his "go ahead with building":**
 
-- A tool of the adventure, like the can and the hookshot. With them on, **light water** can be walked into and she swims: sunk to her shoulders, the snorkel up, slower, bubbles. Dark sea stays shut, so the bridges and gates keep their meaning and a child can see where she may swim.
-- Where: the pool under the waterfall (swim under the fall into the cave behind it, where the pixel game kept the hookshot's chest), the village pond, a lagoon at the beach out to the seal's rock.
-- A chain it would give the adventure: watering can (brambles) -> snorkel (under the waterfall) -> hookshot (in the cave) -> wherever the hookshot leads.
-- Later, perhaps: a spot of bubbles where she dives into a cut-paper sea seen from the side (fish, an octopus, a clam), as its own little set behind a "door", like her bedroom.
-- Who gives them to her: the otter, who dives for them, is the obvious somebody.
+- **Flippers and a snorkel** (his idea: "flippers + snorkle somewhere that allows us to enter some waters"). The otter in the meadow's pool dives and brings them up; she holds them over her head (`gift` in `gear.js`), and from then on **light water** is a floor for her: she swims, up to her shoulders, the mask on her face, slower; the unicorn paddles along. Light water so far: the pool under the waterfall, the village pond, the flamingos' pond. The dark sea stays shut, so bridges and gates keep their meaning. (`S.water`, `S.gear`, `stepMask` in `paper.js`.)
+- **The cave behind the waterfall** (`set-grot.js`): swim under the fall and she is in it. Lilac stone, six crystals that each sing a note and glow, a chest. A tap on the chest: it opens, and **the hookshot** is hers.
+- **The gap in the bridge to the beach** (`hookGap` in `gear.js`): the planks are gone in the middle; a post with a golden ring stands at each lip. A tap on a post without the hookshot shows what is wanted; with it she throws the hook to the far post and is pulled over in an arc, the unicorn flying after. Both ways, every time.
+- So the adventure's chain of tools is: **watering can (brambles) -> snorkel (from the otter) -> hookshot (in the cave) -> the beach**, and beyond it the rainbow island.
+- A start by a direct link (`?set=strand` and the others) has both tools and open brambles, but the gap stays a gap, so the hookshot can be tried at once: from the beach link walk north onto the bridge and tap the post.
+- Still ideas: a lagoon at the beach out to the seal's rock; a spot of bubbles where she dives into a cut-paper sea seen from the side; more things for the hookshot to catch (he said it would be funny if it works out: tell me what it should grab).
 
 ## Every island its own (Oscar, 2026-11-27)
 
@@ -172,7 +173,7 @@ Done: the paper things and forest animals; all sets at once; the brambles; the m
 
 ## How to work
 
-- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people|seesaw|plane|beach|rainbow|castle`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
+- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people|seesaw|plane|beach|rainbow|castle|swim|hook`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
 - **Never a full round before a publish.** Check what changed, look at a picture, push.
 - **Helpers** draw figures well from `STYLE.md` and a precise brief: new files only, their own browser port (`PORT=9555`), no commits. Their sheets go to Oscar.
 - **Phone.** He holds it lying down: 750 by 313 points. He has not yet read the frame rate on the phone with the big world; on his laptop it was 60 after the pixel budget. Watch draws (about 180 at her door now).
@@ -297,7 +298,7 @@ What was asked: go on with the rest of the world, more to interact with, people 
 14. **What she holds is given to the living only** (`thing` on a card, `LIFELESS` in `paper.js`).
 15. **The rainbow island** (`set-regenboog.js`, `wonders.js`) and **the castle** (`set-kasteel.js`, `castle.js`), as described above. Joined by plain bridges: no new gates were invented, the open questions are Oscar's.
 16. **Numbers with all seven sets** on the test machine, phone size: built in about 520 ms; at her door 198 draws and 318k triangles; elsewhere 110 to 215 draws and 200k to 480k triangles. **From the balloon everything is in view at once: 312 draws and 672k triangles** (60 frames a second on the test machine). That is the heaviest picture in the game and the first place to read the phone.
-17. **Traps met tonight, for whoever works on this next.**
+17. **Traps met, for whoever works on this next** (the first one bit a fourth time on the 27th: a comment on the swimming-speed line swallowed the calls that step doors, wind and the island's sound, and that was published for an hour; `tests/swallow.py`, run by `tests/parse.sh`, now looks for it).
     - A `//` comment added in the middle of a one-line statement swallows the rest of the line, and the page does not load. Comments go on a line of their own.
     - **`node --check file.js` catches nothing here**: it does not read these files as modules and says yes to a broken one (tried on purpose). `sh tests/parse.sh` feeds each file in as a module and does catch it. The real proof stays the page itself: the smoke run's "no errors on the page".
     - The tests' `until` took an error from the page for a yes, so a part could pass on a page that never loaded. It no longer does.

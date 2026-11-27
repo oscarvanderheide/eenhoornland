@@ -6,4 +6,5 @@ for f in paper/*.js; do
   node --input-type=module --check < "$f" 2> /tmp/parse-paper.err || { echo "FAIL $f"; head -4 /tmp/parse-paper.err; bad=1; }
 done
 [ $bad = 0 ] && echo "ok   every paper file parses"
+python3 tests/swallow.py || bad=1
 exit $bad
