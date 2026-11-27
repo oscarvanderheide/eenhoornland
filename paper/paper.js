@@ -751,6 +751,8 @@ const coins = {
   /** pay n coins: they fly from her row to (x, y, z), or to a place on the screen ([sx, sy] as x); false if she has too few */
   spend(n, x, y, z, done) { if (purse.coins < n) return false; const fly = Math.min(n, 6), at = () => Array.isArray(x) ? x : onScreen(x, y, z);   // (at most six fly: a dear thing should not take ages)
     for (let k = 0; k < fly; k++) setTimeout(() => { const from = slot(); purse.coins -= Math.floor(n * (k + 1) / fly) - Math.floor(n * k / fly); showCoins(); flyCoin(from, at(), () => { sfx.peep(); if (k === fly - 1 && done) done(); }); }, k * 170); return true; },
+  /** has this happened before (in this save)? `mark`: and now it has */
+  had(key, mark = false) { const h = purse.seen.has(key); if (mark) purse.seen.add(key); return h; },
   /** the first time this happens, a coin */
   reward(key, x, y, z) { if (purse.seen.has(key)) return; purse.seen.add(key); setTimeout(() => coins.earn(x, y, z), 700); },
 };
@@ -1280,6 +1282,8 @@ function restoreSave(sv) {
   uni.away = ['dream', 'zoek', 'ei'].includes(quest.stage); uni.g.visible = !uni.away;
   if (gear.potion) for (const s of sets) if (s.toys && s.toys.braam && s.toys.braam.openGate) s.toys.braam.openGate();   // the brambles bloomed for her potion
   eve = eveTarget = sv.eve ? 1 : 0; skyIcon(!!eveTarget);
+  // the rainbow island is up in this save (or she was standing on it, in a save from before it could sink): up it comes at once, before she is put back
+  if (shared.island) { const q = sets.find(s => s.name === 'regenboog'); if (gear.island || (q && sv.where && sv.where[0] > q.box[0] && sv.where[0] < q.box[2] && sv.where[1] > q.box[1] && sv.where[1] < q.box[3])) shared.island.now(); }
   const at = sv.where && floorAt(sv.where[0], sv.where[1]);
   if (at) { [girl.x, girl.z] = sv.where; standOn(at.set); girl.y = at.h; const u = [[-1, .4], [1, .4], [0, 1]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null) || [girl.x, girl.z]; [uni.x, uni.z] = u; uni.y = heightAt(u[0], u[1]) ?? girl.y;
     eggF.x = uni.x; eggF.z = uni.z; shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true; }

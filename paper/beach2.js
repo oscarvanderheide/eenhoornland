@@ -35,7 +35,7 @@ export function digging(S, x, z, y, cross, sandOk) {
   const finish = () => {
     const [cx, cz] = X.userData.at, here = [girl.x + girl.face * .4, girl.z + .05];
     hole(...here); digs++; sfx.thud(); S.confetti(here[0], y + .3, here[1], [SAND_H, '#f7ecd0', '#e2c58a'], 12, undefined, 2);
-    if (!treasure && Math.hypot(here[0] - cx, here[1] - cz) < 1.0) { treasure = true; X.visible = false; found.push('schat'); chest(here); return; }
+    if (!treasure && Math.hypot(here[0] - cx, here[1] - cz) < 1.0) { treasure = true; X.visible = false; found.push('schat'); S.coins.had('schat', true); chest(here); return; }   // (once in a save)
     const r = Math.random(); if (r < .35) { found.push('schelp'); S.confetti(here[0], y + .5, here[1], ['#fbf5ea', '#f4c6b8', '#f6dfa6'], 8, S.starGeo, 2.2); sfx.peep(); }
     else if (r < .5) { found.push('zeester'); S.confetti(here[0], y + .5, here[1], ['#f2b56b', '#e98f8f'], 8, S.starGeo, 2.4); sfx.chime(); }
   };
@@ -49,6 +49,7 @@ export function digging(S, x, z, y, cross, sandOk) {
     up(); sfx.hello(); setTimeout(() => { S.coins.earn(wx, y + .6, wz, 5); S.confetti(wx, y + .8, wz, ['#f2c65c', '#fbf5ea', '#e0a93a'], 24, S.starGeo, 3); }, 900);
   };
   return { state: () => ({ held, digs, found, treasure, holes: holes.length, at: S.at([0, 0]) && at, cross: X.userData.at }), step({ dt }) {
+    if (!treasure && S.coins.had('schat')) { treasure = true; X.visible = false; }   // (dug up already in this save: no cross)
     if (held && !S.playing()) {
       const h = S.hand(); if (dig < 0) girl.poseName = 'hold'; spade.x = h.x + girl.face * .1; spade.z = h.z + .04; spade.floatY = spade.y = h.y - .3; spade.face = girl.face; spade.lean = 0;
       // stopped somewhere new on open sand: she digs

@@ -49,7 +49,7 @@ export default {
     { const t1 = new THREE.Mesh(new THREE.CylinderGeometry(.06, .085, .75, 12), P('#e0b453')); t1.rotation.x = Math.PI / 2; t1.castShadow = true; tube.add(t1);
       const t2 = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .07, 12), P('#b98a3a')); t2.rotation.x = Math.PI / 2; t2.position.z = -.38; tube.add(t2); }
     S.solid({ x: -.15, z: -D / 2 + .7, r: .25 });
-    const views = () => ['dorp', 'wei', 'strand', 'kasteel', 'regenboog'].map(n => S.middle(n)).filter(Boolean);
+    const views = () => ['dorp', 'wei', 'strand', 'kasteel', ...(S.shared.island && S.shared.island.risen() ? ['regenboog'] : [])].map(n => S.middle(n)).filter(Boolean);   // (the rainbow island only once it has risen from the sea)
     let looks = 0, lt = -1;
     const lookToy = { look: [0, 0], shot: { span: 34, tall: 22, rise: .55, riseTall: .7, dof: .1, range: 8, fx: 1, fz: 1, lag: 1 }, rate: 1, step(dt, inp) {
       lt += dt; girl.view = 'back';

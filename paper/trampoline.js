@@ -4,7 +4,7 @@
 //   on           a tap: she climbs on and starts bouncing, small
 //   higher       a push (any: the stick, a key, a touch) just as she lands and the mat throws her higher; let it be and
 //                every bounce is a little lower. High enough and she does a somersault
-//   sideways     steer while she is in the air (the stick, or a finger on where she should go): she drifts that way. The
+//   sideways     steer while she is in the air (the stick, the arrows, a finger held beside her): she drifts that way. The
 //                mat is a bowl: landing off the middle it throws her back towards it, and the further out, the harder
 //   off          bounce too far out and she flies off over the edge, onto the grass with a tumble. Or a tap on her: at
 //                the next landing she climbs off
@@ -26,18 +26,18 @@ export function trampoline(S, x, y, z) {
   { const st = m3(new THREE.BoxGeometry(.4, .22, .26), '#c79a66'); st.position.set(0, .11, R + .32); g.add(st); }
   S.solid({ x, z, r: R + .1 });
 
-  let flipDur = 1, mode = null, t = 0, px = 0, pz = 0, vx = 0, vz = 0, h = 0, vy = 0, want = .7, press = -9, flip = 0, bounces = 0, best = 0, flips = 0, offs = 0, dip = 0, leave = false;
+  let clock = 0, held = false, flipDur = 1, mode = null, t = 0, px = 0, pz = 0, vx = 0, vz = 0, h = 0, vy = 0, want = .7, press = -9, flip = 0, bounces = 0, best = 0, flips = 0, offs = 0, dip = 0, leave = false;
   const bend = (cx, cz, d) => { const p = matGeo.attributes.position.array; for (let i = 0; i < p.length; i += 3) { const dx = base[i] - cx, dz = base[i + 2] - cz, edge = 1 - Math.min(1, Math.hypot(base[i], base[i + 2]) / R); p[i + 1] = -d * Math.exp(-(dx * dx + dz * dz) / .35) * Math.min(1, edge * 2.2); } matGeo.attributes.position.needsUpdate = true; };
-  const toy = { look: [wx, wz], steer: true, rate: 1.1, shot: { span: 10, tall: 7.5, rise: .26, riseTall: .4, ly: 0, dof: .6, range: 2.5, fx: 1, fz: 1, lag: 1 }, at: () => [wx + px, wz + pz], step(dt, inp) {
-    t += dt; const pushed = !!(inp.x || inp.y || inp.act || inp.move);
-    if (pushed) press = t;
+  const toy = { look: [wx, wz], rate: 1.1, shot: { span: 10, tall: 7.5, rise: .26, riseTall: .4, ly: 0, dof: .6, range: 2.5, fx: 1, fz: 1, lag: 1 }, at: () => [wx + px, wz + pz], step(dt, inp) {
+    t += dt; clock += dt; const pushed = !!(inp.x || inp.y || inp.act);
+    if (pushed && !held) press = clock; held = pushed;   // (only a fresh push counts for the timing: a finger kept down is not a push every bounce)
     if (inp.act) leave = true;
     if (mode === 'on') {   // up the step and onto the mat
       const k = Math.min(1, t / .45); px = 0; pz = (R + .35) * (1 - k); h = TOP + Math.sin(k * Math.PI) * .45 + (TOP * 0) * k; girl.poseName = null; girl.view = 'back';
       if (k >= 1) { mode = 'air'; vy = Math.sqrt(2 * G * want); h = TOP; t = 0; sfx.boing(); } }
     else if (mode === 'air') {
       // in the air: gravity, and a little steering
-      if (inp.move) { vx += inp.move[0] * 3.2 * dt; vz += inp.move[1] * 3.2 * dt; } const sp = Math.hypot(vx, vz); if (sp > 2.4) { vx *= 2.4 / sp; vz *= 2.4 / sp; }
+      if (inp.x || inp.y) { vx += (inp.x || 0) * 3.2 * dt; vz += (inp.y || 0) * 2.4 * dt; } const sp = Math.hypot(vx, vz); if (sp > 2.4) { vx *= 2.4 / sp; vz *= 2.4 / sp; }   // (left and right on the screen; up and down: away and near)
       vy -= G * dt; h += vy * dt; px += vx * dt; pz += vz * dt;
       best = Math.max(best, h - TOP); if (flip > 0) flip = Math.min(1, flip + dt / flipDur);
       const out = Math.hypot(px, pz);
@@ -49,7 +49,7 @@ export function trampoline(S, x, y, z) {
     else if (mode === 'mat') {   // down into the mat and out again
       const k = Math.min(1, t / .2); dip = Math.sin(k * Math.PI) * (.12 + want * .06); h = TOP - dip;
       if (k >= 1) {
-        const timed = t - press < .32;   // pushed just as she landed: higher; not: a little lower
+        const timed = clock - press < .32;   // pushed just as she landed: higher; not: a little lower
         want = Math.max(.45, Math.min(3.4, timed ? want * 1.08 + .45 : want * .82));
         if (leave) { mode = 'off'; t = 0; leave = false; want = .7; return; }
         vy = Math.sqrt(2 * G * want); mode = 'air'; t = 0; sfx.boing(); if (want > 1.8) S.confetti(wx + px, y + TOP, wz + pz, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 4, S.starGeo, 1.4);
