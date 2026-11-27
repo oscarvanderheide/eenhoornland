@@ -672,6 +672,23 @@ export default async function (t) {
   }
 
   /* ---------------- the boat between the beach and the rainbow island ---------------- */
+  /* ---------------- the game houses on the rainbow island ---------------- */
+  if (!only || only === 'games') {
+    await open('?set=regenboog', LAND); await t.sleep(1500);
+    const pl = await t.ev(`__p.places('regenboog')`), h = k => t.ev(`__p.toy('huisje-${k}')`), shut = () => t.ev(`document.querySelector('.gm-x').click()`);
+    await t.ev(`__p.placeAt(${pl.memory[0] + 2}, ${pl.memory[1] + 1})`); await t.sleep(1500); await t.ev(`__p.tap('huisje-memory')`); ok(await until(`__p.toy('huisje-memory').open`, 6), 'a tap on the memory house: she walks to the door and the cards are laid out');
+    const cards = (await h('memory')).game.cards; ok(cards.length === 12, 'twelve cards, six pairs');
+    for (const k of [...new Set(cards)]) { const [a, b] = cards.map((c, i) => c === k ? i : -1).filter(i => i >= 0); await t.ev(`document.querySelectorAll('.mem-card')[${a}].click()`); await t.sleep(150); await t.ev(`document.querySelectorAll('.mem-card')[${b}].click()`); await t.sleep(700); }
+    ok(await until(`__p.toy('huisje-memory').wins === 1`, 3), 'all pairs found: she has won (a coin)'); await t.sleep(400); await shut();
+    await t.ev(`__p.placeAt(${pl.stamps[0] - 2}, ${pl.stamps[1] + 1})`); await t.sleep(1500); await t.ev(`__p.tap('huisje-stamps')`); ok(await until(`__p.toy('huisje-stamps').open`, 6), 'the stamp house opens');
+    for (let i = 0; i < 4; i++) { const b = await t.ev(`(() => { const r = document.querySelector('.st-paper').getBoundingClientRect(); return [r.left + r.width * (.2 + .2 * ${i}), r.top + r.height * .5]; })()`); await t.click(b[0], b[1]); await t.sleep(120); }
+    ok((await h('stamps')).game.stamped === 4, 'a tap on the paper stamps there'); await shut(); ok(await until(`__p.toy('huisje-stamps').hung`, 2), 'out again: her picture hangs on the house');
+    await t.ev(`__p.placeAt(${pl.xylophone[0]}, ${pl.xylophone[1] + .6})`); await t.sleep(1500); await t.ev(`__p.tap('huisje-xylophone')`); ok(await until(`__p.toy('huisje-xylophone').open`, 6), 'the xylophone house opens');
+    await t.ev(`document.querySelector('.xy-bird').click()`); await until(`!__p.toy('huisje-xylophone').game.playing`, 5); const tune = (await h('xylophone')).game.tune; ok(tune.length === 3, 'a tap on the bird: it plays a tune of three');
+    for (const n of tune) { await t.ev(`document.querySelectorAll('.xy-bar')[${n}].click()`); await t.sleep(200); }
+    ok((await h('xylophone')).game.rounds === 1, 'she plays it back: the bird dances'); await shut();
+  }
+
   if (!only || only === 'boat') {
     await open('?set=strand', LAND); await t.sleep(1500);
     const b = () => t.ev(`__p.toy('boot')`), s0 = await b();

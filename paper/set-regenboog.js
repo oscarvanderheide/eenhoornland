@@ -9,6 +9,7 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { rainbow, paint, mushroom, rainbowTree, BANDS } from './wonders.js';
 import { flamingo, parrot, rabbit } from './critters2.js';
 import { regenboogLand, BACK } from './lands.js';
+import { gameHouse } from './games.js';
 import { findSpots, inOval, plantAt, cottonTree, pompom, sprinkle } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
@@ -54,9 +55,13 @@ export default {
     { const p = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, 1.25, 6), P('post')); p.position.set(4.4, .625, -2.2); p.castShadow = true; root.add(p); const bar = new THREE.Mesh(new THREE.BoxGeometry(.6, .05, .05), P('post')); bar.position.set(4.4, 1.23, -2.2); root.add(bar); S.solid({ x: 4.4, z: -2.2, r: .1 }); }
     for (const [x, z] of [[3.2, 4.6], [5.4, 5.2], [1.9, 5.6]]) { const h = slab(circlePts(.3, 660 + Math.round(x * 10), 14).map(([a, b]) => [a * 1.3, b * .8]), H_GRASS + .03, .03, P('hole'), paper('#c9a878')); h.position.set(x, 0, z); root.add(h); laid.push(blob(x, z, .5, .4, 1, 8, 0)); }
     const benches = [], lamps = [], mills = [];   // (benches, lanterns and windmills belong to the village)
+    // the game houses (games.js; Oscar: "in pixel art game we had houses with games"): memory in the west, stamps in the east, the xylophone at the back
+    const HOUSES = [['memory', -11.6, -3.6], ['stamps', 11.2, -2.6], ['xylophone', 5.6, -7.6]];
+    const games = Object.fromEntries(HOUSES.map(([kind, hx, hz]) => [kind, gameHouse(S, hx, hz, H_GRASS, kind)]));
+    for (const [, hx, hz] of HOUSES) { lay(blob(hx, hz + 1.55, .75, .45, 700 + Math.round(hx), 18, .06), 'path'); }   // a little paved spot at each door
 
     /* ---------------- trees in six colours, at the back and the sides; flowers everywhere ---------------- */
-    const keepOff = [[-5.4, -5.2, 5.4, 7.6], [-9.8, -4.6, -4.6, 3.4], [BR.x1 - 1, -2.2, -7.6, 2.2], [2.6, .6, 9.4, 7.4], [-6.4, 2.0, 2.2, 7.4]];
+    const keepOff = [[-5.4, -5.2, 5.4, 7.6], [-9.8, -4.6, -4.6, 3.4], [BR.x1 - 1, -2.2, -7.6, 2.2], [2.6, .6, 9.4, 7.4], [-6.4, 2.0, 2.2, 7.4], ...HOUSES.map(([, hx, hz]) => [hx - 2.2, hz - 1.8, hx + 2.2, hz + 3.0])];
     // planted, not scattered (PLAN.md): groves of candy-floss trees of one colour, at the back and the sides
     const R = rng(661), feet = [], treeOk = (x, z) => inPoly(GRASS, x, z) && edgeDist(GRASS, x, z) > .7 && !inPoly(POND, x, z) && edgeDist(POND, x, z) > 1 && !keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.3); let n = 0;
     findSpots(R, 6, 3.6, R2 => [-11 + R2() * 22, -7.6 + R2() * 15], treeOk).forEach(([gx, gz], k) => { const a0 = R() * 6.283, many = 2 + (k % 2), mine = [];
@@ -64,7 +69,7 @@ export default {
     const sweetSpot = R2 => {
       const x = -11 + R2() * 22, z = -7.6 + R2() * 15.2;
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || inPoly(POND, x, z) || edgeDist(POND, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;
-      if ([[-5.6, 2.6, 1.8, 5.6], [-8.8, -3.9, -5.2, -.8]].some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) return null;   // (clear ground round the paint and the mushrooms)
+      if ([[-5.6, 2.6, 1.8, 5.6], [-8.8, -3.9, -5.2, -.8], ...HOUSES.map(([, hx, hz]) => [hx - 1.8, hz - 1.4, hx + 1.8, hz + 2.6])].some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) return null;   // (clear ground round the paint and the mushrooms)
       return [x, H_GRASS, z];
     };
     // pompom flowers in plots of one colour each, on a cut of greener grass; sprinkles in a ring round every tree and round the middle
@@ -99,14 +104,14 @@ export default {
         bow.step(e); pots.step(e); bunch.step(e); grass.step(e); fruitTree.step(e);
         for (const q of [...shrooms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, boom: fruitTree, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass },
+      toys: { ...live, boom: fruitTree, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass, ...Object.fromEntries(Object.entries(games).map(([k, h]) => ['huisje-' + k, h])) },
       shots: [
         { name: 'brug-regenboog', zone: [BR.x0 + .9, -1.5, BR.x1 - .2, 1.5], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },
         { name: 'boog', zone: [-4.8, -5.4, 4.8, -1.2], span: 17, tall: 10, rise: .3 },   // by the rainbow: far enough back to see the whole arch
         { name: 'regenboog', span: 15, tall: 8.5, rise: .32 },
       ],
       spots: { regenboog: [2.55, 2.55, -3.6], paddenstoel: [-7.2, .6, -1.5] },
-      places: { start: [BR.x1 + 1.2, 0], middle: [-.2, 1.2], tree: [1.8, 3.0], bow: [-.1, -2.2], paint: [-4.6, 4.6], pond: [5.2, 3.6], shrooms: [-5.6, -1.2], rabbit: [3.4, 5.9], west: [BR.x0 + 2, 0] },
+      places: { start: [BR.x1 + 1.2, 0], middle: [-.2, 1.2], tree: [1.8, 3.0], bow: [-.1, -2.2], paint: [-4.6, 4.6], pond: [5.2, 3.6], shrooms: [-5.6, -1.2], rabbit: [3.4, 5.9], west: [BR.x0 + 2, 0], memory: [-11.6, -1.4], stamps: [11.2, -.4], xylophone: [5.6, -5.4] },
     };
   },
 };
