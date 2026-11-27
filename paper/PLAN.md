@@ -37,11 +37,11 @@ Read this before any work under `paper/`. Then `paper/STYLE.md` if you draw a fi
 
 Claude's picks that he has seen working and not objected to, but never said yes to one by one: every island exists at once with the far ones asleep (see "How it is built"); a second flower picked puts the first in her hair; a toy takes her over and the finger then belongs to the toy; her front door is a cut to a room that stands beside the world.
 
-**Open questions for him** (do not build past these without asking):
+**The three questions, answered by Oscar on 2026-11-27:**
 
-1. With the sword gone, what opens the brambles on the bridge to the meadow? Proposal, being built as the default: **a full watering can makes them bloom into roses and curl aside.**
-2. The pixel game's other two tools: the hookshot (the gap in the bridge to the beach) and riding the unicorn (the hole in the bridge to the castle). Proposal: the beach bridge is mended by her (planks lie about the meadow; she carries each to the gap); the castle bridge stays a jump on the grown unicorn.
-3. Is the adventure (dream, egg, warm thing, hatching, fruit, riding, the castle's flowers, the rainbow, home) still the spine, or is this becoming a world to play in with the adventure as one thread through it? Everything built today is the second.
+1. What opens the brambles on the bridge to the meadow? **The watering can, for now** ("for now it is").
+2. The hookshot and the riding gates. **Try the hookshot** ("we could have the hookshot lol. we could try it it would be funny if it works out"). So: build it as a try, and judge it by playing. Nothing was said about riding; the castle bridge stays plain until he says.
+3. Is the adventure still the spine? **Yes.** The world to play in is what the adventure runs through; the thread (dream, egg, warm thing, hatching, fruit, riding, the castle's flowers, the rainbow, home) is to be put back in.
 
 ## Paper or folded card
 
@@ -144,7 +144,7 @@ Done: the paper things and forest animals; all sets at once; the brambles; the m
 1. More things to work with her fingers, Lumino City and Pok Pok style, one per place: a lift on a rope up the oak (and the zipline down), a crank, a marble run down the windy hill, shutters with somebody behind them.
 2. The insides and the boat, see below (the rainbow island and the castle are built as first passes).
 3. The insides: the cave, the cabin, the bakery.
-4. The thread of the adventure, once Oscar has answered the open questions.
+4. The thread of the adventure (he said yes to it on 2026-11-27), and the hookshot as a try.
 5. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
 
 ## How to work
