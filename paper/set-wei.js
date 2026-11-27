@@ -12,6 +12,7 @@ import { kite, balloon } from './toys.js';
 import { butterfly } from './critters.js';
 import { baker, painter } from './folk.js';
 import { sheep, lamb, otter } from './critters2.js';
+import { gift, SNORKEL } from './gear.js';
 import { weiLand, BACK } from './lands.js';
 
 const H_SAND = -.32, H_GRASS = 0, H_HILL = .48, H_TOP = .96;
@@ -49,7 +50,7 @@ export default {
     // where she can stand: the first floor that holds the spot counts
     for (const s of stairs) S.floorBox(s.h, ...s.b);
     S.floorBox(H_GRASS + .09, 18.9, -3.4, 28.1, -2.7);   // the way over the pool: she hops from stone to stone (the hop is in step, below)
-    S.floor(null, POOL); S.floor(null, CLIFF);
+    S.floor(null, CLIFF); S.water(H_GRASS, POOL);   // the pool is light water: with the snorkel she swims in it
     S.floor(H_TOP, TOP); S.floor(H_HILL, HILL);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_E);
     S.floor(H_SAND, SAND, .22); S.floor(H_SAND, SAND_E, .22);
@@ -74,8 +75,9 @@ export default {
     /* ---------------- things ---------------- */
     const bakery = cottage(S, 3.2, H_GRASS, -5.7, null, { wall: '#f6e7c8', roof: '#5f8fb0', door: '#b9675a' });
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
+    let found = 0; const present = gift(S, 'duikbril', SNORKEL);   // how often the otter brought something up for her; the moment it is hers
     const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9) };   // the baker by his door, the painter painting the waterfall (folk.js)
-    const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [23.5, -4.45]]) };   // critters2.js
+    const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [23.5, -4.45]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
     const lamps = [[-9.2, 3.3], [X[0] + 2.4, X[1] + 1.3], [8.6, .1], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
@@ -116,7 +118,7 @@ export default {
         else if (hopping) { hopping = false; if (!S.playing()) girl.lift = 0; }
         stones.forEach((s, i) => { const on = !S.playing() && !(girl.lift > .05) && Math.abs(girl.x - S.at([s.x, s.z])[0]) < .5 && Math.abs(girl.z - S.at([s.x, s.z])[1]) < .5; if (on && !s.on) { s.dip = 1; sung++; sfx.note(NOTES[i]); S.confetti(...S.at([s.x, s.z]).flatMap((v, k) => k ? [.12, v] : [v]), ['#bfe3ea', '#f6efe2'], 5, undefined, 1.2); } s.on = on; if (s.dip > 0) s.dip = Math.max(0, s.dip - dt * 3); s.g.position.y = -.05 * Math.sin(s.dip * Math.PI); });
       },
-      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, molen: mills[0], bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) } },
+      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, molen: mills[0], bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) }, duiken: { state: () => ({ found, snorkel: S.gear.snorkel, swimming: !!girl.swimming }) } },
       shots: [
         { name: 'heuvel', zone: [-10.6, -9.4, .6, -2.3], span: 17, tall: 9.5, rise: .4 },          // on the hill: further back, to see the meadow below and the kite above
         { name: 'waterval', zone: [18.4, -6.2, 29.2, -.5], span: 12.5, rise: .4 },                  // at the pool: looking down on the stones

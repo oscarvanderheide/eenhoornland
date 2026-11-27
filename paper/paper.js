@@ -11,6 +11,7 @@ import bos from './set-bos.js';
 import huis from './set-huis.js';
 import wei from './set-wei.js';
 import { THINGS } from './things.js';
+import { SNORKEL } from './gear.js';
 import { PROPS } from './people.js';
 import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
@@ -220,6 +221,8 @@ function buildSet(def) {
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
     pushing: () => push,   // which way she is pushing right now, in the world's measure ([0, 0]: not at all)
     hands,   // one thing in her hands at a time (see `hands`)
+    gear,    // her tools (gear.js)
+    water: (h, pts) => { s.floors.push({ h, pts: pts.map(W), swim: true }); },   // light water: a floor only for somebody with a snorkel, and she swims on it
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
@@ -280,6 +283,7 @@ function loadWorld(name) {
   // the theatre stands behind everything that exists
   theatre.position.z = Math.min(...sets.map(s => s.back || 0)); { const k = Math.max(...sets.map(s => s.sky || 1)); sky.scale.set(k, 1, k); }
   [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni; uni.face = 1;
+  gear.snorkel = gear.hook = name !== group[0];
   if (name !== group[0]) openGates();   // started beyond the village (a look at one island): the ways there are open
   // a new world is a cut: the camera is there at once
   shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
@@ -333,6 +337,14 @@ const fig = (name, k) => makeFigure(name, FIGS[k]);
 const girl = fig('girl', ASK.get('who') === 'fenna' ? 'fenna' : 'anna');
 const uni = fig('unicorn', 'baby');
 for (const f of [girl, uni]) tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots);
+/* the mask and snorkel she wears while she swims: a card of its own on her face */
+const mask = makeFigure('snorkel', SNORKEL); mask.thing = true; mask.g.visible = false; let bubble = 0;
+function stepMask(dt) {
+  mask.g.visible = !!girl.swimming && !playing && girl.view !== 'back'; if (!mask.g.visible) return;
+  girl.g.updateMatrixWorld(true); const top = girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top);
+  mask.x = top.x + (girl.view === 'side' ? girl.face * .05 : 0); mask.z = top.z + (girl.view === 'back' ? -.03 : .03); mask.floatY = mask.y = top.y - .47; mask.face = girl.view === 'side' ? girl.face : 1;
+  bubble -= dt; if (bubble <= 0 && girl.walking) { bubble = .55; confetti(top.x, top.y - .45, top.z + .1, ['#f6efe2', '#cfeaf0'], 2, undefined, .9, true); }
+}
 /** things to wear by their stall ids, sorted into their slots */
 const wearOf = ids => { const o = {}; for (const id of ids) for (const [slot, list] of Object.entries(WEAR)) if (list.includes(id)) o[slot] = id; return o; };
 if (ASK.get('wear')) girl.redress(wearOf(ASK.get('wear').split(',')));
@@ -493,6 +505,8 @@ function stepWater(dt) {
 }
 
 /* ---------------- what figures do when tapped (always the same) ---------------- */
+/** Her tools (gear.js): what she has for good. A start somewhere beyond the village has them all, like the open gates */
+const gear = { snorkel: false, hook: false };
 /** the cards that are things, not somebody: nobody gives them a flower (the scarecrow and its birds do count as somebody) */
 const LIFELESS = new Set([...Object.entries(THINGS).filter(([n]) => n !== 'vogelverschrikker' && n !== 'vogel').map(([, v]) => v), ...Object.values(PROPS)]);
 /* Her hands: she carries one thing at a time. Whatever she takes says so (and how to put itself down); taking the next
@@ -586,7 +600,7 @@ function stepDoors(dt) {
  *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
 function floorAt(x, z) {
   let best = null;
-  for (const s of sets) if (x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!best || f.h > best.h)) best = { h: f.h, set: s }; break; }
+  for (const s of sets) if (x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
   return best;
 }
 const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
@@ -871,7 +885,7 @@ function frame(now) {
   }
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
   if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
-  const speed = 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
+  const speed = girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz);   // (swimming is slower than walking) push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -886,9 +900,15 @@ function frame(now) {
     else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
+  stepMask(dt);
   // figures: smooth positions, poses that step like stop motion
   for (const f of figures) {
     const ground = f.floatY ?? heightAt(f.x, f.z) ?? f.y;
+    if (f === girl || f === uni) {
+      const wet = !f.lift && !!floorAt(f.x, f.z)?.swim; f.swimY = (f.swimY || 0) + ((wet ? (f === girl ? .5 : .34) : 0) - (f.swimY || 0)) * Math.min(1, dt * 9);
+      if (wet !== !!f.swimming) { sfx.splash(); confetti(f.x, f.y + .15, f.z + .1, ['#8fc3cc', '#f6efe2', '#7fbcc0'], 10, undefined, 2.2); }
+      f.swimming = wet;
+    }
     f.y += (ground - f.y) * Math.min(1, dt * 14);
     if (f.hopV || f.hop > 0) { f.hop += f.hopV * dt; f.hopV -= 14 * dt; if (f.hop <= 0) { f.hop = 0; f.hopV = 0; } }
     if (f.dive > 0) f.dive = Math.max(0, f.dive - dt);
@@ -911,7 +931,7 @@ function frame(now) {
       } else { f.bob = 0; f.tilt = 0; }
       if (f.act) f.act(tick);   // what only this one does (the duck bobs and dives)
       // pose = position snapped to the frame, so even a hop moves in little steps
-      f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0) - (f.sitY || 0);
+      f.pose.position.y = f.bob + Math.round(f.hop * 24) / 24 - (f.sink || 0) - (f.sitY || 0) - (f.swimY || 0);
       f.pose.rotation.z = f.tilt * f.face;
       f.mesh.scale.x = f.view === 'side' ? f.face : 1;
     }
@@ -1025,7 +1045,9 @@ window.__p = {
     return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
   /** open every gate of the world */
-  open: () => openGates(),
+  open: () => { openGates(); gear.snorkel = gear.hook = true; },
+  /** her tools: ask, or set some ({ snorkel: true }) */
+  gear: o => Object.assign(gear, o || {}),
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
   pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
   /** the named places of the set she stands on, or of the set called `name` */

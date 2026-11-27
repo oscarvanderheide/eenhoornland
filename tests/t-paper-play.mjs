@@ -349,4 +349,18 @@ export default async function (t) {
     await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
     ok(await until(`__p.toy('draaimolen').mode === null`, 8), 'a touch on her: it stops, and off they get'); await t.sleep(600); const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
   }
+
+  /* ---------------- the snorkel: the otter brings it up; with it she swims in light water ---------------- */
+  if (!only || only === 'swim') {
+    await open('?set=dorp', LAND); await t.sleep(1200); await t.ev('__p.open(); __p.gear({ snorkel: false, hook: false })');
+    const toy = n => t.ev(`__p.toy('${n}')`), w = await t.ev(`__p.places('wei')`), mid = [w.pool[0] + 4.1, w.pool[1] + .3];
+    ok(!(await t.ev(`__p.canReach(${mid[0]}, ${mid[1]})`)), 'without the snorkel the pool cannot be walked into');
+    await t.ev(`__p.placeAt(${w.pool[0] - .6}, ${w.pool[1] + 1.4})`); await t.sleep(2400); await t.ev(`__p.tap('otter')`); ok(await until(`__p.toy('duiken').found === 1`, 8), 'a tap on the otter: it dives, and comes up with something for her'); await t.sleep(1300); await t.shot('tmp-shots/y-snorkel-gift-land.png');
+    ok(await until(`__p.toy('duiken').snorkel && !__p.toy('otter').on`, 6) && (await t.ev('__p.info()')).pose === null, 'she holds it up, and the snorkel is hers');
+    ok(await t.ev(`__p.canReach(${mid[0]}, ${mid[1]})`), 'now the pool can be walked into');
+    await t.ev(`__p.walkTo(${mid[0]}, ${mid[1]})`); ok(await until(`__p.toy('duiken').swimming`, 8), 'she walks in, and swims'); await t.sleep(1500); await t.shot('tmp-shots/y-swim-land.png');
+    await t.ev(`__p.tap('otter')`); await until(`__p.toy('otter').dives >= 2 && !__p.toy('otter').mode`, 8); await t.sleep(300); ok((await toy('duiken')).found === 1, 'the otter gives it only once');
+    await t.ev(`__p.walkTo(${w.pool[0] - .6}, ${w.pool[1] + 1.4})`); ok(await until(`!__p.toy('duiken').swimming`, 8), 'and out again, on dry land');
+    const d = await t.ev(`__p.places('dorp')`); await t.ev(`__p.placeAt(${d.pond[0]}, ${d.pond[1]})`); await t.sleep(2200); await t.ev(`__p.walkTo(${d.pond[0]}, ${d.pond[1] - 2.4})`); ok(await until(`__p.toy('duiken').swimming`, 6), 'the village pond is light water too'); await t.sleep(900); await t.shot('tmp-shots/y-swim-pond-land.png');
+  }
 }

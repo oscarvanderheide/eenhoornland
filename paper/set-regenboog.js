@@ -27,7 +27,7 @@ export default {
 
     S.sea({ land: [SAND], x0: -40, x1: 32, z0: -24, z1: 26, deep: [230, 180, 0, 0], fine: 1.8 });
     S.floorBox(DECK, BR.x0, BR.z0, BR.x1, BR.z1);
-    S.floor(null, POND); S.floor(H_GRASS, GRASS); S.floor(H_SAND, SAND, .22);
+    S.water(H_GRASS, POND); S.floor(H_GRASS, GRASS); S.floor(H_SAND, SAND, .22);
 
     /* ---------------- paths ---------------- */
     const laid = []; let layer = 0;

@@ -67,7 +67,7 @@ export default {
 
     // where she can stand: the first floor that holds the spot counts
     for (const s of stairs) S.floorBox(s.h, ...s.b);
-    S.floor(null, POND);
+    S.water(H_GRASS, POND);   // light water: with the snorkel she swims among the ducks
     S.floor(H_HIGH, HIGH);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_W); S.floor(H_GRASS, GRASS_S);
     S.floorBox(DECK, NORTH.x0, NORTH.z0, NORTH.x1, NORTH.z1); S.floorBox(DECK, EAST.x0, EAST.z0, EAST.x1, EAST.z1);

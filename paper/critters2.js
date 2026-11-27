@@ -38,14 +38,14 @@ export function lamb(S, x, z, name = 'lam') {
   } };
 }
 /** the otter floats on its back in the pool. A tap: it knocks its pebble on its shell three times, dives, and comes up at its next spot */
-export function otter(S, x, z, spots) {
+export function otter(S, x, z, spots, up = null) {   // (`up`: called each time it comes up from a dive: what it may have found down there)
   const { sfx } = S, f = make(S, 'otter', x, z); let mode = null, t = 0, at = 0, to = null, dives = 0, knocks = 0;
   f.floatY = f.y = .03;
   f.onTap = () => { if (mode) return; mode = 'knock'; t = 0; knocks = 0; };
   f.act = tick => { f.setFrame(mode === 'knock' ? (Math.floor(t / .2) % 2 ? 0 : 1) : mode === 'dive' ? 2 : 0); f.tilt = mode ? 0 : Math.sin(tick * .35 + x) * .05; };
   return { f, state: () => ({ frame: f.frame, mode, dives, at: [f.x, f.z] }), step({ dt }) {
     if (mode === 'knock') { t += dt; if (Math.floor(t / .4) >= knocks && knocks < 3) { knocks++; sfx.click(); } if (t > 1.3) { mode = 'dive'; t = 0; dives++; sfx.splash(); S.confetti(f.x, .2, f.z + .1, WATER, 10, undefined, 2.4); at = (at + 1) % spots.length; to = S.at(spots[at]); } return; }
-    if (mode === 'dive') { t += dt; if (to) { const dx = to[0] - f.x, dz = to[1] - f.z, d = Math.hypot(dx, dz); if (d > .05) { f.x += dx / d * Math.min(d, 2.4 * dt); f.z += dz / d * Math.min(d, 2.4 * dt); if (Math.abs(dx) > .05) f.face = Math.sign(dx); } else to = null; } if (t > .8 && !to) { mode = null; S.confetti(f.x, .15, f.z + .1, WATER, 6, undefined, 1.6); } }
+    if (mode === 'dive') { t += dt; if (to) { const dx = to[0] - f.x, dz = to[1] - f.z, d = Math.hypot(dx, dz); if (d > .05) { f.x += dx / d * Math.min(d, 2.4 * dt); f.z += dz / d * Math.min(d, 2.4 * dt); if (Math.abs(dx) > .05) f.face = Math.sign(dx); } else to = null; } if (t > .8 && !to) { mode = null; S.confetti(f.x, .15, f.z + .1, WATER, 6, undefined, 1.6); if (up) up(f); } }
   } };
 }
 
