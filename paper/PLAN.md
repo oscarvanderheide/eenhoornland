@@ -97,6 +97,19 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - **Game houses** on the candy island (games.js): memory (six pairs of paper animals), stamps (eight stamps, eight inks; her picture hangs on the house), and a xylophone with a parrot that plays a tune to play back, one note longer each time.
 - **The farm:** four rows of paper vegetables (veg.js: carrots, tomatoes, cabbages, pumpkins), each plant grown on its own; a tap on her puts down what she holds, and the pig comes out of its mud to eat a vegetable on the ground. The well's water is paper. The scarecrow's birds only fly up when she rocks it.
 
+**The rooms and the rising island round, 2026-11-27 (evening):**
+
+- **Rooms you walk into** (rooms.js, a doll's-house box like her bedroom): the clothes shop (set-winkel.js: the shopkeeper behind her counter, a rail of dresses, a mirror to twirl in), the room up in the treehouse (set-boomhut.js: telescope, hammock, the hatch down, and an open doorway to the zipline: out of it she takes the bar), the log cabin's workshop (set-blokhut.js: a colouring easel, atelier.js, her pictures hang on the wall; a fire).
+- **The shop** stands on open lawn north-east of the square now, a closed shopfront with a door. Prices are much higher (the onesie 30, the wings 25, a bow 2); her coins and the prices show as **one coin and a number** (Oscar asked for numbers), the cheapest things first.
+- **Coins** in the world are twice as big; **apples and pears** too. The well is a hollow stone ring. The duck pond has no white ripple rings any more.
+- **Trees step aside only where a toy asks** (the treehouse ladder, camera low); elsewhere she may be a little hidden behind a tree.
+- **The voyage:** the dolphins leap where they started, not swung round when she steers, slower and fewer; the whale and the sailing boats are paper cards (cards3.js). **The candy island lies under the sea** until she has rowed through all seven rings: then it rises, the camera far back; near its jetty the camera goes down low over the water. Risen is kept in the save (`gear.island`).
+- **The candy island** is bigger and everything on it further apart; new on it: the candy floss lady, two alpacas, two children playing tag, a monkey on a giant lollipop (candy.js).
+- **The beach** (beach2.js): a spade to dig holes with (a red cross in the sand hides a chest of five coins), a beach ball to kick to the seal (he catches it on his nose and heads it back), a fish kite, the ice cream man, a lifeguard on her tall chair, a sunbather; the palms drop paper coconuts to kick about; the lighthouse lights like a real lamp (a warm light, a halo, soft beams). The frisbee is bigger.
+- **The musicians** all play on until she moves, and the island's animals come and sit in an arc round them (folk.js `audience`).
+- **A trampoline** on the meadow (trampoline.js): push as she lands to go higher (a somersault when high), steer in the air to drift; the mat throws her back to the middle, too far out and she flies off onto the grass.
+- Found on the way: lamps placed in the world's measure never lit (the cave's light too); fixed.
+
 ## Every island its own (Oscar, 2026-11-27)
 
 "all the areas need to feel unique. now i see like all the same elements like the flowers and mills and grass tufts everywhere. that doesnt make it feel like exploring a new area." So: **nothing grows or stands on two islands.** A shared maker is fine for how a thing works, not for how an island looks. What each has (`flora.js` holds everything that is not the village's):

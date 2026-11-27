@@ -152,13 +152,6 @@ function drawMunt(g) {
   ink(g, '#E0A93A', P([[32, 18], [36, 28], [46, 28], [38, 34], [41, 44], [32, 38], [23, 44], [26, 34], [18, 28], [28, 28]]));
   ink(g, 'rgba(255,255,255,.55)', E(23, 22, 4, 6, .6));
 }
-/** ten coins: a little stack of them, seen a bit from above (her row of coins shows every ten as one stack; no numbers) */
-function drawStapel(g) {
-  for (let i = 0; i < 6; i++) { const y = 70 - i * 8.4; piece(g, '#C98F2A', E(32, y + 2.4, 25, 9)); piece(g, '#E0A93A', E(32, y, 25, 9), .2); }
-  piece(g, '#F2C65C', E(32, 26, 20, 6.6), .3);
-  ink(g, '#E0A93A', P([[32, 21], [34.4, 25], [40, 25], [35.6, 27.4], [37.4, 31], [32, 28.6], [26.6, 31], [28.4, 27.4], [24, 25], [29.6, 25]]));
-  ink(g, 'rgba(255,255,255,.55)', E(22, 24, 3.4, 2.2));
-}
 /* ---------- what falls out of a tree when it is shaken (paper.js) ---------- */
 /** a caterpillar hanging head down from its thread: 0 and 1 wriggle */
 function drawRups(g, f) {
@@ -229,15 +222,14 @@ export const THINGS = {
   wortel: { w: 120, h: 120, draw: drawWortel, frames: 1, size: .4, does: ['carrot'] },
   ei: { w: 60, h: 70, draw: drawEi, frames: 1, size: .2, does: ['egg'] },
   mand: { w: 150, h: 126, draw: drawMand, frames: 1, size: .45, does: ['basket'] },
-  appel: { w: 64, h: 70, draw: drawAppel, frames: 1, size: .18, does: ['apple'] },
+  appel: { w: 128, h: 140, draw: g => { g.scale(2, 2); drawAppel(g); }, frames: 1, size: .3, does: ['apple'] },
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
   schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
-  peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
+  peer: { w: 140, h: 160, draw: g => { g.scale(2, 2); drawPeer(g); }, frames: 1, size: .3, does: ['pear'] },
   'veer-uil': { w: 62, h: 124, draw: drawVeerUil, frames: 1, size: .34, does: ['owl feather'] },
   'veer-meeuw': { w: 62, h: 124, draw: drawVeerMeeuw, frames: 1, size: .34, does: ['gull feather'] },
   'veer-papegaai': { w: 62, h: 124, draw: drawVeerPapegaai, frames: 1, size: .34, does: ['parrot feather'] },
   regenboog: { w: 80, h: 84, draw: drawRegenboog, frames: 1, size: .26, does: ['rainbow fruit'] },
-  stapel: { w: 128, h: 166, draw: g => { g.scale(2, 2); drawStapel(g); }, frames: 1, size: .5, does: ['ten coins'] },
   munt: { w: 128, h: 128, draw: g => { g.scale(2, 2); drawMunt(g); }, frames: 1, size: .42, does: ['coin'] },
   rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },
   sok: { w: 90, h: 110, draw: drawSok, frames: 1, size: .22, does: ['sock'] },

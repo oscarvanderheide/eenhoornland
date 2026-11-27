@@ -2,7 +2,7 @@
 # a `   // note` patched in before the end of one silently turns the rest of the line into a note. The page still loads.)
 #   python3 tests/swallow.py      (run by tests/parse.sh)
 import re, glob, sys
-pat = re.compile(r"(\); |; )(S\.\w+\(|const |let |for \(|if \(|root\.add|step\w*\(|return |\w+\.step\()")
+pat = re.compile(r"(\); |; |\) )(S\.\w+\(|const |let |for \(|if \(|root\.add|step\w*\(|return |\w+\.step\()")
 bad = 0
 for f in sorted(glob.glob('paper/*.js')):
     for n, line in enumerate(open(f).read().split('\n'), 1):

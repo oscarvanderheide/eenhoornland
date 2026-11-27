@@ -67,11 +67,11 @@ export function strandLand() {
  *  herself (boat.js), past the things of the voyage (voyage.js). Made at its real size, and bigger than it was.
  *  `bridge`: where its jetty runs out to the west (no bridge any more; the name is kept for the jetty and its shot) */
 export const VOYAGE = 50;   // how far the island's shore lies from the beach's, over the water
-ORIGIN.regenboog = [ORIGIN.strand[0] + 15.0 + VOYAGE + 15.0, ORIGIN.strand[1] + 20];
+ORIGIN.regenboog = [ORIGIN.strand[0] + 15.0 + VOYAGE + 21.0, ORIGIN.strand[1] + 20];
 export function regenboogLand() {
   return {
-    SAND: blob(0, 0, 15.8, 11.4, 601, 96, .04), GRASS: blob(0, -.1, 15.0, 10.6, 602, 96, .04), POND: blob(6.6, 2.6, 1.9, 1.3, 603, 32, .06),
-    bridge: { x0: -18.0, x1: -14.6, z0: -.6, z1: .6 },
+    SAND: blob(0, 0, 21.6, 15.2, 601, 120, .04), GRASS: blob(0, -.1, 20.8, 14.4, 602, 120, .04), POND: blob(9.24, 3.64, 2.5, 1.7, 603, 32, .06),   // (bigger again, and everything on it further apart: Oscar, "candy island still feels cramped")
+    bridge: { x0: -23.8, x1: -20.4, z0: -.6, z1: .6 },
   };
 }
 

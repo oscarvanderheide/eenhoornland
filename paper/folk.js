@@ -96,35 +96,92 @@ export function player(S, x, z) {
   } };
 }
 
-/** Any other musician (the guitar on the beach, the harp in the forest, the flute on the meadow, the herald at the castle):
- *  silent until tapped; then they play for a few seconds (frames `o.play`, taking turns), notes float up from `o.from`
- *  ([dx, dy] from the card's middle bottom), and they end with frame `o.end` (a bow, a wave). At rest: frame `o.rest`.
- *  `o.sound` makes the music (one of the stage's soft instruments); `o.lift` seats them on something. */
+/** An animal of the island, made one that can come and listen to a musician: `c` is what its maker gave ({ f, step },
+ *  or several figures in `c.figs`: the boar and her piglets). While it is asked, its own step does not run: it walks to
+ *  its seat, sits there facing the music, and when the music is over it walks back to where it was and goes on with its
+ *  own little life. Made once per animal, the first time it is asked */
+const audiences = new WeakMap();
+function audience(S, c) {
+  if (audiences.has(c)) return audiences.get(c);
+  const figs = c.figs || [c.f], own = c.step, speed = 2.6; let seats = null, back = null, on = false, look = 0;
+  const stuck = figs.map(() => 0);
+  const go = (f, i, p, dt) => { const dx = p[0] - f.x, dz = p[1] - f.z, d = Math.hypot(dx, dz); if (d < .12) { f.walking = false; return true; }
+    const sp = Math.min(d, speed * dt), x0 = f.x, z0 = f.z; f.walking = S.move(f, dx / d * sp, dz / d * sp) && Math.hypot(f.x - x0, f.z - z0) > sp * .3; if (Math.abs(dx) > .1) f.face = Math.sign(dx);
+    stuck[i] = f.walking ? 0 : stuck[i] + dt; if (stuck[i] > .5) { f.x += dx / d * sp; f.z += dz / d * sp; f.walking = true; }   // (something in the way: it squeezes past)
+    return false; };
+  c.step = e => {
+    if (!on) { own.call(c, e); return; }
+    let all = true; figs.forEach((f, i) => { if (go(f, i, (seats || back)[i], e.dt)) { if (seats) f.face = Math.sign(look - f.x) || f.face; } else all = false; });
+    if (!seats && all) on = false;   // home again: its own life goes on
+  };
+  const a = { n: figs.length, figs,
+    invite(ps, mx) { if (!on) back = figs.map(f => [f.x, f.z]); seats = ps; look = mx; on = true; figs.forEach(f => { f.lift = 0; f.lean = 0; }); },
+    leave() { if (on) seats = null; },
+    there: () => !!seats && figs.every((f, i) => Math.hypot(seats[i][0] - f.x, seats[i][1] - f.z) < .3) };
+  audiences.set(c, a); return a;
+}
+/** seats in a part of a circle round (mx, mz) on the camera's side: her own seat in front, then the animals' to her left
+ *  and right in turn, as wide as each one is, round to the musician's sides; a second row further out when it is full.
+ *  Only where one can stand on this island (`ok`) */
+function arc(mx, mz, R, sizes, ok) {
+  const at = (r, a) => [mx + Math.sin(a) * r, mz + Math.cos(a) * r];
+  let r = R, me = null; search: for (const dr of [0, -.4, .4]) for (const a of [0, .25, -.25, .5, -.5, .75, -.75, 1.0, -1.0, 1.3, -1.3, 1.6, -1.6]) if (ok(...at(R + dr, a))) { me = at(R + dr, a); break search; }
+  if (!me) me = at(r, 0);
+  const meA = Math.atan2(me[0] - mx, me[1] - mz), MAX = 1.75;   // (round to the musician's sides, not behind: there they would hide)
+  let cur = [meA - .42 / r, meA + .42 / r];   // (left and right of her)
+  const out = sizes.map((w, i) => {
+    for (let tries = 0; tries < 40; tries++) {
+      const side = (i + tries) % 2, half = (w * .5 + .14) / r, a = side ? cur[1] + half : cur[0] - half;
+      if (Math.abs(a) > MAX) { if (Math.abs(cur[0]) > MAX && Math.abs(cur[1]) > MAX) { r += 1.15; cur = [meA - .2 / r, meA + .2 / r]; } else if (side) cur[1] = 9; else cur[0] = -9; continue; }
+      if (side) cur[1] = a + half; else cur[0] = a - half;
+      for (const dr of [0, -.35, .4]) { const p = at(r + dr, a); if (ok(...p)) return p; }
+    }
+    return at(r + 1.2, 0);
+  });
+  return { me, seats: out };
+}
+
+/** A musician (the guitar on the beach, the harp in the forest, the flute on the meadow, the herald at the castle). Silent
+ *  until tapped; a tap and she walks over and sits down in front to listen, and the music goes on and on (a run every
+ *  `loop` seconds) until she moves: the stick, a key, a touch anywhere, ✕ (Oscar: "all the musicians should just play
+ *  until we move"). Meanwhile the animals of the island (`o.guests()`) come and sit in a part of a circle round the
+ *  musician, facing the music (Oscar: "the animals of the area should gather in a (part of a) circle around the
+ *  musician"), and go home when it ends; the first time they are all there, a coin. Frames: `o.play` while playing (taking
+ *  turns), `o.end` (a bow, a wave) at the end, `o.rest` otherwise; notes float up from `o.from` ([dx, dy] from the card's
+ *  middle bottom); `o.sound` makes one run of music; `o.lift` seats them on something */
 export function musician(S, name, spec, note, x, z, o) {
   const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face; if (o.sink) f.sink = o.sink;
   const notes = [0, 1, 2].map(i => { const n = S.figure(name + 'noot' + i, note); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
-  const from = o.from || [.3, 1.1], long = o.long || 4.8; let mode = null, t = 0, plays = 0, next = 0, sent = 0;
-  /* o.listen ({ seat: [x, z], guests, loop }): a tap and she sits down in front of him to listen; he plays on and on (a
-     run every `loop` seconds), the forest's animals come and sit with her, and it ends when she is touched again */
-  const L = o.listen; let sit = null, st = 0, again = 0, listens = 0, cheered = false;
-  const [sx, sz] = L ? S.at(L.seat) : [0, 0], seats = L ? [[-1.0, -.45], [-.85, .7], [.75, .75], [-1.9, .2], [1.5, .35]].map(([dx, dz]) => [sx + dx, sz + dz]) : [];
-  const listen = L && { rest: true, look: [(sx + f.x) / 2, (sz + f.z) / 2 + .3], step(dt, inp) {
+  const from = o.from || [.3, 1.1], loop = o.loop || 4.6, reward = o.reward || (name === 'harpist' ? 'harp' : 'luister-' + name);
+  let mode = null, t = 0, plays = 0, next = 0, sent = 0, sit = null, st = 0, again = 0, listens = 0, cheered = false, guests = [], seat = null, uniSeat = null;
+  const ok = (px, pz) => { const h = S.heightAt(px, pz); return h !== null && Math.abs(h - (f.y || 0)) < .3 && S.land(px, pz) && S.free(px, pz, h) && Math.hypot(px - f.x, pz - f.z) > 1.0; };   // (on the musician's own level: the flute's hilltop, not below it)
+  const gather = () => {   // who comes, and where everybody sits
+    guests = (o.guests ? o.guests() : []).filter(c => c && c.f && c.f !== f && !c.f.away && c.f.g.visible).map(c => audience(S, c));
+    // the small ones nearest her in the middle, the big ones (the deer, the sheep) at the ends; the ring as wide as they need
+    const who = guests.flatMap(a => a.figs.map((q, j) => ({ a, j, w: q.W || .8 }))).sort((p, q) => p.w - q.w);
+    const R = o.ring || Math.min(3.0, Math.max(1.9, (who.reduce((n, q) => n + q.w + .28, 0) + .84) / 3.3)), { me, seats } = arc(f.x, f.z, R, who.map(q => q.w), ok);
+    seat = me; for (const a of guests) a.seats = []; who.forEach((q, i) => { q.a.seats[q.j] = seats[i]; });
+    // her own unicorn: it is big, so it stands at the back, beside and behind the musician, where it hides nobody
+    uniSeat = null; const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 1.1;
+    search: for (const r of [1.5, 2.0, 2.6]) for (const a of [2.3, -2.3, 2.7, -2.7, 1.95, -1.95]) { const p = [f.x + Math.sin(a) * r, f.z + Math.cos(a) * r]; if (ok(...p) && !seats.some(q => near(p, q))) { uniSeat = p; break search; } } };
+  const listen = { rest: true, look: [0, 0], step(dt, inp) {
     const { girl, sfx } = S; st += dt;
-    if (sit === 'on') { const k = Math.min(1, st / .3); girl.x = sx; girl.z = sz; girl.lift = Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = Math.sign(f.x - sx) || 1;
-      if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); L.guests.forEach((q, i) => q.guest.invite(seats[i % seats.length])); mode = 'play'; t = 0; next = .25; again = L.loop; plays++; o.sound(); } return; }
+    if (sit === 'on') { const k = Math.min(1, st / .3); girl.x = seat[0]; girl.z = seat[1]; girl.lift = Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = Math.sign(f.x - seat[0]) || 1;
+      if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); for (const a of guests) a.invite(a.seats, f.x); mode = 'play'; t = 0; next = .25; again = loop; plays++; o.sound(); } return; }
     if (sit === 'sit') { girl.lift = 0; girl.poseName = 'sit';
-      if (!cheered && L.guests.every(q => q.guest.there())) { cheered = true; S.coins.reward('harp', f.x, (f.y || 0) + 1.6, f.z); S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
-      if (inp.act || inp.x) { sit = 'off'; st = 0; L.guests.forEach(q => q.guest.leave()); mode = 'end'; t = 0; f.hopV = 1.2; } return; }
+      const u = S.uni; if (uniSeat && u && !u.away) { u.busy = true; const dx = uniSeat[0] - u.x, dz = uniSeat[1] - u.z, d = Math.hypot(dx, dz); if (d > .1) { const sp = Math.min(d, 2.6 * dt); if (!S.move(u, dx / d * sp, dz / d * sp)) { u.x += dx / d * sp; u.z += dz / d * sp; } u.walking = true; u.face = Math.sign(dx) || u.face; } else { u.walking = false; u.face = Math.sign(f.x - u.x) || u.face; } }   // (stopPlay lets it go again)
+      if (!cheered && guests.length && guests.every(a => a.there())) { cheered = true; S.coins.reward(reward, f.x, (f.y || 0) + 1.6, f.z); S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
+      if (st > .4 && (inp.act || inp.x || inp.y)) { sit = 'off'; st = 0; for (const a of guests) a.leave(); mode = 'end'; t = 0; f.hopV = 1.2; } return; }   // she moves: the music ends
     const k = Math.min(1, st / .28); girl.lift = Math.sin(k * Math.PI) * .2; girl.poseName = null; if (k >= 1) { girl.lift = 0; sit = null; S.stopPlay(); }
   } };
   f.onTap = () => {
-    if (L) { if (S.playing() || sit || mode === 'play') return; S.walkThen(sx, sz + .5, () => { if (S.playing()) return; sit = 'on'; st = 0; S.play(listen); }, 1.1); return; }
-    if (mode) return; mode = 'play'; t = 0; next = .25; plays++; o.sound(); };
+    if (S.playing() || sit || mode === 'play') return; gather(); listen.look = [f.x, (f.z + seat[1]) / 2];
+    S.walkThen(seat[0], seat[1], () => { if (S.playing() || sit) return; sit = 'on'; st = 0; S.play(listen); }, .8); };
   f.act = tick => f.setFrame(mode === 'play' ? o.play[Math.floor(tick / 3) % o.play.length] : mode === 'end' ? o.end : o.rest);
-  return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length, sitting: sit === 'sit', listens, guests: L ? L.guests.filter(q => q.guest.there()).length : 0 }), step({ dt }) {
+  return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length, sitting: sit === 'sit', listens, guests: guests.filter(a => a.there()).length, invited: guests.reduce((n, a) => n + a.n, 0), seats: guests.flatMap(a => a.seats || []), seat, who: guests.flatMap(a => a.figs.map(q => [q.name, +q.x.toFixed(1), +q.z.toFixed(1)])) }), step({ dt }) {
     for (const q of notes) if (q.t >= 0) { q.t += dt; const k = q.t / 1.9; q.n.x = f.x + f.face * from[0] + q.side * k * .5 + Math.sin(q.t * 3) * .08; q.n.z = f.z + .06; q.n.floatY = q.n.y = (f.y || 0) + (f.lift || 0) + from[1] + k * 1.2; if (k >= 1) { q.t = -1; q.n.g.visible = false; } }
     if (!mode) return; t += dt;
-    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (sit === 'sit') { again -= dt; if (again <= 0) { again = L.loop; plays++; o.sound(); } } else if (t > long) { mode = 'end'; t = 0; f.hopV = 1.2; } }
+    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (sit === 'sit') { again -= dt; if (again <= 0) { again = loop; plays++; o.sound(); } } else if (sit === null) { mode = 'end'; t = 0; } }
     else if (t > 1.4) mode = null;
   } };
 }
@@ -156,7 +213,7 @@ export function witch(S, x, z) {
   const FLOWER = { w: 90, h: 110, frames: 1, size: .32, thing: true, draw: THINGS.bloem ? THINGS.bloem.draw : (g => { g.save(); g.fillStyle = '#6f8f55'; g.fillRect(42, 52, 6, 50); for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283; g.fillStyle = '#e98f8f'; g.beginPath(); g.arc(45 + Math.cos(a) * 17, 38 + Math.sin(a) * 17, 12, 0, 6.283); g.fill(); } g.fillStyle = '#f2c65c'; g.beginPath(); g.arc(45, 38, 10, 0, 6.283); g.fill(); g.restore(); }) };
   const wishes = { bloem: S.figure('heksbloem', FLOWER), appel: S.figure('heksappel', THINGS.appel), water: S.figure('hekswater', THINGS.gieter) };
   wishes.water.act = () => wishes.water.setFrame(1); for (const w of Object.values(wishes)) { w.g.visible = false; w.thing = true; w.z = wpz + .08; }
-  wishes.bloem.g.scale.setScalar(1.5); wishes.appel.g.scale.setScalar(2.3);
+  wishes.bloem.g.scale.setScalar(1.5); wishes.appel.g.scale.setScalar(1.4);
   const present = gift(S, 'drankje', STORY.drankje);
   // her second brew, once the unicorn has grown: wings, from three feathers (the owl's, the gull's, the peacock's)
   const featherWish = Object.fromEntries(['uil', 'meeuw', 'papegaai'].map(b => { const w = S.figure('heksveer-' + b, THINGS['veer-' + b]); w.g.visible = false; w.thing = true; w.z = wpz + .08; w.g.scale.setScalar(1.9); return [b, w]; }));

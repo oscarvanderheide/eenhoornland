@@ -61,7 +61,7 @@ export default {
     S.tap(mirror, () => { if (S.playing()) return; S.walkThen(mx, mz, () => { twirls++; spin = 1; girl.hopV = 2.2; sfx.chime(); S.confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#fbf7ee', '#bba6ea'], 10, S.starGeo, 1.6); }, .5); }, 'spiegel');
     // a round pink rug in the middle, and a lamp
     root.add(slab(blob(-.2, .55, 1.1, .6, 911, 36, .04), .018, .018, P('#f4b4c9'), whiteEdge)); root.add(slab(blob(-.2, .55, .7, .36, 912, 28, .04), .03, .012, P('#fbe3ea'), whiteEdge));
-    const light = S.lamp(0, '#ffd7b0', 7, 1.4); light.position.set(...S.at([0, 0]).flatMap((v, i) => i ? [2.3, v] : [v]));
+    const light = S.lamp(0, '#ffd7b0', 7, 1.4); light.position.set(0, 2.3, 0);   // (a lamp is placed in the set's own measure)
 
     return {
       start: [0, D / 2 - .95], uni: [-.9, D / 2 - .8],

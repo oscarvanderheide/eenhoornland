@@ -13,9 +13,9 @@ import { E, piece } from './cut.js';
  *  figures: a round card in six wedges of colour, like a beach ball, turning as it rolls */
 const wedge = (a0, a1) => g => { g.moveTo(32, 32); g.arc(32, 32, 22, a0, a1); g.closePath(); };
 const drawBall = () => g => { piece(g, '#f6efe2', E(32, 32, 22, 22)); ['#e98f8f', '#f2c65c', '#9ed9cf', '#f6efe2', '#bba6ea', '#f6efe2'].forEach((c, i) => piece(g, c, wedge(i * Math.PI / 3, (i + 1) * Math.PI / 3), 0)); piece(g, '#fcf8f1', E(32, 32, 4.5, 4.5), .4); };
-export function ball(S, x, y, z, color = '#e98f8f') {
+export function ball(S, x, y, z, color = '#e98f8f', name = 'bal', spec = null) {   // (`spec`: another card to roll, a coconut)
   const { girl, sfx } = S, [wx, wz] = S.at([x, z]);
-  const f = S.figure('bal', { w: 64, h: 64, draw: drawBall(color), frames: 1, size: .46 });
+  const f = S.figure(name, spec || { w: 64, h: 64, draw: drawBall(color), frames: 1, size: .46 });
   f.sink = -f.H / 2; f.mesh.position.y = -f.H / 2;   // its card hangs from its own middle, so it turns about its middle (turned about its foot, half of every turn was under the ground)
   const b = { x: wx, z: wz, vx: 0, vz: 0, lift: 0, vy: 0, held: null, kicks: 0, roll: 0, f };
   const kick = (dx, dz, power = 5.2, up = 2.6) => { const l = Math.hypot(dx, dz) || 1; b.vx = dx / l * power; b.vz = dz / l * power; b.vy = up; b.held = null; b.kicks++; sfx.boing(); };

@@ -24,6 +24,7 @@ import winkel from './set-winkel.js';
 import boomhut from './set-boomhut.js';
 import blokhut from './set-blokhut.js';
 import { EGG } from './quest.js';
+import { CARDS3 } from './cards3.js';
 import { openShop } from './shopui.js';
 import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
@@ -236,35 +237,31 @@ function buildSeaLife(land, x0, x1, z0, z1) {
     for (let i = 0; i < 400; i++) { const x = bx0 - far - 8 + R() * (bx1 - bx0 + 2 * far + 16), z = bz0 - far - 8 + R() * (bz1 - bz0 + 2 * far + 16); if (x > x0 && x < x1 && z > z0 && z < z1 && out(x, z, far)) return [x, z]; } return null; };
   if (!seaLife.figs) {   // the figures are made once; each new sea only finds them new places
     seaLife.figs = { fish: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const f = makeFigure('zeevis' + i, PROPS.vis); f.thing = true; f.g.scale.setScalar(2.2); f.g.visible = false; return f; }),
-      gulls: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const f = makeFigure('zeemeeuw' + i, ANIMALS2.meeuw); f.thing = true; f.g.scale.setScalar(1.15); f.act = tick => f.setFrame(1 + (Math.floor(tick / 3 + i) % 2)); return f; }) };
+      gulls: [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const f = makeFigure('zeemeeuw' + i, ANIMALS2.meeuw); f.thing = true; f.g.scale.setScalar(1.15); f.act = tick => f.setFrame(1 + (Math.floor(tick / 3 + i) % 2)); return f; }),
+      // the sailing boats and the far whale: paper cards, as everything is (Oscar: "the whale should be paper style. the sailboats too")
+      boats: [...Array(12)].map((_, i) => { const f = makeFigure('zeilboot' + i, CARDS3[['zeilboot', 'zeilboot2', 'zeilboot3', 'zeilboot4'][i % 4]]); f.thing = true; f.g.visible = false; f.act = tick => f.setFrame(Math.floor(tick / 9 + i) % 2); return f; }),
+      whale: (() => { const f = makeFigure('zeewalvis', CARDS3.walvis); f.thing = true; f.g.scale.setScalar(.8); f.g.visible = false; f.act = () => f.setFrame((seaLife.whale && seaLife.whale.frame) || 0); return f; })() };
   }
-  seaLife.boats = []; for (let i = 0; i < 12; i++) { const c = spot(4); if (!c) continue; const g = new THREE.Group(); g.scale.setScalar(1.3); seaRoot.add(g);
-    const hull = new THREE.Mesh(new THREE.CylinderGeometry(.42, .3, .26, 12, 1, false, 0, Math.PI), paper(['#e98f8f', '#8fc3e0', '#f2c65c', '#fbf5ea'][i % 4])); hull.rotation.z = Math.PI / 2; hull.rotation.y = Math.PI / 2; hull.scale.set(1, 2.2, 1); hull.position.y = .1; g.add(hull);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, 1.3, 5), paper('#8d6a48')); mast.position.y = .75; g.add(mast);
-    const sail = card([[0, 0], [0, 1.05], [.62, .08]], .01, paper(i % 2 ? '#fbf5ea' : '#f8dde4', { side: THREE.DoubleSide })); sail.position.set(.03, .2, 0); g.add(sail);
-    const jib = card([[0, 0], [0, .85], [-.4, .06]], .01, paper(['#f4a6c4', '#9ed9cf', '#f2c65c', '#bba6ea'][i % 4], { side: THREE.DoubleSide })); jib.position.set(-.03, .2, 0); g.add(jib);
-    for (const o of g.children) o.castShadow = true;
-    seaLife.boats.push({ g, cx: c[0], cz: c[1], r: 2 + R() * 2.5, a: R() * 6.28, sp: (.04 + R() * .04) * (R() < .5 ? -1 : 1), ph: R() * 6 }); }
+  for (const f of seaLife.figs.boats) f.g.visible = false;
+  seaLife.boats = []; for (const f of seaLife.figs.boats) { const c = spot(4); if (!c) continue; f.g.visible = true; seaLife.boats.push({ f, cx: c[0], cz: c[1], r: 2 + R() * 2.5, a: R() * 6.28, sp: (.04 + R() * .04) * (R() < .5 ? -1 : 1), ph: R() * 6 }); }
   seaLife.fish = seaLife.figs.fish.map(f => ({ f, at: spot(3), t: -1 - R() * 5 })).filter(q => q.at);
   seaLife.gulls = seaLife.figs.gulls.map((f, i) => { const c = spot(2) || [0, 0]; return { f, cx: c[0], cz: c[1], r: 4 + R() * 3, a: R() * 6.28, sp: (.18 + R() * .1) * (i % 2 ? 1 : -1), h: 3 + R() * 1.5 }; });
-  { const c = spot(7); if (c) { const g = new THREE.Group(); g.visible = false; seaRoot.add(g); const back = new THREE.Mesh(new THREE.SphereGeometry(1.1, 18, 10, 0, 6.283, 0, Math.PI / 2), paper('#5f7f9a')); back.scale.set(1.8, .55, 1); back.castShadow = true; g.add(back);
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(.5, 12, 8, 0, 6.283, 0, Math.PI / 2), paper('#9fb6c8')); belly.scale.set(1.6, .4, 1); belly.position.set(.9, .05, .3); g.add(belly);
-    const tail = card([[0, 0], [-.5, .55], [-.15, .3], [0, .7], [.15, .3], [.5, .55]], .03, paper('#5f7f9a', { side: THREE.DoubleSide })); tail.position.set(-2.2, .1, 0); g.add(tail);
-    seaLife.whale = { g, x: c[0], z: c[1], t: -6 }; } else seaLife.whale = null; }
+  { const c = spot(7); seaLife.figs.whale.g.visible = false; seaLife.whale = c ? { f: seaLife.figs.whale, x: c[0], z: c[1], t: -6 } : null; }
 }
 function stepSeaLife(dt) {
-  for (const b of seaLife.boats) { b.a += b.sp * dt; const x = b.cx + Math.cos(b.a) * b.r, z = b.cz + Math.sin(b.a) * b.r * .6; b.g.position.set(x, WATER_Y - .02 + Math.sin(time * 1.6 + b.ph) * .04, z); b.g.rotation.set(Math.sin(time * 1.3 + b.ph) * .06, -b.a - Math.sign(b.sp) * Math.PI / 2, Math.sin(time * 1.1 + b.ph) * .05); }
+  for (const b of seaLife.boats) { b.a += b.sp * dt; const f = b.f; f.x = b.cx + Math.cos(b.a) * b.r; f.z = b.cz + Math.sin(b.a) * b.r * .6; f.floatY = f.y = WATER_Y - .12 + Math.sin(time * 1.6 + b.ph) * .04; f.face = -Math.sin(b.a) * Math.sign(b.sp) > 0 ? 1 : -1; f.lean = Math.sin(time * 1.1 + b.ph) * .05; }
   for (const q of seaLife.fish) { q.t += dt; const f = q.f;
     if (q.t < 0) { f.g.visible = false; continue; }
     const k = q.t / 1.1; if (k >= 1) { q.t = -3 - Math.random() * 6; f.g.visible = false; confetti(f.x, WATER_Y + .1, f.z, ['#cfeaf0', '#f6efe2'], 5, undefined, 1.2); continue; }
     if (k === q.t / 1.1 && q.t - dt < 0) confetti(q.at[0], WATER_Y + .1, q.at[1], ['#cfeaf0', '#f6efe2'], 5, undefined, 1.2);
     f.g.visible = true; f.x = q.at[0] + (k - .5) * 1.6; f.z = q.at[1]; f.floatY = f.y = WATER_Y - .1 + Math.sin(k * Math.PI) * 1.1; f.face = 1; f.lean = (.5 - k) * 2.2; }
   for (const q of seaLife.gulls) { q.a += q.sp * dt; const f = q.f; f.x = q.cx + Math.cos(q.a) * q.r; f.z = q.cz + Math.sin(q.a) * q.r * .6; f.floatY = f.y = q.h + Math.sin(time * .9 + q.r) * .25; f.face = -Math.sin(q.a) * Math.sign(q.sp) > 0 ? 1 : -1; }
-  const w = seaLife.whale; if (w) { w.t += dt; const g = w.g;
-    if (w.t < 0) g.visible = false;
-    else { const up = w.t < .9 ? w.t / .9 : w.t < 3.6 ? 1 : Math.max(0, 1 - (w.t - 3.6) / .9); g.visible = up > 0; g.position.set(w.x, WATER_Y - .6 + up * .55, w.z);
-      if (w.t > 1.0 && w.t - dt <= 1.0) { sfx.splash(); confetti(w.x + .3, WATER_Y + 1.2, w.z, ['#fbf7ee', '#cfeaf0', '#e8f4f6'], 22, undefined, 3.4, true); }   // the spout
-      if (w.t > 4.5) w.t = -10 - Math.random() * 10; } }
+  const w = seaLife.whale; if (w) { w.t += dt; const f = w.f;
+    if (w.t < 0) f.g.visible = false;
+    else { const up = w.t < .9 ? w.t / .9 : w.t < 3.6 ? 1 : w.t < 3.8 ? 1 - (w.t - 3.6) / .2 : w.t < 4.3 ? (w.t - 3.8) / .5 : Math.max(0, 1 - (w.t - 4.3) / .8);   // up, a blow; then only its tail, and gone
+      f.g.visible = up > 0; f.x = w.x; f.z = w.z; f.face = 1; f.floatY = f.y = WATER_Y - f.H * .8 * (.9 - .86 * up); w.frame = w.t > 3.8 ? 2 : w.t > 1.0 && w.t < 2.4 ? 1 : 0;
+      if (w.t > 1.0 && w.t - dt <= 1.0) { sfx.splash(); confetti(w.x + .3, WATER_Y + 1.6, w.z, ['#fbf7ee', '#cfeaf0', '#e8f4f6'], 22, undefined, 3.4, true); }   // the spout
+      if (w.t > 5.2) w.t = -10 - Math.random() * 10; } }
 }
 /** build one set at its place in the world */
 function buildSet(def) {
@@ -274,7 +271,7 @@ function buildSet(def) {
   const S = {
     THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine, umbrella,
     at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
-    sea: o => { s.seaAsk = { fine: o.fine ?? 3, land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
+    sea: o => { s.seaAsk = { fine: o.fine ?? 3, land: o.land.map(p => p.map(W)), all: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
     floor: (h, pts, inset = 0) => { s.floors.push({ h, pts: pts.map(W), inset }); },
     floorBox: (h, x0, z0, x1, z1) => { s.floors.push({ h, box: [x0 + ox, z0 + oz, x1 + ox, z1 + oz] }); },
     wall: (cx, cz, hx, hz) => { const w = [cx + ox, cz + oz, hx, hz]; s.walls.push(w); return w; },   // (gives the wall back: a gate opens by making it nothing wide)
@@ -287,7 +284,13 @@ function buildSet(def) {
     // stands at its `stand`. S.through(name) takes her through at once (a tap on the house)
     door: (name, zone, stand, dir, any = false, arrive = null) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir, any, arrive }); },   // (`arrive`: what happens when she comes out of this door: the treehouse puts her on its ladder)   // (`any`: being in the zone is enough, whichever way she came: a way in through water)
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
-    cut: () => { camCut = true; },   // the camera jumps instead of gliding (the treehouse's telescope: from the room to an island far off, and back)
+    cut: () => { camCut = true; },
+    // an island under the sea (the rainbow island, until she has rowed through all seven rings: set-regenboog.js). Sunk, it has
+    // no ground, is not drawn and nobody on it shows, and the sea is not cut round it; rising, it is drawn, `raise` lifting it
+    sink: state => { s.sunk = state; },   // 'down' | 'rising' | false
+    raise: y => { s.root.position.y = y; },
+    seaLand: (on, now = true) => { if (!s.seaAsk) return; s.seaAsk.land = on ? s.seaAsk.all : []; if (now) buildSea(); },
+    myFigures: () => s.figs,   // the camera jumps instead of gliding (the treehouse's telescope: from the room to an island far off, and back)
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
     pushing: () => push,   // which way she is pushing right now, in the world's measure ([0, 0]: not at all)
@@ -733,15 +736,13 @@ function stepFallen(dt, tick) {
 const purse = { coins: 0, seen: new Set() }, coinRow = document.createElement('div'); coinRow.id = 'coins'; document.body.appendChild(coinRow);
 let coinSrc = null; const coinImg = () => coinSrc || (coinSrc = cutout(THINGS.munt.w, THINGS.munt.h, c => THINGS.munt.draw(c, 0), PAPER, 1).toDataURL());
 const featherImgs = {}; const featherImg = b => featherImgs[b] || (featherImgs[b] = cutout(THINGS['veer-' + b].w, THINGS['veer-' + b].h, c => THINGS['veer-' + b].draw(c, 0), PAPER, 1).toDataURL());
-const stackImg = () => stackImg.src || (stackImg.src = cutout(THINGS.stapel.w, THINGS.stapel.h, c => THINGS.stapel.draw(c, 0), PAPER, 1).toDataURL());
-/** her coins: every ten of them a stack, then the ones over (Oscar wants things to cost much more: thirty coins in a row would not fit) */
-function showCoins(pop) { const tens = Math.floor(purse.coins / 10), ones = purse.coins % 10, last = ones ? 'one' : 'ten';
-  coinRow.replaceChildren(...[...Array(tens)].map((_, i) => { const im = new Image(); im.src = stackImg(); im.className = 'stapel' + (pop && last === 'ten' && i === tens - 1 ? ' pop' : ''); return im; }),
-    ...[...Array(ones)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === ones - 1) im.className = 'pop'; return im; }),
-    ...(gear.wings ? [] : gear.feathers).map((b, i) => { const im = new Image(); im.src = featherImg(b); im.className = 'veer' + (pop && i === gear.feathers.length - 1 ? ' pop' : ''); return im; })); }   // (the feathers she has, after the coins: only those she has, never empty places)
+/** her coins: one coin and how many (Oscar: "when collecting coins i see all of them individually at the top. just show a number please") */
+function showCoins(pop) {
+  const im = new Image(); im.src = coinImg(); im.className = 'munt' + (pop ? ' pop' : ''); const n = document.createElement('span'); n.className = 'n' + (pop ? ' pop' : ''); n.textContent = purse.coins;
+  coinRow.replaceChildren(im, n, ...(gear.wings ? [] : gear.feathers).map((b, i) => { const f = new Image(); f.src = featherImg(b); f.className = 'veer' + (pop && i === gear.feathers.length - 1 ? ' pop' : ''); return f; })); }   // (the feathers she has, after the coins: only those she has, never empty places)
 const onScreen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
-/** where in her row a coin lands or leaves from: just after the last coin (or stack) there is */
-function slot() { const all = [...coinRow.querySelectorAll('img:not(.veer)')], q = all[all.length - 1]; if (!q) { const r = coinRow.getBoundingClientRect(); return [r.left + 17, r.top + 17]; } const r = q.getBoundingClientRect(); return [r.left + r.width * .6, r.top + r.height / 2]; }
+/** where a coin lands in her row, or leaves it from: her coin at the top */
+function slot() { const q = coinRow.querySelector('img.munt'), r = (q || coinRow).getBoundingClientRect(); return [r.left + Math.min(r.width, 34) / 2, r.top + Math.min(r.height, 34) / 2]; }
 function flyCoin(from, to, done) { const im = new Image(); im.src = coinImg(); im.className = 'flycoin'; im.style.left = from[0] + 'px'; im.style.top = from[1] + 'px'; document.body.appendChild(im);
   requestAnimationFrame(() => requestAnimationFrame(() => { im.style.left = to[0] + 'px'; im.style.top = to[1] + 'px'; im.style.transform = 'rotate(360deg)'; })); setTimeout(() => { im.remove(); done(); }, 720); }
 const coins = {
@@ -768,7 +769,7 @@ const redressBoth = () => { girl.redress({ ...wardrobe.on[girl.kid] }); zus.redr
 const closet = {
   owns: id => wardrobe.own.has(id), wearing: id => Object.values(wardrobe.on[girl.kid]).includes(id), worn: () => ({ ...wardrobe.on[girl.kid] }),
   /** the shop's counter (shopui.js): the sheet with the mirror and the cards; `keeper(how)` lets the shopkeeper smile, hold up a dress or wave */
-  open(keeper = () => { }) { return openShop({ kid: () => girl.kid, worn: closet.worn, owns: closet.owns, wearing: closet.wearing, have: coins.have, pay: (n, at, done) => coins.spend(n, at, 0, 0, done), buy: id => closet.buy(id), put: id => closet.put(id), coin: coinImg(), stack: stackImg(), prices: PRICES, sfx, keeper }); },
+  open(keeper = () => { }) { return openShop({ kid: () => girl.kid, worn: closet.worn, owns: closet.owns, wearing: closet.wearing, have: coins.have, pay: (n, at, done) => coins.spend(n, at, 0, 0, done), buy: id => closet.buy(id), put: id => closet.put(id), coin: coinImg(), prices: PRICES, sfx, keeper }); },
   buy(id) { wardrobe.own.add(id); closet.put(id); },
   put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
 };
@@ -868,6 +869,9 @@ function play(toy) { if (ride.on) dismount(true); playing = toy; target = null; 
    A tree hides when the line from the camera to her passes through it below its top, and comes back when it no longer does */
 const treesHidden = new Set();
 function hideTreesInFront() {
+  // (only where a toy or a shot asks for it: at the oak and on its ladder, with the camera low on the grass. Oscar: "its ok to get a bit hidden
+  // behind trees. only maybe in specific places or near the treehouse when the camera goes down to the ground")
+  if (!(playing && playing.clearView) && !(shot && shot.clearView)) { if (treesHidden.size) { for (const t of treesHidden) t.g.visible = !(t.q && t.q.farTrees && t.q !== set); treesHidden.clear(); } return; }
   const now = new Set(), cx = camera.position.x, cz = camera.position.z, cy = camera.position.y, gy = girl.y + (girl.lift || 0) + .5;
   const sx = (playing && playing.look ? playing.look[0] : girl.x) - cx, sz = (playing && playing.look ? playing.look[1] : girl.z) - cz, d = Math.hypot(sx, sz) || 1;
   const hx = girl.x - cx, hz = girl.z - cz, dh = Math.hypot(hx, hz) || 1;
@@ -958,7 +962,7 @@ function stepDoors(dt) {
  *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
 function floorAt(x, z) {
   let best = null;
-  for (const s of sets) if (x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
+  for (const s of sets) if (!s.sunk && x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
   return best;
 }
 const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
@@ -1512,7 +1516,7 @@ function frame(now) {
   if (tracking) { const [sx, sz] = toScreen(girl.x - tracking.x, girl.z - tracking.z); tracking.x = girl.x; tracking.z = girl.z; if (sx || sz) { tracking.min = Math.min(tracking.min, (sx * tracking.want[0] + sz * tracking.want[1]) / dt); tracking.n++; } tracking.sx += sx; tracking.sz += sz; if (tracking.last) tracking.slow = Math.max(tracking.slow, now - tracking.last); tracking.last = now; }
   renderer.info.reset();
   // a set the camera cannot see sleeps: its pieces are big glued sheets, and without this every island is drawn all the time
-  { camera.updateMatrixWorld(); viewM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); view.setFromProjectionMatrix(viewM); for (const s of sets) s.root.visible = s === set || view.intersectsBox(s.box3); for (const c of seaChunks) c.m.visible = view.intersectsBox(c.box); }
+  { camera.updateMatrixWorld(); viewM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); view.setFromProjectionMatrix(viewM); for (const s of sets) { s.root.visible = s.sunk !== 'down' && (s === set || view.intersectsBox(s.box3)); if (s.sunk) for (const f of s.figs) f.g.visible = false; } for (const c of seaChunks) c.m.visible = view.intersectsBox(c.box); }
   if (POST) { renderer.setRenderTarget(rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(postScene, postCam); }
   else { renderer.setRenderTarget(null); renderer.render(scene, camera); }
   measure(now);
@@ -1528,7 +1532,11 @@ window.__p = {
   coins: () => purse.coins,
   /** (for tests and screenshots) give her this many coins at once */
   rich(n) { purse.coins += n; showCoins(true); return purse.coins; },
-  seaLife: () => ({ boats: seaLife.boats.map(b => [+b.g.position.x.toFixed(1), +b.g.position.z.toFixed(1), b.g.visible, b.g.parent && b.g.parent.visible]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
+  /** (for tests) what a tap at this point of the screen would hit: its name or kind, where, and whether it is a tap target */
+  pick(x, y) { const h = pickAt(x, y); if (!h) return null; let o = h.object, path = []; for (let q = o; q && path.length < 5; q = q.parent) path.push(q.name || q.type); return { path, at: h.point.toArray().map(v => +v.toFixed(2)), tap: !!o.userData.tap }; },
+  /** (for tests) the rainbow island rises now, as after the seven rings */
+  rise() { return !!(shared.island && shared.island.rise()); },
+  seaLife: () => ({ boats: seaLife.boats.map(b => [+b.f.x.toFixed(1), +b.f.z.toFixed(1), b.f.g.visible, true]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
   /** riding: whether she is on it, flying, and the unicorn's state */
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
   mount: () => (ride.on ? dismount() : mount(), ride.on),

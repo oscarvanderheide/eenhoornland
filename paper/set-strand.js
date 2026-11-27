@@ -15,7 +15,9 @@ import { voyage } from './voyage.js';
 import { ferry } from './boat.js';
 import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
-import { frisbee } from './toys.js';
+import { frisbee, kite } from './toys.js';
+import { digging, sealBall, iceCream, lifeguard, sunbather } from './beach2.js';
+import { CARDS3 } from './cards3.js';
 import { musician } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
 
@@ -42,7 +44,7 @@ export default {
     for (let z = BR.z1 - 1.2; z > BR.z0 + .6; z -= 1.7) if (z < GAP[0] - .4 || z > GAP[1] + .4) for (const x of [BR.x0, BR.x1]) post(x, z);
     const gap = hookGap(S, 0, GAP[0], GAP[1], DECK, spare);
     { const st = new THREE.Mesh(new THREE.CylinderGeometry(.27, .3, .3, 9), P('#d9cfc2')); st.position.set(8.1 - .24, H_SAND + .15, 1.55); st.castShadow = true; root.add(st); }
-    const guitar = musician(S, 'gitarist', PEOPLE2.gitarist, PROPS2.noot2, 8.1, 1.6, { sound: () => S.sfx.strum(), play: [0, 1], rest: 2, end: 3, from: [-.05, .6] });   // she plays the guitar under the parasol (folk.js)
+    const guitar = musician(S, 'gitarist', PEOPLE2.gitarist, PROPS2.noot2, 8.1, 1.6, { sound: () => S.sfx.strum(), play: [0, 1], rest: 2, end: 3, from: [-.05, .6], loop: 4.6, guests: () => [live.krab, live.schildpad] });   // she plays the guitar under the parasol (folk.js)
     const disc = frisbee(S, -1.0, H_SAND, 5.5);   // a frisbee on the sand: she throws, the unicorn fetches (toys.js)
     for (let z = PIER.z0; z < HEAD.z0; z += .32) root.add(slab(rect(PIER.x0 - .05, z, PIER.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
     for (let z = HEAD.z0; z < HEAD.z1; z += .32) root.add(slab(rect(HEAD.x0 - .05, z, HEAD.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
@@ -81,13 +83,18 @@ export default {
       meeuw: gull(S, [[perch[0][0], perch[0][1], DECK + .9], [perch[1][0], perch[1][1], DECK + .9], [perch[2][0], perch[2][1], DECK + .9]]),
       zeehond: seal(S, 5.4, 14.45, -.3),
     };
-    S.featherFrom(live.meeuw.f, 'meeuw');   // the gull's feather for the wings (paper.js)
+    S.featherFrom(live.meeuw.f, 'meeuw');
+    // more to do, and more people (beach2.js): the spade and the treasure, the seal's ball, the fish kite, the ice cream man, the lifeguard, the sunbather
+    const digOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .7 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z)) && !(x > PIER.x0 - .4 && x < PIER.x1 + .4 && z > PIER.z0 - .4);
+    const spade = digging(S, -1.6, 4.0, H_SAND, [-8.8, 5.6], digOk), sealToy = sealBall(S, live.zeehond, [1.2, 14.7], DECK);
+    const fishKite = kite(S, -9.6, H_DUNE, -3.2, () => true, CARDS3.viskite, 'viskite');   // (the whole beach is windy)
+    const people = { ijsverkoper: iceCream(S, -5.6, .3), badmeester: lifeguard(S, 5.7, 7.6), zonnebader: sunbather(S, 10.2, 4.0) };   // the gull's feather for the wings (paper.js)
     // the boat to the rainbow island, at a short jetty where the bridge used to start (boat.js): the rainbow island's end of it is its jetty (set-regenboog.js)
     const RB = { z0: -.6, z1: .6 }, JX = 14.3, JE = JX + 2.2, RBJ = regenboogLand().bridge, rb = [ORIGIN.regenboog[0] - ORIGIN.strand[0], ORIGIN.regenboog[1] - ORIGIN.strand[1]];   // (the beach's jetty, out east where the old bridge began; the island's, far out at sea)
     for (let x = JX; x < JE; x += .32) root.add(slab([[x, RB.z0 - .05], [x + .28, RB.z0 - .05], [x + .28, RB.z1 + .05], [x, RB.z1 + .05]], -.12, .06, paper('#c9a878'), edgeMat));
     for (const x of [JX + 1.1, JE - .15]) for (const z of [RB.z0, RB.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), paper('#8d6a48')); m.castShadow = true; m.position.set(x, -.72, z); root.add(m); }
     S.floorBox(-.12, JX, RB.z0, JE, RB.z1);
-    const theBoat = ferry(S, [{ stand: S.at([JE - .3, 0]), moor: S.at([JE + 1.2, 0]) }, { stand: S.at([rb[0] + RBJ.x1 - 1.9, rb[1]]), moor: S.at([rb[0] + RBJ.x1 - 3.4, rb[1]]) }]);
+    const theBoat = ferry(S, [{ stand: S.at([JE - .3, 0]), moor: S.at([JE + 1.2, 0]) }, { stand: S.at([rb[0] + RBJ.x1 - 1.9, rb[1]]), moor: S.at([rb[0] + RBJ.x1 - 3.4, rb[1]]), low: true, open: () => !S.shared.island || S.shared.island.risen() }]);
     const theVoyage = voyage(S, theBoat);   // what she meets on the way (voyage.js)
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
     const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
@@ -106,11 +113,11 @@ export default {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
-        theBoat.step(e); theVoyage.step(e);
+        theBoat.step(e); theVoyage.step(e); spade.step(e); sealToy.step(e); fishKite.step(e); for (const q of Object.values(people)) q.step(e);
         light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, boot: theBoat, voyage: theVoyage, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, ...people, schep: spade, zeehondbal: sealToy, viskite: fishKite, boot: theBoat, voyage: theVoyage, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal
@@ -118,7 +125,7 @@ export default {
         { name: 'strand', span: 15, tall: 8.5, rise: .32 },
       ],
       spots: { paal: [.82, DECK + .6, GAP[1] + .3], paalnoord: [.82, DECK + .6, GAP[0] - .3], zandkasteel: [-3.6, .08, 3.75], vuurtoren: [11.5, 1.6, -3.6], palm: [-4.2, 1.6, -6.6], bank: [-8.6, .1, 3.63] },
-      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
+      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], spade: [-1.2, 4.4], cross: [-8.8, 6.3], icecream: [-4.2, 1.2], lifeguard: [4.7, 7.9], sunbather: [10.2, 5.0], kite: [-9.2, -2.8], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
     };
   },
 };

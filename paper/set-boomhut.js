@@ -82,7 +82,7 @@ export default {
     const lantern = new THREE.Group(); lantern.position.set(.75, 2.0, .1); root.add(lantern);
     const glow = new THREE.MeshStandardMaterial({ color: '#f6dfa6', emissive: '#f2b866', emissiveIntensity: 1.2, roughness: .9 });
     { const b = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 10), glow); b.scale.y = 1.15; lantern.add(b); for (const y of [-.2, .2]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .04, 10), P('#d9706c')); r.position.y = y; lantern.add(r); } const c = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .6, 4), P('#5a4e66')); c.position.y = .5; lantern.add(c); }
-    const light = S.lamp(0, '#ffc98a', 7, 1.4); light.position.set(...S.at([.75, .1]).flatMap((v, i) => i ? [1.9, v] : [v])); let lit = true;
+    const light = S.lamp(0, '#ffc98a', 7, 1.4); light.position.set(.75, 1.9, .1); let lit = true;   // (a lamp is placed in the set's own measure)
     S.tap(lantern, () => { lit = !lit; sfx.click(); }, 'lantaarn');
     root.add(slab(blob(.6, .6, 1.0, .55, 951, 32, .05), .018, .018, P('#9ed9cf'), whiteEdge));
 

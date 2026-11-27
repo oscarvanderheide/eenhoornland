@@ -1,7 +1,7 @@
 // The clothes shop's counter (Oscar: "the washline with clothes to buy is a cute idea but its really difficult for my kids
 // to understand. we really need a shop with a vendor"). At the counter a big paper sheet opens over the game, as the
-// pixel game's shop did: on the left a mirror with her in it, on the right a card for every thing to wear. No words and no
-// numbers: under each card its price in coins, the ones she has bright, the ones still missing faint.
+// pixel game's shop did: on the left a mirror with her in it, on the right a card for every thing to wear. No words: under each card
+// its price, a coin and a number (bright when she has enough), the cheapest first.
 //   a tap on a card   not hers yet and enough coins: the coins fly from her row to the card, and she has it on at once
 //                     not enough: the card wobbles and the missing coins blink
 //                     hers already: on, or off again (a little heart on the card says it is hers)
@@ -31,13 +31,12 @@ const CSS = `
 .shop-card.padsel{transform:translateY(-4px) scale(1.06);box-shadow:0 0 0 4px #f4a6c4,0 6px 10px rgba(0,0,0,.2)}
 .shop-card.no{animation:shopno .45s ease-in-out}
 @keyframes shopno{20%{transform:rotate(-7deg)}50%{transform:rotate(6deg)}80%{transform:rotate(-3deg)}}
-.shop-cost{display:flex;justify-content:center;min-height:16px;padding-left:9px}
-.shop-cost img{width:16px;height:16px;margin-left:-9px;opacity:.3;filter:saturate(.2)}
-.shop-cost img.stapel{width:15px;height:19px;margin:-3px 4px 0 -4px}
-.shop-cost{flex-wrap:wrap;max-width:100%;align-items:flex-end}
-.shop-cost img.has{opacity:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
-.shop-card.no .shop-cost img:not(.has){animation:shopblink .3s ease-in-out 3}
-@keyframes shopblink{50%{opacity:.9;transform:scale(1.3)}}
+.shop-cost{display:flex;align-items:center;justify-content:center;gap:4px;min-height:22px;opacity:.45;filter:saturate(.3)}
+.shop-cost.has{opacity:1;filter:none}
+.shop-cost img{width:20px;height:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.shop-cost span{font:800 18px/1 ui-rounded,'SF Pro Rounded',system-ui,sans-serif;color:#9a6a1e}
+.shop-card.no .shop-cost{animation:shopblink .3s ease-in-out 3}
+@keyframes shopblink{50%{opacity:.9;transform:scale(1.2)}}
 .shop-heart{width:20px;height:18px}
 .shop-x{position:absolute;top:-14px;right:-14px;width:46px;height:46px;border-radius:50%;border:0;background:#f3ead8;box-shadow:0 3px 0 #b9a888,0 6px 12px rgba(0,0,0,.25);display:grid;place-items:center;cursor:pointer}
 .shop-x svg{width:22px;height:22px}
@@ -47,7 +46,7 @@ const icons = {};
 const iconOf = id => icons[id] || (icons[id] = cutout(120, 120, g => drawWearIcon(g, id), PAPER, 1).toDataURL());
 let styled = false;
 
-/** o: { kid(), worn(), owns(id), wearing(id), have(), pay(n, [sx, sy], done) -> bool, buy(id), put(id), coin and stack (image urls: one coin, ten), prices, sfx, keeper(how) } */
+/** o: { kid(), worn(), owns(id), wearing(id), have(), pay(n, [sx, sy], done) -> bool, buy(id), put(id), coin (an image url), prices, sfx, keeper(how) } */
 export function openShop(o) {
   if (document.getElementById('shopbook')) return null;
   if (!styled) { styled = true; const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st); }
@@ -59,7 +58,7 @@ export function openShop(o) {
   x.innerHTML = '<svg viewBox="0 0 22 22"><path d="M5 5l12 12M17 5 5 17" stroke="#6b5a4a" stroke-width="3.4" stroke-linecap="round"/></svg>'; sheet.appendChild(x);
   let busy = false;
   const drawMe = hup => { me.src = cutout(200, 276, g => drawKid(g, o.kid(), { view: 'front', wear: o.worn() }), PAPER, 1.5).toDataURL(); me.className = ''; if (hup) { void me.offsetWidth; me.className = 'hup'; } };
-  const cards = SHELF.map(id => {
+  const cards = [...SHELF].sort((a, b) => o.prices[a] - o.prices[b]).map(id => {   // (the cheapest first)
     const b = document.createElement('button'); b.className = 'shop-card padcard'; b.setAttribute('aria-label', id); b.dataset.id = id;
     const ic = new Image(); ic.className = 'icon'; ic.src = iconOf(id); b.appendChild(ic);
     const cost = document.createElement('div'); cost.className = 'shop-cost'; b.appendChild(cost);
@@ -78,9 +77,7 @@ export function openShop(o) {
       const own = o.owns(id), on = own && o.wearing(id), n = o.prices[id];
       b.classList.toggle('own', own); b.classList.toggle('on', on); b.classList.toggle('can', !own && have >= n);
       if (own) cost.innerHTML = HEART;
-      else {   // the price as she sees her own coins: a stack for every ten, then the ones; bright as far as she has them
-        const tens = Math.floor(n / 10), parts = [...[...Array(tens)].map((_, k) => [o.stack, (k + 1) * 10, 'stapel']), ...[...Array(n % 10)].map((_, k) => [o.coin, tens * 10 + k + 1, ''])];
-        cost.replaceChildren(...parts.map(([src, need, cls]) => { const im = new Image(); im.src = src; im.className = [cls, have >= need ? 'has' : ''].join(' ').trim(); return im; })); }
+      else { const im = new Image(); im.src = o.coin; const t = document.createElement('span'); t.textContent = n; cost.replaceChildren(im, t); cost.classList.toggle('has', have >= n); }   // the price: a coin and a number (Oscar: "the prices should also just be numbers")
     }
   }
   const close = () => { veil.remove(); removeEventListener('keydown', esc); o.sfx.click(); o.keeper('smile'); };

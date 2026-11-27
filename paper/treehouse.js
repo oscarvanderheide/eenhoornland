@@ -74,7 +74,7 @@ export function treehouse(S, x, z) {
   };
   const barTo = p => { bar.position.copy(at(p)); };
   const LOW = { span: 7.5, tall: 5.6, min: 3, rise: -.2, riseTall: -.16, ly: 1.6, yaw: .3, dof: 1.3, range: 1.2, fx: 1, fz: 1, lag: 1 };   // climbing: from the grass, looking up the ladder past her to the deck
-  const toy = { look: [wx, wz + .9], shot: null, rate: .9, step(dt, inp) {
+  const toy = { look: [wx, wz + .9], shot: null, rate: .9, clearView: true, step(dt, inp) {
     t += dt;
     if (mode === 'grab') {   // to the corner, and up on her toes to the bar
       const k = Math.min(1, t / .45), h = at(.012); girl.x = top[0] + (h.x - top[0]) * k; girl.z = top[1] + (h.z + .05 - top[1]) * k; girl.lift = DECK + .04 + Math.sin(k * Math.PI) * .25; girl.poseName = 'up'; girl.view = 'front';

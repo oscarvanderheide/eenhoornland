@@ -450,8 +450,9 @@ export default async function (t) {
     const toy = n => t.ev(`__p.toy('${n}')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`);
     for (const [n, dx, dz] of [['fluitist', 1.6, 1.0], ['gitarist', 1.8, 1.2], ['trompetter', 2.4, 2.6]]) {
       const [x, z] = await at(n); ok(await t.ev(`__p.canReach(${x + dx}, ${z + dz})`), `she can walk to the ${n}`); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2500);
-      ok(!(await toy(n)).playing, `the ${n} is silent until asked`); await t.ev(`__p.tap('${n}')`); await t.sleep(1700); const m = await toy(n); ok(m.playing && m.notes > 0, `a tap: the ${n} plays, and notes float up`); await t.shot(`tmp-shots/y-${n}-land.png`);
-      ok(await until(`!__p.toy('${n}').playing`, 7), 'and stops again');
+      ok(!(await toy(n)).playing, `the ${n} is silent until asked`); await t.ev(`__p.tap('${n}')`); ok(await until(`__p.toy('${n}').sitting && __p.toy('${n}').playing`, 6), `a tap: she sits down to listen, and the ${n} plays`); await t.sleep(1500); ok((await toy(n)).notes > 0, 'notes float up');
+      await t.sleep(8000); const m = await toy(n); ok(m.playing && m.plays >= 2 && m.guests > 0, `the ${n} plays on and on (${m.plays} runs), and the animals of the island come and sit round (${m.guests})`); await t.shot(`tmp-shots/y-${n}-land.png`);
+      await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`!__p.toy('${n}').playing && !__p.toy('${n}').sitting`, 3), 'she moves: the music ends');
     }
     // the harp: she sits down to listen; he plays on until she is touched; the forest's animals come and listen too
     { const [x, z] = await at('harpist'); ok(await t.ev(`__p.canReach(${x - 1.9}, ${z + 1.4})`), 'she can walk to the harpist'); await t.ev(`__p.placeAt(${x - 1.9}, ${z + 1.4})`); await t.sleep(2500);
@@ -590,9 +591,9 @@ export default async function (t) {
     const all = await coinsAt(); ok(all.length >= 5 && (await shop()).coins === 0, `coins lie about the islands (${all.length}), and she has none yet`);
     await t.ev('__p.open()'); const away = await t.ev(`['kasteel', 'regenboog'].map(n => __p.places(n).start)`); for (const c of all.filter(c => away.every(o => Math.hypot(c[0] - o[0], c[1] - o[1]) > 24))) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);   // (not the castle's, reached by flying, nor the rainbow island's, by boat)
     await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.coins() === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
-    const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
+    const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(11.6, -4.6)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
     const card = id => t.ev(`document.querySelector('.shop-card[data-id=${id}]').click()`), shut = () => t.ev(`document.querySelector('.shop-x').click()`);
-    { const [sx, sy] = await t.ev(`__p.point(3.8, 1.4, 3.3)`); await t.click(sx, sy); } ok(await until(`__p.info().set === 'winkel'`, 8), 'a real tap on the shop: she walks to its door and goes in, into the shop'); await t.sleep(1200); await t.shot('tmp-shots/y-shop-room-land.png');
+    { const [sx, sy] = await t.ev(`__p.point(9.8, 1.4, -6.5)`); await t.click(sx, sy); } ok(await until(`__p.info().set === 'winkel'`, 8), 'a real tap on the shop: she walks to its door and goes in, into the shop'); await t.sleep(1200); await t.shot('tmp-shots/y-shop-room-land.png');
     { const [sx, sy] = await t.ev(`(() => { const q = __p.dbg.figures.find(f => f.name === 'winkelier'); return __p.point(q.x, 1.0, q.z); })()`); await t.click(sx, sy); }
     ok(await until(`__p.toy('toonbank').open`, 6), 'a real tap on the shopkeeper: she walks to the counter and the shop opens'); await t.sleep(800); await t.shot('tmp-shots/y-shop-sheet-land.png');
     ok((await t.ev(`__p.toy('toonbank').opened`)) === 1, 'once');
@@ -601,7 +602,7 @@ export default async function (t) {
     await shut(); ok(await until(`!__p.toy('toonbank').open`, 2), 'the round cross closes it');
     { const r = await t.ev(`__p.places('winkel')`); await t.ev(`__p.walkTo(${r.start[0]}, ${r.start[1]})`); await t.sleep(1800); await t.ev(`__p.keys(['s'])`); ok(await until(`__p.info().set === 'dorp'`, 4), 'walking down off the front of the room: out of the shop'); await t.ev('__p.keys([])'); }
     await t.ev(`__p.placeAt(${all[1][0] - 1.2}, ${all[1][1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${all[1][0] + .6}, ${all[1][1]})`); ok(await until(`__p.coins() === 2`, 5), 'another coin');
-    await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(800); await t.ev(`__p.tap('winkel')`); await until(`__p.info().set === 'winkel'`, 8); await t.sleep(600); await t.ev(`__p.tap('toonbank')`); ok(await until(`__p.toy('toonbank').open`, 8), 'back at the shop'); await t.sleep(500); await card('strik'); ok(await until(`__p.toy('toonbank').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
+    await t.ev(`__p.placeAt(11.6, -4.6)`); await t.sleep(800); await t.ev(`__p.tap('winkel')`); await until(`__p.info().set === 'winkel'`, 8); await t.sleep(600); await t.ev(`__p.tap('toonbank')`); ok(await until(`__p.toy('toonbank').open`, 8), 'back at the shop'); await t.sleep(500); await card('strik'); ok(await until(`__p.toy('toonbank').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
     await card('strik'); ok(await until(`!__p.toy('toonbank').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
     await card('strik'); ok(await until(`__p.toy('toonbank').wearing.includes('strik')`, 4), 'and on again, for free');
     await shut(); await t.sleep(400);
@@ -732,8 +733,11 @@ export default async function (t) {
     const v0 = await t.ev(`__p.toy('voyage')`); let through = 0;
     for (const r of v0.ringsAt) { await t.ev(`__p.sail(${r[0]}, ${r[1]})`); for (let i = 0; i < 40; i++) { await t.sleep(300); const q = await b(); if (Math.hypot(q.boat[0] - r[0], q.boat[1] - r[1]) < 1.2) break; } if (!through) { await t.sleep(400); await t.shot('tmp-shots/y-boat-land.png'); } through++; }
     const v1 = await t.ev(`__p.toy('voyage')`); ok(v1.passed === 7, `a tap on the water rows there: through all seven rings (${v1.passed})`); ok(v1.whale.blows > 0, 'the whale came up and blew');
+    ok(await until(`__p.toy('opkomst').rising || __p.toy('opkomst').risen`, 3), 'through the seventh ring: the rainbow island rises out of the sea'); ok((await b()).cine, 'and the camera goes far back to watch');
+    await t.sleep(2500); await t.shot('tmp-shots/y-island-rising-land.png'); ok(await until(`__p.toy('opkomst').risen`, 8), 'up it is'); await t.sleep(1500); await t.shot('tmp-shots/y-island-up-land.png');
     await t.ev(`__p.sail(${v1.bottle[0]}, ${v1.bottle[1]})`); ok(await until(`__p.toy('voyage').fished`, 14), 'rowing up to the bottle: she fishes it out');
-    await t.ev(`__p.sail(${s0.moors[1][0]}, ${s0.moors[1][1]})`); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 30), 'near the island\'s jetty it glides in, and out she steps');
+    await t.ev(`__p.sail(${s0.moors[1][0]}, ${s0.moors[1][1]})`); ok(await until(`(() => { const q = __p.toy('boot'); return Math.hypot(q.boat[0] - ${s0.moors[1][0]}, q.boat[1] - ${s0.moors[1][1]}) < 9; })()`, 30), 'on to the island'); await t.sleep(1200); await t.shot('tmp-shots/y-island-low-land.png');
+    ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 30), 'near the island\'s jetty it glides in, and out she steps');
     const i1 = await t.ev('__p.info()'); ok(i1.lift === 0 && Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.5, 'her unicorn came along');
     await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'sail'`, 6), 'in again'); await t.ev(`__p.sail(${s0.moors[0][0]}, ${s0.moors[0][1]})`); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'strand'`, 40), 'and all the way back to the beach');
     await t.ev(`__p.placeAt(${s0.stands[1][0]}, ${s0.stands[1][1]})`); await t.sleep(400); ok(await until(`__p.toy('boot').empty`, 3), 'she waits on the far jetty: the boat comes over by itself'); ok(await until(`__p.toy('boot').at === 1 && !__p.toy('boot').empty`, 25), 'and lies there for her');

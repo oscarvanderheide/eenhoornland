@@ -164,7 +164,7 @@ export function boars(S, x, z) {
   const all = [lead, ...kids], home = [lead.x, lead.z]; let run = 0, a = 0, squeals = 0;
   const squeal = () => { if (run > 0) return; run = 2.6; a = 0; squeals++; sfx.oink(); for (const p of all) p.hopV = 2.2; };
   for (const p of all) { p.onTap = squeal; p.act = tick => p.setFrame(run > 0 ? 1 + (Math.floor(tick / 2) % 2) : Math.hypot(girl.x - p.x, girl.z - p.z) < 2.2 ? 0 : 3); }
-  return { f: lead, state: () => ({ run: run > 0, squeals, at: [lead.x, lead.z] }), step({ dt }) {
+  return { f: lead, figs: all, state: () => ({ run: run > 0, squeals, at: [lead.x, lead.z] }), step({ dt }) {   // (figs: the piglets come along to listen too, folk.js)
     if (run > 0) { run -= dt; a += dt * 2.6; all.forEach((p, i) => { const b = a - i * .55, tx = home[0] + Math.sin(b) * 1.1 - i * .62 * Math.max(0, 1 - a), tz = home[1] + (1 - Math.cos(b)) * .7 + i * .12; p.face = Math.cos(b) >= 0 ? 1 : -1; p.x += (tx - p.x) * Math.min(1, dt * 6); p.z += (tz - p.z) * Math.min(1, dt * 6); });
       if (run <= 0) { all.forEach((p, i) => { p.face = 1; }); S.confetti(lead.x + .3, lead.y + .15, lead.z, ['#8d6a48', '#a98f6f', '#7a5a3e'], 8, undefined, 1.4); } }
     else all.forEach((p, i) => { const tx = home[0] - i * .62, tz = home[1] + i * .12; p.x += (tx - p.x) * Math.min(1, dt * 4); p.z += (tz - p.z) * Math.min(1, dt * 4); if (Math.hypot(girl.x - p.x, girl.z - p.z) < 2.2) p.face = girl.x < p.x ? -1 : 1; });

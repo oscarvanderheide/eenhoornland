@@ -35,7 +35,7 @@ export default {
       const q = { g, mat, glow: 0, x, z }; S.tap(g, () => { q.glow = 1; sung++; sfx.note(NOTES[i]); S.confetti(...S.at([x, z]).flatMap((v, k) => k ? [1.0, v] : [v]), [c, '#fbf7ee'], 6, S.starGeo, 1.6); }); return q;
     });
     let sung = 0;
-    const light = S.lamp(0, '#d9c8ff', 7.5, 1.3); light.position.set(...S.at([0, 0]).flatMap((v, k) => k ? [2.2, v] : [v]));
+    const light = S.lamp(0, '#d9c8ff', 7.5, 1.3); light.position.set(0, 2.2, 0);   // (a lamp is placed in the set's own measure: in the world's it was far off, and never lit)
 
     // the chest, on a low stone in the middle
     { const dais = slab(circlePts(.75, 811, 18), .1, .1, P('rock2'), P('rock')); dais.position.set(0, 0, -.55); root.add(dais); }

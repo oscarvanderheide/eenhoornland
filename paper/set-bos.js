@@ -122,7 +122,7 @@ export default {
     for (const [cx, cz] of [[hx + .6, hz - .4], [nx + .8, nz + .6], [ox + 1.4, oz - 1.2], [gx + 1.6, gz - .8]]) S.coinAt(cx, cz);   // coins lying about: in the harp's glade, the nook, the orchard, the picnic's glade
     const heks = witch(S, hwx - 2.0, hwz + 1.5);   // the witch and her pot, outside her door, left of it (folk.js)
     const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
-      listen: { seat: [hx - 1.25, hz + .75], loop: 4.6, guests: [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3] } });   // she sits and listens, and the forest's animals come   // (folk.js)
+      loop: 4.6, guests: () => [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3, live.hert, live.zwijn] });   // she sits and listens, and all the forest's animals come and sit round the harp (not the owl on her ledge)   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
@@ -133,7 +133,7 @@ export default {
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
         { name: 'grot', zone: [rx - 1.9, mouthZ - .2, rx + 1.9, mouthZ + 1.9], span: 8.5, tall: 6, rise: .22 },          // at the cave's mouth the camera comes close and low
-        { name: 'eik', zone: [tx - 2.4, tz + .5, tx + 2.4, tz + 3.6], ax: tx, az: tz + 1.1, fx: .55, fz: .5, lag: 1, span: 9.5, tall: 7, min: 3, rise: -.16, riseTall: -.12, ly: 1.4, yaw: -.25, dof: 1.2, range: 1.4 },   // at the oak's foot the camera is already low on the grass, looking up at the treehouse
+        { name: 'eik', clearView: true, zone: [tx - 2.4, tz + .5, tx + 2.4, tz + 3.6], ax: tx, az: tz + 1.1, fx: .55, fz: .5, lag: 1, span: 9.5, tall: 7, min: 3, rise: -.16, riseTall: -.12, ly: 1.4, yaw: -.25, dof: 1.2, range: 1.4 },   // at the oak's foot the camera is already low on the grass, looking up at the treehouse
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },

@@ -37,7 +37,8 @@ export function ferry(S, ends) {
     girl.x = boat.x + fx * .05; girl.z = boat.z + fz * .05 + .05; girl.lift = WATER_Y + .4 - girl.y; girl.poseName = 'sit'; girl.view = 'side'; if (Math.abs(fx) > .2) girl.face = Math.sign(fx);
     if (!uni.away) { uni.busy = true; uni.x = boat.x - fx * .55; uni.z = boat.z - fz * .55; uni.lift = WATER_Y + .36 - uni.y; uni.face = girl.face; }
   };
-  const SAIL = { span: 19, tall: 12, rise: .46, riseTall: .62, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 };
+  const SAIL = { span: 19, tall: 12, rise: .46, riseTall: .62, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 }, LOW = { span: 9.5, tall: 6.5, rise: .1, riseTall: .16, ly: .5, yaw: -.85, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 };   // (yaw: from the south-west, so the island stands before her)
+  let cine = null;   // (the voyage may take the camera for a while: { look, shot, rate })
   const toy = { look: [0, 0], shot: SAIL, rate: 1.2, steer: true, at: () => [boat.x, boat.z], step(dt, inp) {
     t += dt;
     if (mode === 'in') {   // she climbs in from the jetty, her unicorn hops in behind
@@ -57,8 +58,15 @@ export function ferry(S, ends) {
       oarsGo(Math.min(1, boat.v / SPEED), t * (.6 + boat.v / SPEED));
       if (boat.v > .8 && Math.floor(t * 1.6) !== Math.floor((t - dt) * 1.6)) { sfx.swish(1); S.confetti(boat.x - fx * 1.0, WATER_Y + .15, boat.z - fz * 1.0 + .2, ['#cfeaf0', '#f6efe2'], 4, undefined, 1.1); }
       seat(); toy.look = [boat.x + fx * 2.5, boat.z + fz * 1.5];
+      // the camera: as the voyage asks (the island rising: far back), or low over the water as she comes in to a jetty far out,
+      // so the island stands tall over her (Oscar: "when we get close to the part where we can park our boat we can get the
+      // camera low again for a different sensation of scale")
+      const far = ends.findIndex(e => e.low && Math.hypot(boat.x - e.moor[0], boat.z - e.moor[1]) < 13 && (!e.open || e.open()));
+      if (cine) { toy.look = cine.look; toy.shot = cine.shot; toy.rate = cine.rate || .5; }
+      else if (far >= 0) { const [jx, jz] = ends[far].moor; toy.look = [boat.x * .4 + jx * .6, boat.z * .4 + jz * .6]; toy.shot = LOW; toy.rate = .8; }
+      else { toy.shot = SAIL; toy.rate = 1.2; }
       // near a jetty (the other one, or back at her own once she has been out): in it glides by itself
-      for (const i of [0, 1]) { if (i === at && !left) continue; if (Math.hypot(boat.x - ends[i].moor[0], boat.z - ends[i].moor[1]) < DOCK) { mode = 'dock'; t = 0; from = { ...boat }; to = dock(i); at = i; sfx.chime(); } }
+      for (const i of [0, 1]) { if (i === at && !left) continue; if (ends[i].open && !ends[i].open()) continue; if (Math.hypot(boat.x - ends[i].moor[0], boat.z - ends[i].moor[1]) < DOCK) { mode = 'dock'; t = 0; from = { ...boat }; to = dock(i); at = i; sfx.chime(); } }
       return; }
     if (mode === 'dock') {   // gliding in, bow to the jetty
       const k = Math.min(1, t / 1.1), e = k * k * (3 - 2 * k); let d = to.a - from.a; d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -71,7 +79,7 @@ export function ferry(S, ends) {
   } };
   const board = () => { if (S.playing() || mode || empty) return; const [sx, sz] = ends[at].stand; S.walkThen(sx, sz, () => { if (S.playing() || mode) return; mode = 'in'; t = 0; toy.look = [boat.x, boat.z]; S.play(toy); sfx.hop(); }, .9); };
   S.tap(g, () => { if (!mode && !empty && Math.hypot(girl.x - ends[at].stand[0], girl.z - ends[at].stand[1]) < 10) board(); }, 'boot');
-  return { toy, state: () => ({ at, mode, crossings, empty, bumps, stands: ends.map(e => e.stand), moors: ends.map(e => e.moor), boat: [boat.x, boat.z], v: boat.v }), boat, step({ dt, time }) {
+  return { toy, cine: o => { cine = o; }, state: () => ({ at, mode, crossings, empty, bumps, cine: !!cine, stands: ends.map(e => e.stand), moors: ends.map(e => e.moor), boat: [boat.x, boat.z], v: boat.v }), boat, step({ dt, time }) {
     if (!mode && !empty) { const d = dock(at); place(d.x, d.z, d.a, Math.sin(time * 1.6) * .025);
       // she waits on the other jetty: the boat comes over to fetch her
       const there = Math.hypot(girl.x - ends[1 - at].stand[0], girl.z - ends[1 - at].stand[1]) < 1.2 && !S.playing(); wait = there ? wait + dt : 0;

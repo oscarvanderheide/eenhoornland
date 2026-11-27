@@ -127,8 +127,8 @@ const KITE = { w: 120, h: 190, frames: 3, size: .95, thing: true, draw(g, f) {
 /** The kite: it lies in the grass until she takes it (a tap). Then it is on a string in her hand: when she runs it climbs
  *  behind her, when she stands it sinks, and up on a hill the wind holds it high even when she stands still. A tap on the
  *  kite and she winds it in and lays it down. Nothing else to it: running makes it fly */
-export function kite(S, x, y, z, windy = (wx, wz) => (S.heightAt(wx, wz) ?? 0) > .4) {
-  const { girl, sfx } = S, f = S.figure('vlieger', KITE), [hx, hz] = S.at([x, z]);
+export function kite(S, x, y, z, windy = (wx, wz) => (S.heightAt(wx, wz) ?? 0) > .4, spec = KITE, name = 'vlieger') {   // (the beach's own kite is a fish: cards3.js)
+  const { girl, sfx } = S, f = S.figure(name, spec), [hx, hz] = S.at([x, z]);
   let at = [hx, hz], held = false, alt = 0, px = hx, pz = hz, speed = 0, lx = girl.x, lz = girl.z, t = 0, best = 0;
   // the string: two thin strips of card (a drawn line is a hair wide and drowns in the soft focus)
   const string = new THREE.Group(); string.visible = false; S.root.add(string); const strips = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.BoxGeometry(.022, .022, 1), paper('#fbf5ea')); m.userData.live = true; string.add(m); return m; });
@@ -281,7 +281,7 @@ export function plane(S, x, y, z) {
 
 /* ---------------- the frisbee ---------------- */
 const DISC = (cx, cy, rx, ry) => { const p = []; for (let i = 0; i < 22; i++) { const a = i / 22 * 6.283; p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p; };
-const FRISBEE = { w: 130, h: 70, frames: 1, size: .19, thing: true, draw(g) { piece(g, '#e98f8f', P(DISC(65, 36, 54, 22))); piece(g, '#fbf5ea', P(DISC(65, 33, 36, 13)), .4); piece(g, '#f2c65c', P(DISC(65, 32, 15, 5.5)), .4); } };
+const FRISBEE = { w: 130, h: 70, frames: 1, size: .3, thing: true, draw(g) { piece(g, '#e98f8f', P(DISC(65, 36, 54, 22))); piece(g, '#fbf5ea', P(DISC(65, 33, 36, 13)), .4); piece(g, '#f2c65c', P(DISC(65, 32, 15, 5.5)), .4); } };
 /** A frisbee (Oscar likes playing with the ball: "maybe we can have a frisbee on the beach"). It lies on the sand. A tap:
  *  she picks it up. A tap on it in her hands: she throws it the way she faces. It sails level while it is fast, bends
  *  towards the camera, sinks as it slows, and lands. Then the unicorn runs after it and brings it back to her. From the sea

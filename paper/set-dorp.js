@@ -85,7 +85,8 @@ export default {
     const lay = (pts, c, y = H_GRASS) => { const up = .015 + (layer++) * .003; root.add(slab(pts, y + up, up, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     // every path starts inside the square's outline, so it is joined to it; benches and lanterns stand beside paths, never on them
-    const SQ = [.6 * K, -.6 * K], F = [-1.2 * K, 9.6 * K];   // the middle of the fountain square; the middle of the farm in the south
+    const SQ = [.6 * K, -.6 * K], F = [-1.2 * K, 9.6 * K];
+    const SHOP = [10.6, -7.4];   // the clothes shop, on open lawn north-east of the square, beside the terrace (Oscar: by the paddock it felt cramped)   // the middle of the fountain square; the middle of the farm in the south
     lay(blob(SQ[0], SQ[1], 3.3, 2.5, 61, 48, .05), 'high');                                                               // the square round the fountain
     lay(ribbon(kk([[-3.5, -3.5], [-1.6, -3.36], [.3, -3.46], [2.2, -3.36], [3.85, -3.45]]), .82, 62), 'path', H_HIGH);      // along the terrace, past her door
     lay(ribbon([[.3 * K, -2.9 * K + 1.3], [.34 * K, (-2.9 * K + SQ[1]) / 2], [SQ[0] - .3, SQ[1] - 2.0]], .95, 63, .04), 'path');                                                    // from the foot of the stairs onto the square
@@ -113,7 +114,7 @@ export default {
     // two benches looking at the pond, one at the square
     const benches = [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]].map(([x, z], i) => bench(S, x, H_GRASS, z, i === 2 ? -.3 : 0));
     // lanterns, each beside a path: a tap lights one, a tap puts it out (Oscar: "let me turn them on")
-    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 4.4, pcz + 1.7]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
+    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [5.2, -3.3]]), [pcx + 4.4, pcz + 1.7]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const SW = [-6.4 * K, -.4 * K], SL = [-4.9 * K, 1.05 * K];
@@ -147,7 +148,7 @@ export default {
     S.shared.can = theFarm;
     const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, potion, STORY.drankje, 0);
     // the clothes shop with its shopkeeper, on the green between the square and the unicorns' meadow (props.js shop); and coins lying about, here and there
-    const theShop = shop(S, 4.6, 2.4, H_GRASS);
+    const theShop = shop(S, SHOP[0], SHOP[1], H_GRASS);
     for (const [cx, cz] of [[-17.5, 2.0], [-8.2, 18.0], [6.2, 7.3], [13.8, -5.2], [15.0, 3.7]]) S.coinAt(cx, cz);
     // the zipline's post: where the ride from the treehouse in the forest ends (the cable and the ride are the forest's, treehouse.js)
     { const [zx, zz] = T(43.5, 35.5), zy = inPoly(HIGH, zx, zz) ? H_HIGH : H_GRASS;
@@ -165,7 +166,7 @@ export default {
        Groves of two or three trees of one kind; flower plots of one kind and colour on a paler cut of grass; tufts in
        tight clumps and at the foot of the trees. Bare lawn between. Where a grove or a plot stands is found by chance among
        the places that are free (the village is big, and full of things); never where a tree would hide her on a path. */
-    const busy = [[-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[F[0] - 9.5, F[1] - 3.6, F[0] + 8.5, F[1] + 4.6], [3.4 * K - 3.2, 4.3 * K - 4.2, 3.4 * K + 4, 4.3 * K + 2.2], [.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);
+    const busy = [[SHOP[0] - 2.4, SHOP[1] - 1.6, SHOP[0] + 2.4, SHOP[1] + 2.6], [-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[F[0] - 9.5, F[1] - 3.6, F[0] + 8.5, F[1] + 4.6], [3.4 * K - 3.2, 4.3 * K - 4.2, 3.4 * K + 4, 4.3 * K + 2.2], [.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);
     const groundAt = (x, z) => inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null, yAt = (x, z) => groundAt(x, z) === HIGH ? H_HIGH : H_GRASS;
     const anywhere = R2 => [(-15.5 + R2() * 26) * K, (-8 + R2() * 21) * K];
     const treeGround = (x, z) => { const on = groundAt(x, z); if (!on || edgeDist(on, x, z) < .5 || (on !== HIGH && edgeDist(HIGH, x, z) < .7) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .5) return false;
@@ -189,7 +190,7 @@ export default {
       for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (grassOk(x, z)) planted.push([x, base + up, z, { tuft: true }]); } });
     findSpots(R, 9, 3.8, anywhere, grassOk, plots).forEach(([cx, cz]) => inOval(R, cx, cz, .6, .38, 5, .17, grassOk).forEach(([x, z]) => planted.push([x, yAt(x, z), z, { tuft: true }])));   // tufts in tight clumps
     for (const [x, y, z] of feet) for (const dx of [-.32, .3]) if (grassOk(x + dx, z + .18)) planted.push([x + dx, y, z + .18, { tuft: true }]);                                       // and at the foot of every tree
-    for (let i = planted.length - 1; i >= 0; i--) { const [x, , z] = planted[i]; if (Math.abs(x - 4.6) < 2.2 && z > 2.4 - 1.4 && z < 2.4 + 1.7) planted.splice(i, 1); }   // nothing grows in the shop
+    for (let i = planted.length - 1; i >= 0; i--) { const [x, , z] = planted[i]; if (Math.abs(x - SHOP[0]) < 2.4 && z > SHOP[1] - 1.4 && z < SHOP[1] + 2.4) planted.splice(i, 1); }   // nothing grows in the shop or on its doorstep
     for (let i = planted.length - 1; i >= 0; i--) { const [x, , z, o] = planted[i]; if (x > F[0] - 6.4 && x < F[0] - (o && o.tuft ? 1.9 : 2.8) && z > F[1] - 1.9 && z < F[1] + 2.1) planted.splice(i, 1); }   // nothing grows on the farm's dug bed (farm.js)
     let pi = 0; const grass = meadow(S, planted.length, () => planted[pi++] || null, 401, 0, undefined, bunch);
 
@@ -213,7 +214,7 @@ export default {
         { name: 'boerderij', zone: [F[0] - 9.6, F[1] - 3.7, F[0] + 9.6, F[1] + 4.8], span: 12.5, rise: .34 },              // the farm in the south
         { name: 'dorp', span: 14 },                                                                              // everywhere else
       ],
-      spots: { wip: [-5.3 * K - 1.69, .6, .3 * K + 1.54], bank: [SQ[0] + 1.9, .42, SQ[1] - 2.87], swing: [SW[0], 1.9, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
+      spots: { wip: [-5.3 * K - 1.69, .6, .3 * K + 1.54], bank: [SQ[0] + 1.9, .42, SQ[1] - 2.87], swing: [SW[0], .55, SW[1]], slide: [SL[0] + 1.4, .85, SL[1]], door: [HOUSE.x, H_HIGH + .6, HOUSE.z + HOUSE.d / 2], fountain: [T(32, 41)[0], .5, T(32, 41)[1]] },
       /** named places of the old map, for tests and for the plan: where they are on this set */
       places: { start: [sx, sz], fountain: [SQ[0], SQ[1] + 2.0], stall: T(37, 41.8), swing: [SW[0], SW[1] + .95], slide: [SL[0] - .4, SL[1] + .15], pond: [pcx, pcz + 2.6], bench: [SQ[0] + 2.3, SQ[1] - 2.2], pen: [3.4 * K + .4, 4.3 * K], arch: T(44.5, 46.6), pole: T(43.5, 35.5), mud: [F[0] + 5.4, F[1] - .9], well: [F[0] + .3, F[1] - .8], rows: [F[0] - 4.6, F[1] - .35], crow: [F[0] - 7.6, F[1] + 1.0], north: [6 * K, NORTH.z1 - 3.5], east: [EAST.x0 + 1.9, 2.4 * K], thorns: [EAST.x0 + 2.5, 2.4 * K] },
     };

@@ -6,6 +6,7 @@
 //   dandelions       a tap (or walking through one) and the seeds drift off
 //   the bakery       a cream house with a blue roof (no inside yet; the baker comes with the people)
 // Shapes are cut by hand; real ground, real trees and flowers; nothing here is a grey stand-in.
+import { trampoline } from './trampoline.js';
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump } from './kit.js';
 import { cottage, shore, meadow, bouquet, pinwheel, bench, lantern, dandelion, GROUND } from './props.js';
 import { kite, balloon } from './toys.js';
@@ -80,9 +81,10 @@ export default {
 
     /* ---------------- things ---------------- */
     const bakery = cottage(S, 3.2, H_GRASS, -5.7, null, { wall: '#f6e7c8', roof: '#5f8fb0', door: '#b9675a' });
+    const tramp = trampoline(S, 1.9, H_GRASS, 4.3);   // a trampoline on the lawn (trampoline.js)
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
     let found = 0; const present = gift(S, 'duikbril', SNORKEL);   // how often the otter brought something up for her; the moment it is hers
-    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.flute(), play: [0, 1], rest: 2, end: 3, from: [.45, .98] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
+    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.flute(), play: [0, 1], rest: 2, end: 3, from: [.45, .98], loop: 5.0, guests: () => [herd.schaap, herd.schaap2, herd.lam] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
     const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: befriend(S, lamb(S, 6.5, 4.4), { hop: 2.2, speed: 2.6, hello: () => S.sfx.peep() }),   /* the meadow's companion: it bounds along after her (companion.js) */ otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [21.6, -4.3]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; S.coins.reward('snorkel', S.girl.x, S.girl.y + 1.1, S.girl.z); }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     for (const [cx, cz] of [[-6.0, -5.2], [8.0, 6.6], [28.0, -2.0], [-1.2, 8.6]]) S.coinAt(cx, cz);   // coins lying about: on the hill's top, by the sheep, at the far end, in the south
@@ -151,7 +153,7 @@ export default {
       shadow: { follow: 20 }, back: BACK, sky: 2,
       step(e) {
         const { dt, tick, stepped } = e;
-        bakery.step(e); theKite.step(e); theBalloon.step(e); bunch.step(e); grass.step(e);
+        bakery.step(e); tramp.step(e); theKite.step(e); theBalloon.step(e); bunch.step(e); grass.step(e);
         for (const q of [...benches, ...lamps, ...mills, ...clocks, ...Object.values(flies), ...Object.values(folk), ...Object.values(herd)]) q.step(e);
         if (stepped) { const on = Math.floor(tick / 2) % 3; fall.forEach((g, i) => { g.visible = i === on; }); }
         // the stones: stepping onto one makes it dip and sing its note (hers to play, like keys)
@@ -160,14 +162,14 @@ export default {
         else if (hopping) { hopping = false; if (!S.playing()) girl.lift = 0; }
         stones.forEach((s, i) => { const on = !S.playing() && !(girl.lift > .05) && Math.abs(girl.x - S.at([s.x, s.z])[0]) < .5 && Math.abs(girl.z - S.at([s.x, s.z])[1]) < .5; if (on && !s.on) { s.dip = 1; sung++; sfx.note(NOTES[i]); S.confetti(...S.at([s.x, s.z]).flatMap((v, k) => k ? [.12, v] : [v]), ['#bfe3ea', '#f6efe2'], 5, undefined, 1.2); } s.on = on; if (s.dip > 0) s.dip = Math.max(0, s.dip - dt * 3); s.g.position.y = -.05 * Math.sin(s.dip * Math.PI); });
       },
-      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) }, duiken: { state: () => ({ found, snorkel: S.gear.snorkel, swimming: !!girl.swimming }) } },
+      toys: { ...flies, ...folk, ...herd, trampoline: tramp, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) }, duiken: { state: () => ({ found, snorkel: S.gear.snorkel, swimming: !!girl.swimming }) } },
       shots: [
         { name: 'heuvel', zone: [-10.6, -9.4, .6, -2.3], span: 17, tall: 9.5, rise: .4 },          // on the hill: further back, to see the meadow below and the kite above
         { name: 'waterval', zone: [18.4, -6.2, 29.2, -.5], span: 12.5, rise: .4 },                  // at the pool: looking down on the stones
         { name: 'wei', span: 15, tall: 8.5, rise: .3 },
       ],
       spots: { ballon: [10.6, 3.3, -5.0], vlieger: [-6.4, H_TOP + .3, -6.5] },
-      places: { start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1], sheep: [6.3, 6.4], fall: [23.5, -4.1] },
+      places: { trampoline: [1.9, 6.0], start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1], sheep: [6.3, 6.4], fall: [23.5, -4.1] },
     };
   },
 };

@@ -35,7 +35,7 @@ export default {
     const flames = [['#f2b56b', .34, 0], ['#f2c65c', .26, .08], ['#fbe7a6', .15, -.05]].map(([c, h, dx]) => {
       const f = card([[-h * .5, 0], [-h * .3, h * .6], [0, h * 1.5], [h * .25, h * .7], [h * .5, 0]], .01, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .9, roughness: .9 })); f.position.set(dx, .12, .05); f.userData.live = true; hearth.add(f); return f; });
     S.wall(1.75, -D / 2 + .38, .82, .26);
-    const fire = S.lamp(0, '#ffb070', 6, 1.4); fire.position.set(...S.at([1.75, -D / 2 + .9]).flatMap((v, i) => i ? [.8, v] : [v]));
+    const fire = S.lamp(0, '#ffb070', 6, 1.4); fire.position.set(1.75, .8, -D / 2 + .9);   // (a lamp is placed in the set's own measure)
     let flare = 0, flares = 0;
     S.tap(hearth, () => { flare = 1; flares++; sfx.whoosh(); S.confetti(...S.at([1.75, -D / 2 + .5]).flatMap((v, i) => i ? [.6, v] : [v]), ['#f2b56b', '#f2c65c', '#fbe7a6'], 10, S.starGeo, 1.6); }, 'haard');
 

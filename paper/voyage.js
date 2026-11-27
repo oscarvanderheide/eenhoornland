@@ -2,15 +2,16 @@
 // to row through, other kind of sea things"). Out on the open water between the beach's jetty and the island's:
 //   the rings      seven floating rings, red and white, in a winding row along the way. Rowing through one: it turns
 //                  gold with a little tune, one note higher for each; all seven on one trip and a coin
-//   the whale      a big blue whale about halfway, a little off the way. When the boat comes near it rises, blows a
+//   the whale      a big blue paper whale about halfway, a little off the way. When the boat comes near it rises, blows a
 //                  fountain from its back, and slaps its tail as it goes down again. A tap on it, and it blows for her too
-//   the dolphins   two dolphins that come and leap beside the boat for a stretch of the way
+//   the dolphins   two dolphins that leap beside the boat now and then, for a stretch of the way
 //   the bottle     a bottle bobbing on the waves with a note rolled up inside: rowing up to it she fishes it out (a coin)
 //   the bell buoy  a red buoy with a bell on top: it rings as the boat goes by
 //   the turtle     a sea turtle paddling slowly round in circles near the island
 // All in the world's measure (S.world): they are on the water between two islands, and belong to neither.
 import { THREE, paper, WATER_Y } from './kit.js';
 import { ANIMALS2 } from './animals2.js';
+import { CARDS3 } from './cards3.js';
 
 const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 
@@ -30,24 +31,18 @@ export function voyage(S, ferry) {
     const parts = []; for (let s = 0; s < 8; s++) { const m = new THREE.Mesh(new THREE.TorusGeometry(1.05, .12, 8, 8, Math.PI / 4), s % 2 ? white : red); m.rotation.z = s * Math.PI / 4; m.castShadow = true; g.add(m); parts.push(m); }
     return { g, p, parts, done: false, wob: 0 };
   });
-  let passed = 0, trips = -1, allRings = 0;
+  let passed = 0, trips = -1, allRings = 0, cineT = 0;
 
-  /* ---------------- the whale ---------------- */
-  const wp = along(.5, -8.5), whale = new THREE.Group(); whale.position.set(wp.x, WATER_Y - 1.4, wp.z); whale.rotation.y = Math.atan2(ux, uz) + Math.PI / 2; S.world(whale);
-  { const back = m3(new THREE.SphereGeometry(1.3, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), '#5f86b0'); back.scale.set(2.3, .8, 1); whale.add(back);
-    const belly = m3(new THREE.SphereGeometry(1.31, 20, 6, 0, Math.PI * 2, Math.PI * .42, Math.PI * .08), '#e8eef2'); belly.scale.set(2.3, .8, 1); whale.add(belly);
-    for (const s of [-1, 1]) { const eye = m3(new THREE.SphereGeometry(.09, 8, 6), '#2b2733'); eye.position.set(1.85, .45, s * .62); whale.add(eye); const w = m3(new THREE.SphereGeometry(.05, 6, 4), '#ffffff'); w.position.set(1.9, .5, s * .66); whale.add(w); }
-    const tail = new THREE.Group(); tail.position.set(-3.0, .1, 0); whale.add(tail); whale.userData.tail = tail;
-    const stalk = m3(new THREE.CylinderGeometry(.18, .32, .9, 10), '#5f86b0'); stalk.rotation.z = Math.PI / 2; stalk.position.x = .2; tail.add(stalk);
-    for (const s of [-1, 1]) { const fin = m3(new THREE.SphereGeometry(.55, 12, 6), '#5f86b0'); fin.scale.set(.5, .12, 1.25); fin.position.set(-.35, .1, s * .5); fin.rotation.y = s * .5; tail.add(fin); }
-    for (const s of [-1, 1]) { const fl = m3(new THREE.SphereGeometry(.45, 10, 6), '#56799f'); fl.scale.set(1, .12, .5); fl.position.set(.9, .2, s * 1.05); fl.rotation.y = -s * .6; whale.add(fl); } }
-  const W = { t: -1, up: 0, blows: 0, met: false };
-  const blow = () => { W.blows++; sfx.whoosh(); const top = new THREE.Vector3(.9, 1.15, 0).applyMatrix4(whale.matrixWorld);
-    for (let i = 0; i < 4; i++) setTimeout(() => S.confetti(top.x, top.y, top.z, ['#cfeaf0', '#ffffff', '#9fd3e0'], 14, undefined, 4.2), i * 120); };
-  S.tap(whale, () => { if (W.up > .5) blow(); else W.t = 0; }, 'walvis');
+  /* ---------------- the whale: a big paper card (cards3.js), rising out of the water ---------------- */
+  const wp = along(.5, -8.5), whale = S.figure('walvis', CARDS3.walvis); whale.thing = true; whale.x = wp.x; whale.z = wp.z; whale.face = ux >= 0 ? 1 : -1; whale.g.visible = false;
+  const W = { t: -1, up: 0, blows: 0, met: false, blowT: 0 };
+  const spout = () => new THREE.Vector3(whale.x + whale.face * whale.W * .18, whale.y + whale.H * .95, whale.z + .1);
+  const blow = () => { W.blows++; W.blowT = 1.3; sfx.whoosh(); const top = spout(); for (let i = 0; i < 4; i++) setTimeout(() => S.confetti(top.x, top.y, top.z, ['#cfeaf0', '#ffffff', '#9fd3e0'], 12, undefined, 3.6), i * 120); };
+  whale.onTap = () => { if (W.up > .5 && W.t < 5.6) blow(); else if (W.t < 0) W.t = 0; };
+  whale.act = () => whale.setFrame(W.t > 5.8 ? 2 : W.blowT > 0 ? 1 : 0);
 
   /* ---------------- the dolphins ---------------- */
-  const dolphins = [0, 1].map(i => { const f = S.figure('zeedolfijn' + i, ANIMALS2.dolfijn); f.thing = true; f.g.visible = false; f.g.scale.setScalar(1.25); return { f, t: -1 - i * .7 }; });
+  const dolphins = [0, 1].map(i => { const f = S.figure('zeedolfijn' + i, ANIMALS2.dolfijn); f.thing = true; f.g.visible = false; f.g.scale.setScalar(1.25); return { f, t: -1.5 - i * 1.6, leap: null }; });
 
   /* ---------------- the bottle ---------------- */
   const bp = along(.33, 5.5), bottle = new THREE.Group(); bottle.position.set(bp.x, WATER_Y + .05, bp.z); S.world(bottle);
@@ -70,35 +65,45 @@ export function voyage(S, ferry) {
   const turtle = S.figure('zeeschildpad', ANIMALS2.schildpad); turtle.thing = true; turtle.g.scale.setScalar(1.3); const tc = along(.88, 5);
   let ta = 0; turtle.onTap = () => { turtle.hopV = 2; sfx.peep(); };
 
-  return { state: () => ({ rings: rings.map(r => r.done), passed, allRings, whale: { up: W.up > .5, blows: W.blows, at: [wp.x, wp.z] }, fished, rang, ringsAt: rings.map(r => [r.p.x, r.p.z]), bottle: [bp.x, bp.z], buoy: [yp.x, yp.z] }),
+  return { state: () => ({ rings: rings.map(r => r.done), passed, allRings, whale: { up: W.up > .5, blows: W.blows, at: [wp.x, wp.z], frame: whale.frame }, fished, rang, ringsAt: rings.map(r => [r.p.x, r.p.z]), bottle: [bp.x, bp.z], buoy: [yp.x, yp.z] }),
     step({ dt, time }) {
       const fs = ferry.state(), bt = boatAt();
+      if (cineT > 0) { cineT -= dt; if (cineT <= 0) ferry.cine(null); }
       // a new trip: the rings are red and white again
       if (fs.crossings !== trips) { trips = fs.crossings; passed = 0; for (const r of rings) { r.done = false; r.parts.forEach((m, s) => m.material = s % 2 ? white : red); } }
       for (const r of rings) {
         r.g.position.y = WATER_Y + .25 + Math.sin(time * 1.4 + r.p.x) * .06; r.wob = Math.max(0, r.wob - dt); r.g.rotation.z = Math.sin(r.wob * 14) * r.wob * .25;
-        if (!r.done && sailing() && near(r.p, 1.0)) { r.done = true; r.wob = 1; passed++; for (const m of r.parts) m.material = gold; sfx.note(523 * Math.pow(2, (passed - 1) / 7 * 1.2));
+        if (!r.done && sailing() && near(r.p, 1.35)) { r.done = true; r.wob = 1; passed++; for (const m of r.parts) m.material = gold; sfx.note(523 * Math.pow(2, (passed - 1) / 7 * 1.2));
           S.confetti(r.p.x, WATER_Y + 1.1, r.p.z, ['#f2c65c', '#fbf5ea', '#e8505b'], 14, S.starGeo, 2.4);
+          if (passed === rings.length && S.shared.island && S.shared.island.rise()) { const [ix, iz] = S.shared.island.middle;   // all seven: the island rises out of the sea, and the camera goes far back to watch
+            ferry.cine({ look: [(bt.x + ix * 2) / 3, (bt.z + iz * 2) / 3], shot: { span: 64, tall: 38, rise: .34, riseTall: .5, dof: .1, range: 12, fx: 1, fz: 1, lag: 1 }, rate: .5 }); cineT = 7.5; }
           if (passed === rings.length) { allRings++; sfx.chime(); S.coins.reward('ringen', bt.x, WATER_Y + 1.4, bt.z); S.confetti(bt.x, WATER_Y + 1.4, bt.z, ['#e98f8f', '#f2b56b', '#f2d86b', '#9ed9a0', '#8fc3e0', '#bba6ea'], 30, S.starGeo, 3.2); } }
       }
-      // the whale: up when the boat comes near (or when tapped), a blow, a while to look at it, then down with a slap of its tail
+      // the whale: up when the boat comes near (or when tapped), a blow, a while to look at it, then down with its tail up
       if (W.t < 0 && sailing() && near(wp, 11)) W.t = 0;
-      if (W.t >= 0) { W.t += dt; const up = W.t < 1.2 ? W.t / 1.2 : W.t < 6.5 ? 1 : Math.max(0, 1 - (W.t - 6.5) / 1.4); W.up = up;
+      W.blowT = Math.max(0, W.blowT - dt);
+      if (W.t >= 0) { W.t += dt;
         if (W.t - dt < 1.5 && W.t >= 1.5) { blow(); if (!W.met) { W.met = true; S.coins.reward('walvis', wp.x, WATER_Y + 1.6, wp.z); } }
         if (W.t - dt < 4.2 && W.t >= 4.2) blow();
-        if (W.t - dt < 6.6 && W.t >= 6.6) { sfx.splash(); const tp = new THREE.Vector3(-3.4, .4, 0).applyMatrix4(whale.matrixWorld); S.confetti(tp.x, WATER_Y + .3, tp.z, ['#cfeaf0', '#ffffff'], 22, undefined, 3.4); }
-        whale.userData.tail.rotation.z = W.t > 5.8 && W.t < 7 ? Math.sin((W.t - 5.8) * 4) * .9 : Math.sin(time * 1.3) * .12;
-        if (W.t > 8 + (near(wp, 11) ? 6 : 0)) W.t = -1; }
-      whale.position.y = WATER_Y - 1.25 + W.up * 1.1 + Math.sin(time) * .04 * W.up; whale.visible = W.up > .01;
-      // the dolphins: leaping beside the boat for the middle stretch of the way
+        if (W.t - dt < 5.8 && W.t >= 5.8) sfx.splash();
+        if (W.t - dt < 7.0 && W.t >= 7.0) { sfx.splash(); S.confetti(wp.x, WATER_Y + .3, wp.z, ['#cfeaf0', '#ffffff'], 22, undefined, 3.4); }
+        // up over 1.2 s, there till 5.6; then only its tail, rising and going down again by 7.4
+        W.up = W.t < 1.2 ? W.t / 1.2 : W.t < 5.6 ? 1 : W.t < 5.8 ? 1 - (W.t - 5.6) / .2 : W.t < 6.4 ? (W.t - 5.8) / .6 : Math.max(0, 1 - (W.t - 6.4) / 1.0);
+        if (W.t > 9 + (near(wp, 11) ? 6 : 0)) W.t = -1; }
+      whale.g.visible = W.up > .01; whale.floatY = whale.y = WATER_Y - whale.H * (.9 - .86 * W.up) + Math.sin(time) * .04 * W.up;   // (its belly line, at the card's foot, on the water)
+      // the dolphins: leaping beside the boat for the middle stretch of the way. Each leap is laid down in the water where it
+      // starts, along the way the boat was going then: steering does not swing them about (Oscar: "when i steer the boat, they
+      // also change their jumping direction and that feels weird"). One leap at a time each, unhurried, with a rest between
       const k = ((bt.x - A.x) * ux + (bt.z - A.z) * uz) / L, fx = Math.cos(bt.a), fz = -Math.sin(bt.a);
       for (const [i, d] of dolphins.entries()) {
-        if (!(sailing() && k > .2 && k < .8 && bt.v > 1)) { d.f.g.visible = false; d.t = -1 - i * .7; continue; }
-        d.t += dt; if (d.t < 0) { d.f.g.visible = false; continue; }
-        const q = d.t / 1.1; if (q >= 1) { d.t = -.4 - Math.random() * .8; d.f.g.visible = false; if (Math.random() < .6) sfx.splash(); continue; }
-        const side = i ? -2.2 : 2.4, ahead = 1.5 + q * 2.2;
-        d.f.g.visible = true; d.f.x = bt.x + fx * ahead - fz * side; d.f.z = bt.z + fz * ahead + fx * side; d.f.floatY = d.f.y = WATER_Y - .3 + Math.sin(q * Math.PI) * 1.3; d.f.face = fx >= 0 ? 1 : -1; d.f.lean = (.5 - q) * 1.6 * d.f.face;
-        d.f.act = () => d.f.setFrame(q < .35 ? 0 : q < .65 ? 1 : 2);
+        const onWay = sailing() && k > .2 && k < .8 && bt.v > 1;
+        if (!d.leap) { d.f.g.visible = false; if (!onWay) { d.t = -1.5 - i * 1.6; continue; } d.t += dt; if (d.t < 0) continue;
+          const side = i ? -2.3 : 2.5; d.leap = { x: bt.x + fx * 1.2 - fz * side, z: bt.z + fz * 1.2 + fx * side, dx: fx, dz: fz, v: Math.max(1.5, bt.v) + .5, t: 0 }; sfx.splash(); S.confetti(d.leap.x, WATER_Y + .1, d.leap.z, ['#cfeaf0', '#f6efe2'], 6, undefined, 1.4); }
+        const q = d.leap; q.t += dt; const u = q.t / 1.6;
+        if (u >= 1) { d.leap = null; d.t = -1.8 - Math.random() * 1.6; d.f.g.visible = false; sfx.splash(); S.confetti(d.f.x, WATER_Y + .1, d.f.z, ['#cfeaf0', '#f6efe2'], 8, undefined, 1.6); continue; }
+        const face = q.dx >= 0 ? 1 : -1;
+        d.f.g.visible = true; d.f.x = q.x + q.dx * q.v * q.t; d.f.z = q.z + q.dz * q.v * q.t; d.f.floatY = d.f.y = WATER_Y - .3 + Math.sin(u * Math.PI) * 1.2; d.f.face = face; d.f.lean = (.5 - u) * 1.4 * face;
+        d.f.act = () => d.f.setFrame(u < .35 ? 0 : u < .65 ? 1 : 2);
       }
       // the bottle: bobbing, and fished out when the boat comes alongside
       if (!fished) { bottle.position.y = WATER_Y + .05 + Math.sin(time * 2) * .05; bottle.rotation.y = time * .3; bottle.rotation.x = Math.sin(time * 1.7) * .2;
