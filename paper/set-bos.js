@@ -9,6 +9,7 @@ import { PEOPLE2, PROPS2 } from './people2.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { befriend } from './companion.js';
 import { picnic } from './picnic.js';
+import { treehouse } from './treehouse.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (0.6 of a step per tile, the middle of the forest is 0, 0) */
@@ -73,8 +74,7 @@ export default {
     const theCabin = cabin(S, ax, H_GRASS, az);   // a cabin of logs where the pixel game had the atelier (Oscar: a log cabin, not a normal house)
     const bushes = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]].map(([tx, tz]) => T(tx + .5, tz + .5));
     for (const [x, z] of bushes) { put(new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 8), P('bush')), x, .28, z).castShadow = true; S.solid({ x, z, r: .36 }); }
-    const [tx, tz] = T(56.5, 13); put(cyl(.45, 3.2, 'dark', 12), tx, 1.6, tz); put(box(2.2, .12, 1.8), tx, 2.6, tz); put(box(1.8, 1.0, 1.4, 'path'), tx, 3.15, tz); S.solid({ x: tx, z: tz, r: .55 });
-    for (const [x, z] of [[tx - 1.3, tz - .9], [tx + 1.2, tz - .6], [tx + .2, tz - 1.5]]) S.lollipop(x, z, 3.3, 1.05, '#7fa676', '#a3c08c', 260 + Math.round(x), .5);
+    const [tx, tz] = T(56.5, 13), theTree = treehouse(S, tx, tz, () => ['dorp', 'wei', 'strand', 'kasteel'].map(n => S.middle(n)).filter(Boolean));   // the big oak and its treehouse (treehouse.js)
 
     /* ---------------- trees: a forest's worth ---------------- */
     const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [hx, hz], [cx - .2, cz - .25], [cx - 2.1, cz - .25], [cx + 1.7, cz - .25], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
@@ -110,7 +110,7 @@ export default {
     S.lollipop(cx - 5.7, cz - 3.6, H_GRASS, .7, '#7fa676', '#a3c08c', 480, 1.5); S.lollipop(ox + 5.1, oz + 2.6, H_GRASS, .65, '#93b071', '#b3c98d', 481, 1.4);
 
     // who lives here (critters.js): the shy hedgehog in the nook, the owl asleep on the cave's ledge, the squirrel at the oak
-    const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.0, 'eekhoorn', [tx, tz, .45]),
+    const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 1.4, 'eekhoorn', [tx, tz - .15, .5]),
       // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.3, 'eekhoorn2', [cx - 5.7, cz - 3.6, .1]), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.2, 'eekhoorn3', [ox + 5.1, oz + 2.6, .1]) };
     befriend(S, live.hert, { byTap: false, isFriend: (st => () => st().mode === 'friend')(live.hert.state), own: false, speed: 2.4, gap: 1.4 });   // the forest's companion: the fawn, once it has come to her (she waits quietly), comes along (companion.js)
@@ -125,8 +125,8 @@ export default {
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); },
-      toys: { ...live, ...flies, heks, harpist: harp, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); theTree.step(e); },
+      toys: { ...live, ...flies, heks, harpist: harp, boomhut: theTree, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [
