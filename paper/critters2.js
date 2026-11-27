@@ -214,7 +214,7 @@ export function star(S, spots) {
     // warming the egg: round and round it
     f.x = ex + Math.cos(t * 5) * .46; f.z = ez + .06 + Math.sin(t * 5) * .12; f.floatY = f.y = ey + Math.sin(t * 3) * .1;
     if (t > .9 && cracked < 1) { cracked = 1; S.eggFrame(1); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 6, undefined, 1.4); }
-    if (t > 2.0 && cracked < 2) { cracked = 2; S.eggFrame(2); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 8, undefined, 1.6); }
+    if (t > 2.0 && cracked < 2) { cracked = 2; sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 8, undefined, 1.6); }
     if (t > 3.0) { done = true; mode = null; f.g.visible = false; S.confetti(f.x, f.y + .2, f.z, ['#f2c65c', '#f6dfa6', '#fbf5ea'], 18, S.starGeo, 2.6); S.hatch(ex, ez); after = 0; }
   } };
 }
