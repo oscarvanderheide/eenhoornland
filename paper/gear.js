@@ -7,7 +7,7 @@
 import { THREE, paper } from './kit.js';
 import { P, C, piece, ink, line } from './cut.js';
 
-export const SNORKEL = { w: 120, h: 150, frames: 1, size: .5, thing: true, draw(g) {
+export const SNORKEL = { w: 120, h: 150, frames: 1, size: .72, thing: true, draw(g) {
   piece(g, '#f2b56b', C(92, 100, 92, 34, 6.5)); piece(g, '#f2b56b', C(92, 100, 74, 108, 6)); piece(g, '#e98f8f', C(92, 34, 92, 22, 8.5), .5);            // the tube, its bend to her mouth, its red top
   piece(g, '#5f9fae', P([[16, 62], [26, 52], [74, 52], [84, 62], [84, 84], [74, 94], [26, 94], [16, 84]]));                                              // the mask
   piece(g, '#cfeaf0', P([[24, 64], [30, 59], [70, 59], [76, 64], [76, 82], [70, 87], [30, 87], [24, 82]]), .4);

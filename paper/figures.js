@@ -109,12 +109,64 @@ export function drawGrown(g, f, wing = true) {
   g.restore();
 }
 
+/** the grown unicorn coming towards us: long legs stepping, a broad chest, her head lowered a little so that whoever
+ *  rides her shows above it; her folded wings at her sides once she has them */
+export function drawGrownFront(g, f, wing = true) {
+  const s = swing(f), u = UNI, cx = 140, l1 = Math.max(0, s) * 10, l2 = Math.max(0, -s) * 10;
+  piece(g, u.shade, C(cx - 32, 196, cx - 32, 258 - l2, 9.5)); piece(g, u.hoof2, E(cx - 32, 264 - l2, 11, 6.5));
+  piece(g, u.shade, C(cx + 32, 196, cx + 32, 258 - l1, 9.5)); piece(g, u.hoof2, E(cx + 32, 264 - l1, 11, 6.5));
+  if (wing) for (const d of [-1, 1]) { piece(g, u.lilac, E(cx + d * 56, 176, 20, 34, d * .35), .7); piece(g, '#FFFDF8', E(cx + d * 52, 170, 15, 28, d * .35), .6); }
+  piece(g, u.body, E(cx, 190, 52, 42));
+  piece(g, u.body, C(cx - 20, 206, cx - 20, 266 - l1, 12)); piece(g, u.hoof, E(cx - 20, 272 - l1, 13, 7.5));
+  piece(g, u.body, C(cx + 20, 206, cx + 20, 266 - l2, 12)); piece(g, u.hoof, E(cx + 20, 272 - l2, 13, 7.5));
+  // the mane falls down both sides of her neck
+  piece(g, u.mint, E(cx - 34, 150, 12, 30, .25), .7); piece(g, u.lilac, E(cx + 34, 150, 12, 30, -.25), .7);
+  // ears, head, muzzle
+  piece(g, u.body, S([[cx - 26, 96], [cx - 36, 58], [cx - 12, 86]])); ink(g, u.pink, S([[cx - 25, 90], [cx - 31, 66], [cx - 17, 86]]));
+  piece(g, u.body, S([[cx + 26, 96], [cx + 36, 58], [cx + 12, 86]])); ink(g, u.pink, S([[cx + 25, 90], [cx + 31, 66], [cx + 17, 86]]));
+  piece(g, u.body, E(cx, 124, 38, 38));
+  piece(g, u.muzzle, E(cx, 148, 22, 15), .5); ink(g, '#D99AAE', U(E(cx - 8, 146, 2.6, 2), E(cx + 8, 146, 2.6, 2)));
+  // forelock and horn
+  piece(g, u.pink, E(cx - 12, 92, 16, 11, -.4), .7); piece(g, u.lilac, E(cx + 12, 92, 14, 10, .4), .7);
+  piece(g, u.horn, S([[cx - 8, 90], [cx, 40], [cx, 40], [cx + 8, 90]]), .8);
+  for (let i = 0; i < 3; i++) line(g, u.horn2, 2, [[cx - 5 + i, 80 - i * 12], [cx + 5 - i, 78 - i * 12]]);
+  eye(g, cx - 16, 122, 6.5); eye(g, cx + 16, 122, 6.5);
+  ink(g, 'rgba(240,120,150,.45)', U(E(cx - 28, 136, 8, 5.5), E(cx + 28, 136, 8, 5.5)));
+  if (g.colour) { g.save(); g.strokeStyle = '#c9788f'; g.lineWidth = 2.4; g.lineCap = 'round'; g.beginPath(); g.arc(cx, 152, 7, .4, Math.PI - .4); g.stroke(); g.restore(); }
+}
+/** the grown unicorn walking away: her round rump and long tail swishing, long legs; above, her head and mane from
+ *  behind. `rider`: somebody rides her and hides her head, so only the tips of her ears and her horn show */
+export function drawGrownBack(g, f, wing = true, rider = false) {
+  const s = swing(f), u = UNI, cx = 140, l1 = Math.max(0, s) * 10, l2 = Math.max(0, -s) * 10;
+  piece(g, u.shade, C(cx - 16, 196, cx - 16, 258 - l2, 9.5)); piece(g, u.hoof2, E(cx - 16, 264 - l2, 11, 6.5));
+  piece(g, u.shade, C(cx + 16, 196, cx + 16, 258 - l1, 9.5)); piece(g, u.hoof2, E(cx + 16, 264 - l1, 11, 6.5));
+  if (rider) { for (const d of [-1, 1]) { piece(g, u.body, S([[cx + d * 34, 70], [cx + d * 46, 34], [cx + d * 24, 60]])); ink(g, u.pink, S([[cx + d * 34, 64], [cx + d * 42, 42], [cx + d * 28, 60]])); } piece(g, u.horn, S([[cx - 5, 30], [cx, 2], [cx, 2], [cx + 5, 30]]), .8); }
+  else {
+    piece(g, u.horn, S([[cx - 6, 70], [cx, 26], [cx, 26], [cx + 6, 70]]), .8);
+    for (const d of [-1, 1]) piece(g, u.body, S([[cx + d * 26, 84], [cx + d * 34, 48], [cx + d * 12, 72]]));
+    piece(g, u.body, C(cx, 100, cx, 150, 26, 30)); piece(g, u.body, E(cx, 100, 34, 32));
+    piece(g, u.mint, E(cx - 12, 108, 10, 30, .12), .7); piece(g, u.lilac, E(cx + 12, 108, 10, 30, -.12), .7); piece(g, u.pink, E(cx, 98, 13, 36), .7);
+  }
+  if (wing) for (const d of [-1, 1]) { piece(g, u.lilac, E(cx + d * 58, 168, 20, 32, d * .4), .7); piece(g, '#FFFDF8', E(cx + d * 54, 162, 15, 26, d * .4), .6); }
+  piece(g, u.body, E(cx, 182, 56, 46));
+  piece(g, u.body, C(cx - 24, 206, cx - 24, 266 - l1, 12)); piece(g, u.hoof, E(cx - 24, 272 - l1, 13, 7.5));
+  piece(g, u.body, C(cx + 24, 206, cx + 24, 266 - l2, 12)); piece(g, u.hoof, E(cx + 24, 272 - l2, 13, 7.5));
+  // the long tail, three strands, swishing as she walks
+  const k = s * 8;
+  piece(g, u.mint, S([[cx + 6, 156], [cx + 18 + k, 196], [cx + 12 + k, 244], [cx + 2 + k, 222]]), .7);
+  piece(g, u.lilac, S([[cx - 6, 156], [cx - 18 + k, 196], [cx - 12 + k, 244], [cx - 2 + k, 222]]), .7);
+  piece(g, u.pink, S([[cx - 8, 150], [cx + 8, 150], [cx + 10 + k, 200], [cx + k, 252], [cx - 10 + k, 200]]), .7);
+}
+
 /** canvas sizes (drawing units) and how tall each stands in the world */
 export const FIGS = {
   anna: { w: 200, h: 240, kid: 'anna', draw: kidDraw('anna', 'side'), front: kidDraw('anna', 'front'), back: kidDraw('anna', 'back'), frames: 1 + WALK, size: 1.2 },
   fenna: { w: 200, h: 276, kid: 'fenna', draw: kidDraw('fenna', 'side'), front: kidDraw('fenna', 'front'), back: kidDraw('fenna', 'back'), frames: 1 + WALK, size: 1.38 },
   baby: { w: 220, h: 200, draw: drawBaby, front: drawBabyFront, back: drawBabyBack, frames: 1 + WALK, size: .95 },
-  grown: { w: 280, h: 284, draw: drawGrown, frames: 1 + WALK, size: 1.75 },
-  groot: { w: 280, h: 284, draw: (g, f) => drawGrown(g, f, false), frames: 1 + WALK, size: 1.75 },   // grown, before she has her wings
+  grown: { w: 280, h: 284, draw: drawGrown, front: drawGrownFront, back: drawGrownBack, frames: 1 + WALK, size: 1.75 },
+  groot: { w: 280, h: 284, draw: (g, f) => drawGrown(g, f, false), front: (g, f) => drawGrownFront(g, f, false), back: (g, f) => drawGrownBack(g, f, false), frames: 1 + WALK, size: 1.75 },   // grown, before she has her wings
+  // the same two while she is ridden: from behind, her rider hides her head
+  grownRide: { w: 280, h: 284, draw: drawGrown, front: drawGrownFront, back: (g, f) => drawGrownBack(g, f, true, true), frames: 1 + WALK, size: 1.75 },
+  grootRide: { w: 280, h: 284, draw: (g, f) => drawGrown(g, f, false), front: (g, f) => drawGrownFront(g, f, false), back: (g, f) => drawGrownBack(g, f, false, true), frames: 1 + WALK, size: 1.75 },
 };
 
