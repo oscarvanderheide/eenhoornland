@@ -33,15 +33,15 @@ export const EGG = { w: 124, h: 150, frames: 4, size: .56, thing: true, draw(g, 
 export function dream(S, at) {
   const g = new THREE.Group(); g.position.set(...at); g.visible = false; g.userData.live = true; S.root.add(g);
   const lit = c => paper(c, { extra: { emissive: c, emissiveIntensity: .55 } });
-  // a soft cloud: the outline of a few big round puffs together (Oscar: the wavy one was "too spiky"), flat-ish underneath
-  const PUFFS = [[-1.05, -.05, .5], [-.5, .22, .62], [.2, .3, .68], [.88, .1, .55], [1.25, -.12, .38], [-.2, -.2, .55], [.55, -.22, .5], [-.9, -.25, .4]];
+  // a soft cloud like Oscar's picture: big round bumps all the way round, three on top, one each side, three underneath
+  const PUFFS = [[0, .3, .52], [-.6, .2, .46], [.6, .2, .46], [-1.08, -.02, .42], [1.08, -.02, .42], [-.58, -.3, .44], [0, -.36, .46], [.58, -.3, .44], [0, 0, .6]];
   const cloud = () => { const p = []; for (let i = 0; i < 90; i++) { const a = i / 90 * 6.283, dx = Math.cos(a), dy = Math.sin(a); let r = 0;
     for (const [cx, cy, cr] of PUFFS) { const b = dx * cx + dy * cy, c = cx * cx + cy * cy - cr * cr, d = b * b - c; if (d >= 0) r = Math.max(r, b + Math.sqrt(d)); }
-    p.push([dx * r, Math.max(dy * r, -.62)]); } return p; };
+    p.push([dx * r, dy * r]); } return p; };
   { const back = card(cloud().map(([x, y]) => [x * 1.05, y * 1.1]), .03, lit('#fbf7ee')); back.position.set(0, -.1, -.05); g.add(back); const front = card(cloud(), .03, lit('#bfcdf0')); front.position.set(0, -.1, -.02); g.add(front); }
   // little puffs down to each sleeper: they share it
-  // (they step down to the sleepers' heads, above the beds)
-  for (const [x, y, r] of [[-1.5, -.66, .13], [-1.78, -.84, .09], [-1.97, -.95, .06], [1.5, -.66, .13], [1.78, -.84, .09], [1.97, -.95, .06]]) { const b = card(circlePts(r + .025, 3, 16), .03, lit('#fbf7ee')); b.position.set(x, y, -.05); g.add(b); const f = card(circlePts(r, 3, 16), .03, lit('#bfcdf0')); f.position.set(x, y, -.02); g.add(f); }
+  // (they step down towards the sleepers' heads and stop above them, clear of the beds)
+  for (const [x, y, r] of [[-1.42, -.62, .13], [-1.72, -.76, .09], [-1.95, -.86, .06], [1.42, -.62, .13], [1.72, -.76, .09], [1.95, -.86, .06]]) { const b = card(circlePts(r + .025, 3, 16), .03, lit('#fbf7ee')); b.position.set(x, y, -.05); g.add(b); const f = card(circlePts(r, 3, 16), .03, lit('#bfcdf0')); f.position.set(x, y, -.02); g.add(f); }
   const egg = S.figure('droomei', EGG), baby = S.figure('droomeenhoorn', FIGS.baby), [wx, wz] = S.at([at[0], at[2]]);
   for (const f of [egg, baby]) { f.g.visible = false; f.z = wz + .08; f.thing = true; } egg.g.scale.setScalar(1.7); baby.g.scale.setScalar(.72);
   const glow = f => { if (f.mat.emissiveMap !== f.mat.map) { f.mat.emissiveMap = f.mat.map; f.mat.emissive.set('#ffffff'); f.mat.emissiveIntensity = .5; f.mat.needsUpdate = true; } };
