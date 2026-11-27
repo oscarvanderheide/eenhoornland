@@ -125,9 +125,13 @@ Not a port. East over the long bridge the brambles shut. A wide meadow of flower
 
 South of the meadow over a long bridge (the beach's own). Not a port. A wide island of sand with a green dune. **The sandcastle**: every tap she builds a piece more (tower, tower, wall and gate, big tower, flag); it stays; a tap on the finished castle and she jumps on it. **The lighthouse** on its rock: a tap lights it and two beams turn over the sea; at night it is on by itself. The pier, with the gull on its posts (it flies from post to post, every other time with a fish) and the seal on a rock (claps; a tap on the clapping seal: a ball on its nose). The crab (dances; a tap on the dancing crab, or running at it: it digs in and comes up elsewhere). The turtle (tucks in, then walks on). Palms (a tap shakes one; the first time a coconut drops), parasols, benches, shells. To come: the boat to the rainbow island, shells to hold to her ear, something to dig up, the dolphin for this bridge (the dolphin code only knows bridges that run east-west).
 
-### The rainbow island (`eiland` in the pixel game), the castle (`kasteel`): after that
+### The rainbow island (`regenboog`): built as a first pass
 
-Rainbow island: paint puddles and coloured footprints, bouncy mushrooms, the rainbow tree, flamingos, the parrot, the rabbit. Castle: a walk-in hall, the garden, the carousel, the peacock, the little dragon, somebody funny at the gate. The cards for all six animals are drawn (`animals2.js`).
+East of the beach over a long bridge (its own). (`eiland` is still the name of the first test island, a world of its own.) **A real rainbow** at the back, big enough to walk under: a tap and she is carried up one side, goes slowly over the top and fast down the other, the camera far back. **Paint**: three puddles; walking through one colours her feet and her next thirty-odd steps leave prints of that colour, which stay (the newest 140). **Mushrooms**: four springy ones; walking onto one bounces her, the big one highest. Two flamingos in a pink pond (tap one, the other does the same a moment later), the parrot on its perch (squawks), the rabbit and its three holes (a tap: down one, and it peeks out of the next; a tap on the peeking rabbit: found). Trees in the rainbow's six colours. To come: the rainbow tree and its fruit if the adventure wants them, the boat from the beach.
+
+### The castle (`kasteel`): built as a first pass
+
+East of the meadow's waterfall over a long bridge (its own), so the world is a web and not one long line: village, forest north; meadow east; from the meadow the beach south and the castle east; from the beach the rainbow island east. **The castle** stands at the back: a wall with a gate, a keep, two towers. Three windows with shutters: a tap on one and it opens and somebody looks out (an owl, a chick, a squirrel: always the same one in the same window). **The carousel**: she and the unicorn ride across from each other; pushing turns it and it keeps turning; a touch on her stops it. The peacock (its tail opens into a fan; a tap on the fan and it shimmers), the baby dragon asleep by its rock (smoke ring, smoke ring, then a flame and fireworks). A fountain in the court, two flower beds. To come: the hall inside (the gate is a picture so far), the garden behind, somebody funny at the gate, the treasure.
 
 ### How many islands exist at once
 
@@ -138,14 +142,14 @@ All of them, built once at the start (`WORLDS` in `lands.js`: the first test isl
 Done: the paper things and forest animals; all sets at once; the brambles; the meadow; people; the beach; the first things with a little real mechanism in them (seesaw, aeroplane, kite, balloon, sandcastle).
 
 1. More things to work with her fingers, Lumino City and Pok Pok style, one per place: a lift on a rope up the oak (and the zipline down), a crank, a marble run down the windy hill, shutters with somebody behind them.
-2. The rainbow island; the castle.
+2. The insides and the boat, see below (the rainbow island and the castle are built as first passes).
 3. The insides: the cave, the cabin, the bakery.
 4. The thread of the adventure, once Oscar has answered the open questions.
 5. What a game needs round it: the start screen with the two sisters, saves, the on-screen stick and buttons, the controller, bedtime.
 
 ## How to work
 
-- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people|seesaw|plane|beach`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
+- **Tests.** `tests/t-paper-smoke.mjs` is the half-minute look (loads, every named place can be walked to, pictures of a few places: `AT=fountain,swing SET=bos`). `tests/t-paper-play.mjs` has one part per thing to play with (`ONLY=swing|slide|house|dog|animals|farm|forest|flowers|meadow|people|seesaw|plane|beach|rainbow|castle`). `tests/t-paper-look.mjs` guards the first island's picture: run it when the stage's light, lens or gluing changes. `t-paper.mjs` (first island), `t-paper-dorp.mjs`, `t-paper-cross.mjs` are older and longer; the last two still carry places from before the spreading out.
 - **Never a full round before a publish.** Check what changed, look at a picture, push.
 - **Helpers** draw figures well from `STYLE.md` and a precise brief: new files only, their own browser port (`PORT=9555`), no commits. Their sheets go to Oscar.
 - **Phone.** He holds it lying down: 750 by 313 points. He has not yet read the frame rate on the phone with the big world; on his laptop it was 60 after the pixel budget. Watch draws (about 180 at her door now).
@@ -267,15 +271,20 @@ What was asked: go on with the rest of the world, more to interact with, people 
 11. **The paper aeroplane** (`plane` in `toys.js`): Oscar's wish. Speed and nose angle with lift that grows with speed, so it swoops and climbs. It stays where it lands; from the sea or anywhere she cannot stand it comes back to the terrace.
 12. **The beach** (`set-strand.js`, `beach.js`), as described above.
 13. **The sea in pieces**, and **the fruit stall**; the last grey stand-ins taken away.
+14. **What she holds is given to the living only** (`thing` on a card, `LIFELESS` in `paper.js`).
+15. **The rainbow island** (`set-regenboog.js`, `wonders.js`) and **the castle** (`set-kasteel.js`, `castle.js`), as described above. Joined by plain bridges: no new gates were invented, the open questions are Oscar's.
+16. **Numbers with all seven sets** on the test machine, phone size: built in about 520 ms; at her door 198 draws and 318k triangles; elsewhere 110 to 215 draws and 200k to 480k triangles.
+17. **Two traps met tonight, for whoever works on this next.** A `//` comment added in the middle of a one-line statement swallows the rest of the line (the page then fails to load while `node --check` can still pass on other files): comments go on a line of their own. And the tests' `until` took an error from the page for a yes; it no longer does, and a broken page now shows as failures.
 
 ### What to look at first, and what is not right yet
 
 - **Listen.** The accordion (`sfx.squeeze`), the hello of the people (`sfx.hello`), the singing stones (`sfx.note`): none was heard by a person. If any of them is a chime that asks for attention, say so and it goes.
-- **The phone.** Five islands now exist at once. Triangles are 300k at her door and up to 480k on the meadow; draws about 200. Nothing was measured on the phone.
+- **The phone.** Seven sets now exist at once. Triangles are 320k at her door and up to 480k on the meadow; draws about 200. Nothing was measured on the phone. `?set=dorp&fps` shows the readout.
 - **The unicorn stands in the way** now and then: it walks onto the sandcastle's heap and in front of things she wants to tap.
 - **Trees can hide her** on the meadow and the beach where I did not clear a view (the tree-folding is still switched off, as asked).
 - **From the balloon the sea has an edge** on the far right: the waves stop and flat deep water goes on.
-- **The bridge to the beach has no dolphin**, the bakery, the cave and the cabin have no inside, the lighthouse cannot be climbed.
+- **Only the first bridge has a dolphin**; the bakery, the cave, the cabin and the castle have no inside; the lighthouse cannot be climbed.
+- **The castle's window people are village and forest animals** (owl, chick, squirrel): cards that were there. If the castle should have people of its own, they need drawing.
 - **The seesaw's kick is a push to the side** (stick, key, or a finger held beside her), by the one rule of the toys; a touch on her gets off. A finger simply held keeps it going gently; a push in time with the landing builds the streak. Whether small hands find that, only playing will tell.
 - **Two things share one rule that may surprise**: with the can or the kite in her hands a picked flower goes into her hair; taking an apple or a bun puts the can down where she stands.
 - **Older tests** (`t-paper-dorp.mjs`, `t-paper-cross.mjs`, and the swing, slide, house, dog, animals parts of `t-paper-play.mjs`) were not run tonight and may carry places from before the world grew.
