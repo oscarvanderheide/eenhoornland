@@ -377,7 +377,66 @@ function drawFles(g) {
   piece(g, '#b98f5c', C(0, -44, 0, -54, 9));                                       // the cork
   g.restore();
 }
+// the cow and her calf: white with soft brown-black patches, a pink muzzle, a bell on a strap (the calf: smaller and rounder,
+// no horns, no bell). 0 stands, 1-2 walk, 3 the cow moos (head up, mouth open, eyes shut happily) / the calf jumps for joy
+const COW = { c: WHITE, c2: '#E6DED2', spot: '#5E4A42', pink: '#F4B8C4', horn: '#F2E3B8' };
+function bovine(g, f, calf) {
+  const k = COW, sw = f === 1 ? 1 : f === 2 ? -1 : 0, joy = f === 3, jump = calf && joy, moo = !calf && joy;
+  const legLen = jump ? 26 : 50;
+  const leg = (x, s, col) => { const dx = jump ? (x < 120 ? 10 : -10) : s * 8; piece(g, col, C(x, 150, x + dx, 150 + legLen, 11, 10)); piece(g, k.spot, E(x + dx, 154 + legLen, 10.5, 6.5), .3); };
+  g.save(); if (jump) g.translate(0, -20);
+  for (const [x, s] of [[80, sw], [150, -sw]]) leg(x, s, k.c2);
+  piece(g, k.c2, strip([[50, 108], [40, 128], [38, 156]], 3.2), .4); piece(g, k.spot, E(38, 160, 6, 9), .3);   // the tail and its tuft
+  const body = calf ? E(116, 122, 64, 44) : U(E(115, 118, 74, 44), E(80, 112, 30, 28));
+  piece(g, k.c, body);
+  within(g, body, () => { g.fillStyle = k.spot; for (const [x, y, rx, ry, r] of (calf ? [[96, 104, 20, 15, .3], [146, 132, 17, 12, -.2]] : [[82, 98, 24, 18, .4], [136, 128, 22, 15, -.3], [158, 96, 13, 10, .2]])) { g.beginPath(); g.ellipse(x, y, rx, ry, r, 0, PI * 2); g.fill(); } });
+  for (const [x, s] of [[94, -sw], [164, sw]]) leg(x, s, k.c);
+  // the head, on the right; up when she moos
+  const hx = calf ? 198 : 204, hy = moo ? 70 : calf ? 92 : 84;
+  piece(g, k.c, C(168, 112, hx - 8, hy + 10, 26, 21));
+  if (!calf) for (const [x0, y0, x1, y1] of [[hx - 16, hy - 24, hx - 26, hy - 42], [hx + 4, hy - 28, hx + 12, hy - 44]]) piece(g, k.horn, C(x0, y0, x1, y1, 4.5, 2.5), .4);
+  piece(g, k.c2, E(hx - 30, hy - 14, 14, 7, -.45));   // the ear
+  piece(g, k.c, E(hx, hy, calf ? 30 : 31, calf ? 29 : 31));
+  ink(g, k.spot, E(hx - 8, hy - 16, 13, 9, .2));
+  ink(g, '#F4C7CF', E(hx - 30, hy - 14, 8, 3.5, -.45));
+  piece(g, k.pink, E(hx + 18, hy + 17, 19, 14, .15), .5);
+  for (const [x, y] of [[hx + 13, hy + 14], [hx + 26, hy + 15]]) ink(g, '#C98A98', E(x, y, 2.6, 2));
+  if (joy) line(g, DARK, 2.4, arc(hx + 4, hy - 4, 5.5, 1.2 * PI, 1.8 * PI)); else eye(g, hx + 4, hy - 6, 5.6);
+  cheek(g, hx - 2, hy + 10, 7, 4.5);
+  if (moo) ink(g, MOUTH, E(hx + 22, hy + 26, 7.5, 6.5)); else line(g, MOUTH, 2, arc(hx + 18, hy + 22, 5, .2 * PI, .8 * PI));
+  if (!calf) { line(g, '#C9433F', 4, [[hx - 22, hy + 22], [hx - 10, hy + 32], [hx + 4, hy + 30]]); piece(g, '#F2C65C', U(P([[hx - 18, hy + 30], [hx - 4, hy + 30], [hx - 1, hy + 48], [hx - 21, hy + 48]]), E(hx - 11, hy + 50, 4, 3)), .5); }   // the bell on its strap
+  g.restore();
+}
+function drawKoe(g, f) { bovine(g, f, false); }
+function drawKalf(g, f) { g.save(); g.translate(-4, 190 - 220 * .78); g.scale(.78, .78); bovine(g, f, true); g.restore(); }
+
+// the goat: small and cream, little curved horns, a beard, perky ears. 0 stands, 1-2 walk, 3 rears up on its hind legs
+function drawGeit(g, f) {
+  const c = '#F6EEDD', c2 = '#E4D8C2', hoof = '#7A6250', sw = f === 1 ? 1 : f === 2 ? -1 : 0, rear = f === 3;
+  g.save(); if (rear) { g.translate(62, 204); g.rotate(-.5); g.translate(-62, -204); }
+  const leg = (x, s, col, tuck) => { const ex = tuck ? x + 16 : x + s * 7, ey = tuck ? 176 : 202; piece(g, col, C(x, 146, ex, ey, 6.5, 5.5)); piece(g, hoof, E(ex, ey + 2, 6, 4), .3); };
+  for (const [x, s] of [[62, sw], [118, -sw]]) leg(x, s, c2, rear && x > 100);
+  piece(g, c, U(C(44, 110, 34, 92, 6, 4)));   // the little tail, up
+  piece(g, c, U(E(88, 124, 50, 30), E(60, 118, 22, 22)));
+  ink(g, c2, E(86, 132, 30, 10));
+  for (const [x, s] of [[74, -sw], [130, sw]]) leg(x, s, c, rear && x > 100);
+  // the head
+  const hx = 150, hy = 74;
+  piece(g, c, C(122, 112, hx - 6, hy + 8, 18, 14));
+  piece(g, '#C9A46A', strip([[hx - 6, hy - 16], [hx - 18, hy - 34], [hx - 34, hy - 38], [hx - 40, hy - 28]], 4), .4);   // the curved horn
+  piece(g, c2, E(hx - 22, hy - 4, 16, 6.5, -.25));   // the ear, sticking out
+  ink(g, '#F4C7CF', E(hx - 22, hy - 4, 9, 3, -.25));
+  piece(g, c, U(E(hx, hy, 20, 19), E(hx + 16, hy + 10, 14, 11, .3)));
+  piece(g, c2, strip([[hx + 10, hy + 20], [hx + 8, hy + 34], [hx + 4, hy + 42]], 4.5), .4);   // the beard
+  eye(g, hx + 2, hy - 4, 4.8); cheek(g, hx + 2, hy + 8, 6, 4);
+  ink(g, '#B08A7A', E(hx + 26, hy + 8, 2.4, 2)); line(g, MOUTH, 2, arc(hx + 20, hy + 14, 4, .2 * PI, .8 * PI));
+  g.restore();
+}
+
 export const CARDS3 = {
+  koe: { w: 260, h: 220, draw: drawKoe, frames: 4, size: 1.35, does: ['stand', 'walk', 'walk', 'moo'] },
+  kalf: { w: 200, h: 190, draw: drawKalf, frames: 4, size: .95, does: ['stand', 'walk', 'walk', 'jump'] },
+  geit: { w: 190, h: 210, draw: drawGeit, frames: 4, size: 1.0, does: ['stand', 'walk', 'walk', 'rear'] },
   fles: { w: 120, h: 140, draw: drawFles, frames: 1, size: .55, does: ['bottle'] },
   walvis: { w: 520, h: 220, draw: drawWalvis, frames: 3, size: 3.2, does: ['back up', 'blow', 'tail'] },
   zeilboot: { w: 200, h: 240, draw: drawBoat(BOATS.zeilboot), frames: 2, size: 1.9, does: ['full', 'flutter'] },

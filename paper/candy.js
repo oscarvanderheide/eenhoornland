@@ -7,13 +7,15 @@
 import { CARDS3 } from './cards3.js';
 import { vendor } from './beach2.js';
 
+/** an alpaca: hums */
+export const alpaca = (S, spots, name = 'alpaca') => wanderer(S, CARDS3.alpaca, spots, name, () => { S.sfx.peep(); setTimeout(() => S.sfx.peep(), 200); });
 export const candyFloss = (S, x, z) => vendor(S, 'suikerspin', 'spin', x, z, { rest: 0, make: 0, give: 1, wave: 2 });
 
-/** an alpaca wandering between `spots` (the set's measure) */
-export function alpaca(S, spots, name = 'alpaca') {
-  const { girl, sfx } = S, P = spots.map(p => S.at(p)), f = S.figure(name, CARDS3.alpaca); [f.x, f.z] = P[0]; f.face = 1;
+/** an animal wandering between `spots` (the set's measure): a tap and it is happy (frame 3), says so (`say`), and trots after her a little way */
+export function wanderer(S, spec, spots, name, say) {
+  const { girl } = S, P = spots.map(p => S.at(p)), f = S.figure(name, spec); [f.x, f.z] = P[0]; f.face = 1;
   let at = 0, wait = 1 + Math.random() * 2, happy = 0, follow = 0, hums = 0;
-  f.onTap = () => { happy = 1.2; follow = 5; hums++; f.hopV = 2.8; sfx.peep(); setTimeout(() => sfx.peep(), 200); S.confetti(f.x, (f.y || 0) + 1.2, f.z, ['#f4a6c4', '#f8dde4', '#bba6ea'], 8, undefined, 1.8); };
+  f.onTap = () => { happy = 1.2; follow = 5; hums++; f.hopV = 2.8; say(); S.confetti(f.x, (f.y || 0) + 1.2, f.z, ['#f4a6c4', '#f8dde4', '#bba6ea'], 8, undefined, 1.8); };
   f.act = tick => f.setFrame(happy > 0 ? 3 : f.walking ? 1 + (Math.floor(tick / 4) % 2) : 0);
   return { f, state: () => ({ hums, following: follow > 0, at: [f.x, f.z] }), step({ dt }) {
     happy = Math.max(0, happy - dt); follow = Math.max(0, follow - dt);

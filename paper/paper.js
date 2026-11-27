@@ -571,6 +571,8 @@ const sfx = {
   thud() { tone(120, .12, 'sine', .12, .6); noise(.08, .05, 400); },
   cluck() { tone(520, .07, 'square', .05, .8); setTimeout(() => tone(640, .1, 'square', .05, .7), 110); },
   peep() { tone(1500, .08, 'sine', .06, 1.2); },
+  moo() { tone(150, .9, 'sawtooth', .045, .85, 5); tone(300, .7, 'sine', .02, .85); },
+  bleat() { tone(560, .45, 'triangle', .05, .92, 14); },
   oink() { tone(180, .16, 'sawtooth', .06, .8, 30); setTimeout(() => tone(200, .14, 'sawtooth', .05, .8, 30), 220); },
   hoot() { tone(330, .3, 'sine', .08, .95); setTimeout(() => tone(290, .45, 'sine', .08, .9), 380); },
   bark() { tone(420, .09, 'square', .06, .7); tone(210, .1, 'sawtooth', .04, .8); },
