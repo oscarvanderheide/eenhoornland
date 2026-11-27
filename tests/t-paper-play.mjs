@@ -138,21 +138,27 @@ export default async function (t) {
     await open('?set=dorp', LAND); await t.sleep(1500);
     const farm = () => t.ev(`__p.toy('boerderij')`), pl = await t.ev('__p.places()'), tapAt = async (x, y, z) => { const [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); };
     await t.ev(`__p.placeAt(${pl.well[0] - 1.6}, ${pl.well[1] + 2.4})`); await t.sleep(2800); await t.shot('tmp-shots/y-farm-land.png');
-    // a row without a can: nothing happens but a hint
-    await tapAt(pl.rows[0], .1, pl.rows[1] - .5); await t.sleep(600); ok((await farm()).watered === 0, 'a tap on a row with empty hands waters nothing');
+    const sp0 = (await farm()).spots[2];   // the middle carrot
+    // a plant without a can: nothing happens but a hint
+    await tapAt(sp0.at[0], .1, sp0.at[1]); await t.sleep(600); ok((await farm()).watered === 0, 'a tap on a seed with empty hands waters nothing');
+    ok((await farm()).rows.map(r => r.kind).join() === 'wortel,tomaat,kool,pompoen', 'four rows: carrots, tomatoes, cabbages, pumpkins');
     // the can: a real tap
     const c0 = (await farm()).can; await tapAt(c0[0], .15, c0[1]); ok(await until(`__p.toy('boerderij').held`, 5), 'a tap on the watering can: she walks over and picks it up'); await t.sleep(300);
     ok((await t.ev('__p.info()')).pose === 'hold', 'she carries it in front of her');
     // the well fills it
-    await tapAt(pl.well[0], .5, pl.well[1] - 1.0); ok(await until(`__p.toy('boerderij').full === 2`, 7), 'a tap on the well: the bucket goes down and the can is full'); await t.shot('tmp-shots/y-farm-well-land.png');
-    // water a row: it grows in two steps
-    await tapAt(pl.rows[0], .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').watered === 1`, 8), 'a tap on a row: she walks over and pours');
-    ok(await until(`__p.toy('boerderij').rows[0].stage === 2`, 5), 'and the carrots grow'); await t.shot('tmp-shots/y-farm-grown-land.png');
-    ok((await farm()).full === 1, 'the can has water for one more row');
-    // pull one: it pops into her hand, and the pig gets it
-    const n0 = (await farm()).rows[0].left; await tapAt(pl.rows[0] - .95, .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').pulled === 1`, 6), 'a tap on grown carrots: she pulls one out');
-    await t.sleep(900); ok((await farm()).rows[0].left === n0 - 1 && (await farm()).carrot, 'one carrot fewer in the row, and it is in her hand'); await t.shot('tmp-shots/y-farm-carrot-land.png');
-    const pg = await t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === 'varken'))`); await t.ev(`__p.walkTo(${pg[0] - 1.3}, ${pg[1] + .4})`); await t.sleep(2600); await t.ev(`__p.tap('varken')`); ok(await until(`__p.toy('boerderij').fed === 1`, 3), 'a tap on the pig: it gets the carrot'); await t.shot('tmp-shots/y-farm-fed-land.png');
+    await tapAt(pl.well[0], .5, pl.well[1] - 1.0); ok(await until(`__p.toy('boerderij').full === 3`, 7), 'a tap on the well: the bucket goes down and the can is full'); await t.shot('tmp-shots/y-farm-well-land.png');
+    // water one plant: that one grows, in two steps, the others stay seeds
+    await tapAt(sp0.at[0], .1, sp0.at[1]); ok(await until(`__p.toy('boerderij').watered === 1`, 8), 'a tap on a seed: she walks over and pours');
+    ok(await until(`__p.toy('boerderij').spots[2].stage === 2`, 5), 'and that carrot grows'); const st = (await farm()).rows[0].stages; ok(st.filter(v => v === 2).length === 1, `only that one (${st})`);
+    const sp1 = (await farm()).spots[9]; await tapAt(sp1.at[0], .1, sp1.at[1]); ok(await until(`__p.toy('boerderij').spots[9].stage === 2`, 8), 'a tomato next'); await t.sleep(500); await t.shot('tmp-shots/y-farm-grown-land.png');
+    // pull one: it pops into her hand
+    await tapAt(sp0.at[0], .15, sp0.at[1]); ok(await until(`__p.toy('boerderij').pulled === 1`, 6), 'a tap on the grown carrot: she pulls it out');
+    await t.sleep(900); const f1 = await farm(); ok(f1.spots[2].stage === -1 && f1.holding === 'wortel', 'it is gone from the bed, and in her hand'); await t.shot('tmp-shots/y-farm-carrot-land.png');
+    // a tap on her: she puts it down, and the pig comes and eats it
+    await t.ev(`__p.tap('girl')`);
+    ok(await until(`__p.toy('boerderij').dropped.length === 1 || __p.toy('boerderij').eatenByPig === 1`, 2), 'a tap on her: she puts it down');
+    ok(await until(`__p.toy('varken').meal === 'go' || __p.toy('varken').meal === 'eat'`, 3), 'the pig gets up and trots over'); await t.sleep(1500); await t.shot('tmp-shots/y-farm-pig-land.png');
+    ok(await until(`__p.toy('boerderij').eatenByPig === 1`, 14), 'and eats it up'); ok(await until(`__p.toy('varken').meal === null`, 14), 'and goes back to its mud');
     // the scarecrow's birds
     await t.ev(`__p.placeAt(${pl.crow[0] + 4.5}, ${pl.crow[1] + 1.5})`); await t.sleep(4200); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'from a way off the birds sit on the scarecrow');
     await t.ev(`__p.placeAt(${pl.crow[0] + 1}, ${pl.crow[1] + .8})`); await t.sleep(1500); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: the birds stay');
@@ -558,7 +564,7 @@ export default async function (t) {
     await open('?set=dorp', LAND); await t.sleep(1500);
     const shop = () => t.ev(`__p.toy('winkel')`), coinsAt = () => t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).map(f => [f.x, f.z])`);
     const all = await coinsAt(); ok(all.length >= 5 && (await shop()).coins === 0, `coins lie about the islands (${all.length}), and she has none yet`);
-    await t.ev('__p.open()'); for (const c of all) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);
+    await t.ev('__p.open()'); const away = await t.ev(`['kasteel', 'regenboog'].map(n => __p.places(n).start)`); for (const c of all.filter(c => away.every(o => Math.hypot(c[0] - o[0], c[1] - o[1]) > 24))) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);   // (not the castle's, reached by flying, nor the rainbow island's, by boat)
     await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.toy('winkel').coins === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
     const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
     const card = id => t.ev(`document.querySelector('.shop-card[data-id=${id}]').click()`), shut = () => t.ev(`document.querySelector('.shop-x').click()`);

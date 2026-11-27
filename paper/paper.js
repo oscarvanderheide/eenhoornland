@@ -651,7 +651,7 @@ function give(f) { for (const o of offers) { const kind = o(f); if (kind) { if (
 function tapFigure(f) {
   if (f !== girl && !f.thing && give(f)) return;   // (what she holds is given to the living only: not to the kite, the can or a basket)
   if (f === uni) { uni.hopV = 3; sfx.neigh(); confetti(uni.x, .9, uni.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 12, starGeo, 2.4); }
-  else if (f === girl) { girl.hopV = 3.2; sfx.hop(); }
+  else if (f === girl) { if (inHand && !playing) { const d = inHand.drop; inHand = null; d(); return; } girl.hopV = 3.2; sfx.hop(); }   // (holding something: a tap on her puts it down)
   else if (f.onTap) f.onTap();
 }
 
@@ -994,7 +994,8 @@ function pickAt(cx, cy) {
   const hits = ray.intersectObjects([...baseTaps, ...sets.flatMap(s => s.taps), ...sets.flatMap(s => s.ground), ...seaRows.map(r => r.m)], false);
   // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
   // (and a card that is put away, a bun not yet handed out, a note not yet played, takes no tap at all)
-  return hits.find(h => !h.object.userData.fig || (h.object.userData.fig.g.visible && solidAt(h.object.userData.fig, h.uv))) || null;
+  const shown = o => { for (; o; o = o.parent) if (!o.visible && !o.userData.baked) return false; return true; };   // (glued pieces are hidden, but stand for what they were glued into)   // (a hidden thing is not there to tap: a plant not grown yet)
+  return hits.find(h => shown(h.object) && (!h.object.userData.fig || (h.object.userData.fig.g.visible && solidAt(h.object.userData.fig, h.uv)))) || null;
 }
 /** a finger that hit nothing: was it within a finger's width of something that answers a tap? Measured on the screen, so a
  *  thing that is small because the camera stands far back is as easy to hit as a big one (everything is at least 48 points across) */
@@ -1189,7 +1190,7 @@ function bake(root) {
           }
         }
         if (geo !== o.geometry) geo.dispose();
-        o.visible = false; baked.pieces++;
+        o.visible = false; o.userData.baked = true; baked.pieces++;
       }
     }
     for (const c of o.children) walk(c);

@@ -31,7 +31,19 @@ export function pig(S, x, z) {
   const { girl, sfx } = S, f = make(S, 'varken', x, z); let up = 0;
   f.onTap = () => { up = 2.4; f.hopV = 2.2; sfx.oink(); S.confetti(f.x, f.y + .35, f.z, ['#9c8f80', '#7d6f62', '#b5a999'], 12, undefined, 2); };
   f.act = tick => { f.setFrame(up > 0 ? (up > 1.6 ? 1 + (Math.floor(tick / 2) % 2) : 0) : 3); f.tilt = up > 1.6 ? Math.sin(tick * 2.2) * .12 : 0; };
-  return { f, state: () => ({ up: up > 0, frame: f.frame }), step({ dt }) { if (up > 0) { up -= dt; look(f, girl); } } };
+  // something to eat put down on the ground (farm.js): out of the mud it trots, munches it up, and back it goes to lie down
+  const home = [f.x, f.z]; let meal = null;
+  const walkTo = (tx, tz, dt) => { const dx = tx - f.x, dz = tz - f.z, d = Math.hypot(dx, dz); if (d < .1) { f.walking = false; return true; } const st = Math.min(d, 1.7 * dt); if (!S.move(f, dx / d * st, dz / d * st)) { f.x += dx / d * st; f.z += dz / d * st; } f.walking = true; if (Math.abs(dx) > .05) f.face = Math.sign(dx); return false; };
+  const act0 = f.act; f.act = tick => { if (meal) { f.setFrame(meal.mode === 'eat' ? (Math.floor(tick / 2) % 2 ? 1 : 0) : 1 + (Math.floor(tick / 2) % 2)); f.tilt = meal.mode === 'eat' ? Math.sin(tick * 1.6) * .1 : 0; } else act0(tick); };
+  return { f, state: () => ({ up: up > 0, frame: f.frame, meal: meal ? meal.mode : null, at: [f.x, f.z] }), busy: () => !!meal,
+    eat(x, z, done) { meal = { x: x - .45 * Math.sign(x - f.x || 1), z: z + .05, done, mode: 'go', t: 0 }; sfx.oink(); },
+    step({ dt }) {
+      if (meal) { meal.t += dt;
+        if (meal.mode === 'go' && (walkTo(meal.x, meal.z, dt) || meal.t > 12)) { meal.mode = 'eat'; meal.t = 0; f.face = Math.sign(meal.x < f.x ? -1 : 1) || 1; }
+        else if (meal.mode === 'eat') { f.walking = false; if (Math.floor(meal.t * 3) !== Math.floor((meal.t - dt) * 3)) sfx.munch(); if (meal.t > 1.6) { meal.done(); sfx.oink(); f.hopV = 2.2; S.confetti(f.x, f.y + .5, f.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 10, undefined, 2); meal.mode = 'home'; meal.t = 0; } }
+        else if (meal.mode === 'home' && (walkTo(home[0], home[1], dt) || meal.t > 12)) { meal = null; f.walking = false; }
+        return; }
+      if (up > 0) { up -= dt; look(f, girl); } } };
 }
 /** a duck on the pond. A tap: tail up, a splash, and it swims on to another spot on the water */
 export function duck(S, x, z, name, spots) {
