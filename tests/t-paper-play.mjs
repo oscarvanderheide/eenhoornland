@@ -431,11 +431,17 @@ export default async function (t) {
   if (!only || only === 'music') {
     await open('?set=wei', LAND); await t.sleep(1500); await t.ev('__p.open()');
     const toy = n => t.ev(`__p.toy('${n}')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`);
-    for (const [n, dx, dz] of [['fluitist', 1.6, 1.0], ['harpist', -1.9, 1.4], ['gitarist', 1.8, 1.2], ['trompetter', 2.4, 2.6]]) {
+    for (const [n, dx, dz] of [['fluitist', 1.6, 1.0], ['gitarist', 1.8, 1.2], ['trompetter', 2.4, 2.6]]) {
       const [x, z] = await at(n); ok(await t.ev(`__p.canReach(${x + dx}, ${z + dz})`), `she can walk to the ${n}`); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2500);
       ok(!(await toy(n)).playing, `the ${n} is silent until asked`); await t.ev(`__p.tap('${n}')`); await t.sleep(1700); const m = await toy(n); ok(m.playing && m.notes > 0, `a tap: the ${n} plays, and notes float up`); await t.shot(`tmp-shots/y-${n}-land.png`);
       ok(await until(`!__p.toy('${n}').playing`, 7), 'and stops again');
     }
+    // the harp: she sits down to listen; he plays on until she is touched; the forest's animals come and listen too
+    { const [x, z] = await at('harpist'); ok(await t.ev(`__p.canReach(${x - 1.9}, ${z + 1.4})`), 'she can walk to the harpist'); await t.ev(`__p.placeAt(${x - 1.9}, ${z + 1.4})`); await t.sleep(2500);
+      ok(!(await toy('harpist')).playing, 'the harpist is silent until asked'); await t.ev(`__p.tap('harpist')`); ok(await until(`__p.toy('harpist').sitting && __p.toy('harpist').playing`, 6), 'a tap: she sits down in front of him, and he plays');
+      await t.sleep(9000); const h = await toy('harpist'); ok(h.playing && h.plays >= 2, 'and plays on, run after run'); ok(await until(`__p.toy('harpist').guests >= 3`, 25), 'the animals of the forest come and sit with her'); await t.shot('tmp-shots/y-harp-listen-land.png');
+      await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`!__p.toy('harpist').sitting && !__p.toy('harpist').playing`, 3), 'a touch: she gets up, and the music ends');
+      await t.sleep(4000); ok((await toy('harpist')).guests === 0, 'and the animals go home'); }
   }
 
   /* ---------------- the witch: she wants to see the egg, then three things for her pot; her potion opens the brambles ---------------- */

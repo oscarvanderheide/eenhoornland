@@ -114,7 +114,8 @@ export default {
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.3, 'eekhoorn2', [cx - 5.7, cz - 3.6, .1]), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.2, 'eekhoorn3', [ox + 5.1, oz + 2.6, .1]) };
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
     const heks = witch(S, cx - .7, cz - .25);   // the witch and her pot, in the clearing where the paths meet (folk.js)
-    const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5 });   // (folk.js)
+    const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
+      listen: { seat: [hx - 1.25, hz + .75], loop: 4.6, guests: [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3] } });   // she sits and listens, and the forest's animals come   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 

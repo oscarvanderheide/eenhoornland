@@ -104,12 +104,27 @@ export function musician(S, name, spec, note, x, z, o) {
   const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face; if (o.sink) f.sink = o.sink;
   const notes = [0, 1, 2].map(i => { const n = S.figure(name + 'noot' + i, note); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
   const from = o.from || [.3, 1.1], long = o.long || 4.8; let mode = null, t = 0, plays = 0, next = 0, sent = 0;
-  f.onTap = () => { if (mode) return; mode = 'play'; t = 0; next = .25; plays++; o.sound(); };
+  /* o.listen ({ seat: [x, z], guests, loop }): a tap and she sits down in front of him to listen; he plays on and on (a
+     run every `loop` seconds), the forest's animals come and sit with her, and it ends when she is touched again */
+  const L = o.listen; let sit = null, st = 0, again = 0, listens = 0, cheered = false;
+  const [sx, sz] = L ? S.at(L.seat) : [0, 0], seats = L ? [[-1.0, -.45], [-.85, .7], [.75, .75], [-1.9, .2], [1.5, .35]].map(([dx, dz]) => [sx + dx, sz + dz]) : [];
+  const listen = L && { rest: true, look: [(sx + f.x) / 2, (sz + f.z) / 2 + .3], step(dt, inp) {
+    const { girl, sfx } = S; st += dt;
+    if (sit === 'on') { const k = Math.min(1, st / .3); girl.x = sx; girl.z = sz; girl.lift = Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = Math.sign(f.x - sx) || 1;
+      if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); L.guests.forEach((q, i) => q.guest.invite(seats[i % seats.length])); mode = 'play'; t = 0; next = .25; again = L.loop; plays++; o.sound(); } return; }
+    if (sit === 'sit') { girl.lift = 0; girl.poseName = 'sit';
+      if (!cheered && L.guests.every(q => q.guest.there())) { cheered = true; S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
+      if (inp.act || inp.x) { sit = 'off'; st = 0; L.guests.forEach(q => q.guest.leave()); mode = 'end'; t = 0; f.hopV = 1.2; } return; }
+    const k = Math.min(1, st / .28); girl.lift = Math.sin(k * Math.PI) * .2; girl.poseName = null; if (k >= 1) { girl.lift = 0; sit = null; S.stopPlay(); }
+  } };
+  f.onTap = () => {
+    if (L) { if (S.playing() || sit || mode === 'play') return; S.walkThen(sx, sz + .5, () => { if (S.playing()) return; sit = 'on'; st = 0; S.play(listen); }, 1.1); return; }
+    if (mode) return; mode = 'play'; t = 0; next = .25; plays++; o.sound(); };
   f.act = tick => f.setFrame(mode === 'play' ? o.play[Math.floor(tick / 3) % o.play.length] : mode === 'end' ? o.end : o.rest);
-  return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length }), step({ dt }) {
+  return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length, sitting: sit === 'sit', listens, guests: L ? L.guests.filter(q => q.guest.there()).length : 0 }), step({ dt }) {
     for (const q of notes) if (q.t >= 0) { q.t += dt; const k = q.t / 1.9; q.n.x = f.x + f.face * from[0] + q.side * k * .5 + Math.sin(q.t * 3) * .08; q.n.z = f.z + .06; q.n.floatY = q.n.y = (f.y || 0) + (f.lift || 0) + from[1] + k * 1.2; if (k >= 1) { q.t = -1; q.n.g.visible = false; } }
     if (!mode) return; t += dt;
-    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (t > long) { mode = 'end'; t = 0; f.hopV = 1.2; } }
+    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (sit === 'sit') { again -= dt; if (again <= 0) { again = L.loop; plays++; o.sound(); } } else if (t > long) { mode = 'end'; t = 0; f.hopV = 1.2; } }
     else if (t > 1.4) mode = null;
   } };
 }
