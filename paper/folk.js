@@ -158,6 +158,9 @@ export function witch(S, x, z) {
   wishes.water.act = () => wishes.water.setFrame(1); for (const w of Object.values(wishes)) { w.g.visible = false; w.thing = true; w.z = wpz + .08; }
   wishes.bloem.g.scale.setScalar(1.5); wishes.appel.g.scale.setScalar(2.3);
   const present = gift(S, 'drankje', STORY.drankje);
+  // her second brew, once the unicorn has grown: wings, from three feathers (the owl's, the gull's, the peacock's)
+  const featherWish = Object.fromEntries(['uil', 'meeuw', 'pauw'].map(b => { const w = S.figure('heksveer-' + b, THINGS['veer-' + b]); w.g.visible = false; w.thing = true; w.z = wpz + .08; w.g.scale.setScalar(1.9); return [b, w]; }));
+  let wingWish = false, wingsMade = 0;
   let mode = null, t = 0, show = 0, asks = 0, made = false, puff = 0, here = false, jig = 0;
   const egg = () => S.quest.stage !== 'zoek' && S.quest.stage !== 'dream';
   const arrive = () => {   // she comes: a puff of stars by the pot, a hop, and at once she shows what the potion wants
@@ -171,23 +174,27 @@ export function witch(S, x, z) {
     if (S.playing() || mode === 'brew') return;
     if (!here) { jig = 1; sfx.click(); return; }   // only her cold pot: it wobbles
     const can = S.shared.can;
-    if (made || S.gear.potion) { mode = 'glad'; t = 0; sfx.hello(); return; }
+    if (made || S.gear.potion) {
+      if (S.grown() && !S.gear.wings) { if (S.feathers.all()) { mode = 'wings'; t = 0; sfx.splash(); f.hopV = 1.6; } else { mode = 'ask'; t = 0; show = 2.8; wingWish = true; asks++; sfx.hello(); } return; }   // the wings: all three feathers, or she shows the ones still missing
+      mode = 'glad'; t = 0; sfx.hello(); return; }
     if (!have.water && can && can.holding()) { if (can.full()) { S.walkThen(wpx - .15, wpz + 1.0, () => { girl.view = 'back'; can.pourThen(() => put('water')); }, 1.3); return; } }
     mode = 'ask'; t = 0; show = 2.8; asks++; sfx.hello();
   };
   f.onTap = tap; S.tap(pot, () => { if (!S.give(f)) tap(); });
-  f.act = tick => f.setFrame(mode === 'ask' ? 2 : mode === 'glad' ? 3 : mode === 'brew' ? Math.floor(tick / 2) % 2 : near(f, girl, 5) ? Math.floor(tick / 6) % 2 : 0);
-  return { f, state: () => ({ frame: f.frame, mode, asks, have: { ...have }, made, potion: S.gear.potion, wishing: show > 0, here }), step({ dt, time }) {
+  f.act = tick => f.setFrame(mode === 'ask' ? 2 : mode === 'glad' ? 3 : mode === 'brew' || mode === 'wings' ? Math.floor(tick / 2) % 2 : near(f, girl, 5) ? Math.floor(tick / 6) % 2 : 0);
+  return { f, state: () => ({ frame: f.frame, mode, asks, have: { ...have }, made, potion: S.gear.potion, wishing: show > 0, here, wingWish, wingsMade }), step({ dt, time }) {
     const y0 = (f.y || 0);
     if (!here && egg() && near(f, girl, 4) && !S.playing()) arrive();
     f.g.visible = here; brew.visible = fire.visible = here;
     if (jig > 0) { jig = Math.max(0, jig - dt * 2.5); pot.rotation.z = Math.sin(jig * 18) * .08 * jig; }
     brewM.color.set(COLS[count()]); brewM.emissive.set(COLS[count()]); brew.position.y = .83 + Math.sin(time * 3) * .012; if (puff > 0) puff = Math.max(0, puff - dt * 2); brew.scale.setScalar(1 + puff * .12);
     if (show > 0) show -= dt;
-    const on = show > 0;
-    const missing = Object.keys(wishes).filter(k => !have[k]); Object.entries(wishes).forEach(([k, w]) => { const i = missing.indexOf(k); w.g.visible = on && here && !made && i >= 0; if (w.g.visible) { w.x = wpx + (i - (missing.length - 1) / 2) * .72; w.floatY = w.y = y0 + 1.5 + Math.sin(time * 3 + i) * .04; } });
+    const on = show > 0; if (!on) wingWish = false;
+    { const missing = ['uil', 'meeuw', 'pauw'].filter(b => !S.feathers.have().includes(b)); Object.entries(featherWish).forEach(([b, w]) => { const i = missing.indexOf(b); w.g.visible = on && wingWish && i >= 0; if (w.g.visible) { w.x = wpx + (i - (missing.length - 1) / 2) * .62; w.floatY = w.y = y0 + 1.45 + Math.sin(time * 3 + i) * .05; } }); }
+    const missing = Object.keys(wishes).filter(k => !have[k]); Object.entries(wishes).forEach(([k, w]) => { const i = missing.indexOf(k); w.g.visible = on && here && !made && !S.gear.potion && !wingWish && i >= 0; if (w.g.visible) { w.x = wpx + (i - (missing.length - 1) / 2) * .72; w.floatY = w.y = y0 + 1.5 + Math.sin(time * 3 + i) * .04; } });
     if (!mode) return; t += dt;
     if (mode === 'brew') { if (Math.floor(t * 6) !== Math.floor((t - dt) * 6)) S.confetti(wpx, y0 + 1.0, wpz, COLS, 3, S.starGeo, 1.8); if (t > 2.0 && !S.playing()) { made = true; mode = 'glad'; t = 0; sfx.chime(); present([wpx, y0 + 1.0, wpz], () => { S.gear.potion = true; S.coins.reward('drankje', f.x, y0 + 1.4, f.z); }); } }
+    else if (mode === 'wings') { if (Math.floor(t * 6) !== Math.floor((t - dt) * 6)) S.confetti(wpx, y0 + 1.0, wpz, ['#fbf7ee', '#e2d8f4', '#bba6ea', '#f2c65c'], 3, S.starGeo, 1.8); if (t > 2.0) { mode = 'glad'; t = 0; wingsMade++; sfx.chime(); S.giveWings(); } }   // the feathers in the pot, a boil of stars, and the unicorn has wings
     else if (t > (mode === 'ask' ? 2.8 : 1.6)) mode = null;
   } };
 }

@@ -129,6 +129,16 @@ function drawMand(g) {
 }
 
 // a red apple with a leaf
+/** a feather for the unicorn's wings: the owl's (brown, speckled), the gull's (white, a grey tip), the peacock's (green, with its eye) */
+const featherOf = (vane, shaft, extra) => g => {
+  piece(g, vane, S([[30, 8], [42, 26], [46, 56], [42, 86], [32, 108], [24, 86], [16, 58], [18, 28]]));
+  line(g, shaft, 2.6, [[31, 12], [31, 116]]);
+  for (let i = 0; i < 5; i++) { line(g, shaft, 1.2, [[31, 30 + i * 14], [42, 22 + i * 14]]); line(g, shaft, 1.2, [[31, 30 + i * 14], [20, 22 + i * 14]]); }
+  if (extra) extra(g);
+};
+const drawVeerUil = featherOf('#B88B5C', '#7A5A3E', g => { for (const [x, y] of [[24, 40], [37, 52], [26, 70], [36, 86]]) ink(g, '#F1DDB4', E(x, y, 3.2, 2.4)); });
+const drawVeerMeeuw = featherOf('#FBF7EE', '#B8BFC6', g => { ink(g, '#AEB6BE', S([[24, 86], [32, 108], [40, 86], [32, 92]])); });
+const drawVeerPauw = featherOf('#6FAF8A', '#3E7A5E', g => { piece(g, '#5FA8A0', E(31, 34, 10, 12), .3); piece(g, '#F2C65C', E(31, 34, 6.5, 8), .2); piece(g, '#2E5E8A', E(31, 35, 3.6, 4.6), .1); });
 /** the rainbow fruit from the rainbow island's tree: round, in bands of the rainbow, a leaf on top */
 function drawRegenboog(g) {
   piece(g, '#7A5A3E', C(40, 22, 42, 10, 2.4)); piece(g, '#7FB069', S([[42, 16], [52, 6], [64, 10], [64, 10], [54, 18]]));
@@ -216,6 +226,9 @@ export const THINGS = {
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
   schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
   peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
+  'veer-uil': { w: 62, h: 124, draw: drawVeerUil, frames: 1, size: .34, does: ['owl feather'] },
+  'veer-meeuw': { w: 62, h: 124, draw: drawVeerMeeuw, frames: 1, size: .34, does: ['gull feather'] },
+  'veer-pauw': { w: 62, h: 124, draw: drawVeerPauw, frames: 1, size: .34, does: ['peacock feather'] },
   regenboog: { w: 80, h: 84, draw: drawRegenboog, frames: 1, size: .26, does: ['rainbow fruit'] },
   munt: { w: 64, h: 64, draw: drawMunt, frames: 1, size: .2, does: ['coin'] },
   rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },

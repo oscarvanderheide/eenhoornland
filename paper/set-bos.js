@@ -113,6 +113,7 @@ export default {
     const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 1.4, 'eekhoorn', [tx, tz - .15, .5]),
       // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.3, 'eekhoorn2', [cx - 5.7, cz - 3.6, .1]), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.2, 'eekhoorn3', [ox + 5.1, oz + 2.6, .1]) };
+    S.featherFrom(live.uil.f, 'uil');   // once the unicorn has grown, a tap on the owl lets a feather drift down for the wings (paper.js)
     befriend(S, live.hert, { byTap: false, isFriend: (st => () => st().mode === 'friend')(live.hert.state), own: false, speed: 2.4, gap: 1.4 });   // the forest's companion: the fawn, once it has come to her (she waits quietly), comes along (companion.js)
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
     // the witch's house: her own corner of the forest, south of the picnic's glade, off every path (Oscar: "she needs her own little house")

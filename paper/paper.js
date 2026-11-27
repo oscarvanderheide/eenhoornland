@@ -249,7 +249,10 @@ function buildSet(def) {
     world: obj => { scene.add(obj); return obj; },
     dropFrom: (kind, x, z, top) => { const [wx, wz] = W([x, z]); dropFrom(kind, new THREE.Vector3(wx, heightAt(wx, wz) ?? 0, wz), top, 'leaf'); },   // something falls out of a tree here (the set's measure; top: how high)
     lying: kind => fallen.filter(o => o.kind === kind && !o.gone).length,   // how many of these lie about (or are held) just now
-    grown: () => gear.grown,   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
+    grown: () => gear.grown,
+    feathers, giveWings,
+    /** a bird that gives a feather for the wings: its tap does what it always does, and drops the feather if it is still wanted */
+    featherFrom(f, bird, up = 0) { const own = f.onTap; f.onTap = () => { if (own) own(); if (feathers.wants(bird)) setTimeout(() => feathers.drop(bird, f.x + f.face * .2, (f.y || 0) + (f.lift || 0) + f.H * .7 + up, f.z + .3), 400); }; },   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
     coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); s.coinN = (s.coinN || 0) + 1; return coinAt(wx, wz, y, s.name + ':' + s.coinN); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
@@ -621,6 +624,7 @@ function tapFallen(o) {
   if (o.kind === 'rups') { if (o.mode === 'hang') { o.mode = 'up'; o.t = 0; o.f.hopV = 1.2; sfx.peep(); } return; }
   if (o.kind === 'vogelaar') { o.f.hopV = 2; sfx.hello(); return; }
   if (o.kind === 'munt') { takeCoin(o); return; }
+  if (o.kind.startsWith('veer')) { takeFeather(o); return; }
   if (o.mode !== 'lie' || heldFall === o) return;
   walkThen(o.x - girl.face * .35, o.z + .1, () => { if (o.mode !== 'lie') return; hands.take(o, () => { if (heldFall === o) { heldFall = null; o.mode = 'lie'; o.x = girl.x + girl.face * .4; o.z = girl.z + .15; o.y = heightAt(o.x, o.z) ?? girl.y; o.age = 0; girl.poseName = null; } }); heldFall = o; o.mode = 'held'; sfx.hop(); }, .9);
 }
@@ -635,7 +639,7 @@ function stepFallen(dt, tick) {
   for (const o of [...fallen]) {
     const f = o.f; o.t += dt; o.age += dt;
     if (o.mode === 'fall') {   // down it comes: fruit and boots drop and bounce once, a sock flutters, the birdwatcher tumbles
-      const flutter = o.kind === 'sok'; o.vy -= (flutter ? 2.6 : 9.8) * dt; if (flutter) o.vy = Math.max(o.vy, -1.6); o.y += o.vy * dt;
+      const flutter = o.kind === 'sok' || o.kind.startsWith('veer'); o.vy -= (flutter ? 2.6 : 9.8) * dt; if (flutter) o.vy = Math.max(o.vy, -1.6); o.y += o.vy * dt;
       if (flutter) { o.x += Math.sin(o.t * 5) * .5 * dt; o.tilt = Math.sin(o.t * 4) * .5; } else if (o.kind === 'vogelaar') { o.tilt = o.t * 6; o.frame = 0; }
       if (o.y <= o.ground) { o.y = o.ground; o.tilt = 0;
         if (!o.bounced && (EATS.has(o.kind) || o.kind === 'laars')) { o.bounced = true; o.vy = 1.6; sfx.thud(); }
@@ -650,6 +654,7 @@ function stepFallen(dt, tick) {
     else if (o.mode === 'off') { o.frame = 2; o.x += f.face * 1.3 * dt; o.bob = Math.abs(Math.sin(o.t * 9)) * .05; if (o.t > 2.6) { removeFallen(o); continue; } }
     else if (o.mode === 'held') { const h = handPoint(); o.x = h.x + girl.face * .06; o.z = h.z + .05; o.y = h.y - .08; if (!playing) girl.poseName = 'hold'; f.g.visible = !playing; }
     else if (o.mode === 'lie' && o.kind === 'munt') { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .5) { takeCoin(o); continue; } }
+    else if (o.mode === 'lie' && o.kind.startsWith('veer')) { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .6) { takeFeather(o); continue; } }
     else if (o.mode === 'lie' && o.age > 45) { removeFallen(o); continue; }
     f.x = o.x; f.z = o.z; f.floatY = f.y = o.y;
   }
@@ -660,7 +665,9 @@ function stepFallen(dt, tick) {
    (props.js shop) they fly from her row to what she buys */
 const purse = { coins: 0, seen: new Set() }, coinRow = document.createElement('div'); coinRow.id = 'coins'; document.body.appendChild(coinRow);
 let coinSrc = null; const coinImg = () => coinSrc || (coinSrc = cutout(THINGS.munt.w, THINGS.munt.h, c => THINGS.munt.draw(c, 0), PAPER, 1).toDataURL());
-function showCoins(pop) { coinRow.replaceChildren(...[...Array(purse.coins)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === purse.coins - 1) im.className = 'pop'; return im; })); }
+const featherImgs = {}; const featherImg = b => featherImgs[b] || (featherImgs[b] = cutout(THINGS['veer-' + b].w, THINGS['veer-' + b].h, c => THINGS['veer-' + b].draw(c, 0), PAPER, 1).toDataURL());
+function showCoins(pop) { coinRow.replaceChildren(...[...Array(purse.coins)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === purse.coins - 1) im.className = 'pop'; return im; }),
+  ...(gear.wings ? [] : gear.feathers).map((b, i) => { const im = new Image(); im.src = featherImg(b); im.className = 'veer' + (pop && i === gear.feathers.length - 1 ? ' pop' : ''); return im; })); }   // (the feathers she has, after the coins: only those she has, never empty places)
 const onScreen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
 function slot(i) { const r = coinRow.getBoundingClientRect(); return [r.left + 17 + i * 26, r.top + 17]; }
 function flyCoin(from, to, done) { const im = new Image(); im.src = coinImg(); im.className = 'flycoin'; im.style.left = from[0] + 'px'; im.style.top = from[1] + 'px'; document.body.appendChild(im);
@@ -716,6 +723,21 @@ function stepRide(dt) {
 const rideBtn = document.getElementById('ride');
 if (rideBtn) rideBtn.addEventListener('click', e => { e.stopPropagation(); if (ride.on) { if (!flight.on) dismount(); } else mount(); });
 function showRide() { if (!rideBtn) return; const can = gear.grown && !uni.away && !playing && !through && !flight.on; rideBtn.hidden = !can; rideBtn.classList.toggle('on', ride.on); }
+/* the wings: once the unicorn is grown, three birds each let a feather drift down the first time she taps them (the owl
+   in the forest, the gull on the beach, the peacock at the castle; again whenever that feather is still missing). She
+   picks it up by walking over it; the feathers she has show after her coins. Given all three, the witch brews them into
+   wings (folk.js): giveWings */
+const BIRDS = ['uil', 'meeuw', 'pauw'];
+const feathers = {
+  wants: bird => gear.grown && !gear.wings && !gear.feathers.includes(bird) && !fallen.some(o => o.kind === 'veer-' + bird && !o.gone),
+  drop(bird, x, y, z) { dropFrom('veer-' + bird, new THREE.Vector3(x, heightAt(x, z) ?? 0, z), y, 'leaf'); },
+  have: () => [...gear.feathers], all: () => BIRDS.every(b => gear.feathers.includes(b)),
+};
+function takeFeather(o) { if (o.gone) return; removeFallen(o); const bird = o.kind.slice(5); if (!gear.feathers.includes(bird)) gear.feathers.push(bird); sfx.chime(); confetti(o.x, o.y + .4, o.z, ['#fbf7ee', '#f2c65c', '#bba6ea'], 10, starGeo, 1.8); showCoins(true); }
+function giveWings() {
+  gear.wings = true; gear.feathers = []; showCoins(); uni.become(FIGS.grown); uni.hopV = 3.2; sfx.neigh(); sfx.chime();
+  confetti(uni.x, uni.y + 1.4, uni.z, ['#fbf7ee', '#e2d8f4', '#bba6ea', '#f2c65c'], 30, starGeo, 3); coins.reward('vleugels', uni.x, uni.y + 1.8, uni.z);
+}
 const flight = { on: false, alt: 0 };   // (flying: slice 3)
 const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); };
 
@@ -1300,6 +1322,7 @@ window.__p = {
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
   mount: () => (ride.on ? dismount() : mount(), ride.on),
   hatched: () => { quest.stage = 'baby'; uni.away = false; uni.x = girl.x - 1; uni.z = girl.z + .3; uni.y = heightAt(uni.x, uni.z) ?? 0; },   // (for tests: as if the egg had hatched here)
+  gear: o => { Object.assign(gear, o || {}); if (gear.grown) uni.become(FIGS[gear.wings ? 'grown' : 'groot']); showCoins(); return { ...gear }; },   // (for tests)
   grow: () => { gear.grown = true; uni.become(FIGS[gear.wings ? 'grown' : 'groot']); },
   fallen: () => fallen.map(o => ({ kind: o.kind, mode: o.mode, at: [o.x, o.z], y: o.y })),
   drop(kind) { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); dropFrom(kind, p, p.y + t.top, t.kind); },
@@ -1344,7 +1367,6 @@ window.__p = {
   /** where the story stands; who she is; swap the sisters (as the button does) */
   quest: o => Object.assign(quest, o || {}), who: () => ({ girl: girl.kid, zus: zus.kid, uni: !uni.away, egg: [eggF.x, eggF.z] }), swap: () => swapSisters(),
   /** her tools: ask, or set some ({ snorkel: true }) */
-  gear: o => Object.assign(gear, o || {}),
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
   pin(name) { pinned = !!name; if (name) standOn(sets.find(q => q.name === name)); },
   /** the named places of the set she stands on, or of the set called `name` */

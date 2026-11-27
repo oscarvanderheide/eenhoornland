@@ -606,4 +606,20 @@ export default async function (t) {
     ok((await r()).on && Math.hypot(g1.girl[0] - g0[0], g1.girl[1] - g0[1]) > 2, 'and they ride off together'); await t.shot('tmp-shots/y-riding-land.png');
     await t.click(bx, by); await t.sleep(600); ok(!(await r()).on && (await t.ev('__p.info()')).lift === 0, 'the button again: she slides off');
   }
+
+  /* ---------------- the wings: three feathers from three birds, and the witch brews them ---------------- */
+  if (!only || only === 'wings') {
+    await open('?set=bos', LAND); await t.sleep(1500); await t.ev(`__p.gear({ wings: false, feathers: [] })`);
+    const toy = n => t.ev(`__p.toy('${n}')`), r = () => t.ev('__p.ride()'), bos = await t.ev(`__p.places('bos')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`);
+    ok((await r()).grown && !(await r()).wings, 'a grown unicorn without wings');
+    await t.ev(`__p.placeAt(${bos.witch[0] - .9}, ${bos.witch[1] + .3})`); await t.sleep(2600); await t.ev(`__p.tap('heks')`); await t.sleep(600); ok((await toy('heks')).wingWish, 'a tap on the witch: she shows the three feathers her brew wants'); await t.shot('tmp-shots/y-wings-wish-land.png');
+    const u = await at('uil'); await t.ev(`__p.placeAt(${u[0] + 1.6}, ${u[1] + 1.2})`); await t.sleep(2600); await t.ev(`__p.tap('uil')`); await t.sleep(2600);
+    const fv = (await t.ev('__p.fallen()')).find(o => o.kind === 'veer-uil'); ok(fv && fv.mode === 'lie', 'a tap on the owl: a feather drifts down'); await t.shot('tmp-shots/y-feather-owl-land.png');
+    await t.ev(`__p.walkTo(${fv.at[0]}, ${fv.at[1]})`); ok(await until(`__p.ride().feathers.includes('uil')`, 6), 'she walks over it: the feather is hers, beside her coins');
+    await t.ev(`__p.tap('uil')`); await t.sleep(2600); ok(!(await t.ev('__p.fallen()')).some(o => o.kind === 'veer-uil'), 'the owl gives only one');
+    for (const [b, n] of [['meeuw', 'meeuw'], ['pauw', 'pauw']]) { const p = await at(n); await t.ev(`__p.placeAt(${p[0] + 1.6}, ${p[1] + 1.4})`); await t.sleep(2400); await t.ev(`__p.tap('${n}')`); await t.sleep(2600); ok((await t.ev('__p.fallen()')).some(o => o.kind === 'veer-' + b), `the ${n}: a feather of its own`); await t.shot(`tmp-shots/y-feather-${b}-land.png`); }
+    await t.ev(`__p.gear({ feathers: ['uil', 'meeuw', 'pauw'] })`); await t.ev(`__p.placeAt(${bos.witch[0] - .9}, ${bos.witch[1] + .3})`); await t.sleep(2600);
+    await t.ev(`__p.tap('heks')`); await t.sleep(900); ok((await toy('heks')).mode === 'wings', 'with all three: into the pot they go'); await t.shot('tmp-shots/y-wings-brew-land.png');
+    ok(await until(`__p.ride().wings`, 4), 'a boil of stars, and the unicorn has wings'); ok((await r()).feathers.length === 0, 'the feathers are used up'); await t.sleep(800); await t.shot('tmp-shots/y-wings-land.png');
+  }
 }

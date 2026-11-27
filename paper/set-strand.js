@@ -78,6 +78,7 @@ export default {
       meeuw: gull(S, [[perch[0][0], perch[0][1], DECK + .9], [perch[1][0], perch[1][1], DECK + .9], [perch[2][0], perch[2][1], DECK + .9]]),
       zeehond: seal(S, 5.4, 14.45, -.3),
     };
+    S.featherFrom(live.meeuw.f, 'meeuw');   // the gull's feather for the wings (paper.js)
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
     const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
     // planted, not scattered (PLAN.md): beach grass in clumps round the dune, the shells where the sea left them (a line along
