@@ -410,4 +410,21 @@ export default async function (t) {
     const w1 = await who(); ok(w1.girl === 'fenna' && w1.zus === 'anna', 'a tap on the button with her sister\'s face: now she is Fenna, and Anna sleeps'); await t.shot('tmp-shots/y-sister-land.png');
     const pl = await t.ev(`__p.places('huis')`); await t.ev(`__p.walkTo(${pl.start[0]}, ${pl.start[1] + 1.4})`); ok(await until(`__p.info().set === 'dorp'`, 8), 'out of the front door, into the village'); await t.sleep(1200); ok(!(await who()).uni, 'still without a unicorn'); await t.shot('tmp-shots/y-out-land.png');
   }
+
+  /* ---------------- the egg's cave: three things to work out, and the egg ---------------- */
+  if (!only || only === 'egg') {
+    // (from the real start, so nothing in the cave is open yet and there is no unicorn in the way; the dream is cut short)
+    await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    const hol = () => t.ev(`__p.toy('hol')`), bos = await t.ev(`__p.places('bos')`), pl = await t.ev(`__p.places('hol')`), tapSpot = async n => { const [x, y] = await t.ev(`__p.screen('${n}')`); await t.click(x, y); };
+    await t.ev(`__p.placeAt(${bos.grot[0]}, ${bos.grot[1] + .9})`); await t.sleep(2400); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.info().set === 'hol'`, 6), 'walking into the dark mouth in the forest: she is in the egg\'s cave'); await t.ev(`__p.keys([])`); await t.sleep(1500); await t.shot('tmp-shots/y-hol-1-land.png');
+    ok(!(await t.ev(`__p.canReach(${pl.two[0]}, ${pl.two[1]})`)), 'the vines hang across the way');
+    for (const n of ['zwam0', 'zwam1', 'zwam2']) { await tapSpot(n); await t.sleep(450); }
+    const h1 = await hol(); ok(h1.lit.every(Boolean) && h1.opened[0], 'a tap lights each mushroom; all three alight, and the vines lift'); await t.sleep(900); await t.shot('tmp-shots/y-hol-1b-land.png');
+    await t.ev(`__p.placeAt(${pl.two[0] - 1.9}, ${pl.two[1] + 1.15})`); await t.sleep(2200); await t.shot('tmp-shots/y-hol-2-land.png'); await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('hol').onPlate`, 8), 'walking into the stone rolls it along its groove onto the plate'); await t.ev(`__p.keys([])`); ok((await hol()).opened[1], 'and the stone door sinks'); await t.sleep(900);
+    await t.ev(`__p.placeAt(${pl.three[0] - 1.5}, ${pl.three[1]})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-3-land.png'); await tapSpot('kristal2'); await t.sleep(900); ok((await hol()).dir === 1 && !(await hol()).opened[2], 'a tap turns the crystal: the beam swings to the bud (a flower opens, the door stays)'); await t.shot('tmp-shots/y-hol-3b-land.png');
+    await tapSpot('kristal2'); await t.sleep(1000); ok((await hol()).dir === 2 && (await hol()).opened[2], 'again: the beam is on the sun-stone, and the petal door opens'); await t.sleep(900); await t.shot('tmp-shots/y-hol-3c-land.png');
+    await t.ev(`__p.placeAt(${pl.nest[0] - .9}, ${pl.nest[1] + .5})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-4-land.png'); await t.ev(`__p.tap('nestei')`); ok(await until(`__p.quest().stage === 'ei'`, 9), 'a tap on the egg in its nest: she takes it, and it is hers'); await t.sleep(600); await t.shot('tmp-shots/y-hol-egg-land.png');
+    await t.ev(`__p.walkTo(${pl.two[0]}, ${pl.two[1]})`); await t.sleep(3500); const w = await t.ev('__p.who()'), g = await t.ev('__p.info()'); ok(Math.hypot(w.egg[0] - g.girl[0], w.egg[1] - g.girl[1]) < 2.2, 'the egg hops along behind her'); await t.shot('tmp-shots/y-hol-follow-land.png');
+    await t.ev(`__p.walkTo(${pl.start[0] + .4}, ${pl.start[1] + .95})`); ok(await until(`__p.info().set === 'bos'`, 14), 'and out into the forest again'); await t.sleep(1200); const w2 = await t.ev('__p.who()'), g2 = await t.ev('__p.info()'); ok(Math.hypot(w2.egg[0] - g2.girl[0], w2.egg[1] - g2.girl[1]) < 2.6, 'the egg came out with her'); await t.shot('tmp-shots/y-egg-forest-land.png');
+  }
 }

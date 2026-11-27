@@ -36,6 +36,7 @@ export default {
     { const arch = [[-.5, 0], [.5, 0], [.5, .55]]; for (let i = 1; i < 12; i++) arch.push([Math.cos(i / 12 * Math.PI) * .5, .55 + Math.sin(i / 12 * Math.PI) * .42]); arch.push([-.5, .55]);
       const m = put(card(arch, .04, P('mouth')), rx, 0, mouthZ + .03); m.castShadow = false; }
 
+    S.door('eihol', [rx - .6, mouthZ - .15, rx + .6, mouthZ + .45], [rx, mouthZ + 1.0], [0, -1]);   // the dark mouth: the way into the egg's cave (set-hol.js)
     // where she can stand
     S.floor(null, ROCK);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_E);

@@ -17,8 +17,10 @@ import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
 import kasteel from './set-kasteel.js';
 import grot from './set-grot.js';
+import hol from './set-hol.js';
+import { EGG } from './quest.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -226,6 +228,8 @@ function buildSet(def) {
     quest,   // where the story stands (quest.js)
     sister: () => zus.kid,   // which of the two is at home asleep
     morning: () => { eveTarget = 0; skyIcon(false); },
+    findEgg: (x, z) => { quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
+    eggAt: () => [eggF.x, eggF.z],
     hatch: (x, z) => { quest.stage = 'baby'; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
     water: (h, pts) => { s.floors.push({ h, pts: pts.map(W), swim: true }); },   // light water: a floor only for somebody with a snorkel, and she swims on it
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
@@ -345,6 +349,16 @@ const fig = (name, k) => makeFigure(name, FIGS[k]);
 const girl = fig('girl', ASK.get('who') === 'fenna' ? 'fenna' : 'anna');
 const uni = fig('unicorn', 'baby');
 for (const f of [girl, uni]) tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots);
+/* the egg: once she has found it (quest.stage 'ei') it hops along behind her, as the unicorn will */
+const eggF = makeFigure('ei', EGG); eggF.g.visible = false; eggF.onTap = () => { eggF.hopV = 2.4; sfx.peep(); }; tapTarget(eggF.g, () => tapFigure(eggF), baseTaps, baseSpots);
+eggF.act = tick => { eggF.setFrame(0); eggF.tilt = eggF.hop > 0 ? Math.sin(tick * 1.4) * .16 : 0; };
+function stepEgg(dt) {
+  const on = quest.stage === 'ei'; eggF.g.visible = on; eggF.follows = on; if (!on || playing) return;
+  const dx = girl.x - eggF.x, dz = girl.z - eggF.z, d = Math.hypot(dx, dz); if (d < 1.25) return;
+  const s = Math.min(3.1, (d - 1.0) * 3) * dt;
+  if (move(eggF, dx / d * s, dz / d * s)) { if (!(eggF.hop > 0)) eggF.hopV = 2.3; if (Math.abs(dx) > .1) eggF.face = Math.sign(dx); }
+  else if (d > 4) { const c = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]].find(([x, z]) => heightAt(x, z) !== null); [eggF.x, eggF.z] = c; }
+}
 /* her sister: asleep in her own bed at home while the other one is out. The button swaps the two */
 const zus = fig('zus', girl.kid === 'anna' ? 'fenna' : 'anna'); zus.g.visible = false;
 function stepSister() {
@@ -948,7 +962,7 @@ function frame(now) {
     else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
-  stepMask(dt); stepSister();
+  stepMask(dt); stepSister(); stepEgg(dt);
   // figures: smooth positions, poses that step like stop motion
   for (const f of figures) {
     const ground = f.floatY ?? heightAt(f.x, f.z) ?? f.y;
@@ -1097,7 +1111,7 @@ window.__p = {
   /** every door of the world, and whether one would take her now */
   doors: () => ({ list: sets.flatMap(q => q.doors.map(d => [q.name, d.name, d.zone.map(v => +v.toFixed(2)), !!d.any])), armed: doorArmed, through: !!through, here: (sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z)) || {}).name || null, playing: !!playing }),
   /** where the story stands; who she is; swap the sisters (as the button does) */
-  quest: o => Object.assign(quest, o || {}), who: () => ({ girl: girl.kid, zus: zus.kid, uni: !uni.away }), swap: () => swapSisters(),
+  quest: o => Object.assign(quest, o || {}), who: () => ({ girl: girl.kid, zus: zus.kid, uni: !uni.away, egg: [eggF.x, eggF.z] }), swap: () => swapSisters(),
   /** her tools: ask, or set some ({ snorkel: true }) */
   gear: o => Object.assign(gear, o || {}),
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */
