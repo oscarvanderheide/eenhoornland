@@ -622,4 +622,18 @@ export default async function (t) {
     await t.ev(`__p.tap('heks')`); await t.sleep(900); ok((await toy('heks')).mode === 'wings', 'with all three: into the pot they go'); await t.shot('tmp-shots/y-wings-brew-land.png');
     ok(await until(`__p.ride().wings`, 4), 'a boil of stars, and the unicorn has wings'); ok((await r()).feathers.length === 0, 'the feathers are used up'); await t.sleep(800); await t.shot('tmp-shots/y-wings-land.png');
   }
+
+  /* ---------------- flying: up, over the water, and down again ---------------- */
+  if (!only || only === 'fly') {
+    await open('?set=wei', LAND); await t.sleep(1500);
+    const r = () => t.ev('__p.ride()'), w = await t.ev(`__p.places('wei')`), st = await t.ev(`__p.places('strand')`), btn = async id => t.ev(`(b => b.hidden ? null : (r => [r.left + r.width / 2, r.top + r.height / 2])(b.getBoundingClientRect()))(document.getElementById('${id}'))`);
+    await t.ev(`__p.placeAt(${w.cross[0]}, ${w.cross[1]})`); await t.sleep(2400); ok(!(await btn('fly')), 'on foot: no wings button');
+    let b = await btn('ride'); await t.click(...b); await t.sleep(700); ok((await r()).on, 'on her winged unicorn'); b = await btn('fly'); ok(!!b, 'riding: now the wings button shows');
+    await t.click(...b); ok(await until(`__p.ride().fly && __p.ride().alt > 3`, 4), 'a tap: up they fly, high'); ok(!(await btn('ride')), 'in the air the wings button is the only one'); await t.sleep(600); await t.shot('tmp-shots/y-fly-up-land.png');
+    await t.ev(`__p.flyTo(${st.start[0]}, ${st.start[1] + 6})`); await t.sleep(2600); await t.shot('tmp-shots/y-fly-over-land.png'); const g1 = await t.ev('__p.info()'); ok(g1.lift > 3, 'flying over, high up');
+    ok(await until(`(i => Math.hypot(i.girl[0] - ${st.start[0]}, i.girl[1] - ${st.start[1] + 6}) < .5)(__p.info())`, 12), 'she flies where she was asked, over the water');
+    await t.ev(`__p.flyTo(${st.start[0] + 14}, ${st.start[1] + 30})`); await t.sleep(5000); const g2 = await t.ev('__p.info()'), gr = await t.ev(`__p.ground(${g2.girl[0]}, ${g2.girl[1]})`);
+    b = await btn('fly'); await t.click(...b); ok(await until(`!__p.ride().fly`, 12), 'the button again: down they come'); const g3 = await t.ev('__p.info()'), gr3 = await t.ev(`__p.ground(${g3.girl[0]}, ${g3.girl[1]})`);
+    ok(gr3 && !gr3.swim && g3.lift < 1.2, `and land on ground (${gr3 && gr3.set}${gr ? '' : ', flown over the water first'})`); ok((await r()).on, 'still riding'); await t.sleep(800); await t.shot('tmp-shots/y-fly-landed-land.png');
+  }
 }

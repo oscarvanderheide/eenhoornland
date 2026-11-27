@@ -738,7 +738,33 @@ function giveWings() {
   gear.wings = true; gear.feathers = []; showCoins(); uni.become(FIGS.grown); uni.hopV = 3.2; sfx.neigh(); sfx.chime();
   confetti(uni.x, uni.y + 1.4, uni.z, ['#fbf7ee', '#e2d8f4', '#bba6ea', '#f2c65c'], 30, starGeo, 3); coins.reward('vleugels', uni.x, uni.y + 1.8, uni.z);
 }
-const flight = { on: false, alt: 0 };   // (flying: slice 3)
+/* ---------------- flying ----------------
+   Riding a unicorn with wings, a second round button shows (the wings): a tap and up they go, high over the trees, the
+   camera wide and following, big paper wings beating. In the air a tap anywhere is only where to fly (no toys, no doors),
+   over the water too, over the islands only. The same button lands: straight down where there is ground to stand on, or
+   first to the nearest such ground. While flying it is the only button (Oscar, in the pixel game: one button to land) */
+const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot']);
+const flyBtn = document.getElementById('fly');
+function bounds() { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const s of sets) if (!OUTSIDE.has(s.name) && s.box) { x0 = Math.min(x0, s.box[0]); z0 = Math.min(z0, s.box[1]); x1 = Math.max(x1, s.box[2]); z1 = Math.max(z1, s.box[3]); } return [x0 - 4, z0 - 4, x1 + 4, z1 + 4]; }
+const landable = (x, z) => { const fl = floorAt(x, z); return !!fl && !fl.swim && !OUTSIDE.has(fl.set.name) && free(x, z, fl.h); };
+function nearestLand() { if (landable(girl.x, girl.z)) return [girl.x, girl.z]; for (let r = .5; r < 40; r += .5) for (let a = 0; a < 24; a++) { const x = girl.x + Math.cos(a / 24 * 6.283) * r, z = girl.z + Math.sin(a / 24 * 6.283) * r; if (landable(x, z)) return [x, z]; } return null; }
+function takeOff() { if (!ride.on || !gear.wings || flight.on || playing) return; flight.on = true; flight.landing = false; flight.flights++; target = null; sfx.whoosh(); sfx.neigh(); confetti(uni.x, uni.y + .5, uni.z, ['#fbf7ee', '#e2d8f4', '#bba6ea'], 14, starGeo, 2.4); coins.reward('vliegen', uni.x, uni.y + 2, uni.z); }
+function land() { if (!flight.on || flight.landing) return; flight.landAt = nearestLand(); if (!flight.landAt) return; flight.landing = true; target = { x: flight.landAt[0], z: flight.landAt[1] }; sfx.swish(2); }
+function stepFlight(dt) {
+  const want = flight.on && !(flight.landing && Math.hypot(flight.landAt[0] - girl.x, flight.landAt[1] - girl.z) < .3) ? ALT : 0;
+  flight.alt += (want - flight.alt) * Math.min(1, dt * (want ? 1.6 : 2.4));
+  if (flight.on && flight.landing && want === 0) { target = null; [girl.x, girl.z] = flight.landAt; if (flight.alt < .05) { flight.on = false; flight.landing = false; flight.alt = 0; sfx.thud(); confetti(girl.x, girl.y + .2, girl.z, ['#d8c9a8', '#efe6d4'], 10, undefined, 1.6); } }
+  if (flight.on) { const [x0, z0, x1, z1] = bounds(); girl.x = clamp(girl.x, x0, x1); girl.z = clamp(girl.z, z0, z1); }   // (in the air: over the islands only)
+  // her wings: two big paper wings at the unicorn's shoulder, beating while she flies (folded on her side otherwise)
+  wingsG.visible = flight.alt > .15; if (wingsG.visible) { const beat = Math.sin(time * 7) * .55; wingsG.children[0].rotation.z = .35 + beat; wingsG.children[1].rotation.z = .55 + beat * .8; wingsG.position.set((168 / 280 - .5) * (uni.W || uni.H * 280 / 284) * (uni.face || 1), (1 - 150 / 284) * uni.H, -.01); wingsG.scale.x = uni.face || 1; }
+}
+// the beating wings: cut from pearl paper with a lilac underside, like her folded one
+const wingsG = new THREE.Group(); wingsG.visible = false;
+{ const pts = [[0, 0], [-.18, .25], [-.55, .62], [-.95, .86], [-1.25, .9], [-1.05, .7], [-1.3, .62], [-1.02, .44], [-1.2, .32], [-.85, .2], [-.95, .06], [-.5, .02]];
+  for (const [k, col, z] of [[1, '#e2d8f4', -.02], [.92, '#fffdf8', .02]]) { const w = card(pts.map(([x, y]) => [x * k, y * k]), .015, paper(col, { side: THREE.DoubleSide }), whiteEdge); w.position.z = z; w.castShadow = true; wingsG.add(w); } }
+uni.g.add(wingsG);
+function showFly() { if (!flyBtn) return; flyBtn.hidden = !(ride.on && gear.wings && !playing && !through); flyBtn.classList.toggle('on', flight.on); }
+if (flyBtn) flyBtn.addEventListener('click', e => { e.stopPropagation(); if (flight.on) land(); else takeOff(); });
 const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); };
 
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
@@ -806,7 +832,7 @@ function stepDoors(dt) {
     if (through.t >= .32) through = null;
     return;
   }
-  const here = sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z));
+  const here = !flight.on && sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z));
   if (!here) { doorArmed = true; return; }
   if (doorArmed && !playing && (here.any || push[0] * here.dir[0] + push[1] * here.dir[1] > .5)) goThrough(here);   // only when she walks into it, not past it
 }
@@ -901,6 +927,7 @@ canvas.addEventListener('pointerdown', e => {
     const [hx, hy] = herOnScreen(); if (Math.hypot(e.clientX - hx, e.clientY - hy) < 34) playAct = true; else hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), since: time };
     return;
   }
+  if (flight.on) { const p = groundPoint(e.clientX, e.clientY); if (p && !flight.landing) target = { x: p.x, z: p.z }; return; }   // in the air a tap is only where to fly
   const hit = pickAt(e.clientX, e.clientY);
   if (hit && hit.object.userData.tap) { hit.object.userData.tap(hit); return; }   // (the hit goes along: a field of flowers is one piece and has to know which flower)
   const near = nearTap(e.clientX, e.clientY); if (near) { near.fn(); return; }
@@ -1070,7 +1097,7 @@ function readSave() { if (ASK.has('new')) { store.del(slotKey(saveSlot)); const 
 let lastSpot = null;
 function writeSave() {
   if (!STORY || !saving || quest.stage === 'dream') return;
-  if (!playing && !through && floorAt(girl.x, girl.z)) lastSpot = [+girl.x.toFixed(2), +girl.z.toFixed(2)];
+  if (!playing && !through && !flight.on && floorAt(girl.x, girl.z)) lastSpot = [+girl.x.toFixed(2), +girl.z.toFixed(2)];
   store.set(slotKey(saveSlot), JSON.stringify({ v: 1, who: girl.kid, stage: quest.stage, gear: { ...gear, feathers: [...gear.feathers] }, coins: purse.coins, seen: [...purse.seen],
     taken: [...takenCoins], own: [...wardrobe.own], on: wardrobe.on, where: lastSpot, eve: eveTarget, t: Date.now() }));
   store.set('eh-paper-slot', String(saveSlot));
@@ -1168,8 +1195,9 @@ function frame(now) {
   let ix = 0, iz = 0;
   if (keys.has('arrowleft') || keys.has('a')) ix -= 1; if (keys.has('arrowright') || keys.has('d')) ix += 1;
   if (keys.has('arrowup') || keys.has('w')) iz -= 1; if (keys.has('arrowdown') || keys.has('s')) iz += 1;
+  if (flight.landing) ix = iz = 0;   // (coming down to land: she is set on where she lands)
   if (ix || iz) { target = null; [ix, iz] = toFloor(ix, iz); }   // the stick: left is left on the screen, up is away from the camera, whatever the shot
-  if (hold && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
+  if (hold && !flight.landing && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
   if (playing) {
     let px = 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
     if (hold) { const [hx] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
@@ -1185,17 +1213,18 @@ function frame(now) {
     } else { ix = dx / d; iz = dz / d; }
   }
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
-  if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
+  if (!playing && !flight.on) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
   // (swimming is slower than walking)
-  const speed = ride.on ? 3.6 : girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
+  const speed = flight.on ? 6.2 : ride.on ? 3.6 : girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
-    if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) { const q = target; target = null; if (q.then && Math.hypot(q.x - girl.x, q.z - girl.z) < q.near) q.then(); }
+    if (flight.on) { girl.x += mx; girl.z += mz; girl.walking = true; }   // in the air nothing is in the way
+    else if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) { const q = target; target = null; if (q.then && Math.hypot(q.x - girl.x, q.z - girl.z) < q.near) q.then(); }
     { const [sx] = toScreen(ix, iz); if (Math.abs(sx) > .2 * il) girl.face = Math.sign(sx); }
   }
   // the unicorn walks after her (or carries her)
-  stepRide(dt); showRide();
+  stepFlight(dt); stepRide(dt); showRide(); showFly();
   {
     const dx = girl.x - uni.x, dz = girl.z - uni.z, d = Math.hypot(dx, dz);
     uni.walking = false;
@@ -1283,7 +1312,8 @@ function frame(now) {
 
   // camera: a still diorama shot that leans a little towards her
   { const next = shotFor(girl.x, girl.z); if (next !== shot) { shot = next; shotChanges++; }
-    const want = playing && playing.shot ? { ...shot, ...playing.shot } : shot, k = camCut ? 1 : 1 - Math.exp(-dt * (playing && playing.shot ? playing.rate || .9 : 1.7)); for (const n of SHOT_KEYS) cam[n] += (want[n] - cam[n]) * k;   // (a toy may bring its own way of looking: the balloon pulls the camera far back)
+    const FLY = flight.alt > .2 ? { span: 22, tall: 14, rise: .42, riseTall: .58, ly: flight.alt * .85, dof: .3, range: 4, fx: 1, fz: 1, lag: 1, yaw: 0 } : null;
+    const want = playing && playing.shot ? { ...shot, ...playing.shot } : FLY ? { ...shot, ...FLY } : shot, k = camCut ? 1 : 1 - Math.exp(-dt * (playing && playing.shot ? playing.rate || .9 : FLY ? 1.2 : 1.7)); for (const n of SHOT_KEYS) cam[n] += (want[n] - cam[n]) * k;   // (a toy may bring its own way of looking: the balloon pulls the camera far back)
     const vw = portrait ? cam.tall : cam.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
     camDist = clamp(vw / 2 / tanH, cam.min, 110); camH = camDist * (portrait ? cam.riseTall : cam.rise);
     { const far = Math.max(0, camDist - 45); scene.fog.near = 30 + far * 1.6; scene.fog.far = 95 + far * 3; const cf = 140 + far * 3; if (Math.abs(camera.far - cf) > 1) { camera.far = cf; camera.updateProjectionMatrix(); post.uniforms.far.value = cf; } }   // from far back, the haze and the end of the picture move back too
@@ -1321,6 +1351,9 @@ window.__p = {
   /** riding: whether she is on it, flying, and the unicorn's state */
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
   mount: () => (ride.on ? dismount() : mount(), ride.on),
+  fly: () => (flight.on ? land() : takeOff(), flight.on),
+  flyTo(x, z) { if (flight.on && !flight.landing) target = { x, z }; },
+  ground: (x, z) => { const fl = floorAt(x, z); return fl ? { h: fl.h, set: fl.set.name, swim: fl.swim } : null; },
   hatched: () => { quest.stage = 'baby'; uni.away = false; uni.x = girl.x - 1; uni.z = girl.z + .3; uni.y = heightAt(uni.x, uni.z) ?? 0; },   // (for tests: as if the egg had hatched here)
   gear: o => { Object.assign(gear, o || {}); if (gear.grown) uni.become(FIGS[gear.wings ? 'grown' : 'groot']); showCoins(); return { ...gear }; },   // (for tests)
   grow: () => { gear.grown = true; uni.become(FIGS[gear.wings ? 'grown' : 'groot']); },
