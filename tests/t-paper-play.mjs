@@ -149,9 +149,10 @@ export default async function (t) {
     await tapAt(pl.rows[0], .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').watered === 1`, 8), 'a tap on a row: she walks over and pours');
     ok(await until(`__p.toy('boerderij').rows[0].stage === 2`, 5), 'and the carrots grow'); await t.shot('tmp-shots/y-farm-grown-land.png');
     ok((await farm()).full === 1, 'the can has water for one more row');
-    // pull one: it flies to the pig
+    // pull one: it pops into her hand, and the pig gets it
     const n0 = (await farm()).rows[0].left; await tapAt(pl.rows[0] - .95, .1, pl.rows[1] - .5); ok(await until(`__p.toy('boerderij').pulled === 1`, 6), 'a tap on grown carrots: she pulls one out');
-    await t.sleep(1100); ok((await farm()).rows[0].left === n0 - 1 && await t.ev(`__p.hop('varken')`) >= 0, 'one carrot fewer in the row, and it went to the pig');
+    await t.sleep(900); ok((await farm()).rows[0].left === n0 - 1 && (await farm()).carrot, 'one carrot fewer in the row, and it is in her hand'); await t.shot('tmp-shots/y-farm-carrot-land.png');
+    const pg = await t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === 'varken'))`); await t.ev(`__p.walkTo(${pg[0] - 1.3}, ${pg[1] + .4})`); await t.sleep(2600); await t.ev(`__p.tap('varken')`); ok(await until(`__p.toy('boerderij').fed === 1`, 3), 'a tap on the pig: it gets the carrot'); await t.shot('tmp-shots/y-farm-fed-land.png');
     // the scarecrow's birds
     await t.ev(`__p.placeAt(${pl.crow[0] + 4.5}, ${pl.crow[1] + 1.5})`); await t.sleep(4200); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'from a way off the birds sit on the scarecrow');
     await t.ev(`__p.placeAt(${pl.crow[0]}, ${pl.crow[1]})`); await t.sleep(1500); ok((await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: up they fly'); await t.shot('tmp-shots/y-farm-crow-land.png');

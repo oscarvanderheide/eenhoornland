@@ -515,7 +515,9 @@ function stepWind(dt, stepped) {
    Resting on a bench or the picnic cloth it opens up a little; in the evening it is darker; indoors it is quieter. */
 const tune = { v: null, out: null, lp: null, chord: 0, t: 0, rest: 0 };
 const CHORDS = [[130.8, 196, 261.6, 329.6], [146.8, 220, 261.6, 349.2], [110, 164.8, 261.6, 329.6], [98, 196, 246.9, 293.7], [130.8, 196, 293.7, 392]];
+const DRONE = false;   // Oscar, 2026-11-27: "the background music is weird. its like drone sound ... for now get rid of it". The chord still moves on, silently: the musicians play out of it
 function stepTune(dt) {
+  if (!DRONE) { tune.t -= dt; if (tune.t <= 0) { tune.t = 18 + Math.random() * 8; tune.chord = (tune.chord + 1 + Math.floor(Math.random() * 2)) % CHORDS.length; } return; }
   if (!ac || ac.state !== 'running') return;
   if (!tune.v) {
     tune.lp = ac.createBiquadFilter(); tune.lp.type = 'lowpass'; tune.lp.frequency.value = 700; tune.out = ac.createGain(); tune.out.gain.value = 0; tune.lp.connect(tune.out); tune.out.connect(ac.destination);

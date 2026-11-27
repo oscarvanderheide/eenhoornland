@@ -3,7 +3,7 @@
 //   the well     with the can: the bucket goes down and comes up full, and the can is full. Good for two rows
 //   the bed      one patch of dug brown soil with a raised ridge for each row; a tap anywhere on it means the row nearest
 //   a row        seeds in little mounds. With a full can: she pours, they sprout, and the carrots grow, in two steps you can watch
-//   grown        a tap pulls one out, and it flies to whoever is hungry nearest by: the pig, or her unicorn
+//   grown        a tap pulls one out: it pops up into her hand, and whoever she taps next gets it (the pig, her unicorn, ...)
 //   the row      empty, it is seeds again after a while
 // When something is missing (no can, an empty can) the thing she needs gives a little hop: there is no wrong.
 // Also here: the scarecrow, with three birds that fly up when she comes close and settle again when she has gone.
@@ -34,7 +34,7 @@ export function well(S, x, y, z) {
     step(dt) { if (dip > 0) { const was = dip; dip = Math.max(0, dip - dt / .95); if (was > .5 && dip <= .5) { S.sfx.splash(); S.confetti(...S.at([x, z]).flatMap((v, i) => i ? [y + .6, v] : [v]), ['#8fc3cc', '#f6efe2', '#6fb0b8'], 8, undefined, 2); } place(); } } };
 }
 
-export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters = [] }) {
+export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0 }) {
   const { girl, sfx } = S;
   /* ---------------- the watering can: a paper card like everything she holds (things.js: empty, full, pouring) ---------------- */
   const can = S.figure('gieter', THINGS.gieter), carrot = S.figure('wortel', THINGS.wortel); carrot.g.visible = false;
@@ -68,7 +68,9 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
   { const zs = rowsAt.map(r => r[1]), xs0 = rowsAt.map(r => r[0]), cx = (Math.min(...xs0) + Math.max(...xs0)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
     const bed = slab(blob(cx, cz, (Math.max(...xs0) - Math.min(...xs0)) / 2 + 1.55, (Math.max(...zs) - Math.min(...zs)) / 2 + .75, 520, 36, .05), y + .02, .02, paper('#a98f6f'), paper('#8d7557')); S.root.add(bed);
     S.tap(bed, hit => { const p = hit && hit.point ? [hit.point.x, hit.point.z] : [girl.x, girl.z]; tapRow(rows.slice().sort((a, b) => Math.hypot(a.mid[0] - p[0], a.mid[1] - p[1]) - Math.hypot(b.mid[0] - p[0], b.mid[1] - p[1]))[0]); }); }
-  let pour = null, flying = null, pulled = 0, watered = 0;
+  let pour = null, flying = null, pulled = 0, watered = 0, held = false, fed = 0;
+  const me = {}, letGo = () => { held = false; carrot.g.visible = false; girl.poseName = null; };   // (put down, it is simply gone: there are more)
+  S.offer(who => { if (!held) return false; letGo(); S.hands.free(me); fed++; who.hopV = 2.6; sfx.munch(); S.confetti(who.x, (who.y || 0) + .6, who.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); return 'wortel'; });
   function tapRow(row) {
     if (S.playing() || pour) return;
     if (row.stage === 2 && row.left > 0) { S.walkThen(row.at[0], row.at[1], () => pull(row), 1.1); return; }
@@ -80,14 +82,13 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
   function pull(row) {
     if (row.left <= 0 || flying) return; row.left--; row.show(); pulled++; sfx.boing();
     const i = row.left, from = new THREE.Vector3(row.mid[0] + [-.8, -.4, 0, .4, .8][i], y + .1, row.mid[1]);
-    const who = eaters.map(e => e()).filter(Boolean).sort((a, b) => Math.hypot(a.x - from.x, a.z - from.z) - Math.hypot(b.x - from.x, b.z - from.z))[0] || S.uni;
-    carrot.g.visible = true; flying = { from, who, t: 0 };
+    if (held) S.hands.free(me); S.hands.take(me, letGo); held = false; carrot.g.visible = true; flying = { from, t: 0 };   // up it pops, into her hand
     if (row.left === 0) row.back = 45;
   }
   S.tap(theWell.g, () => { if (S.playing() || theWell.busy()) return; S.walkThen(theWell.at[0], theWell.at[1], () => { if (theWell.draw() && C.held) setTimeout(() => { C.full = 2; sfx.chime(); }, 600); }, 1.2); });
 
   return {
-    state: () => ({ held: C.held, full: C.full, rows: rows.map(r => ({ stage: r.stage, left: r.left })), pulled, watered, can: C.at }),
+    state: () => ({ carrot: held, fed, held: C.held, full: C.full, rows: rows.map(r => ({ stage: r.stage, left: r.left })), pulled, watered, can: C.at }),
     places: { can: [C.at[0] - .35, C.at[1] + .1], well: theWell.at, row: rows[0].at },
     // for other things that want water (the fountain fills the can too; the brambles on the bridge are watered open)
     holding: () => C.held, full: () => C.full, hint() { can.hopV = 2.6; sfx.peep(); },
@@ -104,11 +105,12 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
         if (r.grow) { r.grow += dt; const st = r.grow > 1.7 ? 2 : r.grow > .7 ? 1 : 0; if (st !== r.stage) { r.stage = st; r.left = 5; r.show(); sfx.hop(); } if (r.grow > 1.7) r.grow = 0; }
         if (r.back > 0) { r.back -= dt; if (r.back <= 0) { r.stage = 0; r.left = 5; r.show(); } }
       }
-      if (flying) {   // a pulled carrot: up, over, and into a hungry mouth
-        flying.t += dt; const k = Math.min(1, flying.t / .7), w = flying.who, ty = (w.y || 0) + .2;
-        carrot.x = flying.from.x + (w.x - flying.from.x) * k; carrot.z = flying.from.z + (w.z - flying.from.z) * k + .05; carrot.floatY = carrot.y = flying.from.y + (ty - flying.from.y) * k + Math.sin(k * Math.PI) * 1.1; carrot.lean = k * 6;
-        if (k >= 1) { carrot.g.visible = false; w.hopV = 2.6; sfx.munch(); S.confetti(w.x, ty + .4, w.z, ['#f4a6c4', '#f8dde4', '#e8893a'], 8, undefined, 2); flying = null; }
+      if (flying) {   // a pulled carrot: up out of the soil in a little arc, and into her hand
+        flying.t += dt; const k = Math.min(1, flying.t / .45), h = S.hand(); girl.poseName = 'hold';
+        carrot.x = flying.from.x + (h.x - flying.from.x) * k; carrot.z = flying.from.z + (h.z + .05 - flying.from.z) * k; carrot.floatY = carrot.y = flying.from.y + (h.y - .1 - flying.from.y) * k + Math.sin(k * Math.PI) * .7; carrot.lean = (1 - k) * 6;
+        if (k >= 1) { flying = null; held = true; carrot.lean = 0; }
       }
+      if (held) { carrot.g.visible = !S.playing(); if (carrot.g.visible) { girl.poseName = 'hold'; const h = S.hand(); carrot.x = h.x + girl.face * .06; carrot.z = h.z + .05; carrot.floatY = carrot.y = h.y - .1; } }
     },
   };
 }

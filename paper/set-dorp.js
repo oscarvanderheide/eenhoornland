@@ -128,7 +128,7 @@ export default {
       eend1: duck(S, ...pondSpots[0], 'eend1', pondSpots), eend2: duck(S, ...pondSpots[1], 'eend2', [pondSpots[1], pondSpots[2], pondSpots[3], pondSpots[0]]) };
 
     const flies = { vlinder1: butterfly(S, .3 * K - 3.6, -5.5 * K + .3, 'v1'), vlinder2: butterfly(S, .3 * K + 3.7, -5.5 * K + .2, 'v2', '#9ed9cf', '#f6efe2'), vlinder3: butterfly(S, F[0] - 2.4, F[1] + 1.6, 'v3', '#f2c65c', '#e98f8f') };
-    const theFarm = farm(S, { can: [F[0] + 1.7, F[1] - 1.3], well: theWell, rows: [0, 1, 2].map(i => [F[0] - 4.6, F[1] - .9 + i * 1.0]), y: H_GRASS, eaters: [() => live.varken.f] });
+    const theFarm = farm(S, { can: [F[0] + 1.7, F[1] - 1.3], well: theWell, rows: [0, 1, 2].map(i => [F[0] - 4.6, F[1] - .9 + i * 1.0]), y: H_GRASS });
     mills.push(pinwheel(S, F[0] - 2.6, H_GRASS, F[1] + 2.4, '#f2c65c', '#e98f8f'));
 
     /* ---------------- the unicorns' meadow: a fence with an open gate, and the race arch beside it ---------------- */
