@@ -69,7 +69,7 @@ export default {
     stepping([[10.4, -.6], [10.3, -1.5], [10.45, -2.4], [10.6, -3.2]], 450);                                                                     // up to the balloon
     lay(blob(6.2, 5.3, 2.7, 1.8, 437, 36, .06), GROUND.high);                                                                                     // the sheep's pasture: a paler patch of grass
     stepping([[-.5, 10.0], [-.45, 10.5]], 458);                                                                                                  // over the sand to the bridge to the beach (set-strand.js)
-    stepping([[28.0, -3.0], [28.7, -2.6], [29.3, -2.1]], 455);                                                                                   // on from the last stone
+    stepping([[28.0, -3.0], [28.7, -2.6], [29.3, -2.1], [30.0, -2.1], [30.6, -2.1]], 455);                                                                                   // on from the last stone
 
     /* ---------------- things ---------------- */
     const bakery = cottage(S, 3.2, H_GRASS, -5.7, null, { wall: '#f6e7c8', roof: '#5f8fb0', door: '#b9675a' });

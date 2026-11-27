@@ -159,3 +159,24 @@ export function rabbit(S, holes) {
     else if (mode === 'out') { const k = Math.min(1, t / .4); f.x = H[at][0] + .55 * k; f.z = H[at][1] + .02 + .08 * k; if (k >= 1) mode = null; }
   } };
 }
+
+/* ---------------- the castle ---------------- */
+/** the peacock: a tap and its tail opens half, then all the way, a fan of eyes. It holds it a while. A tap on the fan: it shimmers */
+export function peacock(S, x, z) {
+  const { girl, sfx } = S, f = make(S, 'pauw', x, z); let t = -1, fans = 0, shimmers = 0;
+  f.onTap = () => { if (t < 0) { t = 0; fans++; sfx.flutter(); } else if (t > .7) { shimmers++; f.hopV = 1.6; sfx.flutter(); S.confetti(f.x, f.y + .8, f.z, ['#5fa8a0', '#8fc3e0', '#f2c65c', '#7fa676'], 12, undefined, 2); t = Math.min(t, 1.5); } };
+  f.act = () => f.setFrame(t < 0 ? 0 : t < .7 ? 1 : 2);
+  return { f, state: () => ({ frame: f.frame, fans, shimmers }), step({ dt }) { if (t < 0) { if (near(f, girl, 2.4)) look(f, girl); return; } const was = t; t += dt; if (was < .7 && t >= .7) { f.hopV = 1.4; sfx.swish(3); } if (t > 5.5) t = -1; } };
+}
+/** the baby dragon sleeps until she comes near. A tap: a smoke ring. Again: a smoke ring. The third time: a little flame,
+ *  and fireworks go up. Then it starts over */
+export function dragon(S, x, z) {
+  const { girl, sfx } = S, f = make(S, 'draakje', x, z); let t = -1, n = 0, puffs = 0, fires = 0, pops = [];
+  f.onTap = () => { if (t >= 0) return; t = 0; n++; if (n < 3) { puffs++; sfx.swish(2); S.confetti(f.x + f.face * .5, f.y + .65, f.z + .05, ['#e9e4dc', '#d8d2c8', '#f6efe2'], 7, undefined, .9, true); } else { n = 0; fires++; f.hopV = 2; sfx.whoosh(); pops = [.25, .6, .95].map((at, i) => ({ at, x: f.x + (i - 1) * 1.4 + f.face * .6, done: false })); } };
+  f.act = () => f.setFrame(t >= 0 ? (n === 0 ? 2 : 1) : near(f, girl, 4.5) ? 0 : 3);
+  return { f, state: () => ({ frame: f.frame, puffs, fires, n }), step({ dt }) {
+    if (t < 0) { if (near(f, girl, 3)) look(f, girl); return; }
+    t += dt; for (const p of pops) if (!p.done && t > p.at) { p.done = true; sfx.hop(); S.confetti(p.x, f.y + 2.6 + (p.at * 7 % 1), f.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea', '#e98f8f'], 22, S.starGeo, 3.2); }
+    if (t > (n === 0 ? 1.5 : .9)) { t = -1; pops = []; }
+  } };
+}

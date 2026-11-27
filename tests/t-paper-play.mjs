@@ -329,4 +329,24 @@ export default async function (t) {
     ok(await until(`__p.toy('regenboog').high > 4`, 6), 'over the top'); await t.sleep(250); await t.shot('tmp-shots/y-bow-top-land.png');
     ok(await until(`__p.toy('regenboog').mode === null`, 8), 'and down the other side'); await t.sleep(700); const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null, 'she stands on the grass again'); await t.shot('tmp-shots/y-bow-down-land.png');
   }
+
+  /* ---------------- the castle: windows with somebody behind them, the carousel, the peacock, the baby dragon ---------------- */
+  if (!only || only === 'castle') {
+    await open('?set=kasteel', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('kasteel')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
+    ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('wei')`)).far[0]}, ${(await t.ev(`__p.places('wei')`)).far[1]})`), 'the bridge joins the castle to the meadow');
+    await t.ev(`__p.placeAt(${pl.gate[0] + 2.6}, ${pl.gate[1] + 1.6})`); await t.sleep(2600);
+    await tapOn('raam0'); await t.sleep(900); ok((await toy('kasteel')).open[0] && !(await toy('kasteel')).open[1], 'a tap on a window of the castle: its shutters open, the others stay shut');
+    await tapOn('raam2'); await t.sleep(900); ok((await toy('kasteel')).open[2], 'the high window too'); await t.shot('tmp-shots/y-castle-windows-land.png');
+    ok(await until(`!__p.toy('kasteel').open[0] && !__p.toy('kasteel').open[2]`, 6), 'and after a while they close again');
+    await by('pauw', 1.6, 1.2); await t.ev(`__p.tap('pauw')`); await t.sleep(1100); ok((await toy('pauw')).frame === 2, 'a tap on the peacock: its tail opens into a fan'); await t.shot('tmp-shots/y-peacock-land.png');
+    await by('draakje', 1.8, 1.3); ok((await toy('draakje')).frame === 0, 'the baby dragon wakes when she comes near'); await t.ev(`__p.tap('draakje')`); await t.sleep(300); ok((await toy('draakje')).frame === 1, 'a tap: a smoke ring'); await t.shot('tmp-shots/y-dragon-land.png');
+    await t.sleep(900); await t.ev(`__p.tap('draakje')`); await t.sleep(1100); await t.ev(`__p.tap('draakje')`); await t.sleep(700); ok((await toy('draakje')).fires === 1 && (await toy('draakje')).frame === 2, 'the third tap: a flame, and fireworks'); await t.shot('tmp-shots/y-dragon-fire-land.png');
+    // the carousel
+    await t.ev(`__p.placeAt(${pl.carousel[0] - 1.5}, ${pl.carousel[1] + .4})`); await t.sleep(2400); await tapOn('draaimolen'); ok(await until(`__p.toy('draaimolen').mode === 'ride'`, 7), 'a tap on the carousel: she and the unicorn get on');
+    await t.sleep(300); ok(Math.abs((await toy('draaimolen')).w) < .05, 'it stands still by itself'); await t.ev(`__p.keys(['d'])`); await t.sleep(1600); await t.ev(`__p.keys([])`); const c1 = await toy('draaimolen'); ok(Math.abs(c1.w) > 2, `pushing turns it (${c1.w.toFixed(1)} round a second)`); await t.shot('tmp-shots/y-carousel-land.png');
+    await t.sleep(1500); const c2 = await toy('draaimolen'); ok(Math.abs(c2.w) > 1 && Math.abs(c2.w) < Math.abs(c1.w), 'let go, it keeps turning, a little slower'); await t.shot('tmp-shots/y-carousel-2-land.png');
+    await t.send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 }); await t.send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
+    ok(await until(`__p.toy('draaimolen').mode === null`, 8), 'a touch on her: it stops, and off they get'); await t.sleep(600); const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null && await t.ev('__p.uniOk()'), 'both stand on the ground again');
+  }
 }

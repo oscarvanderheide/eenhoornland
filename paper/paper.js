@@ -14,8 +14,9 @@ import { THINGS } from './things.js';
 import { PROPS } from './people.js';
 import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
+import kasteel from './set-kasteel.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.

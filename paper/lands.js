@@ -16,7 +16,7 @@ export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K -
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
  *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
-export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog']];
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog', 'kasteel']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -68,5 +68,14 @@ export function regenboogLand() {
   return {
     SAND: blob(0, 0, 11.6, 8.2, 601, 80, .04), GRASS: blob(0, -.1, 10.8, 7.4, 602, 80, .04), POND: blob(6.6, 2.6, 1.9, 1.3, 603, 32, .06),
     bridge: { x0: -(11.2 + 12 + .7), x1: -10.6, z0: -.6, z1: .6 },
+  };
+}
+
+/** the castle's island, east of the meadow's waterfall over a long bridge (its own, running west). Made at its real size */
+ORIGIN.kasteel = [ORIGIN.wei[0] + 30.7 + 12 + 10.9, ORIGIN.wei[1] - 2.1];
+export function kasteelLand() {
+  return {
+    SAND: blob(0, 0, 11.4, 8.6, 701, 80, .04), GRASS: blob(0, -.1, 10.6, 7.8, 702, 80, .04),
+    bridge: { x0: -(10.9 + 12 + .2), x1: -10.3, z0: -.6, z1: .6 },
   };
 }
