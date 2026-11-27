@@ -180,6 +180,7 @@ export default {
       for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (grassOk(x, z)) planted.push([x, base + up, z, { tuft: true }]); } });
     findSpots(R, 9, 3.8, anywhere, grassOk, plots).forEach(([cx, cz]) => inOval(R, cx, cz, .6, .38, 5, .17, grassOk).forEach(([x, z]) => planted.push([x, yAt(x, z), z, { tuft: true }])));   // tufts in tight clumps
     for (const [x, y, z] of feet) for (const dx of [-.32, .3]) if (grassOk(x + dx, z + .18)) planted.push([x + dx, y, z + .18, { tuft: true }]);                                       // and at the foot of every tree
+    for (let i = planted.length - 1; i >= 0; i--) { const [x, , z, o] = planted[i]; if (x > F[0] - 6.4 && x < F[0] - (o && o.tuft ? 1.9 : 2.8) && z > F[1] - 1.9 && z < F[1] + 2.1) planted.splice(i, 1); }   // nothing grows on the farm's dug bed (farm.js)
     let pi = 0; const grass = meadow(S, planted.length, () => planted[pi++] || null, 401, 0, undefined, bunch);
 
     const [sx, sz] = T(31.5, 36.6);

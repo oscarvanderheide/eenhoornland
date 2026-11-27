@@ -1,9 +1,10 @@
 // The farm: a loop of small real actions, each a tap away.
 //   the can      a tap and she walks over and picks it up (she carries it in front of her); a tap on it again puts it down
 //   the well     with the can: the bucket goes down and comes up full, and the can is full. Good for two rows
-//   a row        seedlings. With a full can: she pours, and the carrots grow, in two steps you can watch
+//   the bed      one patch of dug brown soil with a raised ridge for each row; a tap anywhere on it means the row nearest
+//   a row        seeds in little mounds. With a full can: she pours, they sprout, and the carrots grow, in two steps you can watch
 //   grown        a tap pulls one out, and it flies to whoever is hungry nearest by: the pig, or her unicorn
-//   the row      empty, it is seedlings again after a while
+//   the row      empty, it is seeds again after a while
 // When something is missing (no can, an empty can) the thing she needs gives a little hop: there is no wrong.
 // Also here: the scarecrow, with three birds that fly up when she comes close and settle again when she has gone.
 import { THREE, paper, card, slab, blob } from './kit.js';
@@ -12,6 +13,7 @@ import { THINGS } from './things.js';
 const mesh = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 const box = (w, h, d, col) => mesh(new THREE.BoxGeometry(w, h, d), col), cyl = (r0, r1, h, col, n = 12) => mesh(new THREE.CylinderGeometry(r0, r1, h, n), col);
 const LEAF = [[-.1, 0], [-.07, .16], [-.02, .05], [.02, .22], [.06, .06], [.1, .15], [.1, 0]];
+const MOUND = new THREE.SphereGeometry(.12, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), SEED = new THREE.SphereGeometry(.03, 8, 5);
 
 /** the well: a ring of pale stone, two posts, a little roof, and a bucket on a rope that goes down and comes up */
 export function well(S, x, y, z) {
@@ -46,20 +48,26 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0, eaters
     const g = new THREE.Group(); g.position.set(rx, y, rz); S.root.add(g);
     const stages = [0, 1, 2].map(st => { const sg = new THREE.Group(); sg.userData.live = true; g.add(sg); return sg; });
     const xs = [-.8, -.4, 0, .4, .8];
-    for (const px of xs) { const a = card(LEAF, .02, paper('#86a466')); a.position.set(px, 0, 0); a.scale.setScalar(.6); stages[0].add(a); }
-    for (const px of xs) { const a = card(LEAF, .02, paper('#7f9d5e')); a.position.set(px, 0, 0); a.scale.setScalar(1.15); stages[1].add(a); const b = card(LEAF, .02, paper('#9bb877')); b.position.set(px + .05, 0, .03); b.rotation.y = .7; stages[1].add(b); }
+    // seeds: a little mound of soil each, with a pale seed on top
+    for (const px of xs) { const m = mesh(MOUND, '#8a6f50'); m.scale.set(1, .45, .8); m.position.set(px, .04, 0); stages[0].add(m); const sd = mesh(SEED, '#efe2c4'); sd.position.set(px + .02, .095, .01); stages[0].add(sd); }
+    // sprouts: two small leaves
+    for (const px of xs) { const m = mesh(MOUND, '#8a6f50'); m.scale.set(1, .45, .8); m.position.set(px, .04, 0); stages[1].add(m); const a = card(LEAF, .02, paper('#86a466')); a.position.set(px, .06, 0); a.scale.setScalar(.75); stages[1].add(a); const b = card(LEAF, .02, paper('#9bb877')); b.position.set(px + .04, .06, .03); b.rotation.y = .7; b.scale.setScalar(.6); stages[1].add(b); }
     S.glue(stages[0]); S.glue(stages[1]);
-    const plants = xs.map(px => { const p = new THREE.Group(); p.userData.live = true; p.position.x = px; stages[2].add(p);
+    const plants = xs.map(px => { const p = new THREE.Group(); p.userData.live = true; p.position.set(px, .045, 0); stages[2].add(p);
       const a = card(LEAF, .02, paper('#6f9057')); a.scale.setScalar(1.6); a.position.y = .07; p.add(a); const b = card(LEAF, .02, paper('#86a466')); b.scale.setScalar(1.4); b.position.set(.04, .07, .03); b.rotation.y = .8; p.add(b);
       const top = mesh(new THREE.SphereGeometry(.075, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#e8893a'); top.position.y = .01; p.add(top); S.glue(p); return p; });
     const row = { g, stages, plants, stage: 0, grow: 0, left: 5, back: 0, at: S.at([rx, rz + .55]), mid: S.at([rx, rz]), n };
     const show = () => { stages.forEach((sg, i) => { sg.visible = i === row.stage; }); plants.forEach((p, i) => { p.visible = i < row.left; }); };
     row.show = show; show();
     S.tap(g, () => tapRow(row));
-    // a strip of soil under the row: also what a finger finds
-    const soil = slab(blob(rx, rz, 1.2, .3, 500 + n, 20, .06), y + .02, .02, paper('#a98f6f'), paper('#8d7557')); S.root.add(soil); S.tap(soil, () => tapRow(row));
+    // its ridge of heaped soil, darker than the bed
+    const ridge = slab(blob(rx, rz, 1.15, .2, 500 + n, 20, .04), y + .05, .03, paper('#957a5a'), paper('#7f6649')); S.root.add(ridge); S.tap(ridge, () => tapRow(row));
     return row;
   });
+  // the bed: one patch of dug soil under all the rows, a little wider than they are; a tap on it means the nearest row
+  { const zs = rowsAt.map(r => r[1]), xs0 = rowsAt.map(r => r[0]), cx = (Math.min(...xs0) + Math.max(...xs0)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    const bed = slab(blob(cx, cz, (Math.max(...xs0) - Math.min(...xs0)) / 2 + 1.55, (Math.max(...zs) - Math.min(...zs)) / 2 + .75, 520, 36, .05), y + .02, .02, paper('#a98f6f'), paper('#8d7557')); S.root.add(bed);
+    S.tap(bed, hit => { const p = hit && hit.point ? [hit.point.x, hit.point.z] : [girl.x, girl.z]; tapRow(rows.slice().sort((a, b) => Math.hypot(a.mid[0] - p[0], a.mid[1] - p[1]) - Math.hypot(b.mid[0] - p[0], b.mid[1] - p[1]))[0]); }); }
   let pour = null, flying = null, pulled = 0, watered = 0;
   function tapRow(row) {
     if (S.playing() || pour) return;
