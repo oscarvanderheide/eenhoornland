@@ -345,7 +345,7 @@ function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
   const poseOf = i => fig.poseName && fig.poseName !== 'sit' ? fig.poseName : fig.poseName === 'sit' && !i ? 'sit' : i ? 'walk' : 'stand';
   const tex = (view, i, ps = poseOf(i), eyes = fig.eyes) => {
     const key = kid ? `${view}|${ps}|${i}|${eyes}` : `${view}|${i}`; let t = cache.get(key);
-    if (!t) { t = new THREE.CanvasTexture(cutout(w, h, kid ? c => drawKid(c, kid, { view, pose: ps, f: i, wear: fig.wear, eyes }) : c => views[view](c, i), PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; cache.set(key, t); }
+    if (!t) { t = new THREE.CanvasTexture(cutout(w, h, kid ? c => drawKid(c, kid, { view, pose: ps, f: i, wear: fig.wear, eyes }) : c => (views[view] || views.side)(c, i), PAPER, 1.25)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; cache.set(key, t); }
     return t;
   };
   fig.poseOf = poseOf;
@@ -355,7 +355,7 @@ function makeFigure(name, { w, h, draw, front, back, frames, size, kid }) {
   /** put other things on her: every drawing of her is thrown away and made again */
   fig.redress = wear => { fig.wear = wear || {}; for (const t of cache.values()) t.dispose(); cache.clear(); mat.map = null; fig.setFrame(fig.frame); fig.warmUp(false); };
   /** she becomes her sister (the two cards are not the same size): a new sheet of card and new drawings */
-  fig.become = spec => { ({ w, h, size, kid } = spec); H = size; W = size * w / h; views.side = spec.draw; views.front = spec.front; views.back = spec.back; Object.assign(fig, { kid, w, h, W, H });
+  fig.become = spec => { ({ w, h, size, kid } = spec); H = size; W = size * w / h; views.side = spec.draw; views.front = spec.front; views.back = spec.back; Object.assign(fig, { kid, w, h, W, H }); if (!views[fig.view]) fig.view = 'side';
     mesh.geometry.dispose(); mesh.geometry = new THREE.PlaneGeometry(W, H); mesh.geometry.translate(0, H / 2, 0); for (const t of cache.values()) t.dispose(); cache.clear(); mat.map = depth.map = null; fig.setFrame(fig.frame); fig.warmUp(false); };
   /** a point on her card (drawing units) as a place in the world */
   fig.point = ([px, py]) => mesh.localToWorld(new THREE.Vector3((px / w - .5) * W, (1 - py / h) * H, 0));

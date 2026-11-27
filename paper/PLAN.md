@@ -68,6 +68,14 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - **Bedroom and dream:** drawn paper blankets fitted to each sleeper (face free); a round cloud like his picture, higher, its bubbles above the girls' heads; the egg in the dream (and on the meadow) cracks, confetti, and the baby is there.
 - **Coins, all round** (his yes, the same evening): 21 coins lie about the village, forest, meadow, beach and castle, and a coin comes the first time for: the egg found, the hatching, the potion, each of the cave's three puzzles, the hookshot's chest, the otter's snorkel, the first zipline ride, the first somersault on the seesaw, the first carrot fed, everyone at the harp, everyone at the picnic (`S.coins.reward` with its own key). Still to do: a camera push-in for buying.
 
+**The story's second act, built 2026-11-27 (evening)** (Oscar: "once we have the grown unicorn, can we ride it? we need to add quest where we find wings for it and then we can fly it"; tests `ride`, `wings`, `fly`, `savewings`):
+
+- **Growing:** the rainbow tree in the rainbow island's middle (pastel crown, rainbow fruit hanging under it; `rainbowTree` in `wonders.js`). Shaken, it drops a rainbow fruit; given to the baby unicorn she grows into the big unicorn (a moment with the camera close). The story stage stays `'baby'`; growing, wings and feathers live in `gear` (`grown`, `wings`, `feathers`), saved with the rest.
+- **Riding:** with the big unicorn, a round button bottom right (her head) puts the girl on its back and takes her off again; riding is a way of walking (faster), not a toy; a toy or a door gets her off first.
+- **The wings:** once grown, the owl (forest), the gull (beach) and the peacock (castle) each let a feather drift down at a tap (again while it is still missing); feathers she has show after her coins; the witch, her potion done, wants all three and brews them into wings (`FIGS.groot` has no wing, `FIGS.grown` its folded wing).
+- **Flying:** riding with wings, a second button (the wings) takes them up high with big paper wings beating, the camera wide; in the air a tap is only where to fly, over the water too, over the outdoor islands only, no doors; the same button lands on the nearest ground. While flying it is the only button.
+- `?set=...` links start with a grown, winged unicorn, so flying can be tried at once.
+
 - Still ideas: a lagoon at the beach out to the seal's rock; a spot of bubbles where she dives into a cut-paper sea seen from the side; more things for the hookshot to catch (he said it would be funny if it works out: tell me what it should grab).
 
 ## Every island its own (Oscar, 2026-11-27)

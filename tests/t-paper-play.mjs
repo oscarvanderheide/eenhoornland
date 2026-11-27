@@ -636,4 +636,14 @@ export default async function (t) {
     b = await btn('fly'); await t.click(...b); ok(await until(`!__p.ride().fly`, 12), 'the button again: down they come'); const g3 = await t.ev('__p.info()'), gr3 = await t.ev(`__p.ground(${g3.girl[0]}, ${g3.girl[1]})`);
     ok(gr3 && !gr3.swim && g3.lift < 1.2, `and land on ground (${gr3 && gr3.set}${gr ? '' : ', flown over the water first'})`); ok((await r()).on, 'still riding'); await t.sleep(800); await t.shot('tmp-shots/y-fly-landed-land.png');
   }
+
+  /* ---------------- the save keeps the grown unicorn, her wings and the feathers she has ---------------- */
+  if (!only || only === 'savewings') {
+    await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    await t.ev('__p.hatched()'); await t.ev(`__p.gear({ grown: true, wings: false, feathers: ['uil', 'pauw'] })`); await t.sleep(5000);
+    await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500);
+    const a = await t.ev('__p.ride()'); ok(a.grown && !a.wings && a.feathers.join() === 'uil,pauw', 'opened again: the grown unicorn, and the two feathers she had');
+    await t.ev(`__p.gear({ wings: true, feathers: [] })`); await t.sleep(5000); await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500);
+    ok((await t.ev('__p.ride()')).wings, 'and her wings'); await t.shot('tmp-shots/y-save-wings-land.png');
+  }
 }
