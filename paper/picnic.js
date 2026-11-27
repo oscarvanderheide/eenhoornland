@@ -12,22 +12,14 @@ export function picnic(S, x, y, z, guests) {
   const W = 2.2, D = 1.5, rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
   g.add(slab(rect(-W / 2, -D / 2, W / 2, D / 2), .03, .03, paper('#d9706c'), paper('#c05f5c')));
   for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) { const q = slab(rect(-W / 2 + i * W / 6 + .02, -D / 2 + j * D / 4 + .02, -W / 2 + (i + 1) * W / 6 - .02, -D / 2 + (j + 1) * D / 4 - .02), .036, .006, paper('#fbf5ea'), paper('#fbf5ea')); q.castShadow = false; g.add(q); }
-  const add = (m, px, py, pz, to = g) => { m.position.set(px, py, pz); m.castShadow = true; to.add(m); return m; };
-  // the basket, full of apples
-  const basket = new THREE.Group(); g.add(basket);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.2, .16, .2, 12), paper('#c79a66')), -.62, .13, -.42, basket);
-  { const h = new THREE.Mesh(new THREE.TorusGeometry(.18, .02, 5, 12, Math.PI), paper('#a97a4e')); add(h, -.62, .23, -.42, basket); }
-  for (const [ax, az] of [[-.69, -.45], [-.57, -.38], [-.59, -.5]]) add(new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), paper('#d9574f')), ax, .25, az, basket);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .012, 14), paper('#fbf5ea')), .62, .045, -.35);                   // a plate
-  for (const [ax, az, c] of [[.56, -.4, '#d9706c'], [.7, -.3, '#e6b748']]) add(new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), paper(c)), ax, .11, az);
-  // a little bowl of hazelnuts
-  const bowl = new THREE.Group(); g.add(bowl);
-  add(new THREE.Mesh(new THREE.SphereGeometry(.16, 14, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), paper('#9fc4c9', { side: THREE.DoubleSide })), -.72, .19, .22, bowl);
-  for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28; add(new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 6), paper(i % 2 ? '#9a6a40' : '#b07c4c')), -.72 + Math.cos(a) * .07 * (i ? 1 : 0), .2, .22 + Math.sin(a) * .06 * (i ? 1 : 0), bowl); }
+  // the food: cut-paper cards like everything she holds (Oscar: "let the apples and food and whatnot ... all be paper style"): the basket of apples, a bowl of hazelnuts, an apple and a pear on the cloth
+  const [cx0, cz0] = S.at([x, z]), card2 = (name, spec, dx, dz, up = 0) => { const f = S.figure(name, spec); f.x = cx0 + dx; f.z = cz0 + dz; f.floatY = f.y = y + .04 + up; f.thing = true; return f; };
+  const basket = card2('appels', THINGS.mand, -.62, -.42), bowl = card2('noten', THINGS.schaal, -.78, .22);
+  card2('picknickappel0', THINGS.appel, .5, -.38); card2('picknickpeer', THINGS.peer, .7, -.3);
   const [wx, wz] = S.at([x, z]); let mode = null, t = 0, sits = 0, cheered = false, eat = null, apples = 0, nuts = 0;
   const seats = [[wx - 1.25, wz - .15], [wx + 1.3, wz + .1]];
   const appleF = S.figure('picknickappel', THINGS.appel), nutF = S.figure('picknicknoot', THINGS.noot); appleF.g.visible = nutF.g.visible = false;
-  const food = new Set(); for (const o of [basket, bowl]) o.traverse(m => { if (m.isMesh) food.add(m); });
+  const food = new Set(); for (const o of [basket, bowl]) o.g.traverse(m => { if (m.isMesh) food.add(m); });
   const crumbs = (c, n = 5) => { const h = S.head(); S.confetti(h.x + girl.face * .12, h.y - .25, h.z + .05, c, n, undefined, 1.3); };
   /* eating, while she sits: what she holds goes up to her mouth and gets smaller bite by bite */
   const stepEat = dt => {
@@ -49,6 +41,6 @@ export function picnic(S, x, y, z, guests) {
   const sitDown = then => { if (S.playing()) return; S.walkThen(wx - .1, wz + .95, () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); if (then) setTimeout(then, 450); }, 1.1); };
   const take = kind => () => { if (mode === 'sit') { if (!eat) { eat = { kind, t: 0, n: 0 }; sfx.hop(); } } else if (!S.playing()) sitDown(take(kind)); };
   S.tap(g, () => sitDown());
-  S.tap(basket, take('appel'), 'appels'); S.tap(bowl, take('noot'), 'noten');
+  basket.onTap = take('appel'); bowl.onTap = take('noot');
   return { toy, state: () => ({ mode, sits, cheered, there: guests.map(q => q.guest.there()), eating: eat ? eat.kind : null, apples, nuts }) };
 }

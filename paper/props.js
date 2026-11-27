@@ -357,7 +357,7 @@ export function stall(S, x, z, y) {
   for (const sx of [-.7, .7]) { add(.05, 1.75, .05, '#8d6a48', sx, .875, -.32); add(.05, 1.45, .05, '#8d6a48', sx, .725, .36); }                                 // four posts
   for (let i = 0; i < 6; i++) add(.26, .04, .98, i % 2 ? '#fbf5ea' : '#e98f8f', -.65 + i * .26, 1.62, .02, .3);                                                  // the awning, in stripes
   for (let i = 0; i < 6; i++) add(.26, .16, .03, i % 2 ? '#fbf5ea' : '#e98f8f', -.65 + i * .26, 1.42, .5);                                                       // and its hanging edge
-  for (const [px, c] of [[-.45, '#e98f8f'], [-.27, '#f2c65c'], [-.36, '#d9706c']]) { const a = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), paper(c)); a.position.set(px, .73, c === '#d9706c' ? .12 : -.02); a.castShadow = true; g.add(a); }
+  for (const [n, spec, px, pz] of [['kraamappel1', THINGS.appel, -.5, .05], ['kraamappel2', THINGS.appel, -.32, .1], ['kraampeer', THINGS.peer, -.14, .04]]) { const f = S.figure(n, spec); [f.x, f.z] = S.at([x + px, z + pz]); f.floatY = f.y = y + .66; f.thing = true; }   // fruit on the counter, cut from paper
   S.wall(x, z, .8, .42);
   const basket = S.figure('mand', THINGS.mand), apple = S.figure('appel', THINGS.appel), me = {}; basket.x = wx + .3; basket.z = wz + .1; basket.floatY = basket.y = y + .66; apple.g.visible = false;
   let held = false, taken = 0, given = 0;

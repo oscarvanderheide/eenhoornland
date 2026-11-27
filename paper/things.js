@@ -134,6 +134,19 @@ function drawNoot(g, f) {
   if (f === 1) { piece(g, '#8A5E3A', S([[8, 30], [10, 46], [22, 50], [22, 34]])); piece(g, '#8A5E3A', S([[40, 30], [38, 46], [26, 50], [26, 34]])); piece(g, '#F1DDB4', E(24, 30, 9, 11)); ink(g, 'rgba(255,255,255,.5)', E(21, 26, 2.4, 3.6)); return; }
   piece(g, '#9A6A40', E(24, 32, 15, 16)); piece(g, '#C9A36E', S([[10, 22], [16, 12], [24, 8], [32, 12], [38, 22], [24, 20]])); ink(g, 'rgba(255,255,255,.35)', E(18, 34, 3, 6, .3));
 }
+/** a bowl of hazelnuts, seen a little from above: a pale blue bowl, brown nuts heaped in it */
+function drawSchaal(g) {
+  for (const [x, y, r] of [[40, 40, 11], [58, 34, 12], [76, 38, 11], [94, 42, 10], [50, 50, 10], [68, 48, 11], [86, 52, 10]]) { piece(g, '#9A6A40', E(x, y, r, r * .95)); piece(g, '#C9A36E', E(x, y - r * .55, r * .75, r * .38), .3); }
+  piece(g, '#9FC4C9', S([[16, 50], [114, 50], [108, 74], [92, 90], [38, 90], [22, 74]]));
+  piece(g, '#B8D6DA', E(65, 52, 50, 6), .2); ink(g, 'rgba(255,255,255,.5)', E(36, 66, 4, 9, .4));
+}
+/** a pear: yellow-green, round at the bottom, a short stalk and a leaf */
+function drawPeer(g) {
+  piece(g, '#7A5A3E', C(34, 14, 18, 10, 1.9));
+  piece(g, '#7FB069', S([[36, 14], [44, 6], [54, 8], [54, 8], [46, 16]]));
+  piece(g, '#D8C45A', S([[34, 16], [40, 22], [44, 36], [52, 52], [50, 68], [34, 74], [18, 68], [16, 52], [24, 36], [28, 22]]));
+  ink(g, 'rgba(255,255,255,.45)', E(26, 50, 3.4, 7, .3));
+}
 function drawAppel(g) {
   piece(g, '#7A5A3E', C(32, 28, 35, 16, 1.9));
   piece(g, '#7FB069', S([[35, 22], [42, 10], [54, 12], [54, 12], [47, 23]]));
@@ -151,4 +164,6 @@ export const THINGS = {
   mand: { w: 150, h: 126, draw: drawMand, frames: 1, size: .45, does: ['basket'] },
   appel: { w: 64, h: 70, draw: drawAppel, frames: 1, size: .18, does: ['apple'] },
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
+  schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
+  peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
 };
