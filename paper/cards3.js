@@ -433,7 +433,29 @@ function drawGeit(g, f) {
   g.restore();
 }
 
+/** a telescope on its tripod: three wooden legs, a brass tube with dark bands, a big lens at the front (looking up and to the right) */
+function drawKijker(g) {
+  for (const [x, y] of [[34, 196], [86, 198], [132, 194]]) line(g, '#8d6a48', 6, [[84, 104], [x, y]]);
+  piece(g, '#7a5a3e', E(84, 104, 9, 9));
+  g.save(); g.translate(84, 92); g.rotate(-.42);
+  piece(g, '#e0b453', U(C(-58, 0, 30, 0, 13), C(30, 0, 62, 0, 18)));
+  for (const x of [-34, 12, 40]) ink(g, '#b98a3a', S([[x - 3, -16], [x + 3, -16], [x + 3, 16], [x - 3, 16]]));
+  ink(g, '#f6dfa6', C(-50, -6, 50, -6, 3));
+  piece(g, '#8fc3e0', E(64, 0, 5, 16)); piece(g, '#7a5a3e', C(-64, 0, -58, 0, 7));
+  g.restore();
+}
+/** a hanging basket chair: a rope from the ceiling, a round woven basket open at the front, a pink cushion in it */
+function drawHangstoel(g) {
+  line(g, '#d8c9a8', 6, [[100, 0], [100, 132]]); piece(g, '#c9a46a', E(100, 138, 12, 9));
+  piece(g, '#e8c896', E(100, 226, 84, 86));
+  g.save(); g.beginPath(); g.ellipse(100, 226, 80, 82, 0, 0, Math.PI * 2); g.clip(); for (let i = -8; i <= 8; i++) { line(g, '#d2ad74', 3, [[100 + i * 16 - 40, 140], [100 + i * 16 + 40, 312]]); line(g, '#d2ad74', 3, [[100 + i * 16 + 40, 140], [100 + i * 16 - 40, 312]]); } g.restore();   // (the weave, kept inside the basket)
+  piece(g, '#b98a54', E(100, 214, 64, 66));
+  piece(g, '#f4a6c4', E(100, 196, 46, 40), .3); piece(g, '#f8c6d8', E(100, 268, 58, 18), .3);
+  ink(g, '#fbe3ea', E(84, 182, 12, 9));
+}
 export const CARDS3 = {
+  hangstoel: { w: 200, h: 320, draw: drawHangstoel, frames: 1, size: 2.1, does: ['chair'] },
+  kijker: { w: 170, h: 200, draw: drawKijker, frames: 1, size: 1.15, does: ['telescope'] },
   koe: { w: 260, h: 220, draw: drawKoe, frames: 4, size: 1.35, does: ['stand', 'walk', 'walk', 'moo'] },
   kalf: { w: 200, h: 190, draw: drawKalf, frames: 4, size: .95, does: ['stand', 'walk', 'walk', 'jump'] },
   geit: { w: 190, h: 210, draw: drawGeit, frames: 4, size: 1.0, does: ['stand', 'walk', 'walk', 'rear'] },

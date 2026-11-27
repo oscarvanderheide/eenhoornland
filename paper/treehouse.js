@@ -35,19 +35,18 @@ export function treehouse(S, x, z) {
   for (const pz of [-DD / 2 + .1, 0, DD / 2 - .04]) { post(-DW / 2 + .05, pz); post(DW / 2 - .05, pz); }
   for (const [w, px] of [[DW / 2 - .38, -DW / 2 + .05 + (DW / 2 - .38) / 2], [DW / 2 - .38, DW / 2 - .05 - (DW / 2 - .38) / 2]]) add(m3(new THREE.BoxGeometry(w, .05, .05), '#b9875a'), px, DECK + .48, DD / 2 - .04);   // the front rail, open in the middle
   for (const s of [-1, 1]) add(m3(new THREE.BoxGeometry(.05, .05, DD), '#b9875a'), s * (DW / 2 - .05), DECK + .48, 0);
-  // the hut at the back of the deck: plank walls, a red roof, a window, a pennant
-  const hut = new THREE.Group(); hut.position.set(-.25, DECK, -.45); g.add(hut);
-  add(m3(new THREE.BoxGeometry(1.2, .95, .8), '#c1905f'), 0, .48, 0, hut);
-  for (let k = 0; k < 4; k++) add(m3(new THREE.BoxGeometry(1.22, .02, .82), '#a97a4e'), 0, .2 + k * .22, 0, hut);
-  { const roof = m3(new THREE.ConeGeometry(.95, .6, 4), '#d9706c'); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, .72); add(roof, 0, 1.25, 0, hut); }
-  add(m3(new THREE.BoxGeometry(.3, .3, .03), '#3d3452'), .25, .55, .41, hut); add(m3(new THREE.BoxGeometry(.36, .04, .05), '#7a5a3e'), .25, .38, .43, hut);
-  add(m3(new THREE.CylinderGeometry(.015, .015, .7, 5), '#7a5a3e'), .05, 1.75, 0, hut);
-  const flag = card([[0, 0], [.36, -.09], [0, -.18]], .01, paper('#f2c65c', { side: THREE.DoubleSide })); add(flag, .06, 2.07, 0, hut); flag.userData.live = true;
-  // the telescope: a brass tube on a little tripod at the deck's right front corner, looking out
-  const scope = new THREE.Group(); scope.position.set(.8, DECK + .04, .45); g.add(scope);
-  for (let i = 0; i < 3; i++) { const a = i / 3 * 6.28, l = m3(new THREE.CylinderGeometry(.015, .015, .55, 5), '#7a5a3e'); l.position.set(Math.cos(a) * .1, .26, Math.sin(a) * .1); l.rotation.set(Math.sin(a) * .3, 0, -Math.cos(a) * .3); scope.add(l); }
-  const tube = new THREE.Group(); tube.position.y = .55; tube.rotation.z = .35; tube.userData.live = true; scope.add(tube);
-  add(m3(new THREE.CylinderGeometry(.05, .07, .6, 10), '#e0b453'), 0, 0, 0, tube).rotation.z = Math.PI / 2; add(m3(new THREE.CylinderGeometry(.075, .075, .06, 10), '#b98a3a'), .3, 0, 0, tube).rotation.z = Math.PI / 2;
+  // the hut on the deck: the room she goes into (set-boomhut.js), and it looks like it from outside: the same warm planks, a
+  // window in a dark wooden frame, the door the ladder comes up to, a doorway on the side to the zipline, a red roof, a pennant
+  const hut = new THREE.Group(); hut.position.set(-.1, DECK, -.4); g.add(hut);
+  add(m3(new THREE.BoxGeometry(1.6, 1.15, 1.0), '#c99a68'), 0, .58, 0, hut);
+  for (let k = 0; k < 7; k++) add(m3(new THREE.BoxGeometry(.02, 1.13, 1.02), '#a97a4e'), -.7 + k * .233, .58, 0, hut);   // the planks, standing
+  { const roof = m3(new THREE.ConeGeometry(1.25, .7, 4), '#d9706c'); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, .72); add(roof, 0, 1.5, 0, hut); }
+  add(m3(new THREE.BoxGeometry(.42, .72, .03), '#3d3430'), .12, .37, .51, hut); add(m3(new THREE.BoxGeometry(.5, .06, .05), '#8d6a48'), .12, .76, .52, hut);   // the door
+  for (const s2 of [-1, 1]) add(m3(new THREE.BoxGeometry(.05, .76, .05), '#8d6a48'), .12 + s2 * .23, .38, .52, hut);
+  add(m3(new THREE.BoxGeometry(.38, .32, .03), '#bfe3ea'), -.48, .66, .51, hut); add(m3(new THREE.BoxGeometry(.46, .4, .02), '#8d6a48'), -.48, .66, .5, hut);   // the window
+  add(m3(new THREE.BoxGeometry(.03, .7, .4), '#3d3430'), .81, .36, .1, hut);   // the doorway on the side, towards the zipline's post
+  add(m3(new THREE.CylinderGeometry(.015, .015, .7, 5), '#7a5a3e'), .05, 2.05, 0, hut);
+  const flag = card([[0, 0], [.36, -.09], [0, -.18]], .01, paper('#f2c65c', { side: THREE.DoubleSide })); add(flag, .06, 2.37, 0, hut); flag.userData.live = true;
   // the rope ladder: two ropes and wooden rungs, from the deck's open front down to the grass; it sways while she climbs
   const ladder = new THREE.Group(); ladder.position.set(0, DECK, DD / 2 + .02); ladder.userData.live = true; g.add(ladder);
   for (const s of [-1, 1]) add(m3(new THREE.CylinderGeometry(.015, .015, DECK, 5), '#d8c9a8'), s * .2, -DECK / 2, 0, ladder);
@@ -73,12 +72,13 @@ export function treehouse(S, x, z) {
     S.world(bar); bar.visible = true; barTo(.012);
   };
   const barTo = p => { bar.position.copy(at(p)); };
-  const LOW = { span: 7.5, tall: 5.6, min: 3, rise: -.2, riseTall: -.16, ly: 1.6, yaw: .3, dof: 1.3, range: 1.2, fx: 1, fz: 1, lag: 1 };   // climbing: from the grass, looking up the ladder past her to the deck
+  const climbShot = () => ({ ly: 1.4 + h * .75 });   // climbing: the same low shot as at the oak's foot (set-bos.js 'eik'), only lifted as she goes up
+  const ZIP = { span: 15, tall: 10, rise: .4, riseTall: .55, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 };   // climbing: from the grass, looking up the ladder past her to the deck
   const toy = { look: [wx, wz + .9], shot: null, rate: .9, clearView: true, step(dt, inp) {
     t += dt;
     if (mode === 'grab') {   // to the corner, and up on her toes to the bar
       const k = Math.min(1, t / .45), h = at(.012); girl.x = top[0] + (h.x - top[0]) * k; girl.z = top[1] + (h.z + .05 - top[1]) * k; girl.lift = DECK + .04 + Math.sin(k * Math.PI) * .25; girl.poseName = 'up'; girl.view = 'front';
-      if (k >= 1) { mode = 'zip'; t = 0; rides++; sfx.whoosh(); toy.rate = 1.6; toy.shot = { span: 15, tall: 10, rise: .4, riseTall: .55, ly: 0, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 }; } return; }
+      if (k >= 1) { mode = 'zip'; t = 0; rides++; sfx.whoosh(); toy.rate = 1.6; toy.shot = { ...ZIP, ly: DECK * .75 }; } return; }
     if (mode === 'zip') {   // down the cable: slow at first, then whizzing, a little slower again at the end
       const k = Math.min(1, t / ZT), p = .012 + .975 * k * k * (3 - 2 * k), v = at(Math.min(.987, p));
       barTo(Math.min(.987, p)); girl.poseName = 'up'; { const h = S.hand(); girl.x += v.x - h.x; girl.z = v.z + .05; girl.lift = (girl.lift || 0) + (v.y - .64 - h.y); }   // her hands on the grip (measured: the pose decides where they are)
@@ -93,7 +93,7 @@ export function treehouse(S, x, z) {
       if (uni && !uni.away) { uni.x = mx - 1.0; uni.z = mz + .2; uni.lift = Math.max(0, uni.lift * (1 - k)); }
       if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; sfx.thud(); S.coins.reward('tokkel', girl.x, girl.y + 1.2, girl.z); girl.hopV = 2.4; S.confetti(girl.x, girl.y + .6, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 14, S.starGeo, 2.2); if (uni && !uni.away) { uni.lift = 0; uni.hopV = 3; } back = 0; toy.shot = null; S.stopPlay(); } return; }
     if (mode === 'ladder') {   // on the ladder, her back to us: up while she holds up, down while she holds down, still when she lets go; the camera low on the grass, looking up
-      const v = -(inp.y || 0) * 1.35, was = h; h = Math.max(0, Math.min(DECK, h + v * dt)); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = h;
+      const v = -(inp.y || 0) * 1.35, was = h; h = Math.max(0, Math.min(DECK, h + v * dt)); toy.shot = climbShot(); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = h;
       if (v) { rung += Math.abs(h - was); girl.poseName = Math.floor(rung / .3) % 2 ? 'up' : 'hold'; sway = .06; if (Math.floor(rung / .3) !== Math.floor((rung - Math.abs(h - was)) / .3)) sfx.click(); }
       if (h <= 0 && v < 0 && t > .3) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; girl.z = foot[1]; S.stopPlay(); return; }   // at the foot, down again: off
       if (h <= 0 && (inp.x || inp.act) && t > .3) { mode = null; girl.lift = 0; girl.poseName = null; girl.z = foot[1]; S.stopPlay(); return; }
@@ -101,14 +101,14 @@ export function treehouse(S, x, z) {
     if (mode === 'in') { if (t > .22) { mode = null; S.stopPlay(); } }   // (held up there until the cut at .15 s has put her in the room; the camera already looks at her, so it cuts straight to the room's own shot)
   } };
   /** out of the room by its hatch: she is on the ladder at the top, and climbs down holding down */
-  const onTop = () => { mode = 'ladder'; h = DECK - .05; rung = 0; t = .3; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 1.6; S.play(toy); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = h; };
+  const onTop = () => { mode = 'ladder'; h = DECK - .05; rung = 0; t = .3; toy.shot = climbShot(); toy.look = null; toy.rate = 1.6; S.play(toy); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = h; };
   /** out of the room by its zipline door: at the deck's corner she takes hold of the bar, and away she goes */
-  const onZip = () => { if (!A) { onTop(); return; } back = -1; barTo(.012); mode = 'grab'; t = 0; toy.shot = null; toy.rate = .9; toy.look = [wx, wz + .3]; S.play(toy); sfx.hop(); girl.x = top[0]; girl.z = top[1]; girl.lift = DECK + .04; };
+  const onZip = () => { if (!A) { onTop(); return; } back = -1; barTo(.012); mode = 'grab'; t = 0; toy.shot = { ...ZIP, ly: DECK * .75 }; toy.rate = .9; toy.look = [top[0], top[1]]; S.play(toy); sfx.hop(); girl.x = top[0]; girl.z = top[1]; girl.lift = DECK + .04; };   // (the camera starts with her up on the deck, already wide: she is in the picture from the start)
   S.door('boomhut', [x - .3, z - .45, x - .05, z - .2], [x, z + DD / 2 + .45], [0, 1], false, onTop);   // (the doors' own spots are in the trunk, where she never walks: she only comes out of them)
   S.door('tokkel', [x + .05, z - .45, x + .3, z - .2], [x, z + DD / 2 + .45], [0, 1], false, onZip);
-  const begin = () => { if (S.playing() || mode) return; mode = 'ladder'; h = 0; rung = 0; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); girl.view = 'back'; sfx.hop(); };
+  const begin = () => { if (S.playing() || mode) return; mode = 'ladder'; h = 0; rung = 0; t = 0; toy.shot = climbShot(); toy.look = null; toy.rate = 1.2; S.play(toy); girl.view = 'back'; sfx.hop(); };
   const climb = () => { if (S.playing() || mode) return; S.walkThen(foot[0], foot[1], begin, 1.0); };
-  S.tap(bar, () => { if (!mode) climb(); }, 'zipline'); S.tap(ladder, climb, 'ladder'); S.tap(scope, climb, 'telescope');   // (from the grass, everything up there means: up the ladder)
+  S.tap(bar, () => { if (!mode) climb(); }, 'zipline'); S.tap(ladder, climb, 'ladder'); S.tap(hut, climb);   // (from the grass, everything up there means: up the ladder)
   return { toy, state: () => ({ mode, climbs, rides, h, back }), step({ dt, time }) {
     if (!A && !end) lay();
     // walking into the foot of the ladder she takes hold of it, as a tap on it does

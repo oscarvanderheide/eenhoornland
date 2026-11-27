@@ -3,13 +3,16 @@
 // rope ladder (treehouse.js). Plank walls, a window full of leaves, a paper lantern.
 //   the telescope    a tap: she walks over and looks through it, and the picture is far out over another island, a
 //                    different one each time; a moment later (or a touch) she is back
-//   the hammock      a tap: she climbs in and it rocks; any push or a touch and she is out again
+//   the chair        a hanging basket chair: a tap and she climbs in; it swings left and right, pushes in time swing it higher
 //   the lantern      a tap: on or off
 //   the zipline door in the back wall stands open: the cable goes past outside and its red bar hangs in the doorway.
 //                    Walking through it she takes hold of the bar and whizzes down to the village (treehouse.js)
 //   the hatch        at the front: walking down over it she is on the ladder again, and climbs down
 import { THREE, paper, slab, card, blob, whiteEdge } from './kit.js';
 import { roomShell, roomShot } from './rooms.js';
+import { CARDS3 } from './cards3.js';
+import { cutout } from './figures.js';
+import { PAPER } from './kit.js';
 
 const W = 5.0, D = 3.2, H = 2.6, ZX = 1.5;   // (ZX: where the zipline doorway is in the back wall)
 const LEAF = ['#6f9a5e', '#7fa676', '#86ad6e', '#5f8a55'];
@@ -43,11 +46,7 @@ export default {
     for (const s of [-1, 1]) put(box(.025, .02, .5, '#d8c9a8'), s * .22, .03, D / 2 - .34);
 
     /* ---------------- the telescope at the window ---------------- */
-    const scope = new THREE.Group(); scope.position.set(-.15, 0, -D / 2 + .7); root.add(scope);
-    for (let i = 0; i < 3; i++) { const a = i / 3 * 6.28, l = box(.03, .95, .03, '#7a5a3e'); l.position.set(Math.cos(a) * .16, .46, Math.sin(a) * .16); l.rotation.set(Math.sin(a) * .2, 0, -Math.cos(a) * .2); scope.add(l); }
-    const tube = new THREE.Group(); tube.position.y = .95; tube.rotation.set(-.35, -.25, 0); tube.userData.live = true; scope.add(tube);
-    { const t1 = new THREE.Mesh(new THREE.CylinderGeometry(.06, .085, .75, 12), P('#e0b453')); t1.rotation.x = Math.PI / 2; t1.castShadow = true; tube.add(t1);
-      const t2 = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .07, 12), P('#b98a3a')); t2.rotation.x = Math.PI / 2; t2.position.z = -.38; tube.add(t2); }
+    const scope = S.figure('kijker', CARDS3.kijker); scope.thing = true; [scope.x, scope.z] = S.at([-.15, -D / 2 + .7]); scope.face = 1;   // (a paper card, as everything is)
     S.solid({ x: -.15, z: -D / 2 + .7, r: .25 });
     const views = () => ['dorp', 'wei', 'strand', 'kasteel', ...(S.shared.island && S.shared.island.risen() ? ['regenboog'] : [])].map(n => S.middle(n)).filter(Boolean);   // (the rainbow island only once it has risen from the sea)
     let looks = 0, lt = -1;
@@ -55,28 +54,34 @@ export default {
       lt += dt; girl.view = 'back';
       if (lt > 3.6 || (lt > .7 && (inp.act || inp.x || inp.y))) { lt = -1; S.cut(); S.stopPlay(); } } };
     const [sx, sz] = S.at([.3, -D / 2 + 1.15]);
-    const look = () => { if (S.playing()) return; S.walkThen(sx, sz, () => { const V = views(); if (!V.length) return; lookToy.look = V[looks++ % V.length]; lt = 0; S.play(lookToy); S.cut(); sfx.swish(2); tube.rotation.y = -.25 + (looks % 2 ? .12 : -.12); }, .4); };
-    S.tap(scope, look, 'telescope');
+    const look = () => { if (S.playing()) return; S.walkThen(sx, sz, () => { const V = views(); if (!V.length) return; lookToy.look = V[looks++ % V.length]; lt = 0; S.play(lookToy); S.cut(); sfx.swish(2); scope.hopV = 1.2; }, .4); };
+    scope.onTap = look;
 
-    /* ---------------- the hammock: a striped cloth hung from two hooks, at the left ---------------- */
-    const HX = -1.62, HZ = .55, hang = new THREE.Group(); hang.position.set(HX, 1.55, HZ); hang.userData.live = true; root.add(hang);
-    { const cloth = []; for (let i = 0; i <= 16; i++) { const u = i / 16, x = (u - .5) * 1.25; cloth.push([x, -.95 + Math.sin(u * Math.PI) * -.18 + Math.abs(u - .5) * .6]); }
-      const pts = [...cloth, ...cloth.slice().reverse().map(([x, y]) => [x, y + .16 + Math.sin((x / 1.25 + .5) * Math.PI) * .06])];
-      const c = card(pts, .03, paper('#f2c65c', { side: THREE.DoubleSide }), paper('#e0a93a')); hang.add(c);
-      const hem = card(cloth.map(([x, y]) => [x, y + .03]).concat(cloth.slice().reverse().map(([x, y]) => [x, y + .09])), .04, paper('#f4a6c4')); hang.add(hem);   // a pink stripe along it
-      for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .85, 4), P('#d8c9a8')); r.position.set(s * .76, -.3, 0); r.rotation.z = s * .5; hang.add(r); } }
-    for (const s of [-1, 1]) put(box(.08, 1.7, .08, '#8d6a48'), HX + s * .95, .85, HZ);
-    S.wall(HX, HZ, 1.0, .18);
-    let swing = 0, rock = 0, rocks = 0;
-    const hamToy = { look: S.at([HX + .6, HZ]), rest: true, mode: 'on', t: 0, step(dt, inp) {
-      const q = hamToy; q.t += dt; const [bx, bz] = S.at([HX, HZ]);
-      if (q.mode === 'on') { const k = Math.min(1, q.t / .35); girl.x = bx; girl.z = bz + .55 * (1 - k) + .04; girl.lift = .62 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1; if (k >= 1) { q.mode = 'in'; q.t = 0; rock = .22; rocks++; sfx.hop(); } return; }
-      if (q.mode === 'in') { swing += dt * 2.1; rock = Math.max(.08, rock - dt * .02); const a = Math.sin(swing) * rock; hang.rotation.x = a; girl.z = bz + .04 + Math.sin(a) * .9; girl.lift = .62 - (1 - Math.cos(a)) * .9; girl.poseName = 'sit'; girl.view = 'side';
-        if (q.t > .4 && (inp.act || inp.x || inp.y)) { q.mode = 'off'; q.t = 0; } return; }
-      const k = Math.min(1, q.t / .3); girl.z = bz + .04 + k * .6; girl.lift = .62 * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null;
+    /* ---------------- the hanging chair: a woven basket on a rope from the roof, at the left (Oscar: the hammock was clunky) ----------------
+       A tap and she climbs in. It swings left and right like a real pendulum: a push the way it is already going, as it comes
+       through the bottom, swings it higher (as the playground's swing); any other touch and she climbs out */
+    const HX = -1.55, HZ = .45, PY = 2.45, LS = 1.62, hang = new THREE.Group(); hang.position.set(HX, PY, HZ); hang.userData.live = true; root.add(hang);
+    { const t = new THREE.CanvasTexture(cutout(CARDS3.hangstoel.w, CARDS3.hangstoel.h, c => CARDS3.hangstoel.draw(c, 0), PAPER, 1.5)); t.colorSpace = THREE.SRGBColorSpace;
+      const Hc = CARDS3.hangstoel.size, Wc = Hc * CARDS3.hangstoel.w / CARDS3.hangstoel.h, m = new THREE.Mesh(new THREE.PlaneGeometry(Wc, Hc), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, roughness: .95, side: THREE.DoubleSide }));
+      m.position.y = -Hc / 2; m.castShadow = true; hang.add(m); }
+    S.solid({ x: HX, z: HZ, r: .45 });
+    let th = 0, om = 0, rocks = 0, best = 0;
+    const K = 9.8 / LS * .8;
+    const chairToy = { look: S.at([HX + .5, HZ]), rest: true, mode: 'on', t: 0, step(dt, inp) {
+      const q = chairToy; q.t += dt; const [bx, bz] = S.at([HX, HZ]);
+      const seat = a => [bx + Math.sin(a) * LS, PY - Math.cos(a) * LS - .14];
+      if (q.mode === 'on') { const k = Math.min(1, q.t / .4), [x, y] = seat(th); girl.x = bx + (x - bx) * k; girl.z = bz + .5 * (1 - k) + .1; girl.lift = y * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = 1;
+        if (k >= 1) { q.mode = 'in'; q.t = 0; rocks++; sfx.hop(); om = .9; } return; }
+      if (q.mode === 'in') {
+        // a pendulum: a push in time adds, against it brakes; it sways down by itself
+        const px = inp.x || 0; if (px && Math.abs(th) < .35) om += px * (Math.sign(px) === Math.sign(om || px) ? 2.4 : 1.2) * dt;
+        om += (-K * Math.sin(th) - .25 * om) * dt; th += om * dt; th = Math.max(-.9, Math.min(.9, th)); best = Math.max(best, Math.abs(th));
+        hang.rotation.z = th; const [x, y] = seat(th); girl.x = x; girl.z = bz + .1; girl.lift = y; girl.lean = th; girl.poseName = 'sit'; girl.view = 'side'; girl.face = om >= 0 ? 1 : -1;
+        if (q.t > .4 && (inp.act || inp.y)) { q.mode = 'off'; q.t = 0; } return; }
+      const k = Math.min(1, q.t / .35), [x, y] = seat(th); girl.x = x; girl.z = bz + .1 + k * .55; girl.lift = y * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null; girl.lean = 0;
       if (k >= 1) { girl.lift = 0; S.stopPlay(); } } };
-    const [hx, hz] = S.at([HX, HZ + .6]);
-    S.tap(hang, () => { if (S.playing()) return; S.walkThen(hx, hz, () => { if (S.playing()) return; hamToy.mode = 'on'; hamToy.t = 0; S.play(hamToy); }, .5); }, 'hangmat');
+    const [hx, hz] = S.at([HX + .1, HZ + .6]);
+    S.tap(hang, () => { if (S.playing()) return; S.walkThen(hx, hz, () => { if (S.playing()) return; chairToy.mode = 'on'; chairToy.t = 0; S.play(chairToy); }, .5); }, 'hangstoel');
 
     /* ---------------- a paper lantern hanging from the roof, and a rug ---------------- */
     const lantern = new THREE.Group(); lantern.position.set(.75, 2.0, .1); root.add(lantern);
@@ -92,11 +97,11 @@ export default {
       step({ dt, time }) {
         light.intensity += ((lit ? 1.9 : .15) - light.intensity) * Math.min(1, dt * 6); glow.emissiveIntensity = lit ? 1.2 : .1;
         lantern.rotation.z = Math.sin(time * 1.3) * .05; bar.rotation.z = Math.sin(time * 1.1) * .05;
-        if (S.playing() !== hamToy) hang.rotation.x *= Math.exp(-dt * 2);
+        if (S.playing() !== chairToy) { om += (-K * Math.sin(th) - .6 * om) * dt; th += om * dt; hang.rotation.z = th; }   // (empty, it sways to a stop)
       },
-      toys: { boomkamer: { state: () => ({ looks, looking: lt >= 0, rocks, lit, hammock: S.playing() === hamToy ? hamToy.mode : null }) } },
+      toys: { boomkamer: { state: () => ({ looks, looking: lt >= 0, rocks, lit, chair: S.playing() === chairToy ? chairToy.mode : null, best: +best.toFixed(2) }) } },
       shots: [roomShot('boomhut', 7.4, 5.6)],
-      spots: { telescope: [-.15, 1.0, -D / 2 + .7], hammock: [HX, .9, HZ], zipline: [ZX, 1.4, -D / 2 - .3] },
+      spots: { telescope: [-.15, .62, -D / 2 + .7], chair: [HX, 1.0, HZ], zipline: [ZX, 1.4, -D / 2 - .3] },
       places: { start: [0, D / 2 - .95], zipline: [ZX, -D / 2 + 1.0], telescope: [.3, -D / 2 + 1.15] },
     };
   },

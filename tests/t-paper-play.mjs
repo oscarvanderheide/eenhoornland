@@ -536,9 +536,9 @@ export default async function (t) {
     { const [x, y, z] = await spot('telescope'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
     ok(await until(`__p.toy('boomkamer').looking`, 5), 'a real tap on the telescope: she looks out, far over another island'); await t.sleep(1500); await t.shot('tmp-shots/y-treehouse-view-land.png');
     ok(await until(`!__p.toy('boomkamer').looking`, 4) && (await t.ev('__p.info()')).set === 'boomhut', 'and a moment later she is back in the room');
-    { const [x, y, z] = await spot('hammock'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
-    ok(await until(`__p.toy('boomkamer').hammock === 'in'`, 5), 'a real tap on the hammock: she climbs in and it rocks'); await t.sleep(1200); await t.shot('tmp-shots/y-treehouse-hammock-land.png');
-    await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev('__p.keys([])'); ok(await until(`!__p.toy('boomkamer').hammock`, 3), 'a push: out of the hammock again');
+    { const [x, y, z] = await spot('chair'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
+    ok(await until(`__p.toy('boomkamer').chair === 'in'`, 5), 'a real tap on the hanging chair: she climbs in and it swings'); await t.sleep(1200); await t.shot('tmp-shots/y-treehouse-chair-land.png');
+    await t.ev(`__p.keys(['s'])`); await t.sleep(300); await t.ev('__p.keys([])'); ok(await until(`!__p.toy('boomkamer').chair`, 3), 'down: out of the chair again');
     // out through the hatch at the front: on the ladder at the top, and down
     await t.ev(`__p.walkTo(${room.start[0]}, ${room.start[1]})`); await t.sleep(1500); await t.ev(`__p.keys(['s'])`);
     ok(await until(`__p.info().set === 'bos' && __p.toy('boomhut').mode === 'ladder'`, 4), 'walking down over the hatch: out, on the ladder at the top'); ok((await toy()).h > 3, 'up high');
