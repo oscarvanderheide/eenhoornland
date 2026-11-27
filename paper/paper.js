@@ -16,8 +16,9 @@ import { PROPS } from './people.js';
 import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
 import kasteel from './set-kasteel.js';
+import grot from './set-grot.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -215,7 +216,7 @@ function buildSet(def) {
     figure: (name, spec) => { const f = makeFigure(name, spec); f.thing = !!spec.thing || LIFELESS.has(spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
     // a door: walking into `zone` in the direction `dir` is a cut to the door of the same name on another set, where she then
     // stands at its `stand`. S.through(name) takes her through at once (a tap on the house)
-    door: (name, zone, stand, dir) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir }); },
+    door: (name, zone, stand, dir, any = false) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir, any }); },   // (`any`: being in the zone is enough, whichever way she came: a way in through water)
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
@@ -592,7 +593,7 @@ function stepDoors(dt) {
   }
   const here = sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z));
   if (!here) { doorArmed = true; return; }
-  if (doorArmed && !playing && push[0] * here.dir[0] + push[1] * here.dir[1] > .5) goThrough(here);   // only when she walks into it, not past it
+  if (doorArmed && !playing && (here.any || push[0] * here.dir[0] + push[1] * here.dir[1] > .5)) goThrough(here);   // only when she walks into it, not past it
 }
 
 /* ---------------- where she can stand ---------------- */
@@ -885,7 +886,8 @@ function frame(now) {
   }
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
   if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
-  const speed = girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz);   // (swimming is slower than walking) push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
+  // (swimming is slower than walking)
+  const speed = girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
@@ -1045,7 +1047,9 @@ window.__p = {
     return { cells: seen.size, extra: extra.map(at), places: Object.fromEntries(sets.flatMap(q => Object.entries(q.places).map(([n, p]) => [(q === set ? '' : q.name + ' ') + n, at(p)]))) };
   },
   /** open every gate of the world */
-  open: () => { openGates(); gear.snorkel = gear.hook = true; },
+  open: () => { openGates(); gear.snorkel = gear.hook = true; for (const s of sets) for (const q of Object.values(s.toys || {})) if (q.mend) q.mend(); },   // (and gaps are planked over: the walk-everywhere check walks)
+  /** every door of the world, and whether one would take her now */
+  doors: () => ({ list: sets.flatMap(q => q.doors.map(d => [q.name, d.name, d.zone.map(v => +v.toFixed(2)), !!d.any])), armed: doorArmed, through: !!through, here: (sets.flatMap(q => q.doors).find(d => inZone(d, girl.x, girl.z)) || {}).name || null, playing: !!playing }),
   /** her tools: ask, or set some ({ snorkel: true }) */
   gear: o => Object.assign(gear, o || {}),
   /** for tests: treat her as standing on the set called `name` wherever she is (null: as usual again) */

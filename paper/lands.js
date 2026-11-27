@@ -16,7 +16,7 @@ export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K -
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
  *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
-export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog', 'kasteel']];
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog', 'kasteel', 'grot']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -79,3 +79,6 @@ export function kasteelLand() {
     bridge: { x0: -(10.9 + 12 + .2), x1: -10.3, z0: -.6, z1: .6 },
   };
 }
+
+/** the cave behind the waterfall: a room far beside the world, like her bedroom */
+ORIGIN.grot = [-260, 70];

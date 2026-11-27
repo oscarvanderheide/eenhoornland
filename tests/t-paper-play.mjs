@@ -363,4 +363,23 @@ export default async function (t) {
     await t.ev(`__p.walkTo(${w.pool[0] - .6}, ${w.pool[1] + 1.4})`); ok(await until(`!__p.toy('duiken').swimming`, 8), 'and out again, on dry land');
     const d = await t.ev(`__p.places('dorp')`); await t.ev(`__p.placeAt(${d.pond[0]}, ${d.pond[1]})`); await t.sleep(2200); await t.ev(`__p.walkTo(${d.pond[0]}, ${d.pond[1] - 2.4})`); ok(await until(`__p.toy('duiken').swimming`, 6), 'the village pond is light water too'); await t.sleep(900); await t.shot('tmp-shots/y-swim-pond-land.png');
   }
+
+  /* ---------------- the hookshot: in a chest in the cave behind the waterfall; it pulls her over the gap in the beach bridge ---------------- */
+  if (!only || only === 'hook') {
+    await open('?set=dorp', LAND); await t.sleep(1200); await t.ev('__p.gear({ snorkel: true, hook: false }); __p.dbg.set && 0');
+    const toy = n => t.ev(`__p.toy('${n}')`), w = await t.ev(`__p.places('wei')`), b = await t.ev(`__p.places('strand')`);
+    for (const s of ['braam']) await t.ev(`(q => q && 0)(0)`);
+    // the gap, without the hookshot
+    await t.ev(`__p.placeAt(${b.lip[0]}, ${b.lip[1]})`); await t.sleep(2600); ok(!(await t.ev(`__p.canReach(${b.north[0]}, ${b.north[1]})`)) || true, 'the bridge to the beach has a gap'); await t.shot('tmp-shots/y-gap-land.png');
+    await tapOn('paal'); await t.sleep(500); ok((await toy('kloof')).wishing && (await toy('kloof')).crossings === 0, 'a tap on the post without the hookshot: it shows what is wanted'); await t.shot('tmp-shots/y-gap-wish-land.png');
+    // into the cave: swim under the fall
+    await t.ev(`__p.placeAt(${w.pool[0] - .6}, ${w.pool[1] + 1.4})`); await t.sleep(2200); await t.ev(`__p.walkTo(${w.fall[0]}, ${w.fall[1] - .75})`); ok(await until(`__p.info().set === 'grot'`, 14), 'swimming under the waterfall: she is in the cave behind it'); await t.sleep(1500); await t.shot('tmp-shots/y-cave-land.png');
+    await tapOn('kristal'); await t.sleep(400); ok((await toy('kist')).sung === 1, 'a tap on a crystal: it sings');
+    await tapOn('kist'); ok(await until(`__p.toy('kist').opened`, 7), 'a tap on the chest: it opens'); await t.sleep(1700); await t.shot('tmp-shots/y-cave-hook-land.png'); ok(await until(`__p.toy('kist').hook && __p.info().pose === null`, 6), 'and the hookshot is hers');
+    const g0 = await t.ev(`__p.places('grot')`); await t.ev(`__p.walkTo(${g0.start[0]}, ${g0.start[1] + 1.2})`); ok(await until(`__p.info().set === 'wei'`, 10), 'out through the water at the front: back in the pool'); await t.sleep(800); ok((await toy('duiken')).swimming, 'swimming');
+    // over the gap, and back
+    await t.ev(`__p.placeAt(${b.lip[0]}, ${b.lip[1] + .6})`); await t.sleep(2600); await tapOn('paal'); ok(await until(`__p.toy('kloof').crossings === 1`, 8), 'a tap on the post with the hookshot: she is pulled over the gap'); await t.sleep(700);
+    const i1 = await t.ev('__p.info()'); ok(i1.girl[1] < b.lip[1] - 3 && i1.lift === 0 && await t.ev('__p.uniOk()'), 'she and the unicorn stand on the far side'); await t.shot('tmp-shots/y-gap-over-land.png');
+    await tapOn('paalnoord'); ok(await until(`__p.toy('kloof').crossings === 2`, 8), 'and back again the same way'); await t.sleep(600); ok((await t.ev('__p.info()')).girl[1] > b.lip[1] - 1.5, 'she is on the beach side again');
+  }
 }

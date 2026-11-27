@@ -11,6 +11,7 @@ import { palm, parasol, lighthouse, sandcastle } from './beach.js';
 import { crab, gull, turtle, seal } from './critters2.js';
 import { strandLand, BACK } from './lands.js';
 import { scatter, beachGrass, starfish, driftwood, rowboat } from './flora.js';
+import { hookGap } from './gear.js';
 
 const H_SAND = -.32, H_DUNE = 0, H_ROCK = -.02, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', rock: '#bdb6c9', rock2: '#cbc5d6', path: '#f3e6c4' };
@@ -29,8 +30,11 @@ export default {
     root.add(slab(ROCK, H_ROCK, .32, P('rock2'), P('rock'))); root.add(slab(SEALROCK, -.3, .5, P('rock2'), P('rock')));
     // the bridge from the meadow (this set's, all the way), and the pier
     const PIER = { x0: 1.4, x1: 2.6, z0: 7.6, z1: 15.6 }, HEAD = { x0: .5, x1: 3.5, z0: 14.2, z1: 15.8 };
-    for (let z = BR.z0; z < BR.z1; z += .32) root.add(slab(rect(BR.x0 - .05, z, BR.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
-    for (let z = BR.z1 - 1.2; z > BR.z0 + .6; z -= 1.7) for (const x of [BR.x0, BR.x1]) post(x, z);
+    // (the bridge has a gap in the middle: the planks are gone. The hookshot pulls her over, gear.js)
+    const GAP = [-16.6, -13.4], spare = new THREE.Group(); spare.visible = false; spare.userData.live = true; root.add(spare);
+    for (let z = BR.z0; z < BR.z1; z += .32) { const pl = slab(rect(BR.x0 - .05, z, BR.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat); if (z > GAP[0] - .1 && z < GAP[1] - .2) spare.add(pl); else root.add(pl); }
+    for (let z = BR.z1 - 1.2; z > BR.z0 + .6; z -= 1.7) if (z < GAP[0] - .4 || z > GAP[1] + .4) for (const x of [BR.x0, BR.x1]) post(x, z);
+    const gap = hookGap(S, 0, GAP[0], GAP[1], DECK, spare);
     for (let z = PIER.z0; z < HEAD.z0; z += .32) root.add(slab(rect(PIER.x0 - .05, z, PIER.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
     for (let z = HEAD.z0; z < HEAD.z1; z += .32) root.add(slab(rect(HEAD.x0 - .05, z, HEAD.x1 + .05, z + .28), DECK, .06, P('plank'), edgeMat));
     for (let z = PIER.z0 + 1.6; z < HEAD.z0; z += 1.7) for (const x of [PIER.x0, PIER.x1]) post(x, z);
@@ -78,18 +82,18 @@ export default {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
-        light.step(e); castle.step(e); bunch.step(e); grass.step(e);
+        light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal
         { name: 'vuurtoren', zone: [8.2, -5.8, 14.2, -1.2], span: 16, tall: 10, rise: .34 },                                                 // by the lighthouse: back far enough to see its lamp
         { name: 'strand', span: 15, tall: 8.5, rise: .32 },
       ],
-      spots: { zandkasteel: [-3.6, .08, 3.75], vuurtoren: [11.5, 1.6, -3.6], palm: [-4.2, 1.6, -6.6], bank: [-8.6, .1, 3.63] },
-      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], north: [0, BR.z0 + 2] },
+      spots: { paal: [.82, DECK + .6, GAP[1] + .3], paalnoord: [.82, DECK + .6, GAP[0] - .3], zandkasteel: [-3.6, .08, 3.75], vuurtoren: [11.5, 1.6, -3.6], palm: [-4.2, 1.6, -6.6], bank: [-8.6, .1, 3.63] },
+      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
     };
   },
 };

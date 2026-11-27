@@ -51,6 +51,7 @@ export default {
     // where she can stand: the first floor that holds the spot counts
     for (const s of stairs) S.floorBox(s.h, ...s.b);
     S.floorBox(H_GRASS + .09, 18.9, -3.4, 28.1, -2.7);   // the way over the pool: she hops from stone to stone (the hop is in step, below)
+    S.door('waterval', [22.6, fallZ - .1, 24.4, fallZ + .75], [23.5, fallZ + 1.5], [0, -1], true);   // under the fall: the way into the cave behind it (set-grot.js); she has to swim there
     S.floor(null, CLIFF); S.water(H_GRASS, POOL);   // the pool is light water: with the snorkel she swims in it
     S.floor(H_TOP, TOP); S.floor(H_HILL, HILL);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_E);
@@ -78,7 +79,7 @@ export default {
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
     let found = 0; const present = gift(S, 'duikbril', SNORKEL);   // how often the otter brought something up for her; the moment it is hers
     const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9) };   // the baker by his door, the painter painting the waterfall (folk.js)
-    const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [23.5, -4.45]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
+    const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [21.6, -4.3]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
     const lamps = [[X[0] + 2.4, X[1] + 1.3], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
@@ -129,7 +130,7 @@ export default {
         { name: 'wei', span: 15, tall: 8.5, rise: .3 },
       ],
       spots: { ballon: [10.6, 3.3, -5.0], vlieger: [-6.4, H_TOP + .3, -6.5] },
-      places: { start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1], sheep: [6.3, 6.4] },
+      places: { start: [W[0] + 1.4, W[1]], cross: [X[0], X[1]], hill: [-4.6, -3.4], top: [-6.4, -5.6], balloon: [11.6, -4.3], bakery: [3.2, -4.3], pool: [19.4, -2.2], far: [28.4, -2.6], south: [-.5, 9.1], sheep: [6.3, 6.4], fall: [23.5, -4.1] },
     };
   },
 };
