@@ -186,21 +186,26 @@ export function dragon(S, x, z) {
 /** The warm little star of the meadow: it hatches the egg. `spots`: three places [x, y, z] in the set's measure. It is
  *  shy: a tap, or her walking up close, and it hops away to its next place, twice. At the third place it stays; a tap, and
  *  it beams, flies to the egg that hops behind her, and circles it: the egg cracks, opens, and the unicorn is there (and
- *  the star is gone: its warmth is in the unicorn now). Without an egg behind her it sleeps (a tap: a peep, and it sleeps on). */
+ *  the star is gone: its warmth is in the unicorn now). Without an egg behind her it sleeps (a tap: a peep, and it sleeps on).
+ *  The hatching is a moment to watch: from the star's flight until a little after the unicorn is out she stands still,
+ *  facing the egg, and the camera pushes in low and close between her and the egg, then glides back. */
 export function star(S, spots) {
   const { girl, sfx } = S, f = S.figure('ster', STORY.ster), P = spots.map(([x, y, z]) => { const [wx, wz] = S.at([x, z]); return [wx, y, wz]; });
-  let at = 0, mode = null, t = 0, from = null, hops = 0, done = false, cracked = 0; f.x = P[0][0]; f.z = P[0][2]; f.floatY = f.y = P[0][1];
+  let at = 0, mode = null, t = 0, from = null, hops = 0, done = false, cracked = 0, after = -1;
+  const PUSH = { span: 6.2, tall: 4.4, rise: .2, riseTall: .34, fx: 1, fz: 1, lag: 1, dof: 1.5, range: .8 };   // close and low: the egg, the star and her in one small picture
+  const watch = { look: [0, 0], shot: PUSH, step() { const [ex] = S.eggAt(); if (Math.abs(ex - girl.x) > .1) girl.face = Math.sign(ex - girl.x); } }; f.x = P[0][0]; f.z = P[0][2]; f.floatY = f.y = P[0][1];
   const egg = () => S.quest.stage === 'ei', ease = k => k * k * (3 - 2 * k);
   const go = () => {
     if (mode || done) return;
     if (!egg()) { f.hopV = 1.4; sfx.peep(); return; }
     if (at < P.length - 1) { from = P[at]; at++; mode = 'hop'; t = 0; hops++; sfx.peep(); }
-    else { mode = 'fly'; t = 0; from = [f.x, f.y, f.z]; sfx.hello(); }
+    else { mode = 'fly'; t = 0; from = [f.x, f.y, f.z]; sfx.hello(); const [ex, ez] = S.eggAt(); watch.look = [(ex + girl.x) / 2, (ez + girl.z) / 2]; if (!S.playing()) S.play(watch); }
   };
   f.onTap = go;
   f.act = tick => { f.setFrame(mode === 'hop' ? 1 : mode === 'fly' || mode === 'warm' ? 2 : egg() ? 0 : 3); f.tilt = mode === 'warm' ? Math.sin(tick * .8) * .2 : 0; };
-  return { f, state: () => ({ at, hops, mode, done, frame: f.frame }), step({ dt }) {
+  return { f, state: () => ({ at, hops, mode, done, frame: f.frame, watching: S.playing() === watch }), step({ dt }) {
     f.g.visible = !done && S.quest.stage !== 'baby';
+    if (after >= 0) { after += dt; if (after > 1.6) { after = -1; if (S.playing() === watch) S.stopPlay(); } }   // the unicorn is out: a moment more, then the camera glides back
     if (!mode) { if (egg() && !done && at < P.length - 1 && near(f, girl, 1.0) && girl.walking) go(); return; }
     t += dt;
     if (mode === 'hop') { const k = Math.min(1, t / .8), e = ease(k), to = P[at]; f.x = from[0] + (to[0] - from[0]) * e; f.z = from[2] + (to[2] - from[2]) * e; f.floatY = f.y = from[1] + (to[1] - from[1]) * e + Math.sin(k * Math.PI) * 1.4; if (k >= 1) mode = null; return; }
@@ -210,6 +215,6 @@ export function star(S, spots) {
     f.x = ex + Math.cos(t * 5) * .46; f.z = ez + .06 + Math.sin(t * 5) * .12; f.floatY = f.y = ey + Math.sin(t * 3) * .1;
     if (t > .9 && cracked < 1) { cracked = 1; S.eggFrame(1); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 6, undefined, 1.4); }
     if (t > 2.0 && cracked < 2) { cracked = 2; S.eggFrame(2); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 8, undefined, 1.6); }
-    if (t > 3.0) { done = true; mode = null; f.g.visible = false; S.confetti(f.x, f.y + .2, f.z, ['#f2c65c', '#f6dfa6', '#fbf5ea'], 18, S.starGeo, 2.6); S.hatch(ex, ez); }
+    if (t > 3.0) { done = true; mode = null; f.g.visible = false; S.confetti(f.x, f.y + .2, f.z, ['#f2c65c', '#f6dfa6', '#fbf5ea'], 18, S.starGeo, 2.6); S.hatch(ex, ez); after = 0; }
   } };
 }

@@ -1098,7 +1098,7 @@ window.__p = {
   info() { return { set: set.name, lift: girl.lift || 0, pose: girl.poseName, girl: [girl.x, girl.z, girl.y], uni: [uni.x, uni.z], eve, h: heightAt(girl.x, girl.z), ...Object.assign({}, ...sets.map(q => q.info ? q.info() : {})) }; },
   /** throw away what exists and build the set called `name` with its neighbours; gives how long that took */
   load(name) { loadWorld(name); return world.ms; },
-  dbg: { get set() { return set; }, scene, renderer, figures },
+  dbg: { get set() { return set; }, scene, renderer, figures, camera },
   /** what exists right now: to see that a set thrown away is really gone */
   count() { const all = k => sets.reduce((n, q) => n + q[k].length, 0); return { set: set.name, ms: world.ms, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, programs: renderer.info.programs.length, newest: Math.max(...renderer.info.programs.map(p => p.id)), calls: stat.calls, taps: all('taps'), solids: all('solids'), trees: all('trees'), ground: all('ground'), figures: figures.length, things: scene.children.length }; },
   /** which of the set's named places she can walk to from where she starts: a flood over the floor in small steps, by the same rule as her walk */

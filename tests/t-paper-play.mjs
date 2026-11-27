@@ -469,8 +469,9 @@ export default async function (t) {
     await t.sleep(3000); await t.ev(`__p.quest({ stage: 'ei' })`); await t.sleep(2500); ok((await star()).frame === 0, 'with the egg behind her it wakes, and looks shy');
     await t.ev(`__p.tap('ster')`); await t.sleep(1200); ok((await star()).at === 1, 'a tap: it hops away'); await t.shot('tmp-shots/y-star-hop-land.png');
     await t.ev(`__p.placeAt(${w.hill[0] + 1.2}, ${w.hill[1] + .4})`); await t.sleep(2200); await t.ev(`__p.tap('ster')`); await t.sleep(1200); ok((await star()).at === 2, 'and again');
-    await t.ev(`__p.placeAt(${w.cross[0] + 1.2}, ${w.cross[1] + .6})`); await t.sleep(3000); await t.ev(`__p.tap('ster')`); await t.sleep(1900); ok((await star()).mode === 'warm', 'the third time it stays: it beams and flies to the egg'); await t.shot('tmp-shots/y-star-warm-land.png');
+    await t.ev(`__p.placeAt(${w.cross[0] + 1.2}, ${w.cross[1] + .6})`); await t.sleep(3000); const far = () => t.ev('(c => Math.round(Math.hypot(c.position.x - __p.info().girl[0], c.position.z - __p.info().girl[1])))(__p.dbg.camera)'), far0 = await far(); await t.ev(`__p.tap('ster')`); await t.sleep(1900); ok((await star()).mode === 'warm', 'the third time it stays: it beams and flies to the egg'); ok((await star()).watching, 'a moment to watch: she stands still'); await t.sleep(1200); const far1 = await far(); ok(far1 < far0 * .7, `the camera pushes in (${far0} to ${far1} steps)`); await t.shot('tmp-shots/y-star-warm-land.png');
     ok(await until(`__p.quest().stage === 'baby' && __p.who().uni`, 6), 'the egg cracks and opens: the unicorn is there'); await t.sleep(500); await t.shot('tmp-shots/y-hatched-land.png');
+    ok(await until(`!__p.toy('ster').watching`, 4), 'a moment later it is over'); await t.sleep(2500); await t.shot('tmp-shots/y-hatched-after-land.png'); ok(await far() > far1 * 1.3, 'and the camera glides back');
     await t.ev(`__p.walkTo(${w.cross[0] - 3}, ${w.cross[1]})`); await t.sleep(3000); const i1 = await t.ev('__p.info()'); ok(Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.4, 'and it follows her');
   }
 }
