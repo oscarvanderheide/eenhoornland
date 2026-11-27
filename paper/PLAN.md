@@ -67,6 +67,18 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 
 Still shared and to be judged: the bench (village, meadow, beach), the lantern (village, meadow), the plank bridges, picking flowers (village, forest, meadow).
 
+## How things are planted (Oscar, 2026-11-27)
+
+"the filling of the grass with things like flowers and whatnot feels very messy ... without the flowers and the tufts it feels empty. but now its just like objects randomly scattered throughout the grass fields." The answer tried on the meadow first (`set-wei.js`, "planting, composed"); the other islands still scatter at random until he has judged it.
+
+Where the idea comes from: the remake of Link's Awakening (a toy diorama with soft focus, as ours is: flowers stand in small tidy groups on plain ground), Animal Crossing (flowers in beds and clusters, the ground itself carries the pattern), garden design in drifts (one plant per drift, as Piet Oudolf plants), and model railways (grass and flowers gather at the foot of things; bare ground between). Lumino City itself leaves most of its ground plain card.
+
+1. **Things grow in patches, never singly.** Between the patches the lawn is bare, and the bareness is the calm.
+2. **A patch is a cut of other grass with one kind of flower in one family of colours**: thick and tall in the middle, thinning out, a few tufts at its rim. Patches differ from each other; inside, a patch is all one thing.
+3. **Tall things stand at the back and the sides**: golden grass, trees. Trees stand in groves of two or three of one colour, with tufts at their feet, and never where they would hide her on a path.
+4. **Every patch and grove is placed by hand** in the set file; only the places inside a patch are left to chance.
+5. Small loose things of one kind stand together too (the dandelion clocks have two corners of their own).
+
 ## Paper or folded card
 
 Oscar asked whether what lives should be paper. The rule now:

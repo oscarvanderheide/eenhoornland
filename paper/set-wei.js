@@ -84,28 +84,48 @@ export default {
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
     const lamps = [[X[0] + 2.4, X[1] + 1.3], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
     const mills = [];   // (the toy windmills are the village's)
-    const clocks = [[-9.5, 5.5], [-8.6, 6.4], [-7.4, 5.3], [1.6, 6.6], [10.2, 4.4], [11.3, 5.5], [-11.0, -1.4], [8.2, -2.7], [13.6, -2.0], [15.5, 2.4]].map(([x, z], i) => dandelion(S, x, H_GRASS, z, i + 1));
+    // dandelion clocks stand together, in two corners of their own
+    const CLOCKS = [[-3.4, 6.2], [-2.6, 6.9], [-3.9, 7.1], [-2.9, 7.7], [-4.4, 6.4], [12.6, -1.5], [13.5, -2.1], [12.9, -2.7], [14.2, -1.4], [13.8, -2.9]];
+    const clocks = CLOCKS.map(([x, z], i) => dandelion(S, x, H_GRASS, z, i + 1));
     const flies = { vlinder1: butterfly(S, -6.5, 4.6, 'w1'), vlinder2: butterfly(S, 9.5, -1.6, 'w2', '#bba6ea', '#f6efe2'), vlinder3: butterfly(S, 22.0, .6, 'w3', '#f2c65c', '#e98f8f') };
 
-    /* ---------------- trees in blossom, and flowers everywhere: this is the flower meadow ---------------- */
-    const keepOff = [[W[0] - 1, W[1] - 2.4, W[0] + 4, W[1] + 2.4], [1.2, -8, 5.4, -3.2], [3.2, 3.0, 9.2, 9.8], [8.2, -7.4, 13.2, -2.6], [18.0, -6, 29.5, 2.8], [-8.8, -8.6, -3.6, -3.6]];
-    const blossom = [['#f4a6c4', '#f8dde4'], ['#f6efe2', '#fcf8f1'], ['#a3bf76', '#bccb84'], ['#f2c65c', '#f6dfa6']], R = rng(461); let n = 0;
-    for (let i = 0; i < 1600 && n < 18; i++) {
-      const x = -14 + R() * 44, z = -10 + R() * 20, c = blossom[Math.floor(R() * blossom.length)];
-      const on = inPoly(HILL, x, z) ? HILL : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
-      if (!on || edgeDist(on, x, z) < .6 || inPoly(TOP, x, z) || (on !== HILL && edgeDist(HILL, x, z) < .8) || inPoly(POOL, x, z) || edgeDist(POOL, x, z) < 1 || inPoly(CLIFF, x, z) || edgeDist(CLIFF, x, z) < .8) continue;
-      if (keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.6)) continue;
-      S.lollipop(x, z, on === HILL ? H_HILL : H_GRASS, .5 + R() * .3, c[0], c[1], 470 + n, 1 + R() * .5); n++;
-    }
-    const grass = meadow(S, 520, R2 => {
-      const x = -15 + R2() * 46, z = -11 + R2() * 22, on = inPoly(TOP, x, z) ? TOP : inPoly(HILL, x, z) ? HILL : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
-      if (!on || edgeDist(on, x, z) < .3 || (on === GRASS && edgeDist(HILL, x, z) < .3) || (on === HILL && edgeDist(TOP, x, z) < .3) || inPoly(POOL, x, z) || edgeDist(POOL, x, z) < .3 || inPoly(CLIFF, x, z) || edgeDist(CLIFF, x, z) < .3) return null;
-      if (laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || Math.abs(x - 3.2) < 1.5 && z > -6.9 && z < -3.4 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
-      return [x, on === TOP ? H_TOP : on === HILL ? H_HILL : H_GRASS, z];
-    }, 462, 6.5, ['#a9c078', '#b9cc86', '#9cb56c'], bunch);
-    // golden grass in seed, in drifts: the meadow's own (flora.js)
-    { const drifts = [[-10.5, 5.5, 3.2], [9.5, 3.5, 3.4], [14, -3, 3], [-9, -1.5, 2.6], [20.5, 3.2, 3], [1, 7, 2.6]];
-      scatter(S, 150, R2 => { const [dx, dz, dr] = drifts[Math.floor(R2() * drifts.length)], a = R2() * 6.28, r = Math.sqrt(R2()) * dr, x = dx + Math.cos(a) * r, z = dz + Math.sin(a) * r * .7; const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null; if (!on || edgeDist(on, x, z) < .4 || inPoly(HILL, x, z) || inPoly(POOL, x, z) || edgeDist(POOL, x, z) < .4 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .3) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .6)) return null; return [x, H_GRASS, z]; }, 463, goldGrass); }
+    /* ---------------- planting, composed ----------------
+       Oscar, 2026-11-27: flowers and tufts scattered at random over the whole lawn looked messy, and without them it is
+       empty. So, the way a garden or a model is planted (and the way the toy-like Zelda islands and Animal Crossing do it):
+         1. Things grow in patches, never singly. Between the patches the lawn is bare, and that bareness is the calm.
+         2. A patch is a cut of other grass with ONE kind of flower in one family of colours: thick and tall in the middle,
+            thinning out, a few tufts at its rim.
+         3. Tall things (golden grass, trees) stand at the back and the sides. Trees stand in groves of two or three of one
+            colour, with tufts at their feet; none where it would hide her on a path.
+       Every patch is placed by hand here; only the places inside a patch are left to chance. */
+    const bare = (x, z) => { const on = inPoly(HILL, x, z) ? null : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null; return !!on && edgeDist(on, x, z) > .35 && edgeDist(HILL, x, z) > .35 && !inPoly(POOL, x, z) && edgeDist(POOL, x, z) > .35 && !inPoly(CLIFF, x, z) && edgeDist(CLIFF, x, z) > .35 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5); };
+    const cut = (cx, cz, rx, rz, seed, mat) => { const up = .012 + (layer++) * .003; root.add(slab(blob(cx, cz, rx, rz, seed, 28, .09), H_GRASS + up, up, mat, mat)); return H_GRASS + up; };   // a patch of other grass (not in `laid`: things grow on it)
+    const DRIFTS = [   // (a flower's colour has to be one its kind knows: see bloom in props.js)
+      { at: [-10.4, -.5], r: [2.3, 1.3], kind: 'tulip', cols: ['#e98f8f', '#d9706c', '#f4a6c4'], n: 24 },      // red and pink tulips, north of the way in
+      { at: [-8.6, 5.7], r: [2.6, 1.4], kind: 'daisy', cols: ['#f2efe6'], n: 26 },                             // a field of white daisies in the south-west
+      { at: [-4.6, 4.4], r: [1.6, .9], kind: 'daisy', cols: ['#f4a6c4'], n: 14 },                              // pink daisies south of the path
+      { at: [1.7, 7.3], r: [1.9, 1.1], kind: 'spike', cols: ['#bba6ea', '#9ed9cf'], n: 19 },                   // lilac and mint spikes by the south path
+      { at: [.3, -1.5], r: [1.4, .9], kind: 'rose', cols: [null], n: 14 },                                     // roses between the hill and the bakery
+      { at: [9.2, 2.5], r: [1.3, .7], kind: 'spike', cols: ['#bba6ea'], n: 12 },                               // lilac spikes beside the sheep
+      { at: [13.2, 4.3], r: [2.6, 1.4], kind: 'tulip', cols: ['#f2c65c'], n: 24 },                             // yellow tulips east of the sheep
+      { at: [20.4, 1.7], r: [1.9, 1.0], kind: 'spike', cols: ['#f4a6c4'], n: 16 },                             // pink spikes on the pool's near bank
+      { at: [6.8, -1.6], r: [1.5, .9], kind: 'daisy', cols: ['#f2c65c', '#f2efe6'], n: 14 },                   // yellow and white daisies below the balloon
+      { at: [14.2, -5.3], r: [2.6, 1.3], gold: 40 }, { at: [-11.4, -4.7], r: [1.7, 1.0], gold: 24 }, { at: [25.5, 3.6], r: [2.2, 1.1], gold: 30 },   // golden grass, at the back and the far side
+    ];
+    const spots = [], golden = [], R = rng(461);
+    DRIFTS.forEach((d, k) => {
+      const [cx, cz] = d.at, [rx, rz] = d.r, y = cut(cx, cz, rx + .45, rz + .4, 480 + k, d.gold ? GROUND.high : GROUND.wood), mine = [];
+      for (let i = 0, tries = 0; i < (d.gold || d.n) && tries < 600; tries++) { const a = R() * 6.283, rr = Math.pow(R(), .75), x = cx + Math.cos(a) * rx * rr, z = cz + Math.sin(a) * rz * rr; if (!bare(x, z) || mine.some(([px, pz]) => Math.hypot(px - x, pz - z) < (d.gold ? .22 : .26))) continue; mine.push([x, z]); i++;
+        if (d.gold) golden.push([x, y, z]); else spots.push([x, y, z, { kind: d.kind, col: d.cols[i % d.cols.length], big: 1.3 - rr * .4 }]); }
+      if (!d.gold) for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (bare(x, z)) spots.push([x, y, z, { tuft: true }]); }
+    });
+    cut(-3.4, 6.9, 1.5, 1.1, 495, GROUND.high); cut(13.4, -2.2, 1.4, 1.1, 496, GROUND.high);   // the dandelions' two corners
+    // groves: two or three trees of one colour together, at the back and the sides
+    const blossom = { pink: ['#f4a6c4', '#f8dde4'], white: ['#f6efe2', '#fcf8f1'], yellow: ['#f2c65c', '#f6dfa6'] };
+    const GROVES = [['pink', H_GRASS, [[-12.2, -1.6], [-13.1, -2.6]]], ['white', H_GRASS, [[.9, -7.0], [.2, -8.0]]], ['yellow', H_GRASS, [[6.4, -7.3], [7.5, -6.5], [5.7, -6.2]]], ['pink', H_GRASS, [[15.0, -6.9], [16.2, -7.5]]], ['white', H_GRASS, [[10.4, 8.0], [11.5, 7.4]]], ['yellow', H_HILL, [[-1.6, -6.4], [-2.4, -7.2]]]];
+    let n = 0; for (const [c, y, trees] of GROVES) for (const [x, z] of trees) { S.lollipop(x, z, y, .52 + R() * .26, blossom[c][0], blossom[c][1], 470 + n, 1 + R() * .5); n++; for (const dx of [-.34, .3]) spots.push([x + dx, y, z + .16 + R() * .1, { tuft: true }]); }
+    let si = 0; const grass = meadow(S, spots.length, () => spots[si++] || null, 462, 0, ['#7f9d5e', '#8fb06c', '#86a466'], bunch);
+    { let gi = 0; scatter(S, golden.length, () => golden[gi++] || null, 463, goldGrass); }
 
     const NOTES = [392, 440, 523.3, 587.3, 659.3]; let sung = 0, hopping = false;
     const [px0, pz0] = S.at([18.9, -3.4]), [px1, pz1] = S.at([28.1, -2.7]), sx = stones.map(s => S.at([s.x, s.z])[0]);

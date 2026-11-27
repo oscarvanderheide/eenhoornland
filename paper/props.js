@@ -39,11 +39,11 @@ export function bouquet(S) {
 export function meadow(S, n, pick, seed, flowers = 2.5, greens = ['#86a466', '#9bb877', '#7f9d5e'], bunch = null) {
   const R = rnd(seed), tuft = card(TUFT, .02, paper(greens[0])).geometry, blooms = [];
   for (let k = 0, tries = 0; k < n && tries < n * 40; tries++) {
-    const at = pick(R); if (!at) continue; k++; const [x, y, z] = at;
-    if (R() * 10 >= flowers) {
+    const at = pick(R); if (!at) continue; k++; const [x, y, z, want] = at;   // (`want`: the set says what grows here; without it, chance does)
+    if (want ? !!want.tuft : R() * 10 >= flowers) {
       const g = paper(greens[Math.floor(R() * greens.length)]), t = new THREE.Mesh(tuft, [g, g]); t.castShadow = t.receiveShadow = true; t.position.set(x, y, z); t.rotation.y = R() * .6 - .3; t.scale.setScalar(.8 + R() * .7); S.root.add(t);
       if (R() < .5) { const t2 = new THREE.Mesh(tuft, [g, g]); t2.castShadow = true; t2.position.set(x + .16 + R() * .1, y, z + R() * .12 - .06); t2.rotation.y = R() * .8 - .4; t2.scale.setScalar(.6 + R() * .4); S.root.add(t2); }   // tufts grow in twos and threes
-    } else { const o = { kind: ['daisy', 'daisy', 'tulip', 'rose', 'spike'][Math.floor(R() * 5)], seed: Math.floor(R() * 1e9) + 1, big: 1.05 }, f = bloom(o.kind, rnd(o.seed), o.big); f.position.set(x, y, z); f.rotation.y = R() * .5 - .25; blooms.push({ f, o, x, y, z, back: 0 }); }
+    } else { const o = { kind: (want && want.kind) || ['daisy', 'daisy', 'tulip', 'rose', 'spike'][Math.floor(R() * 5)], seed: Math.floor(R() * 1e9) + 1, big: (want && want.big) || 1.05, col: (want && want.col) || null }, f = bloom(o.kind, rnd(o.seed), o.big, o.col); f.position.set(x, y, z); f.rotation.y = R() * .5 - .25; blooms.push({ f, o, x, y, z, back: 0 }); }
   }
   if (!blooms.length) return { step() {}, state: () => ({ flowers: 0 }) };
   // all the flowers as one piece: every corner keeps its colour, and each flower remembers which corners are its own
