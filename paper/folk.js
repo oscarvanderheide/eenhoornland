@@ -20,7 +20,7 @@ const WATER = ['#8fd0e0', '#f6efe2', '#7fbcc0'];
 
 /** grandma, on the right half of a bench (x, z: the bench's middle; `bench`: what props.js bench gave, so she knows when she has company) */
 export function grandma(S, x, z, bench) {
-  const { girl, sfx } = S, f = make(S, 'oma', PEOPLE.oma, x + .3, z + .08, 0); f.lift = .13; f.face = -1; let wave = 0, sat = false, waves = 0;
+  const { girl, sfx } = S, f = make(S, 'oma', PEOPLE.oma, x + .3, z + .22, 0); f.lift = .13; f.face = -1; let wave = 0, sat = false, waves = 0;   // (z + .22: in front of the seat's front slat, which reaches .19; on the edge of the bench, her feet and the scarf hanging in front)
   const hello = () => { if (wave > 0) return; wave = 1.7; waves++; sfx.hello(); };
   f.onTap = hello;
   f.act = tick => f.setFrame(wave > 0 ? 2 : near(f, girl, 4) ? Math.floor(tick / 4) % 2 : 3);
