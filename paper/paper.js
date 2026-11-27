@@ -157,6 +157,19 @@ function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
   tapTarget(g, () => { t.wob = 1; sfx.rustle(); shake(t); });
   return t;
 }
+// umbrella trees, the meadow's own: a dark trunk and a wide, flat crown of layered card, standing alone in the fields
+function umbrella(x, z, y, r = 1.1, col = '#7f9d5e', col2 = '#9bb877', seed = 1) {
+  const g = new THREE.Group(); g.position.set(x, y, z); into.root.add(g);
+  const sway = new THREE.Group(); sway.userData.live = true; g.add(sway); const R = rng(seed), h = 1.35 + r * .35;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.08, .14, h, 8), paper('#7a5a3e')); trunk.position.y = h / 2; trunk.castShadow = trunk.receiveShadow = true; sway.add(trunk);
+  for (const s of [-1, 1]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.03, .06, r * .7, 6), paper('#7a5a3e')); b.rotation.z = s * .9; b.position.set(s * r * .24, h - .05, 0); b.castShadow = true; sway.add(b); }
+  const crown = (rr, yy, c, dx = 0, dz = 0) => { const m = new THREE.Mesh(new THREE.SphereGeometry(rr, 18, 10), paper(c)); m.scale.y = .34; m.position.set(dx, yy, dz); m.castShadow = m.receiveShadow = true; sway.add(m); };
+  crown(r, h + .12, col); crown(r * .78, h + .3, col2, (R() - .5) * .2, .05); crown(r * .45, h + .44, col, (R() - .5) * .3, .08);
+  bake(sway); into.local.push({ x, z, r: .3 }); into.solids.push({ x: x + into.ox, z: z + into.oz, r: .3 });
+  const t = { g, sway, wob: 0, x, z, top: h + .2, kind: 'leaf' }; into.trees.push(t);
+  tapTarget(g, () => { t.wob = 1; sfx.rustle(); shake(t); });
+  return t;
+}
 function pine(x, z, y, h, col) {
   const g = new THREE.Group(); g.position.set(x, y, z); into.root.add(g);
   const sway = new THREE.Group(); sway.userData.live = true; g.add(sway);
@@ -209,7 +222,7 @@ function buildSet(def) {
   const root = new THREE.Group(); root.name = def.name; root.position.set(ox, 0, oz); scene.add(root);
   const s = into = { name: def.name, root, ox, oz, floors: [], walls: [], solids: [], local: [], taps: [], tapSpots: [], trees: [], ground: [], figs: [], lamps: [], doors: [], offers: [], names: {}, spots: {} };
   const S = {
-    THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine,
+    THREE, FIGS, root, girl, uni, sfx, confetti, bitGeo, starGeo, lollipop, pine, umbrella,
     at: W,   // a place in the set's own measure -> where that is in the world (for whoever lives here: figures think in the world's measure)
     sea: o => { s.seaAsk = { fine: o.fine ?? 3, land: o.land.map(p => p.map(W)), x0: (o.x0 ?? -30) + ox, x1: (o.x1 ?? 30) + ox, z0: (o.z0 ?? -9) + oz, z1: (o.z1 ?? 17) + oz, deep: o.deep ? [o.deep[0], o.deep[1], o.deep[2] + ox, o.deep[3] + oz] : [120, 80, ox, oz] }; },
     floor: (h, pts, inset = 0) => { s.floors.push({ h, pts: pts.map(W), inset }); },

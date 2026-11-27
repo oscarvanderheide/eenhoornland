@@ -6,7 +6,7 @@
 //   dandelions       a tap (or walking through one) and the seeds drift off
 //   the bakery       a cream house with a blue roof (no inside yet; the baker comes with the people)
 // Shapes are cut by hand; real ground, real trees and flowers; nothing here is a grey stand-in.
-import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump } from './kit.js';
 import { cottage, shore, meadow, bouquet, pinwheel, bench, lantern, dandelion, GROUND } from './props.js';
 import { kite, balloon } from './toys.js';
 import { butterfly } from './critters.js';
@@ -29,7 +29,9 @@ export default {
     const { SAND, GRASS, SAND_E, GRASS_E, HILL, TOP, bridge: W } = weiLand();
 
     /* ---------------- the land: a beach, the meadow, the hill and its top ---------------- */
-    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.grass], [GRASS_E, H_GRASS, .32, GROUND.grass], [HILL, H_HILL, .48, GROUND.high], [TOP, H_TOP, .48, GROUND.high]]);
+    // the meadow's own look (Oscar: the islands felt alike): 'the patchwork hills', warm late-summer grass, fields cut like a quilt
+    const MEADOW = paper('#bcc56e', { map: grassMap, bump: grassBump }), HILLG = paper('#cdc978', { map: grassMap, bump: grassBump }), TOPG = paper('#dccf86', { map: grassMap, bump: grassBump });
+    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, MEADOW], [GRASS_E, H_GRASS, .32, MEADOW], [HILL, H_HILL, .48, HILLG], [TOP, H_TOP, .48, TOPG]]);
     // stairs: three card steps up the south side of a level
     const edge = (poly, at) => { let best = -99; for (let v = -30; v <= 30; v += .01) if (inPoly(poly, at, v)) best = v; return best; };
     const stairs = [], steps = (poly, at, half, base) => { const lip = edge(poly, at); for (let i = 0; i < 3; i++) { const far = lip + .05 + (2 - i) * .42, h = base + (i + 1) * .16 - .02, b = [at - half, far - .5, at + half, far]; root.add(slab(rect(...b), h, h - base + .02, P('path'), edgeMat)); stairs.push({ b, h }); } };
@@ -104,30 +106,41 @@ export default {
        Every patch is placed by hand here; only the places inside a patch are left to chance. */
     const bare = (x, z) => { const on = inPoly(HILL, x, z) ? null : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null; return !!on && edgeDist(on, x, z) > .35 && edgeDist(HILL, x, z) > .35 && !inPoly(POOL, x, z) && edgeDist(POOL, x, z) > .35 && !inPoly(CLIFF, x, z) && edgeDist(CLIFF, x, z) > .35 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5); };
     const cut = (cx, cz, rx, rz, seed, mat) => { const up = .012 + (layer++) * .003; root.add(slab(blob(cx, cz, rx, rz, seed, 28, .09), H_GRASS + up, up, mat, mat)); return H_GRASS + up; };   // a patch of other grass (not in `laid`: things grow on it)
-    const DRIFTS = [   // (a flower's colour has to be one its kind knows: see bloom in props.js)
-      { at: [-10.4, -.5], r: [2.3, 1.3], kind: 'tulip', cols: ['#e98f8f', '#d9706c', '#f4a6c4'], n: 24 },      // red and pink tulips, north of the way in
-      { at: [-8.6, 5.7], r: [2.6, 1.4], kind: 'daisy', cols: ['#f2efe6'], n: 26 },                             // a field of white daisies in the south-west
-      { at: [-4.6, 4.4], r: [1.6, .9], kind: 'daisy', cols: ['#f4a6c4'], n: 14 },                              // pink daisies south of the path
-      { at: [1.7, 7.3], r: [1.9, 1.1], kind: 'spike', cols: ['#bba6ea', '#9ed9cf'], n: 19 },                   // lilac and mint spikes by the south path
-      { at: [.3, -1.5], r: [1.4, .9], kind: 'rose', cols: [null], n: 14 },                                     // roses between the hill and the bakery
-      { at: [9.2, 2.5], r: [1.3, .7], kind: 'spike', cols: ['#bba6ea'], n: 12 },                               // lilac spikes beside the sheep
-      { at: [13.2, 4.3], r: [2.6, 1.4], kind: 'tulip', cols: ['#f2c65c'], n: 24 },                             // yellow tulips east of the sheep
-      { at: [20.4, 1.7], r: [1.9, 1.0], kind: 'spike', cols: ['#f4a6c4'], n: 16 },                             // pink spikes on the pool's near bank
-      { at: [6.8, -1.6], r: [1.5, .9], kind: 'daisy', cols: ['#f2c65c', '#f2efe6'], n: 14 },                   // yellow and white daisies below the balloon
-      { at: [14.2, -5.3], r: [2.6, 1.3], gold: 40 }, { at: [-11.4, -4.7], r: [1.7, 1.0], gold: 24 }, { at: [25.5, 3.6], r: [2.2, 1.1], gold: 30 },   // golden grass, at the back and the far side
+    // the fields: long rounded oblongs at a slant, each one kind in straight rows, a dark green hedgerow round it
+    const FIELDS = [
+      { at: [-9.7, 5.6], size: [4.8, 2.3], ang: .12, kind: 'lavender' }, { at: [-10.4, -.8], size: [4.0, 2.1], ang: -.1, kind: 'wheat' },
+      { at: [1.9, 7.4], size: [3.6, 1.7], ang: -.16, kind: 'lavender' }, { at: [13.4, 4.4], size: [4.8, 2.3], ang: .08, kind: 'poppy' },
+      { at: [15.8, -5.7], size: [3.8, 2.0], ang: -.06, kind: 'wheat' }, { at: [20.7, 1.9], size: [3.2, 1.7], ang: .14, kind: 'poppy' },
+      { at: [25.6, 3.7], size: [3.8, 1.9], ang: -.12, kind: 'wheat' }, { at: [-4.8, 4.3], size: [2.4, 1.3], ang: .05, kind: 'poppy' },
     ];
-    const spots = [], golden = [], R = rng(461);
-    DRIFTS.forEach((d, k) => {
-      const [cx, cz] = d.at, [rx, rz] = d.r, y = cut(cx, cz, rx + .45, rz + .4, 480 + k, d.gold ? GROUND.high : GROUND.wood), mine = [];
-      for (let i = 0, tries = 0; i < (d.gold || d.n) && tries < 600; tries++) { const a = R() * 6.283, rr = Math.pow(R(), .75), x = cx + Math.cos(a) * rx * rr, z = cz + Math.sin(a) * rz * rr; if (!bare(x, z) || mine.some(([px, pz]) => Math.hypot(px - x, pz - z) < (d.gold ? .22 : .26))) continue; mine.push([x, z]); i++;
-        if (d.gold) golden.push([x, y, z]); else spots.push([x, y, z, { kind: d.kind, col: d.cols[i % d.cols.length], big: 1.3 - rr * .4 }]); }
-      if (!d.gold) for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (bare(x, z)) spots.push([x, y, z, { tuft: true }]); }
+    const LOOK = { lavender: ['#a9b56c', '#8e9b5c'], wheat: ['#e2c66c', '#cdb05a'], poppy: ['#b6c26a', '#9aa85a'] };
+    const oblong = (cx, cz, w, d, ang, pad = 0) => { const pts = [], hw = w / 2 + pad, hd = d / 2 + pad, rr = Math.min(hd, .35 + pad); for (let i = 0; i < 40; i++) { const a = i / 40 * 6.283, sx = Math.sign(Math.cos(a)) * (hw - rr) + Math.cos(a) * rr, sz = Math.sign(Math.sin(a)) * (hd - rr) + Math.sin(a) * rr; pts.push([cx + sx * Math.cos(ang) - sz * Math.sin(ang), cz + sx * Math.sin(ang) + sz * Math.cos(ang)]); } return pts; };
+    const at = (f, u, v) => [f.at[0] + u * Math.cos(f.ang) - v * Math.sin(f.ang), f.at[1] + u * Math.sin(f.ang) + v * Math.cos(f.ang)];
+    const spots = [], golden = [], R = rng(461), bales = [];
+    FIELDS.forEach((f, k) => {
+      const [w, d] = f.size, [base, row] = LOOK[f.kind];
+      root.add(slab(oblong(...f.at, w, d, f.ang, .2), H_GRASS + .005, .005, paper('#6f8f55'), paper('#6f8f55')));   // the hedgerow: a dark green rim
+      root.add(slab(oblong(...f.at, w, d, f.ang), H_GRASS + .008, .003, paper(base), paper(base)));
+      const rows = Math.max(3, Math.round(d / .36));
+      for (let r = 0; r < rows; r++) { const v = -d / 2 + (r + .5) * d / rows;
+        root.add(slab(oblong(...at(f, 0, v), w - .5, .14, f.ang), H_GRASS + .011, .003, paper(row), paper(row)));   // the furrow under the row
+        for (let u = -w / 2 + .35; u <= w / 2 - .35; u += f.kind === 'wheat' ? .2 : .26) { const [x, z] = at(f, u + (R() - .5) * .06, v + (R() - .5) * .05); if (!bare(x, z)) continue;
+          if (f.kind === 'wheat') golden.push([x, H_GRASS + .012, z]);
+          else spots.push([x, H_GRASS + .012, z, f.kind === 'lavender' ? { kind: 'spike', col: '#bba6ea', big: 1.15 } : { kind: 'tulip', col: '#d9706c', big: .85 }]); } }
+      if (f.kind === 'wheat') bales.push(at(f, w / 2 + .55, d * .15), at(f, -w / 2 - .5, -d * .2));   // round bales of hay at the field's ends
     });
     cut(-3.4, 6.9, 1.5, 1.1, 495, GROUND.high); cut(13.4, -2.2, 1.4, 1.1, 496, GROUND.high);   // the dandelions' two corners
     // groves: two or three trees of one colour together, at the back and the sides
-    const blossom = { pink: ['#f4a6c4', '#f8dde4'], white: ['#f6efe2', '#fcf8f1'], yellow: ['#f2c65c', '#f6dfa6'] };
-    const GROVES = [['pink', H_GRASS, [[-12.2, -1.6], [-13.1, -2.6]]], ['white', H_GRASS, [[.9, -7.0], [.2, -8.0]]], ['yellow', H_GRASS, [[6.4, -7.3], [7.5, -6.5], [5.7, -6.2]]], ['pink', H_GRASS, [[15.0, -6.9], [16.2, -7.5]]], ['white', H_GRASS, [[10.4, 8.0], [11.5, 7.4]]], ['yellow', H_HILL, [[-1.6, -6.4], [-2.4, -7.2]]]];
-    let n = 0; for (const [c, y, trees] of GROVES) for (const [x, z] of trees) { S.lollipop(x, z, y, .52 + R() * .26, blossom[c][0], blossom[c][1], 470 + n, 1 + R() * .5); n++; for (const dx of [-.34, .3]) spots.push([x + dx, y, z + .16 + R() * .1, { tuft: true }]); }
+    // big lone umbrella trees, one here and there at the back and the sides (paper.js umbrella), a few tufts at their feet
+    const LONE = [[-12.7, -2.9, H_GRASS, 1.25], [.6, -7.6, H_GRASS, 1.05], [6.9, -7.0, H_GRASS, 1.3], [10.9, 7.8, H_GRASS, 1.15], [-2.1, -6.9, H_HILL, .95], [18.6, -7.4, H_GRASS, 1.1]];
+    LONE.forEach(([x, z, y, r], k) => { S.umbrella(x, z, y, r, ['#7f9d5e', '#6f9057', '#86a466'][k % 3], '#a3bf76', 470 + k); for (const dx of [-.4, .35]) spots.push([x + dx, y, z + .2 + R() * .1, { tuft: true }]); });
+    // the hay: round bales lying at the wheat fields' ends, rolled paper with a spiral on each end
+    for (const [x, z] of bales) { if (!bare(x, z)) continue; const b = new THREE.Group(); b.position.set(x, H_GRASS, z); b.rotation.y = R() * .6 - .3; root.add(b);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .56, 18), paper('#e3c461')); m.rotation.z = Math.PI / 2; m.position.y = .34; m.castShadow = m.receiveShadow = true; b.add(m);
+      for (const sd of [-1, 1]) { const e = new THREE.Mesh(new THREE.CircleGeometry(.33, 18), paper('#d6b24f', { side: THREE.DoubleSide })); e.rotation.y = Math.PI / 2; e.position.set(sd * .285, .34, 0); b.add(e);
+        const sp = []; for (let i = 0; i <= 30; i++) { const a = i / 30 * 6.283 * 2.2, r2 = .04 + i / 30 * .26; sp.push(new THREE.Vector3(sd * .29, .34 + Math.sin(a) * r2, Math.cos(a) * r2)); }
+        b.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(sp), new THREE.LineBasicMaterial({ color: '#b8923e' }))); }
+      S.solid({ x, z, r: .38 }); }
     let si = 0; const grass = meadow(S, spots.length, () => spots[si++] || null, 462, 0, ['#7f9d5e', '#8fb06c', '#86a466'], bunch);
     { let gi = 0; scatter(S, golden.length, () => golden[gi++] || null, 463, goldGrass); }
 
