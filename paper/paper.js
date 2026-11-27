@@ -240,6 +240,8 @@ function buildSet(def) {
     head: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top); },   // the top of her head, in the world
     glue: group => bake(group),   // a thing that moves as a whole (a windmill's sails): glue its pieces into one, so it is one draw
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
+    land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
+    where: () => set.name,   // the set she stands on now
   };
   Object.assign(s, def.build(S));
   s.start = W(s.start); s.uni = s.uni ? W(s.uni) : [s.start[0] - 1.2, s.start[1] + .4];

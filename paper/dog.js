@@ -1,6 +1,7 @@
 // The dog, and the ball that is hers to fetch. The dog waits where it lives until she comes: it never calls her.
 //   close by     it gets up and looks at her
-//   a tap        hello: a hop, two barks, and from then on it comes along with her (over the bridge, into the house)
+//   a tap        hello: a hop, two barks, and from then on it comes along with her, in the village and into the house; it
+//                never leaves the village (Oscar): when she goes over a bridge it sits at the edge and waits for her
 //   she stops    it sits down beside her
 //   a tap again  it rolls over on its back
 //   the ball     a tap on the ball and she kicks it; it really rolls and bounces off things. The dog runs after it,
@@ -42,7 +43,7 @@ export function ball(S, x, y, z, color = '#e98f8f') {
 export function dog(S, x, z, theBall = null) {
   const { girl, sfx } = S, f = S.figure('hond', ANIMALS.hond), [hx, hz] = S.at([x, z]);
   f.x = hx; f.z = hz; f.face = 1;
-  let mode = 'wait', t = 0, still = 0, hellos = 0;
+  let mode = 'wait', t = 0, still = 0, hellos = 0, left = null;
   const dist = (ax, az) => Math.hypot(f.x - ax, f.z - az);
   const bark = () => { sfx.bark(); setTimeout(() => sfx.bark(), 170); };
   const hearts = () => S.confetti(f.x, f.y + .7, f.z, ['#f4a6c4', '#f8dde4', '#e98f8f'], 9, undefined, 2.3);
@@ -74,9 +75,12 @@ export function dog(S, x, z, theBall = null) {
       if (runTo(girl.x + girl.face * .75, girl.z + .15, dt, 3.8, .3) || t > 9) { theBall.held = null; theBall.x = f.x + f.face * .4; theBall.z = f.z + .05; theBall.vy = 1.6; f.hopV = 2.6; bark(); mode = 'follow'; still = 0; }
       return;
     }
+    // the village is its home: when she is off it (a bridge, another island) it waits where she left, looking after her
+    const home = S.land(girl.x, girl.z) || S.where() === 'huis'; f.follows = home; if (S.land(girl.x, girl.z)) left = [girl.x, girl.z];
+    if (!home) { if (left && !runTo(left[0], left[1], dt, 3.3, .4)) { still = 0; return; } f.walking = false; still += dt; f.face = girl.x < f.x ? -1 : 1; return; }
     // coming along: a few steps behind her, sitting down when she has stood still for a while
     const d = dist(girl.x, girl.z);
     if (d > 1.7 && !S.playing()) { runTo(girl.x - girl.face * 1.1, girl.z + .35, dt, 3.3, .5); still = 0; } else { f.walking = false; still += dt; if (d < 2.5) f.face = girl.x < f.x ? -1 : 1; }
   };
-  return { f, step, state: () => ({ mode, hellos, still, frame: f.frame, at: [f.x, f.z] }) };
+  return { f, step, state: () => ({ mode, hellos, still, frame: f.frame, at: [f.x, f.z], home: f.follows }) };
 }

@@ -483,4 +483,25 @@ export default async function (t) {
     ok(await until(`!__p.toy('ster').watching`, 4), 'a moment later it is over'); await t.sleep(2500); await t.shot('tmp-shots/y-hatched-after-land.png'); ok(await far() > far1 * 1.3, 'and the camera glides back');
     await t.ev(`__p.walkTo(${w.cross[0] - 3}, ${w.cross[1]})`); await t.sleep(3000); const i1 = await t.ev('__p.info()'); ok(Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.4, 'and it follows her');
   }
+
+  /* ---------------- companions: each island its own friend, who never leaves its island ---------------- */
+  if (!only || only === 'friends') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), far = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), girl = async () => (await t.ev('__p.info()')).girl;
+    const d = await t.ev(`__p.places('dorp')`), b = await t.ev(`__p.places('bos')`), w = await t.ev(`__p.places('wei')`);
+    // the dog
+    const h = await at('hond'); await t.ev(`__p.placeAt(${h[0] + 1.4}, ${h[1] + .6})`); await t.sleep(2400); await t.ev(`__p.tap('hond')`); await t.sleep(300); ok((await toy('dog')).mode === 'follow', 'the dog: a tap, and it comes along');
+    await t.ev(`__p.walkTo(${d.fountain[0]}, ${d.fountain[1]})`); await t.sleep(4500); ok(far((await toy('dog')).at, await girl()) < 2.6, 'it is with her in the village');
+    await t.ev(`__p.placeAt(${b.start[0]}, ${b.start[1]})`); await t.sleep(3500); { const dg = await toy('dog'); ok(!dg.home && far(dg.at, await girl()) > 6, 'she is in the forest: the dog stays in the village'); }
+    await t.ev(`__p.placeAt(${d.fountain[0]}, ${d.fountain[1]})`); await t.sleep(4500); ok(far((await toy('dog')).at, await girl()) < 2.6, 'back in the village: it comes along again');
+    // the lamb on the meadow
+    const l = await at('lam'); await t.ev(`__p.placeAt(${l[0] + 1.3}, ${l[1] + .5})`); await t.sleep(2400); await t.ev(`__p.tap('lam')`); await t.sleep(300); ok((await toy('lam')).friend, 'the lamb: a tap, and it is her friend');
+    await t.ev(`__p.walkTo(${w.cross[0]}, ${w.cross[1]})`); await t.sleep(7000); ok(far(await at('lam'), await girl()) < 2.8, 'and it bounds along after her'); await t.shot('tmp-shots/y-lamb-friend-land.png');
+    await t.ev(`__p.placeAt(${d.fountain[0]}, ${d.fountain[1]})`); await t.sleep(3000); ok(far(await at('lam'), await girl()) > 6, 'it stays on the meadow');
+    // the crab on the beach, the little dragon at the castle
+    for (const [isle, n] of [['strand', 'krab'], ['kasteel', 'draakje']]) {
+      const c = await at(n); await t.ev(`__p.placeAt(${c[0] + 1.3}, ${c[1] + .6})`); await t.sleep(2600); await t.ev(`__p.tap('${n}')`); await t.sleep(300); ok((await toy(n)).friend, `the ${n}: a tap, and it is her friend`);
+      const p = await t.ev(`__p.places('${isle}')`), to = p.start; await t.ev(`__p.walkTo(${to[0]}, ${to[1]})`); await t.sleep(7000); ok(far(await at(n), await girl()) < 2.8, `and it comes along on its island (${far(await at(n), await girl()).toFixed(1)} away)`); await t.shot(`tmp-shots/y-${n}-friend-land.png`);
+    }
+  }
 }

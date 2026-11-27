@@ -8,6 +8,7 @@ import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edg
 import { shore, meadow, bouquet, flowerBed, pinwheel, fountain, bench, lantern, GROUND } from './props.js';
 import { castle, carousel } from './castle.js';
 import { peacock, dragon } from './critters2.js';
+import { befriend } from './companion.js';
 import { musician } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
 import { kasteelLand, BACK } from './lands.js';
@@ -46,7 +47,7 @@ export default {
     for (const s of [-1, 1]) { roseHedge(S, s * 1.3, -2.9, s * 3.9, -2.9, H_GRASS, 760 + s); roseHedge(S, s * 3.9, -2.9, s * 3.9, -1.5, H_GRASS, 764 + s); }
     for (const [x, z, k] of [[-1.25, -1.9, 'two'], [1.25, -1.9, 'two'], [-4.7, .2, 'cone'], [4.7, .2, 'cone'], [-2.9, 2.6, 'ball'], [2.2, 3.0, 'ball'], [-7.6, 1.2, 'cone'], [-7.6, -1.2, 'cone']]) topiary(S, x, H_GRASS, z, k);
     root.add(slab(blob(-7.0, -2.6, 1.3, .9, 735, 20, .08), .34, .34, P('rock2'), P('rock'))); S.solid({ x: -7.0, z: -2.6, r: 1.0 });   // the dragon's rock
-    const live = { pauw: peacock(S, -4.8, 3.6), draakje: dragon(S, -5.9, -1.5), trompetter: musician(S, 'trompetter', PEOPLE2.trompetter, PROPS2.noot2, -2.45, -3.7, { sound: () => S.sfx.horn(), play: [0, 1], rest: 2, end: 3, from: [.68, 1.2], long: 3.6 }) };
+    const live = { pauw: peacock(S, -4.8, 3.6), draakje: befriend(S, dragon(S, -5.9, -1.5), { speed: 2.2, hop: 1.3 }),   /* the castle's companion (companion.js) */ trompetter: musician(S, 'trompetter', PEOPLE2.trompetter, PROPS2.noot2, -2.45, -3.7, { sound: () => S.sfx.horn(), play: [0, 1], rest: 2, end: 3, from: [.68, 1.2], long: 3.6 }) };
     const benches = [], lamps = [], mills = [];
     for (const [x, z, c] of [[-9.0, 1.3, '#e98f8f'], [-9.0, -1.3, '#bba6ea'], [-1.25, -3.7, '#f2c65c'], [1.25, -3.7, '#f2c65c'], [3.6, 4.6, '#8fc3e0']]) pennant(S, x, H_GRASS, z, c);
 

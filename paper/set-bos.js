@@ -7,6 +7,7 @@ import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora
 import { musician, witch } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
+import { befriend } from './companion.js';
 import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
 
@@ -112,6 +113,7 @@ export default {
     const live = { egel: hedgehog(S, nx + .3, nz + .2), uil: owl(S, rx - 2.3, rz + .45, 1.1), eekhoorn: squirrel(S, tx - .8, tz + .6, 2.0, 'eekhoorn', [tx, tz, .45]),
       // more of the forest's own (Oscar: deer, boar, squirrels): a shy fawn that grazes in the orchard, a row of boar piglets rooting in the west, two more squirrels
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.3, 'eekhoorn2', [cx - 5.7, cz - 3.6, .1]), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.2, 'eekhoorn3', [ox + 5.1, oz + 2.6, .1]) };
+    befriend(S, live.hert, { byTap: false, isFriend: (st => () => st().mode === 'friend')(live.hert.state), own: false, speed: 2.4, gap: 1.4 });   // the forest's companion: the fawn, once it has come to her (she waits quietly), comes along (companion.js)
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
     const heks = witch(S, cx - .7, cz - .25);   // the witch and her pot, in the clearing where the paths meet (folk.js)
     const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,

@@ -9,6 +9,7 @@ import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edg
 import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './props.js';
 import { palm, parasol, lighthouse, sandcastle } from './beach.js';
 import { crab, gull, turtle, seal } from './critters2.js';
+import { befriend } from './companion.js';
 import { strandLand, BACK } from './lands.js';
 import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
@@ -71,7 +72,7 @@ export default {
     rowboat(S, 10.6, H_SAND, 4.4, .5); driftwood(S, -11.2, H_SAND, 5.4, .4); driftwood(S, 4.4, H_SAND, -5.6, -.3, 1.1); driftwood(S, -1.6, H_SAND, 7.4, 1.1, .9);
     const mills = [];
     const live = {
-      krab: crab(S, 5.2, 3.6, [[5.2, 3.6], [8.2, 5.0], [3.9, 1.2]]),
+      krab: befriend(S, crab(S, 5.2, 3.6, [[5.2, 3.6], [8.2, 5.0], [3.9, 1.2]]), { speed: 2.4, hop: .8, gap: 1.0, hello: () => S.sfx.click() }),   // the beach's companion: it scuttles after her (companion.js)
       schildpad: turtle(S, -6.2, 6.4, [[-6.2, 6.4], [-2.6, 7.2], [-10.2, 5.2]]),
       meeuw: gull(S, [[perch[0][0], perch[0][1], DECK + .9], [perch[1][0], perch[1][1], DECK + .9], [perch[2][0], perch[2][1], DECK + .9]]),
       zeehond: seal(S, 5.4, 14.45, -.3),
