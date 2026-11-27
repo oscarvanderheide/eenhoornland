@@ -12,7 +12,7 @@ import huis from './set-huis.js';
 import wei from './set-wei.js';
 import { THINGS } from './things.js';
 import { SNORKEL } from './gear.js';
-import { PROPS } from './people.js';
+import { PROPS, PEOPLE } from './people.js';
 import strand from './set-strand.js';
 import regenboog from './set-regenboog.js';
 import kasteel from './set-kasteel.js';
@@ -152,8 +152,8 @@ function lollipop(x, z, y, r, col, col2, seed, stickH = 1.25) {
   }
   bake(sway);
   into.local.push({ x, z, r: .3 }); into.solids.push({ x: x + into.ox, z: z + into.oz, r: .3 });
-  const t = { g, sway, wob: 0, x, z }; into.trees.push(t);
-  tapTarget(g, () => { t.wob = 1; sfx.rustle(); });
+  const t = { g, sway, wob: 0, x, z, top: stickH + r * .78, kind: 'leaf' }; into.trees.push(t);
+  tapTarget(g, () => { t.wob = 1; sfx.rustle(); shake(t); });
   return t;
 }
 function pine(x, z, y, h, col) {
@@ -166,8 +166,8 @@ function pine(x, z, y, h, col) {
     c.position.y = .35 + i * h * .22 + hh / 2; c.castShadow = c.receiveShadow = true; sway.add(c);
   }
   bake(sway); into.local.push({ x, z, r: .32 }); into.solids.push({ x: x + into.ox, z: z + into.oz, r: .32 });
-  const t = { g, sway, wob: 0, x, z }; into.trees.push(t);
-  tapTarget(g, () => { t.wob = 1; sfx.rustle(); });
+  const t = { g, sway, wob: 0, x, z, top: .35 + h * .55, kind: 'pine' }; into.trees.push(t);
+  tapTarget(g, () => { t.wob = 1; sfx.rustle(); shake(t); });
   return t;
 }
 /** the sea: rows of wavy card, like a toy theatre, one sea for everything that exists. Every set says what water it wants
@@ -585,6 +585,70 @@ function tapFigure(f) {
   else if (f.onTap) f.onTap();
 }
 
+/* ---------------- what falls out of a tree when it is shaken ----------------
+   (Oscar: "paper style caterpillars ... could fall outside of trees sometimes. or apples ... when shaking them. or maybe
+   even also sometimes weird stuff like a person lol. or a sock ... we can have some fun right")
+   Not every shake: a tree has something again only a while after the last time. Mostly fruit (an apple from a leafy
+   tree, a pinecone from a pine): it drops, bounces and lies there; a tap and she picks it up, and whoever she taps next
+   gets it. Sometimes a caterpillar comes down on its thread, wriggles, and climbs back up (at a tap, or after a while).
+   Now and then a sock flutters down, or a boot; and once in a long while a birdwatcher tumbles out, sits a moment dazed,
+   waves, and wanders off. What lies about long enough is gone again. */
+const fallen = [], EATS = new Set(['appel', 'denappel']); let shakes = 0, heldFall = null;
+const threadMat = new THREE.MeshBasicMaterial({ color: '#f6efe2' });
+function shake(t) {
+  if ((t.next || 0) > time || playing) return; t.next = time + 4 + Math.random() * 5;
+  const p = new THREE.Vector3(); t.g.getWorldPosition(p); shakes++;
+  const r = Math.random(), what = shakes === 1 ? 'fruit' : r < .48 ? 'fruit' : r < .76 ? 'rups' : r < .88 ? 'sok' : r < .95 ? 'laars' : 'vogelaar';
+  dropFrom(what === 'fruit' ? (t.kind === 'pine' ? 'denappel' : 'appel') : what, p, p.y + t.top, t.kind);
+}
+function dropFrom(kind, p, top, tree = 'leaf') {
+  const side = Math.random() < .5 ? -1 : 1; let x = p.x + side * (.45 + Math.random() * .3), z = p.z + .35 + Math.random() * .3;
+  if (heightAt(x, z) === null) { x = p.x; z = p.z + .4; }
+  const f = makeFigure('val-' + kind, kind === 'laars' ? PEOPLE.laars : THINGS[kind]); f.thing = kind !== 'vogelaar'; f.face = side;
+  const o = { f, kind, x, z, y: top, vy: 0, mode: kind === 'rups' ? 'down' : 'fall', t: 0, age: 0, ground: heightAt(x, z) ?? p.y, top, bounced: false, thread: null };
+  if (kind === 'rups') { o.x = p.x + side * .3; o.z = p.z + (tree === 'pine' ? .72 : .35);   // (in front of a pine's cone, not inside it)
+    o.ground = heightAt(o.x, o.z) ?? p.y; o.thread = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1, 3), threadMat); scene.add(o.thread); }
+  f.act = () => { f.setFrame(o.frame || 0); f.tilt = o.tilt || 0; if (o.bob) f.bob = o.bob; };   // (the stage resets these every frame; act comes after)
+  f.onTap = () => tapFallen(o); tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots); fallen.push(o);
+  sfx.rustle(); confetti(p.x, top, p.z + .2, ['#7fa676', '#93b071', '#a3c08c'], 6, undefined, 1.2);
+}
+function tapFallen(o) {
+  if (playing) return;
+  if (o.kind === 'rups') { if (o.mode === 'hang') { o.mode = 'up'; o.t = 0; o.f.hopV = 1.2; sfx.peep(); } return; }
+  if (o.kind === 'vogelaar') { o.f.hopV = 2; sfx.hello(); return; }
+  if (o.mode !== 'lie' || heldFall === o) return;
+  walkThen(o.x - girl.face * .35, o.z + .1, () => { if (o.mode !== 'lie') return; hands.take(o, () => { if (heldFall === o) { heldFall = null; o.mode = 'lie'; o.x = girl.x + girl.face * .4; o.z = girl.z + .15; o.y = heightAt(o.x, o.z) ?? girl.y; o.age = 0; girl.poseName = null; } }); heldFall = o; o.mode = 'held'; sfx.hop(); }, .9);
+}
+offers.push(who => {   // what fell from a tree, given to whoever she taps next: fruit is eaten, anything else makes them jump
+  const o = heldFall; if (!o) return false; heldFall = null; hands.free(o); girl.poseName = null; removeFallen(o);
+  who.hopV = EATS.has(o.kind) ? 2.6 : 3.4; if (EATS.has(o.kind)) sfx.munch(); else sfx.boing();
+  confetti(who.x, (who.y || 0) + .7, who.z, EATS.has(o.kind) ? ['#d9574f', '#f6efe2', '#a77e54'] : ['#e98f8f', '#f6efe2', '#f2c65c'], 9, undefined, 1.8); return o.kind;
+});
+function removeFallen(o) { o.f.g.visible = false; o.gone = true; if (o.thread) { scene.remove(o.thread); o.thread.geometry.dispose(); } const i = fallen.indexOf(o); if (i >= 0) fallen.splice(i, 1); }
+function stepFallen(dt, tick) {
+  for (const o of [...fallen]) {
+    const f = o.f; o.t += dt; o.age += dt;
+    if (o.mode === 'fall') {   // down it comes: fruit and boots drop and bounce once, a sock flutters, the birdwatcher tumbles
+      const flutter = o.kind === 'sok'; o.vy -= (flutter ? 2.6 : 9.8) * dt; if (flutter) o.vy = Math.max(o.vy, -1.6); o.y += o.vy * dt;
+      if (flutter) { o.x += Math.sin(o.t * 5) * .5 * dt; o.tilt = Math.sin(o.t * 4) * .5; } else if (o.kind === 'vogelaar') { o.tilt = o.t * 6; o.frame = 0; }
+      if (o.y <= o.ground) { o.y = o.ground; o.tilt = 0;
+        if (!o.bounced && (EATS.has(o.kind) || o.kind === 'laars')) { o.bounced = true; o.vy = 1.6; sfx.thud(); }
+        else { sfx.thud(); confetti(o.x, o.ground + .1, o.z + .1, ['#d8c9a8', '#efe6d4'], 6, undefined, 1.2); o.mode = o.kind === 'vogelaar' ? 'dazed' : 'lie'; o.t = 0; o.age = 0; } }
+    } else if (o.mode === 'down' || o.mode === 'hang' || o.mode === 'up') {   // the caterpillar on its thread
+      const low = o.ground + .95; if (o.mode === 'down') { o.y = o.top + (low - o.top) * Math.min(1, o.t / 1.4); if (o.t >= 1.4) { o.mode = 'hang'; o.t = 0; } }
+      else if (o.mode === 'hang') { o.y = low + Math.sin(o.t * 2) * .05; o.frame = Math.floor(tick / 4) % 2; if (o.t > 8) { o.mode = 'up'; o.t = 0; } }
+      else { o.y = low + (o.top - low) * Math.min(1, o.t / 1.3); o.frame = Math.floor(tick / 2) % 2; if (o.t >= 1.3) { removeFallen(o); continue; } }
+      const len = Math.max(.01, o.top - (o.y + f.H)); o.thread.scale.y = len; o.thread.position.set(o.x, o.y + f.H + len / 2, o.z);
+    } else if (o.mode === 'dazed') { o.frame = 1; if (o.t > 1.8) { o.mode = 'wave'; o.t = 0; sfx.hello(); f.hopV = 1.6; } }
+    else if (o.mode === 'wave') { o.frame = 2; if (o.t > 1.4) { o.mode = 'off'; o.t = 0; } }
+    else if (o.mode === 'off') { o.frame = 2; o.x += f.face * 1.3 * dt; o.bob = Math.abs(Math.sin(o.t * 9)) * .05; if (o.t > 2.6) { removeFallen(o); continue; } }
+    else if (o.mode === 'held') { const h = handPoint(); o.x = h.x + girl.face * .06; o.z = h.z + .05; o.y = h.y - .08; if (!playing) girl.poseName = 'hold'; f.g.visible = !playing; }
+    else if (o.mode === 'lie' && o.age > 45) { removeFallen(o); continue; }
+    f.x = o.x; f.z = o.z; f.floatY = f.y = o.y;
+  }
+}
+const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); };
+
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
 let playing = null, playAct = false;
 function play(toy) { playing = toy; target = null; playAct = false; }
@@ -979,7 +1043,7 @@ function frame(now) {
     else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
-  stepMask(dt); stepSister(); stepEgg(dt);
+  stepMask(dt); stepSister(); stepEgg(dt); stepFallen(dt, tick);
   // figures: smooth positions, poses that step like stop motion
   for (const f of figures) {
     const ground = f.floatY ?? heightAt(f.x, f.z) ?? f.y;
@@ -1090,6 +1154,10 @@ requestAnimationFrame(frame);
 window.__p = {
   placeAt(x, z) { girl.x = x; girl.z = z; uni.x = x; uni.z = z - .9; if (heightAt(uni.x, uni.z) === null) { uni.x = x - 1; uni.z = z; } target = null; },
   walkTo(x, z) { target = goTo(x, z); },
+  /** what fell from trees, and (for tests) let the tree nearest her drop this: 'appel', 'rups', 'sok', 'laars', 'vogelaar' */
+  fallen: () => fallen.map(o => ({ kind: o.kind, mode: o.mode, at: [o.x, o.z], y: o.y })),
+  drop(kind) { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); dropFrom(kind, p, p.y + t.top, t.kind); },
+  tree() { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); return [p.x, p.y + t.top, p.z, t.kind]; },
   /** how often she had to look for a way round, and how long the last look took */
   ways() { return { ...pathStat }; },
   tap(name) { const f = figures.find(f => f.name === name); const named = sets.map(q => q.names[name]).find(Boolean); if (f) tapFigure(f); else if (named) named(); else if (name === 'tree') { set.trees[0].wob = 1; } },

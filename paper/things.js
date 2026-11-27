@@ -129,6 +129,43 @@ function drawMand(g) {
 }
 
 // a red apple with a leaf
+/* ---------- what falls out of a tree when it is shaken (paper.js) ---------- */
+/** a caterpillar hanging head down from its thread: 0 and 1 wriggle */
+function drawRups(g, f) {
+  const w = f ? 1 : -1;
+  for (let i = 0; i < 6; i++) { const y = 14 + i * 13, x = 30 + Math.sin(i * 1.1) * 6 * w; piece(g, i % 2 ? '#8CC46E' : '#A6D486', E(x, y, 11, 9), .5); ink(g, 'rgba(255,255,255,.35)', E(x - 4, y - 3, 2.5, 2)); }
+  const hx = 30 + Math.sin(6 * 1.1) * 6 * w, hy = 100;
+  line(g, '#5E8A4A', 2.2, [[hx - 5, hy + 8], [hx - 9, hy + 16]]); line(g, '#5E8A4A', 2.2, [[hx + 5, hy + 8], [hx + 9, hy + 16]]);
+  piece(g, '#7FB862', E(hx, hy, 13, 12)); eye(g, hx - 5, hy + 1, 3); eye(g, hx + 5, hy + 1, 3); cheek(g, hx, hy + 6, 4, 2.6);
+}
+/** a stripy sock, for no reason at all */
+function drawSok(g) {
+  piece(g, '#F6EFE2', round([[22, 6], [52, 6], [52, 70], [74, 82], [76, 100], [48, 104], [22, 86]], 12));
+  for (const y of [18, 34, 50]) piece(g, '#E98F8F', P([[22, y], [52, y], [52, y + 8], [22, y + 8]]), 0);
+  piece(g, '#E98F8F', E(62, 96, 12, 8), 0); piece(g, '#E98F8F', P([[20, 4], [54, 4], [54, 12], [20, 12]]), .3);
+}
+/** a pinecone */
+function drawDenappel(g) {
+  piece(g, '#7A5A3E', E(30, 44, 18, 26));
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) piece(g, r % 2 ? '#A77E54' : '#B88B5C', E(20 + c * 10 + (r % 2) * 5, 26 + r * 9, 6, 4.5), .3);
+  line(g, '#5E4430', 3, [[30, 18], [30, 8]]);
+}
+/** a birdwatcher who fell out of a tree: 0 tumbling, arms up; 1 sitting, dazed, little stars; 2 up again, waving */
+function drawVogelaar(g, f) {
+  const coat = '#7FA676', coat2 = '#5F8A5E', skin = '#F2C8A8', hat = '#B8925E', shorts = '#C9A36E', boots = '#6B4B33';
+  const sit = f === 1, body = sit ? 118 : 96;
+  if (sit) { piece(g, shorts, round([[44, 148], [96, 148], [104, 170], [40, 170]], 8)); piece(g, boots, E(112, 172, 12, 8)); piece(g, boots, E(30, 172, 12, 8)); }
+  else { for (const s of [-1, 1]) { piece(g, shorts, round([[70 + s * 4, 140], [70 + s * 22, 140], [70 + s * (f ? 22 : 30), 172], [70 + s * (f ? 8 : 14), 172]], 6)); piece(g, boots, E(70 + s * (f ? 15 : 24), 178, 11, 7)); } }
+  piece(g, coat, round([[42, body], [98, body], [104, body + 50], [36, body + 50]], 16));
+  if (f === 0) { line(g, coat2, 12, [[46, body + 8], [26, body - 30]]); line(g, coat2, 12, [[94, body + 8], [114, body - 30]]); piece(g, skin, E(24, body - 36, 8, 8)); piece(g, skin, E(116, body - 36, 8, 8)); }
+  else if (f === 2) { line(g, coat2, 12, [[94, body + 8], [118, body - 24]]); piece(g, skin, E(120, body - 30, 8, 8)); line(g, coat2, 12, [[46, body + 10], [38, body + 44]]); }
+  else { line(g, coat2, 12, [[46, body + 10], [34, body + 40]]); line(g, coat2, 12, [[94, body + 10], [106, body + 40]]); }
+  piece(g, '#33262E', round([[56, body + 14], [84, body + 14], [84, body + 26], [56, body + 26]], 4)); ink(g, '#8FB8C8', E(62, body + 20, 4, 4)); ink(g, '#8FB8C8', E(78, body + 20, 4, 4));   // the binoculars
+  const hy = body - 26; piece(g, skin, E(70, hy, 24, 24)); eye(g, 61, hy + 2, f === 1 ? 2.6 : 3.6); eye(g, 79, hy + 2, f === 1 ? 2.6 : 3.6); cheek(g, 70, hy + 12, 6, 3.5);
+  if (f === 0) ink(g, '#33262E', E(70, hy + 14, 5, 6)); else line(g, '#33262E', 2.4, [[63, hy + 13], [70, hy + 16], [77, hy + 13]]);
+  piece(g, hat, U(E(70, hy - 16, 26, 7), E(70, hy - 22, 18, 12)));
+  if (f === 1) for (const [x, y] of [[40, hy - 38], [70, hy - 48], [100, hy - 38]]) piece(g, '#F2C65C', P([[x, y - 7], [x + 2, y - 2], [x + 7, y - 2], [x + 3, y + 2], [x + 5, y + 7], [x, y + 4], [x - 5, y + 7], [x - 3, y + 2], [x - 7, y - 2], [x - 2, y - 2]]), .3);
+}
 /** a hazelnut: 0 whole in its brown shell, 1 cracked open, the pale nut showing */
 function drawNoot(g, f) {
   if (f === 1) { piece(g, '#8A5E3A', S([[8, 30], [10, 46], [22, 50], [22, 34]])); piece(g, '#8A5E3A', S([[40, 30], [38, 46], [26, 50], [26, 34]])); piece(g, '#F1DDB4', E(24, 30, 9, 11)); ink(g, 'rgba(255,255,255,.5)', E(21, 26, 2.4, 3.6)); return; }
@@ -166,4 +203,8 @@ export const THINGS = {
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
   schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
   peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
+  rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },
+  sok: { w: 90, h: 110, draw: drawSok, frames: 1, size: .22, does: ['sock'] },
+  denappel: { w: 60, h: 78, draw: drawDenappel, frames: 1, size: .2, does: ['pinecone'] },
+  vogelaar: { w: 140, h: 196, draw: drawVogelaar, frames: 3, size: 1.15, does: ['tumble', 'dazed', 'wave'] },
 };
