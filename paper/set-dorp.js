@@ -86,13 +86,14 @@ export default {
     const stones = (line, seed) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.19 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, P('path'), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
     // every path starts inside the square's outline, so it is joined to it; benches and lanterns stand beside paths, never on them
     const SQ = [.6 * K, -.6 * K], F = [-1.2 * K, 9.6 * K];
-    const SHOP = [10.6, -7.4];   // the clothes shop, on open lawn north-east of the square, beside the terrace (Oscar: by the paddock it felt cramped)   // the middle of the fountain square; the middle of the farm in the south
+    const SHOP = [-10.0, -8.1];   // the clothes shop, on open lawn north-west of the terrace, its own path to the door (Oscar: by the paddock it felt cramped; then it stood on the north bridge's path)   // the middle of the fountain square; the middle of the farm in the south
     lay(blob(SQ[0], SQ[1], 3.3, 2.5, 61, 48, .05), 'high');                                                               // the square round the fountain
     lay(ribbon(kk([[-3.5, -3.5], [-1.6, -3.36], [.3, -3.46], [2.2, -3.36], [3.85, -3.45]]), .82, 62), 'path', H_HIGH);      // along the terrace, past her door
     lay(ribbon([[.3 * K, -2.9 * K + 1.3], [.34 * K, (-2.9 * K + SQ[1]) / 2], [SQ[0] - .3, SQ[1] - 2.0]], .95, 63, .04), 'path');                                                    // from the foot of the stairs onto the square
     lay(ribbon([[SQ[0] + .1, SQ[1] + 2.0], ...kk([[.4, 2.0], [.75, 3.4], [.15, 4.8], [-.7, 5.9], [-1.15, 6.9], [-1.2, 7.7]]), [F[0] + .3, F[1] - 2.9]], .85, 64), 'path');   // south, winding down to the farm's well
     lay(ribbon([[SQ[0] + 2.8, SQ[1] + .3], ...kk([[3.9, .5], [6.0, 1.85], [7.6, 2.45], [9.3, 2.4]])], .9, 65), 'path');                        // east to the bridge
     lay(ribbon([[SQ[0] - 2.8, SQ[1] - .2], ...kk([[-2.6, -1.3], [-4.6, -2.15], [-7.0, -2.3], [-9.0, -1.5]]), [pcx + 3.3, pcz - .9]], .8, 66), 'path');  // west, round the north of the playground to the pond
+    lay(ribbon([[SHOP[0] + 1.0, SHOP[1] + 1.25], [SHOP[0] + 1.25, SHOP[1] + 2.4], [SHOP[0] + 2.0, SHOP[1] + 3.5], [-7.4, -3.9]], .8, 68), 'path');   // from the shop's door down to the path round the playground
     lay(ribbon(kk([[6.0, -5.75], [5.9, -4.4], [5.35, -3.3], [5.5, -1.6], [6.05, .2], [6.5, 1.75]]), .85, 67), 'path');      // from the north bridge past the terrace's east stairs
     lay(blob(-5.3 * K, .3 * K, 4.4, 2.8, 68, 44, .06), sandP);                                                                 // the playground's sand
     stones([0, 1, 2, 3, 4].map(i => [3.4 * K + .4 + (4.6 * K - 3.4 * K - .4) * (1 - i / 4) * .35, 4.3 * K - 2.0 - i * .52]), 160);                                                 // to the gate of the unicorns' meadow
@@ -114,7 +115,7 @@ export default {
     // two benches looking at the pond, one at the square
     const benches = [[pcx - 1.5, pcz - 2.9], [pcx + 1.6, pcz - 2.9], [SQ[0] + 2.3, SQ[1] - 3.0]].map(([x, z], i) => bench(S, x, H_GRASS, z, i === 2 ? -.3 : 0));
     // lanterns, each beside a path: a tap lights one, a tap puts it out (Oscar: "let me turn them on")
-    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-6.4, -3.0], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [5.2, -3.3]]), [pcx + 4.4, pcz + 1.7]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
+    const lamps = [[SQ[0] - 1.9, SQ[1] - 3.1], ...kk([[2.7, -2.1], [-7.3, -2.75], [4.9, -.1], [7.2, 1.5], [-.6, 3.3], [6.6, -3.0]]), [pcx + 4.4, pcz + 1.7]].map(([x, z], n) => lantern(S, x, inPoly(HIGH, x, z) ? H_HIGH : H_GRASS, z, n));
 
     /* ---------------- the playground: the swing and the slide (toys.js), and a ball ---------------- */
     const SW = [-6.4 * K, -.4 * K], SL = [-4.9 * K, 1.05 * K];

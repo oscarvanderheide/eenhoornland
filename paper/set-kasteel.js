@@ -54,13 +54,13 @@ export default {
     stepping([[-2.6, 1.7], [-3.4, 2.4], [-4.1, 3.0]], 745);                                                  // to the peacock's lawn
 
     /* ---------------- things ---------------- */
-    const burg = castle(S, 0, H_GRASS, -4.9), turn = carousel(S, 6.4, H_GRASS, 3.0), well = goldBall(S, 0, H_GRASS + .015, .5), bunch = bouquet(S);   // (a fountain stands on the village square; the court has a golden ball)
+    const burg = castle(S, 0, H_GRASS, -4.9, 'kasteelzaal'), turn = carousel(S, 6.4, H_GRASS, 3.0), well = goldBall(S, 0, H_GRASS + .015, .5), bunch = bouquet(S);   // (a fountain stands on the village square; the court has a golden ball)
     const beds = [];   // (flower beds are her garden's; here: rose hedges and clipped bushes, flora.js)
     for (const s of [-1, 1]) { roseHedge(S, s * 1.3, -2.9, s * 3.9, -2.9, H_GRASS, 760 + s); roseHedge(S, s * 3.9, -2.9, s * 3.9, -1.5, H_GRASS, 764 + s); }
     for (const [x, z, k] of [[-1.25, -1.9, 'two'], [1.25, -1.9, 'two'], [-4.7, .2, 'cone'], [4.7, .2, 'cone'], [-2.9, 2.6, 'ball'], [2.2, 3.0, 'ball'], [-7.6, 1.2, 'cone'], [-7.6, -1.2, 'cone']]) topiary(S, x, H_GRASS, z, k);
     root.add(slab(blob(-7.0, -2.6, 1.3, .9, 735, 20, .08), .34, .34, P('rock2'), P('rock'))); S.solid({ x: -7.0, z: -2.6, r: 1.0 });   // the dragon's rock
     for (const [cx, cz] of [[5.0, 6.9], [-4.6, 5.6], [1.2, 2.8], [-9.4, 2.2]]) S.coinAt(cx, cz);   // coins lying about: by the carousel, on the peacock's lawn, in the court, on the west side
-    const live = { pauw: peacock(S, -4.8, 3.6), draakje: befriend(S, dragon(S, -5.9, -1.5), { speed: 2.2, hop: 1.3 }),   /* the castle's companion (companion.js) */ trompetter: musician(S, 'trompetter', PEOPLE2.trompetter, PROPS2.noot2, -2.45, -3.7, { sound: () => S.sfx.horn(), play: [0, 1], rest: 2, end: 3, from: [.68, 1.2], loop: 3.8, guests: () => [live.pauw, live.draakje] }) };
+    const live = { pauw: peacock(S, -4.8, 3.6), draakje: befriend(S, dragon(S, -5.9, -1.5), { speed: 2.2, hop: 1.3 }),   /* the castle's companion (companion.js) */ trompetter: musician(S, 'trompetter', PEOPLE2.trompetter, PROPS2.noot2, -2.45, -3.7, { sound: () => S.sfx.song('ode', 'trumpet'), play: [0, 1], rest: 2, end: 3, from: [.68, 1.2], loop: 3.8, guests: () => [live.pauw, live.draakje] }) };
     const benches = [], lamps = [], mills = [];
     for (const [x, z, c] of [[-9.0, 1.3, '#e98f8f'], [-9.0, -1.3, '#bba6ea'], [-1.25, -3.7, '#f2c65c'], [1.25, -3.7, '#f2c65c'], [3.6, 4.6, '#8fc3e0']]) pennant(S, x, H_GRASS, z, c);
 

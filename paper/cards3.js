@@ -368,7 +368,17 @@ function drawKind(g, f) {
 }
 
 /** every card: { w, h, draw, frames, size, does } */
+/** a bottle with a message: pale green glass, a cork, a rolled-up note with a red ribbon inside; it lies a little tilted */
+function drawFles(g) {
+  g.save(); g.translate(60, 70); g.rotate(-.5);
+  piece(g, '#9fd8b8', U(C(0, 34, 0, -8, 24), C(0, -14, 0, -44, 10)));          // the body and the neck
+  ink(g, '#c6ecd6', C(-11, 30, -11, -6, 4));                                       // a shine down the glass
+  piece(g, '#fbf5ea', C(4, 26, 4, -2, 9), .3); line(g, '#e8505b', 3, [[-5, 12], [13, 12]]);   // the note, and its ribbon
+  piece(g, '#b98f5c', C(0, -44, 0, -54, 9));                                       // the cork
+  g.restore();
+}
 export const CARDS3 = {
+  fles: { w: 120, h: 140, draw: drawFles, frames: 1, size: .55, does: ['bottle'] },
   walvis: { w: 520, h: 220, draw: drawWalvis, frames: 3, size: 3.2, does: ['back up', 'blow', 'tail'] },
   zeilboot: { w: 200, h: 240, draw: drawBoat(BOATS.zeilboot), frames: 2, size: 1.9, does: ['full', 'flutter'] },
   zeilboot2: { w: 200, h: 240, draw: drawBoat(BOATS.zeilboot2), frames: 2, size: 1.9, does: ['full', 'flutter'] },

@@ -86,12 +86,12 @@ export function player(S, x, z) {
   const { sfx } = S, f = make(S, 'muzikant', PEOPLE.muzikant, x, z);
   const notes = [0, 1, 2].map(i => { const n = S.figure('noot' + i, PROPS.noot); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
   let mode = null, t = 0, plays = 0, next = 0, sent = 0;
-  f.onTap = () => { if (mode) return; mode = 'play'; t = 0; next = .25; plays++; sfx.squeeze(); };
+  let long = 4.9; f.onTap = () => { if (mode) return; mode = 'play'; t = 0; next = .25; plays++; const s = sfx.song('birthday', 'accordion'); long = s.dur + .3; };   // (Happy Birthday: everybody knows it)
   f.act = tick => f.setFrame(mode === 'play' ? [0, 1, 2, 1][Math.floor(tick / 3) % 4] : mode === 'bow' ? 3 : 2);
   return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length }), step({ dt }) {
     for (const q of notes) if (q.t >= 0) { q.t += dt; const k = q.t / 1.9; q.n.x = f.x + q.side * (.4 + k * .55) + Math.sin(q.t * 3) * .08; q.n.z = f.z + .06; q.n.floatY = q.n.y = 1.15 + k * 1.2; if (k >= 1) { q.t = -1; q.n.g.visible = false; } }
     if (!mode) return; t += dt;
-    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (t > 4.9) { mode = 'bow'; t = 0; f.hopV = 1.2; } }
+    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (t > long) { mode = 'bow'; t = 0; f.hopV = 1.2; } }
     else if (t > 1.4) mode = null;
   } };
 }
@@ -153,7 +153,7 @@ export function musician(S, name, spec, note, x, z, o) {
   const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face; if (o.sink) f.sink = o.sink;
   const notes = [0, 1, 2].map(i => { const n = S.figure(name + 'noot' + i, note); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
   const from = o.from || [.3, 1.1], loop = o.loop || 4.6, reward = o.reward || (name === 'harpist' ? 'harp' : 'luister-' + name);
-  let mode = null, t = 0, plays = 0, next = 0, sent = 0, sit = null, st = 0, again = 0, listens = 0, cheered = false, guests = [], seat = null, uniSeat = null;
+  let tune = null, mode = null, t = 0, plays = 0, next = 0, sent = 0, sit = null, st = 0, again = 0, listens = 0, cheered = false, guests = [], seat = null, uniSeat = null;
   const ok = (px, pz) => { const h = S.heightAt(px, pz); return h !== null && Math.abs(h - (f.y || 0)) < .3 && S.land(px, pz) && S.free(px, pz, h) && Math.hypot(px - f.x, pz - f.z) > 1.0; };   // (on the musician's own level: the flute's hilltop, not below it)
   const gather = () => {   // who comes, and where everybody sits
     guests = (o.guests ? o.guests() : []).filter(c => c && c.f && c.f !== f && !c.f.away && c.f.g.visible).map(c => audience(S, c));
@@ -167,11 +167,11 @@ export function musician(S, name, spec, note, x, z, o) {
   const listen = { rest: true, look: [0, 0], step(dt, inp) {
     const { girl, sfx } = S; st += dt;
     if (sit === 'on') { const k = Math.min(1, st / .3); girl.x = seat[0]; girl.z = seat[1]; girl.lift = Math.sin(k * Math.PI) * .25; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = Math.sign(f.x - seat[0]) || 1;
-      if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); for (const a of guests) a.invite(a.seats, f.x); mode = 'play'; t = 0; next = .25; again = loop; plays++; o.sound(); } return; }
+      if (k >= 1) { sit = 'sit'; st = 0; listens++; cheered = false; sfx.hop(); for (const a of guests) a.invite(a.seats, f.x); mode = 'play'; t = 0; next = .25; plays++; tune = o.sound(); again = Math.max(loop, ((tune && tune.dur) || 0) + 1.2); } return; }
     if (sit === 'sit') { girl.lift = 0; girl.poseName = 'sit';
       const u = S.uni; if (uniSeat && u && !u.away) { u.busy = true; const dx = uniSeat[0] - u.x, dz = uniSeat[1] - u.z, d = Math.hypot(dx, dz); if (d > .1) { const sp = Math.min(d, 2.6 * dt); if (!S.move(u, dx / d * sp, dz / d * sp)) { u.x += dx / d * sp; u.z += dz / d * sp; } u.walking = true; u.face = Math.sign(dx) || u.face; } else { u.walking = false; u.face = Math.sign(f.x - u.x) || u.face; } }   // (stopPlay lets it go again)
       if (!cheered && guests.length && guests.every(a => a.there())) { cheered = true; S.coins.reward(reward, f.x, (f.y || 0) + 1.6, f.z); S.confetti(f.x, (f.y || 0) + 1.4, f.z, ['#f4a6c4', '#f8dde4', '#f2c65c'], 10, undefined, 2); }   // everybody is here
-      if (st > .4 && (inp.act || inp.x || inp.y)) { sit = 'off'; st = 0; for (const a of guests) a.leave(); mode = 'end'; t = 0; f.hopV = 1.2; } return; }   // she moves: the music ends
+      if (st > .4 && (inp.act || inp.x || inp.y)) { sit = 'off'; st = 0; if (tune && tune.stop) tune.stop(); tune = null; for (const a of guests) a.leave(); mode = 'end'; t = 0; f.hopV = 1.2; } return; }   // she moves: the music ends
     const k = Math.min(1, st / .28); girl.lift = Math.sin(k * Math.PI) * .2; girl.poseName = null; if (k >= 1) { girl.lift = 0; sit = null; S.stopPlay(); }
   } };
   f.onTap = () => {
@@ -181,7 +181,7 @@ export function musician(S, name, spec, note, x, z, o) {
   return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length, sitting: sit === 'sit', listens, guests: guests.filter(a => a.there()).length, invited: guests.reduce((n, a) => n + a.n, 0), seats: guests.flatMap(a => a.seats || []), seat, who: guests.flatMap(a => a.figs.map(q => [q.name, +q.x.toFixed(1), +q.z.toFixed(1)])) }), step({ dt }) {
     for (const q of notes) if (q.t >= 0) { q.t += dt; const k = q.t / 1.9; q.n.x = f.x + f.face * from[0] + q.side * k * .5 + Math.sin(q.t * 3) * .08; q.n.z = f.z + .06; q.n.floatY = q.n.y = (f.y || 0) + (f.lift || 0) + from[1] + k * 1.2; if (k >= 1) { q.t = -1; q.n.g.visible = false; } }
     if (!mode) return; t += dt;
-    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (sit === 'sit') { again -= dt; if (again <= 0) { again = loop; plays++; o.sound(); } } else if (sit === null) { mode = 'end'; t = 0; } }
+    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (sit === 'sit') { again -= dt; if (again <= 0) { plays++; tune = o.sound(); again = Math.max(loop, ((tune && tune.dur) || 0) + 1.2); } } else if (sit === null) { mode = 'end'; t = 0; } }   // (the song again, after a breath)
     else if (t > 1.4) mode = null;
   } };
 }

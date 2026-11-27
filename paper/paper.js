@@ -21,6 +21,7 @@ import kasteel from './set-kasteel.js';
 import grot from './set-grot.js';
 import hol from './set-hol.js';
 import winkel from './set-winkel.js';
+import kasteelzaal from './set-kasteelzaal.js';
 import boomhut from './set-boomhut.js';
 import blokhut from './set-blokhut.js';
 import { EGG } from './quest.js';
@@ -28,7 +29,7 @@ import { CARDS3 } from './cards3.js';
 import { openShop } from './shopui.js';
 import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut, kasteelzaal };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -515,12 +516,40 @@ function tone(freq, dur, type = 'sine', vol = .12, slide = 0, vib = 0) {
   o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .05);
 }
 /** one soft note: `at` seconds from now, `len` long, through a low-pass at `cut`; `rise` is how slowly it starts */
-function voice(freq, at, len, type, vol, cut, rise = .02, vib = 0) {
+function voice(freq, at, len, type, vol, cut, rise = .02, vib = 0, out = null) {
   const a = audio(); if (!a) return; const t = a.currentTime + .03 + at, o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter();
   o.type = type; o.frequency.value = freq; lp.type = 'lowpass'; lp.frequency.value = cut;
   if (vib) { const l = a.createOscillator(), lg = a.createGain(); l.frequency.value = vib; lg.gain.value = freq * .006; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + len + .1); }
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + rise); g.gain.exponentialRampToValueAtTime(.0008, t + len);
-  o.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o.stop(t + len + .05);
+  o.connect(lp); lp.connect(g); g.connect(out || a.destination); o.start(t); o.stop(t + len + .05);
+}
+/* ---------------- songs: tunes everybody knows (Oscar: "the musicians should play real songs familiar to anyone"), all old
+   and free: a note name and octave, and how many beats (C4:2). Played by an instrument of the stage's own soft voices */
+const SONGS = {
+  twinkle: { beat: .42, notes: 'C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2' },
+  jacques: { beat: .38, notes: 'C4 D4 E4 C4 C4 D4 E4 C4 E4 F4 G4:2 E4 F4 G4:2 G4:.5 A4:.5 G4:.5 F4:.5 E4 C4 G4:.5 A4:.5 G4:.5 F4:.5 E4 C4 C4 G3 C4:2 C4 G3 C4:2' },
+  ode: { beat: .4, notes: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:.5 C4:2' },
+  oldmac: { beat: .36, notes: 'G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:3 D4 G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:3' },
+  fanfare: { beat: .3, notes: 'G4:.5 C5:.5 E5:.5 G5:1.5 E5:.5 G5:2.5' },
+  elise: { beat: .26, notes: 'E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 G#4 B4 C5:2 E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 C5 B4 A4:3' },
+  birthday: { beat: .36, notes: 'G4:.75 G4:.25 A4 G4 C5 B4:2 G4:.75 G4:.25 A4 G4 D5 C5:2 G4:.75 G4:.25 G5 E5 C5 B4 A4:2 F5:.75 F5:.25 E5 C5 D5 C5:3' },
+};
+const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }, noteHz = n => { const m = /^([A-G])(#?)(\d)$/.exec(n); return 440 * Math.pow(2, (NOTE[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12 - 69) / 12); };
+/** how each instrument sounds one note (`f`, at `at` seconds from now, `len` long), into `out` */
+const PLAY = {
+  harp: (f, at, len, out) => { voice(f, at, Math.max(1.4, len * 2), 'sine', .055, 2400, .006, 0, out); voice(f * 2, at, .9, 'sine', .016, 3000, .006, 0, out); },
+  flute: (f, at, len, out) => voice(f * 2, at, len * .96 + .05, 'sine', .045, 3000, .06, 5, out),
+  trumpet: (f, at, len, out) => { voice(f, at, len * .92, 'sawtooth', .026, 1500, .035, 0, out); voice(f / 2, at, len * .92, 'square', .006, 700, .035, 0, out); },
+  guitar: (f, at, len, out) => { voice(f, at, Math.max(1.1, len * 1.7), 'triangle', .055, 1900, .005, 0, out); voice(f / 2, at, Math.max(.8, len), 'triangle', .018, 900, .005, 0, out); },
+  musicbox: (f, at, len, out) => { voice(f * 2, at, Math.max(1.2, len * 2.5), 'sine', .045, 4000, .004, 0, out); voice(f * 4, at, .5, 'sine', .012, 5000, .004, 0, out); },
+  accordion: (f, at, len, out) => { voice(f, at, len * .96 + .05, 'sawtooth', .018, 1200, .05, 4, out); voice(f * 1.005, at, len * .96 + .05, 'square', .01, 900, .05, 0, out); },
+};
+/** play a song on an instrument; gives back how long it lasts and a way to stop it (it fades out) */
+function playSong(name, inst) {
+  const a = audio(), S = SONGS[name]; if (!a || !S) return { dur: 6, stop() { } };
+  const bus = a.createGain(); bus.connect(a.destination); let at = 0;
+  for (const tok of S.notes.split(' ')) { const [n, b] = tok.split(':'), len = (b ? +b : 1) * S.beat; PLAY[inst](noteHz(n), at, len, bus); at += len; }
+  return { dur: at, stop() { const t = a.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0, t + .35); setTimeout(() => bus.disconnect(), 600); } };
 }
 function noise(dur, vol = .08, hp = 1200) {
   const a = audio(); if (!a) return; const t = a.currentTime, b = a.createBuffer(1, a.sampleRate * dur, a.sampleRate), d = b.getChannelData(0);
@@ -550,6 +579,8 @@ const sfx = {
   flutter() { [0, 70, 140, 210].forEach(d => setTimeout(() => noise(.05, .035, 3200), d)); },
   gust() { noise(1.6, .028, 500); tone(240, 1.4, 'sine', .01, 1.8); },
   note(f) { tone(f, 1.7, 'sine', .07); tone(f * 2, 1.1, 'sine', .018); },
+  /** a whole song: { dur, stop() } (folk.js: the musicians) */
+  song: (name, inst) => playSong(name, inst),
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
   squawk() { tone(880, .14, 'square', .035, 1.35); setTimeout(() => tone(700, .16, 'square', .03, .75), 130); },
@@ -833,7 +864,7 @@ function giveWings() {
    camera wide and following, big paper wings beating. In the air a tap anywhere is only where to fly (no toys, no doors),
    over the water too, over the islands only. The same button lands: straight down where there is ground to stand on, or
    first to the nearest such ground. While flying it is the only button (Oscar, in the pixel game: one button to land) */
-const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot', 'winkel', 'boomhut', 'blokhut']);
+const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot', 'winkel', 'boomhut', 'blokhut', 'kasteelzaal']);
 const flyBtn = document.getElementById('fly'); if (flyBtn) flyBtn.style.backgroundImage = `url(${wingIcon().toDataURL()})`;
 function bounds() { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const s of sets) if (!OUTSIDE.has(s.name) && s.box) { x0 = Math.min(x0, s.box[0]); z0 = Math.min(z0, s.box[1]); x1 = Math.max(x1, s.box[2]); z1 = Math.max(z1, s.box[3]); } return [x0 - 4, z0 - 4, x1 + 4, z1 + 4]; }
 const landable = (x, z) => { const fl = floorAt(x, z); return !!fl && !fl.swim && !OUTSIDE.has(fl.set.name) && free(x, z, fl.h); };

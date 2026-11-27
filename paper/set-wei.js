@@ -32,7 +32,8 @@ export default {
     /* ---------------- the land: a beach, the meadow, the hill and its top ---------------- */
     // the meadow's own look (Oscar: the islands felt alike): 'the patchwork hills', warm late-summer grass, fields cut like a quilt
     const MEADOW = paper('#bcc56e', { map: grassMap, bump: grassBump }), HILLG = paper('#cdc978', { map: grassMap, bump: grassBump }), TOPG = paper('#dccf86', { map: grassMap, bump: grassBump });
-    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [SAND_E, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, MEADOW], [GRASS_E, H_GRASS, .32, MEADOW], [HILL, H_HILL, .48, HILLG], [TOP, H_TOP, .48, TOPG]]);
+    shore(S, [[SAND, H_GRASS, .87, MEADOW], [SAND_E, H_GRASS, .87, MEADOW],   // (no beach round the meadow: the grass goes right to the water. Oscar: "i dont think we even need a coastline for meadow")
+       [HILL, H_HILL, .48, HILLG], [TOP, H_TOP, .48, TOPG]]);
     // stairs: three card steps up the south side of a level
     const edge = (poly, at) => { let best = -99; for (let v = -30; v <= 30; v += .01) if (inPoly(poly, at, v)) best = v; return best; };
     const stairs = [], steps = (poly, at, half, base) => { const lip = edge(poly, at); for (let i = 0; i < 3; i++) { const far = lip + .05 + (2 - i) * .42, h = base + (i + 1) * .16 - .02, b = [at - half, far - .5, at + half, far]; root.add(slab(rect(...b), h, h - base + .02, P('path'), edgeMat)); stairs.push({ b, h }); } };
@@ -60,7 +61,7 @@ export default {
     S.floor(null, CLIFF); S.water(H_GRASS, POOL);   // the pool is light water: with the snorkel she swims in it
     S.floor(H_TOP, TOP); S.floor(H_HILL, HILL);
     S.floor(H_GRASS, GRASS); S.floor(H_GRASS, GRASS_E);
-    S.floor(H_SAND, SAND, .22); S.floor(H_SAND, SAND_E, .22);
+    S.floor(H_GRASS, SAND, .22); S.floor(H_GRASS, SAND_E, .22);
 
     /* ---------------- paths, cut by hand ---------------- */
     const laid = []; let layer = 0;
@@ -84,7 +85,7 @@ export default {
     const tramp = trampoline(S, 1.9, H_GRASS, 4.3);   // a trampoline on the lawn (trampoline.js)
     const theKite = kite(S, -6.4, H_TOP, -6.5), theBalloon = balloon(S, 10.6, H_GRASS + .03, -5.0), bunch = bouquet(S);
     let found = 0; const present = gift(S, 'duikbril', SNORKEL);   // how often the otter brought something up for her; the moment it is hers
-    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.flute(), play: [0, 1], rest: 2, end: 3, from: [.45, .98], loop: 5.0, guests: () => [herd.schaap, herd.schaap2, herd.lam] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
+    const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.song('jacques', 'flute'), play: [0, 1], rest: 2, end: 3, from: [.45, .98], loop: 5.0, guests: () => [herd.schaap, herd.schaap2, herd.lam] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
     const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: befriend(S, lamb(S, 6.5, 4.4), { hop: 2.2, speed: 2.6, hello: () => S.sfx.peep() }),   /* the meadow's companion: it bounds along after her (companion.js) */ otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [21.6, -4.3]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; S.coins.reward('snorkel', S.girl.x, S.girl.y + 1.1, S.girl.z); }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     for (const [cx, cz] of [[-6.0, -5.2], [8.0, 6.6], [28.0, -2.0], [-1.2, 8.6]]) S.coinAt(cx, cz);   // coins lying about: on the hill's top, by the sheep, at the far end, in the south

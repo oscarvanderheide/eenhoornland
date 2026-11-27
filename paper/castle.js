@@ -11,7 +11,7 @@ import { ANIMALS } from './animals.js';
 const mesh = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 const WALL = '#f6e7d8', WALL2 = '#ecd9c6', STONE = '#d9cfc2';
 
-export function castle(S, x, y, z) {
+export function castle(S, x, y, z, door = null) {   // (`door`: the name of the door through the gate into the hall, set-kasteelzaal.js)
   const { sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g); const [wx, wz] = S.at([x, z]);
   const add = (geo, col, px, py, pz, o) => { const m = mesh(geo, col, o); m.position.set(px, py, pz); g.add(m); return m; };
   const battlements = (cx, top, w, zc, n) => { for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(w / n * .55, .22, .26), WALL2, cx - w / 2 + (i + .5) * w / n, top + .11, zc); };
@@ -23,7 +23,8 @@ export function castle(S, x, y, z) {
   for (const [fx, fy, fz, c] of [[-3.9, 4.7, .1, '#f2c65c'], [3.9, 4.7, .1, '#f2c65c'], [0, 4.7, -.25, '#e98f8f']]) { add(new THREE.CylinderGeometry(.016, .016, .6, 4), '#8d6a48', fx, fy + .3, fz); const f = card([[0, 0], [.34, -.1], [0, -.2]], .012, paper(c, { side: THREE.DoubleSide })); f.position.set(fx + .015, fy + .6, fz); g.add(f); }
   // the gate: a dark arch, two doors of wood
   const arch = card([[-.62, 0], [-.62, .95], [-.44, 1.3], [0, 1.46], [.44, 1.3], [.62, .95], [.62, 0]], .04, paper('#8d6a48')); arch.position.set(0, 0, .56); g.add(arch);
-  for (const s of [-1, 1]) { const d = card([[0, 0], [0, 1.36], [.3, 1.24], [.5, .92], [.5, 0]], .03, paper('#b98a5a')); d.position.set(s < 0 ? -.52 : .52, 0, .6); d.scale.x = s < 0 ? 1 : -1; g.add(d); }
+  const gates = [-1, 1].map(s => { const d = card([[0, 0], [0, 1.36], [.3, 1.24], [.5, .92], [.5, 0]], .03, paper('#b98a5a')); d.position.set(s < 0 ? -.52 : .52, 0, .6); d.scale.x = s < 0 ? 1 : -1; d.userData.live = true; g.add(d); return { d, s }; });
+  { const dark = card([[-.5, 0], [-.5, .9], [0, 1.3], [.5, .9], [.5, 0]], .02, paper('#3d3430')); dark.position.set(0, 0, .5); g.add(dark); }   // (behind the doors, the dark of the hall)
   S.wall(x, z - .05, 3.8, .75); S.solid({ x: x - 3.9, z: z + .1, r: .95 }); S.solid({ x: x + 3.9, z: z + .1, r: .95 });
   // the windows: who lives behind each, where it is, how big its card stands there
   const wins = [['uil', -1.95, 1.2, .57, () => sfx.hoot()], ['kuiken', 1.95, 1.2, .57, () => sfx.peep()], ['eekhoorn', 0, 2.5, .52, () => sfx.yip()]].map(([kind, px, py, pz, say], i) => {
@@ -37,9 +38,13 @@ export function castle(S, x, y, z) {
   const at = (px, py) => wins.find(w => Math.abs(w.px - px) < .5 && Math.abs(w.py + .36 - py) < .55);
   const openIt = w => { if (!w || w.t >= 0) return; w.t = 0; w.opens++; sfx.click(); };
   // a tap anywhere on the castle opens the window nearest to where the finger was (a tap on the wall low down: the gate knocks)
-  S.tap(g, hit => { const p = hit && hit.point, w = p ? at(p.x - wx, p.y - y) : null; if (w) openIt(w); else sfx.thud(); });
+  const [gx, gz] = [wx, wz + 1.0]; let gateOpen = 0, gateWant = 0, visits = 0;
+  if (door) S.door(door, [x - .5, z + .72, x + .5, z + 1.05], [x, z + 1.6], [0, -1]);
+  const goIn = () => { if (!door || S.playing()) return; S.walkThen(gx, gz + .2, () => { visits++; S.through(door); }, .5); };
+  S.tap(g, hit => { const p = hit && hit.point, w = p ? at(p.x - wx, p.y - y) : null; if (w) openIt(w); else if (door && p && Math.abs(p.x - wx) < 1.4 && p.y - y < 1.8) goIn(); else sfx.thud(); });   // (low on the wall by the gate: in she goes)
   wins.forEach(w => { w.f.onTap = () => { if (w.t >= 0) { w.f.hopV = 1.2; w.say(); } }; });
-  return { wins, open: i => openIt(wins[i]), state: () => ({ open: wins.map(w => w.t >= 0), opens: wins.map(w => w.opens) }), step({ dt }) {
+  return { wins, open: i => openIt(wins[i]), goIn, state: () => ({ open: wins.map(w => w.t >= 0), opens: wins.map(w => w.opens), gate: gateWant, visits }), step({ dt }) {
+    if (door) { const near = Math.hypot(S.girl.x - gx, S.girl.z - gz) < 1.4 ? 1 : 0; if (near !== gateWant) { gateWant = near; sfx.door(near); } gateOpen += (gateWant - gateOpen) * Math.min(1, dt * 6); for (const q of gates) q.d.rotation.y = -q.s * gateOpen * 1.3; }
     for (const w of wins) {
       if (w.t >= 0) { w.t += dt; if (w.t > .3 && !w.f.g.visible) { w.f.g.visible = true; w.f.hopV = 1.4; w.say(); } if (w.t > 3.6) { w.t = -1; w.f.g.visible = false; } }
       const want = w.t >= 0 ? 1 : 0; w.open += (want - w.open) * Math.min(1, dt * 9); for (const q of w.shut) q.hinge.rotation.y = -q.s * w.open * 1.9;

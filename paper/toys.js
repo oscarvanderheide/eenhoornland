@@ -39,7 +39,7 @@ export function swing(S, x, y, z) {
         const drive = inp.x * PUSH * Math.cos(th) ** 2;
         om += (-K * Math.sin(th) - DAMP * om + drive) * dt; th += om * dt;
         if (Math.abs(th) > MAX) { th = Math.sign(th) * MAX; om *= -.2; }
-        girl.x = wx + L * Math.sin(th); girl.z = wz; girl.lift = seatY() - y; girl.lean = th; girl.poseName = 'sit';   // she tilts with the ropes, as the seat does girl.face = 1; girl.view = 'side';
+        girl.x = wx + L * Math.sin(th); girl.z = wz; girl.lift = seatY() - y; girl.lean = th; girl.poseName = 'sit'; girl.face = 1; girl.view = 'side';   // she tilts with the ropes, as the seat does
         if (Math.abs(om) > 1.3 && Math.abs(th) < .12 && t - puff > .35) { puff = t; sfx.swish(Math.abs(om)); }   // the air at the bottom of a good swing
         if (inp.act) letGo();
         return;

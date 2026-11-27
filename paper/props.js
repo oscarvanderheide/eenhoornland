@@ -488,9 +488,7 @@ export function shop(S, x, z, y = 0) {
   // the striped awning sloping out over the front, with a scalloped edge
   for (let i = 0; i < 9; i++) { const st = add(W / 9 + .02, .04, 1.0, i % 2 ? '#fbf5ea' : '#f4a6c4', -W / 2 + W / 18 + i * W / 9, H - .14, D / 2 + .42); st.rotation.x = .42;
     const sc = new THREE.Mesh(new THREE.CircleGeometry(W / 18 + .01, 14, Math.PI, Math.PI), paper(i % 2 ? '#fbf5ea' : '#f4a6c4', { side: THREE.DoubleSide })); sc.position.set(-W / 2 + W / 18 + i * W / 9, H - .35, D / 2 + .88); g.add(sc); }
-  // the sign on the roof: the onesie on a round board
-  { const board = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .06, 28), paper('#fbf5ea')); board.rotation.x = Math.PI / 2; board.position.set(0, H + .7, -.1); board.castShadow = true; g.add(board);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(.5, .05, 6, 28), paper('#c79a66')); rim.position.set(0, H + .7, -.1); g.add(rim); add(.06, .4, .06, '#a97a4e', 0, H + .2, -.1); pic('onesie', .78).position.set(0, H + .7, -.06); }
+  // (no sign on the roof: the clothes in the window say what it is. Oscar)
   S.wall(x, z, W / 2 + .12, D / 2 + .08);
   // in: walking up into the doorstep, or a tap on the shop
   S.door('winkel', [x + DX - .34, z + D / 2 + .1, x + DX + .34, z + D / 2 + .45], [x + DX, z + D / 2 + .95], [0, -1]);

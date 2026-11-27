@@ -121,7 +121,7 @@ export default {
     const house = witchHouse(S, hwx, H_GRASS, hwz);
     for (const [cx, cz] of [[hx + .6, hz - .4], [nx + .8, nz + .6], [ox + 1.4, oz - 1.2], [gx + 1.6, gz - .8]]) S.coinAt(cx, cz);   // coins lying about: in the harp's glade, the nook, the orchard, the picnic's glade
     const heks = witch(S, hwx - 2.0, hwz + 1.5);   // the witch and her pot, outside her door, left of it (folk.js)
-    const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
+    const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.song('twinkle', 'harp'), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
       loop: 4.6, guests: () => [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3, live.hert, live.zwijn] });   // she sits and listens, and all the forest's animals come and sit round the harp (not the owl on her ledge)   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
