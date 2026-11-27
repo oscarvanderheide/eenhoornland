@@ -74,7 +74,7 @@ export default {
     const theCabin = cabin(S, ax, H_GRASS, az);   // a cabin of logs where the pixel game had the atelier (Oscar: a log cabin, not a normal house)
     const bushes = [[28, 15], [33, 11], [27, 11], [43, 13], [47, 12], [21, 12], [32, 15]].map(([tx, tz]) => T(tx + .5, tz + .5));
     for (const [x, z] of bushes) { put(new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 8), P('bush')), x, .28, z).castShadow = true; S.solid({ x, z, r: .36 }); }
-    const [tx, tz] = T(56.5, 13), theTree = treehouse(S, tx, tz, () => ['dorp', 'wei', 'strand', 'kasteel'].map(n => S.middle(n)).filter(Boolean));   // the big oak and its treehouse (treehouse.js)
+    const [tx, tz] = T(56.5, 13), theTree = treehouse(S, tx, tz);   // the big oak and its treehouse (treehouse.js)
 
     /* ---------------- trees: a forest's worth ---------------- */
     const sights = [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2], [nx + 5.2, nz + 2.6], [nx + .3, nz + .2], [gx, gz], [hx, hz], [cx - .2, cz - .25], [cx - 2.1, cz - .25], [cx + 1.7, cz - .25], [ax, az + 1.2], [tx - .6, tz + .8], [cx - 5.2, cz - 3.4], [ox + 4.6, oz + 2.8]];
@@ -127,7 +127,7 @@ export default {
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); theTree.step(e); },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); theTree.step(e); theCabin.step(e); },
       toys: { ...live, ...flies, heks, harpist: harp, boomhut: theTree, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
@@ -137,7 +137,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], witch: [hwx - 2.3, hwz + 2.85], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], witch: [hwx - 2.3, hwz + 2.85], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 2.3], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

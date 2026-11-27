@@ -28,12 +28,25 @@ function wellWater() {
   for (const [y, x0, x1] of [[86, 60, 170], [128, 40, 200], [170, 70, 185]]) { g.beginPath(); for (let x = x0; x <= x1; x += 4) g.lineTo(x, y + Math.sin((x - x0) / 16) * 6); g.stroke(); }
   wellTex = new THREE.CanvasTexture(c); wellTex.colorSpace = THREE.SRGBColorSpace; return wellTex;
 }
+let stoneTex = null;
+/** the well's stones: pale lilac paper blocks in rows, each its own shade, with a darker gap between them */
+function wellStones() {
+  if (stoneTex) return stoneTex;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d'), R = (i => () => ((i = (i * 9301 + 49297) % 233280) / 233280))(7);
+  g.fillStyle = '#8f88a3'; g.fillRect(0, 0, 512, 128);
+  for (let row = 0; row < 3; row++) { let x = row % 2 ? -20 : 0; const y = 4 + row * 42; while (x < 512) { const w = 52 + R() * 34; g.fillStyle = ['#cfc9da', '#c5bfd0', '#d8d2e2', '#bdb6c9'][Math.floor(R() * 4)]; g.beginPath(); g.roundRect(x + 3, y, w - 6, 36, 9); g.fill(); g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.roundRect(x + 8, y + 4, w * .4, 6, 3); g.fill(); x += w; } }
+  stoneTex = new THREE.CanvasTexture(c); stoneTex.colorSpace = THREE.SRGBColorSpace; stoneTex.wrapS = THREE.RepeatWrapping; stoneTex.repeat.set(2, 1); return stoneTex;
+}
 /** the well: a ring of pale stone, two posts, a little roof, and a bucket on a rope that goes down and comes up */
 export function well(S, x, y, z) {
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
-  const ring = cyl(.62, .66, .52, '#c5bfd0', 18); ring.position.y = .26; g.add(ring);
+  // a ring of stone, open at the top (Oscar: "the well looks like its solid"): the outside of cut paper stones, a rounded lip,
+  // the dark inside wall, and the water lying well down in it
+  const outer = new THREE.Mesh(new THREE.CylinderGeometry(.64, .67, .52, 24, 1, true), new THREE.MeshStandardMaterial({ map: wellStones(), roughness: .95 })); outer.position.y = .26; outer.castShadow = outer.receiveShadow = true; g.add(outer);
+  const lip = new THREE.Mesh(new THREE.LatheGeometry([[.47, .5], [.47, .55], [.5, .58], [.62, .58], [.66, .55], [.66, .5]].map(([r, h]) => new THREE.Vector2(r, h)), 28), paper('#ddd7e6', { side: THREE.DoubleSide })); lip.castShadow = lip.receiveShadow = true; g.add(lip);
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(.48, .48, .5, 24, 1, true), paper('#6f6882', { side: THREE.BackSide })); inner.position.y = .27; inner.receiveShadow = true; g.add(inner);
   // the water down in it: cut paper, pale blue with a few white wavy lines, as the pond's (Oscar: "the water in the well should be paper style")
-  const water = new THREE.Mesh(new THREE.CircleGeometry(.52, 28), new THREE.MeshStandardMaterial({ map: wellWater(), roughness: .95 })); water.rotation.x = -Math.PI / 2; water.position.y = .5; water.receiveShadow = true; g.add(water);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(.48, 28), new THREE.MeshStandardMaterial({ map: wellWater(), roughness: .95 })); water.rotation.x = -Math.PI / 2; water.position.y = .2; water.receiveShadow = true; g.add(water);
   for (const s of [-1, 1]) { const p = box(.09, 1.5, .09, '#9a6e47'); p.position.set(s * .6, .75, 0); g.add(p); }
   for (const s of [-1, 1]) { const r = box(.86, .05, .9, '#d9706c'); r.position.set(s * .36, 1.68, 0); r.rotation.z = -s * .62; g.add(r); }
   const bar = cyl(.035, .035, 1.3, '#7a5a3e', 6); bar.rotation.z = Math.PI / 2; bar.position.y = 1.4; g.add(bar);
@@ -42,7 +55,7 @@ export function well(S, x, y, z) {
   const pail = cyl(.15, .12, .2, '#8d6a48', 10); bucket.add(pail);
   S.solid({ x, z, r: .68 });
   let dip = 0;   // 1 while the bucket is on its way down and up
-  const place = () => { const d = dip > 0 ? Math.sin(Math.PI * (1 - dip)) : 0, top = 1.38, py = 1.0 - d * .62; pail.position.y = py; rope.scale.y = top - py; rope.position.y = (top + py) / 2; };
+  const place = () => { const d = dip > 0 ? Math.sin(Math.PI * (1 - dip)) : 0, top = 1.38, py = 1.0 - d * .74; pail.position.y = py; rope.scale.y = top - py; rope.position.y = (top + py) / 2; };
   place();
   return { g, at: S.at([x, z + 1.0]), draw() { if (dip > 0) return false; dip = 1; return true; }, busy: () => dip > 0,
     step(dt) { if (dip > 0) { const was = dip; dip = Math.max(0, dip - dt / .95); if (was > .5 && dip <= .5) { S.sfx.splash(); S.confetti(...S.at([x, z]).flatMap((v, i) => i ? [y + .6, v] : [v]), ['#8fc3cc', '#f6efe2', '#6fb0b8'], 8, undefined, 2); } place(); } } };

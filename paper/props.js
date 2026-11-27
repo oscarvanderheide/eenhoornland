@@ -3,8 +3,6 @@ import { THREE, lerp, paper, sheetOf, slab, card, edgeMat, grassMap, grassBump, 
 import { THINGS } from './things.js';
 import { drawWearIcon } from './kids.js';
 import { E, U, S as S2, piece, ink, cutout } from './cut.js';
-import { PEOPLE } from './people.js';
-import { SHELF } from './shopui.js';
 
 /** the printed papers the ground is cut from */
 export const GROUND = {
@@ -173,7 +171,7 @@ export function lantern(S, x, y, z, n) {
     const want = lit ? 1 : 0; mat.emissiveIntensity += (want * 1.6 - mat.emissiveIntensity) * Math.min(1, dt * 8); light.intensity = want * (1.0 + 1.6 * eve); } };
 }
 /** a cabin of logs: round logs laid on each other, crossing at the corners, a plank door, a round window, a roof of green
- *  card and a stone chimney. (A tap knocks on the door; what is inside comes later) */
+ *  card and a stone chimney. Its door opens when she comes near and is the way into the workshop inside (set-blokhut.js) */
 export function cabin(S, x, y, z) {
   const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   const W = 2.6, D = 2.0, r = .13, rows = 6, cols = ['#b9875a', '#a97a4e', '#c1905f'];
@@ -188,14 +186,20 @@ export function cabin(S, x, y, z) {
   for (const s of [-1, 1]) { const gable = card([[-W / 2 - .1, 0], [W / 2 + .1, 0], [0, .95]], .08, paper('#a97a4e')); gable.position.set(0, top, s * D / 2); g.add(gable); }
   const slope = Math.hypot(W / 2 + .35, .95 + .1);
   for (const s of [-1, 1]) { const roof = m3(new THREE.BoxGeometry(slope, .07, D + .7), '#5f8665'); roof.position.set(s * (W / 4 + .09), top + .95 / 2 + .06, 0); roof.rotation.z = -s * Math.atan2(1.05, W / 2 + .35); g.add(roof); }
-  const door = card([[-.3, 0], [.3, 0], [.3, 1.05], [0, 1.2], [-.3, 1.05]], .05, paper('#8d5a4a')); door.position.set(0, .02, D / 2 - .04); g.add(door);
-  const knob = m3(new THREE.SphereGeometry(.035, 8, 6), '#e2b04a'); knob.position.set(.18, .55, D / 2 + .02); g.add(knob);
+  // the plank door: it swings in when she comes near, and walking into it takes her into the workshop (set-blokhut.js)
+  const dGroup = new THREE.Group(); dGroup.position.set(-.3, .02, D / 2 - .04); dGroup.userData.live = true; g.add(dGroup);
+  dGroup.add(card([[0, 0], [.6, 0], [.6, 1.05], [.3, 1.2], [0, 1.05]], .05, paper('#8d5a4a')));
+  const knob = m3(new THREE.SphereGeometry(.035, 8, 6), '#e2b04a'); knob.position.set(.48, .53, .06); dGroup.add(knob);
+  { const dark = new THREE.Mesh(new THREE.PlaneGeometry(.6, 1.15), paper('#3d3430')); dark.position.set(0, .6, D / 2 - .14); g.add(dark); }   // (inside, behind the door: dark)
+  { const step = m3(new THREE.BoxGeometry(.8, .08, .3), '#bdb6c9'); step.position.set(0, .04, D / 2 + .3); g.add(step); }
   const win = m3(new THREE.CylinderGeometry(.2, .2, .04, 14), '#f6dfa6', { extra: { emissive: '#f2b866', emissiveIntensity: .25 } }); win.rotation.x = Math.PI / 2; win.position.set(-.82, 1.0, D / 2 + .13); g.add(win);
   const chim = m3(new THREE.BoxGeometry(.36, 1.0, .36), '#bdb6c9'); chim.position.set(.75, top + .7, -.4); g.add(chim);
   S.wall(x, z, W / 2 + .3, D / 2 + .25);
-  const [wx, wz] = S.at([x, z]); let knocks = 0;
-  S.tap(g, () => { knocks++; S.sfx.thud(); setTimeout(() => S.sfx.thud(), 160); S.confetti(wx + .75, y + top + 1.5, wz - .4, ['#efe8dc', '#d9d2c4', '#f7f1e6'], 7, undefined, 1.2); });   // a knock, and a puff from the chimney
-  return { state: () => ({ knocks }) };
+  const [wx, wz] = S.at([x, z]), [sx, sz] = S.at([x, z + D / 2 + .45]); let knocks = 0, open = 0, want = 0;
+  S.door('blokhut', [x - .32, z + D / 2 + .27, x + .32, z + D / 2 + .6], [x, z + D / 2 + 1.1], [0, -1]);
+  // a tap: a knock and a puff from the chimney, and in she goes (Oscar: "the log cabin cant be entered")
+  S.tap(g, () => { if (S.playing()) return; knocks++; S.sfx.thud(); setTimeout(() => S.sfx.thud(), 160); S.confetti(wx + .75, y + top + 1.5, wz - .4, ['#efe8dc', '#d9d2c4', '#f7f1e6'], 7, undefined, 1.2); S.walkThen(sx, sz + .3, () => S.through('blokhut'), .5); }, 'hut');
+  return { state: () => ({ knocks, door: want }), step({ dt }) { const near = Math.hypot(S.girl.x - sx, S.girl.z - sz) < 1.3 ? 1 : 0; if (near !== want) { want = near; S.sfx.door(near); } open += (want - open) * Math.min(1, dt * 6); dGroup.rotation.y = open * 1.5; } };
 }
 /** a toy windmill on a stick: four paper sails in two colours. A tap sets it spinning, and only a tap (Oscar: not by
  *  itself, not from her running past, not from the wind); it turns in stop-motion steps and slows down by itself. Gives back step() for the set to call every frame */
@@ -455,41 +459,49 @@ export function witchHouse(S, x, y, z) {
  *  the shopkeeper behind her counter. A tap on the shop or on her: she walks up to the counter, the shopkeeper waves, and
  *  the shop's sheet opens (shopui.js: a mirror with her in it, a card for every thing, its price in coins under it).
  *  (x, z): the shop's middle, its open front to the south */
-export const PRICES = { strik: 2, krans: 3, hoed: 3, kroon: 6, ketting: 3, knuffel: 3, ballon: 2, jurkgeel: 4, jurkblauw: 4, jurkregenboog: 8, onesie: 8, vleugels: 6 };
+/** what each thing costs, in coins (Oscar: "we should need much more coins to buy things. maybe a few coins for a ribbon ... but for
+ *  something like the angel wings and the unicorn onesie it should not be easy"). About forty coins lie about or come the first
+ *  time she does something; more come from the game houses, each time she wins, and now and then out of a shaken tree */
+export const PRICES = { strik: 2, ballon: 3, krans: 3, hoed: 4, ketting: 4, knuffel: 5, jurkgeel: 8, jurkblauw: 8, kroon: 10, jurkregenboog: 15, vleugels: 25, onesie: 30 };
 export function shop(S, x, z, y = 0) {
+  // the clothes shop, from outside: a pink building with a striped awning, the onesie on a round sign on the roof, a shop
+  // window with the onesie and the wings in it, and a door. The shop itself is a room you walk into (set-winkel.js): the
+  // door opens when she comes near, walking into it (or a tap on the shop) takes her in (Oscar: "the store ... should also be
+  // like a room we enter")
   const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
   const add = (w, h, d, col, px, py, pz) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); g.add(m); return m; };
-  const W = 3.6, D = 2.0, H = 2.3;
+  const W = 3.6, D = 2.0, H = 2.3, DX = 1.0;   // (DX: where the door is, right of the middle)
   add(W + .2, .1, D + .2, '#e8d5b0', 0, .05, 0);                                   // the floor
-  add(W, H, .1, '#f8dde4', 0, H / 2, -D / 2);                                       // the back wall, pink
+  add(W, H, .1, '#f8dde4', 0, H / 2, -D / 2);                                       // the back wall
   for (const s of [-1, 1]) add(.12, H, D, '#f4c6d4', s * W / 2, H / 2, 0);            // the side walls
-  for (let i = 0; i < 9; i++) add(W / 9 - .01, .02, D * .9, '#ecd2dc', -W / 2 + W / 18 + i * W / 9, H - .01, -.05);
   add(W + .4, .12, D + .3, '#c79a66', 0, H + .06, -.05);                            // the roof
+  // the front: a pink wall with the shop window (left) and the door (right) cut out of it
+  const winHole = [[-1.55, .6], [-1.55, 1.75], [-.15, 1.75], [-.15, .6]], doorHole = [[DX - .32, .02], [DX - .32, 1.5], [DX + .32, 1.5], [DX + .32, .02]];
+  const front = card([[-W / 2, 0], [W / 2, 0], [W / 2, H], [-W / 2, H]], .08, paper('#f6c9d6'), edgeMat, [winHole, doorHole]); front.position.z = D / 2 - .04; g.add(front);
+  { const fr = card([[-1.63, .52], [-.07, .52], [-.07, 1.83], [-1.63, 1.83]], .03, paper('#fbf5ea'), paper('#fbf5ea'), [winHole]); fr.position.z = D / 2 + .05; g.add(fr);
+    add(1.56, .06, .2, '#fbf5ea', -.85, .54, D / 2 + .1);                                                   // the window sill
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.15), new THREE.MeshStandardMaterial({ color: '#dcebf0', transparent: true, opacity: .28, roughness: .2 })); glass.position.set(-.85, 1.175, D / 2 - .06); g.add(glass); }
+  // in the window: the onesie and the wings on little stands
+  const pic = (id, w, mat = {}) => { const t = new THREE.CanvasTexture(cutout(120, 120, c => drawWearIcon(c, id), null, 1.5)); t.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, roughness: .95, ...mat })); m.castShadow = true; g.add(m); return m; };
+  pic('onesie', .78).position.set(-1.15, 1.08, D / 2 - .3); pic('vleugels', .6).position.set(-.5, 1.12, D / 2 - .34);
+  for (const px of [-1.15, -.5]) add(.04, .5, .04, '#a97a4e', px, .55, D / 2 - .32);
+  // the door: mint, with a round window and a golden knob; it swings in
+  const dGroup = new THREE.Group(); dGroup.position.set(DX - .32, 0, D / 2 - .02); dGroup.userData.live = true; g.add(dGroup);
+  dGroup.add(card([[0, .02], [.64, .02], [.64, 1.48], [0, 1.48]], .05, paper('#9ed9cf'), edgeMat, [[[.2, 1.0], [.2, 1.28], [.44, 1.28], [.44, 1.0]]]));
+  { const k = m3(new THREE.SphereGeometry(.04, 8, 6), '#e2b04a'); k.position.set(.53, .72, .06); dGroup.add(k); }
+  add(.8, .08, .32, '#d9c6a2', DX, .04, D / 2 + .16);                                // the doorstep
   // the striped awning sloping out over the front, with a scalloped edge
   for (let i = 0; i < 9; i++) { const st = add(W / 9 + .02, .04, 1.0, i % 2 ? '#fbf5ea' : '#f4a6c4', -W / 2 + W / 18 + i * W / 9, H - .14, D / 2 + .42); st.rotation.x = .42;
     const sc = new THREE.Mesh(new THREE.CircleGeometry(W / 18 + .01, 14, Math.PI, Math.PI), paper(i % 2 ? '#fbf5ea' : '#f4a6c4', { side: THREE.DoubleSide })); sc.position.set(-W / 2 + W / 18 + i * W / 9, H - .35, D / 2 + .88); g.add(sc); }
   // the sign on the roof: the onesie on a round board
-  const pic = (id, w, mat = {}) => { const t = new THREE.CanvasTexture(cutout(120, 120, c => drawWearIcon(c, id), null, 1.5)); t.colorSpace = THREE.SRGBColorSpace; const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w), new THREE.MeshStandardMaterial({ map: t, alphaTest: .5, roughness: .95, ...mat })); m.castShadow = true; g.add(m); return m; };
   { const board = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .06, 28), paper('#fbf5ea')); board.rotation.x = Math.PI / 2; board.position.set(0, H + .7, -.1); board.castShadow = true; g.add(board);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(.5, .05, 6, 28), paper('#c79a66')); rim.position.set(0, H + .7, -.1); g.add(rim); add(.06, .4, .06, '#a97a4e', 0, H + .2, -.1); pic('onesie', .78).position.set(0, H + .7, -.06); }
-  // clothes on a rail along the back wall
-  { const r = m3(new THREE.CylinderGeometry(.025, .025, W - .5, 8), '#c79a66'); r.rotation.z = Math.PI / 2; r.position.set(0, 1.75, -D / 2 + .2); g.add(r);
-    ['jurkgeel', 'onesie', 'jurkregenboog', 'jurkblauw', 'vleugels'].forEach((id, i) => pic(id, .55).position.set(-1.2 + i * .6, 1.45, -D / 2 + .22));
-    ['kroon', 'hoed', 'strik'].forEach((id, i) => pic(id, .4).position.set(-1.35 + i * .45, .62, -D / 2 + .5));   // and hats on a low shelf
-    add(1.4, .05, .4, '#c79a66', -.9, .42, -D / 2 + .25); }
-  // the counter, with a stack of folded things and a mirror on it
-  add(2.4, .82, .5, '#d9a8b8', .3, .41, .45); add(2.55, .07, .62, '#e8d5b0', .3, .855, .45);
-  [['#f7b6cf', .9], ['#9ed9cf', .96], ['#f2c65c', .92]].forEach(([c, w], i) => add(.36 * w, .07, .28, c, 1.15, .93 + i * .075, .45));
-  // the shopkeeper behind her counter
-  const [wx, wz] = S.at([x - .5, z - .05]), keeper = S.figure('winkelier', PEOPLE.winkelier); keeper.x = wx; keeper.z = wz; keeper.floatY = keeper.y = y + .1; keeper.face = 1;
-  let mood = 'smile', moodT = 0; const FR = { smile: 0, dress: 1, wave: 2 };
-  keeper.act = () => keeper.setFrame(FR[mood] || 0);
-  const setMood = how => { mood = how; moodT = how === 'smile' ? 0 : 2.2; if (how === 'wave') keeper.hopV = 1.4; };
-  S.wall(x, z - .12, W / 2 + .12, D / 2 + .05);
-  const [fx, fz] = S.at([x - .3, z + 1.55]); let opened = 0, sheet = null;
-  const enter = () => { if (S.playing() || document.getElementById('shopbook')) return; S.walkThen(fx, fz, () => { girl.view = 'back'; opened++; sheet = S.closet.open(setMood); }, .9); };
-  S.tap(g, enter, 'winkel'); keeper.onTap = enter;
-  return { keeper, state: () => ({ coins: S.coins.have(), own: SHELF.filter(id => S.closet.owns(id)), wearing: SHELF.filter(id => S.closet.wearing(id)), open: !!document.getElementById('shopbook'), opened, mood }),
-    places: { front: S.at([x - .3, z + 1.55]) },
-    step({ dt }) { if (moodT > 0) { moodT -= dt; if (moodT <= 0) mood = 'smile'; } } };
+  S.wall(x, z, W / 2 + .12, D / 2 + .08);
+  // in: walking up into the doorstep, or a tap on the shop
+  S.door('winkel', [x + DX - .34, z + D / 2 + .1, x + DX + .34, z + D / 2 + .45], [x + DX, z + D / 2 + .95], [0, -1]);
+  const [sx, sz] = S.at([x + DX, z + D / 2 + .3]); let open = 0, want = 0, visits = 0;
+  const enter = () => { if (S.playing()) return; S.walkThen(sx, sz + .35, () => { visits++; S.through('winkel'); }, .5); };
+  S.tap(g, enter, 'winkel');
+  return { state: () => ({ coins: S.coins.have(), door: want, visits }), places: { front: S.at([x + DX, z + D / 2 + .95]) },
+    step({ dt }) { const near = Math.hypot(girl.x - sx, girl.z - sz) < 1.3 ? 1 : 0; if (near !== want) { want = near; sfx.door(near); } open += (want - open) * Math.min(1, dt * 6); dGroup.rotation.y = open * 1.5; } };
 }

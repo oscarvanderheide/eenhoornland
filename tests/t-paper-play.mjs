@@ -529,15 +529,39 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${b.oak[0] - 1.4}, ${b.oak[1] + 1.6})`); await t.sleep(2600); await t.shot('tmp-shots/y-treehouse-land.png');
     await t.ev(`__p.tap('ladder')`); ok(await until(`__p.toy('boomhut').mode === 'ladder'`, 5), 'a tap on the rope ladder: she walks over and takes hold'); await t.sleep(1500); ok((await toy()).h === 0, 'she does not climb by herself');
     await t.ev(`__p.keys(['w'])`); await t.sleep(1200); await t.ev('__p.keys([])'); const h1 = (await toy()).h; await t.sleep(800); ok(h1 > .8 && (await toy()).h === h1, `holding up she climbs, letting go she hangs there (${h1.toFixed(1)})`); await t.shot('tmp-shots/y-treehouse-climb-land.png');
-    await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('boomhut').up`, 6), 'holding up again: up on the deck'); await t.ev('__p.keys([])'); await t.sleep(1600); await t.shot('tmp-shots/y-treehouse-top-land.png');
-    const [sx, sy] = await t.ev(`__p.point(${b.oak[0] + .8}, 4.6, ${b.oak[1] - .65})`); await t.click(sx, sy); ok(await until(`__p.toy('boomhut').view === 0`, 2), 'a real tap on the telescope: she looks out to another island');
-    await t.sleep(2200); await t.shot('tmp-shots/y-treehouse-view-land.png'); ok(await until(`__p.toy('boomhut').view === -1`, 3) && (await toy()).up, 'and a moment later the picture comes back to her, still up there');
-    await t.ev(`__p.tap('telescope')`); await t.sleep(300); ok((await toy()).view === 1, 'the next look shows the next island'); await t.sleep(3600);
-    await t.ev(`__p.keys(['s'])`); ok(await until(`__p.toy('boomhut').mode === 'ladder'`, 2), 'holding down up there: onto the ladder'); ok(await until(`__p.toy('boomhut').mode === null`, 7), 'and down, and off at the foot'); await t.ev('__p.keys([])');
-    // the zipline: up again, a tap on the hand-bar, and down the cable to the village
-    await t.ev(`__p.tap('ladder')`); await until(`__p.toy('boomhut').mode === 'ladder'`, 5); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('boomhut').up`, 6), 'up the ladder again'); await t.ev('__p.keys([])'); await t.sleep(1200);
-    await t.ev(`__p.tap('zipline')`); ok(await until(`__p.toy('boomhut').mode === 'zip'`, 2), 'a tap on the zipline\'s bar: she takes hold and off she goes'); await t.sleep(2400); await t.shot('tmp-shots/y-zipline-land.png');
-    ok(await until(`__p.toy('boomhut').mode === null`, 8), 'and lets go at the end'); ok(await until(`__p.coins() >= 1`, 3), 'the first ride: a coin'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
+    await t.ev(`__p.keys(['w'])`); ok(await until(`__p.info().set === 'boomhut'`, 6), 'holding up again: at the top she goes in, into the room up in the tree'); await t.ev('__p.keys([])'); await t.sleep(1200);
+    ok((await t.ev('__p.info()')).lift === 0 && !(await t.ev(`__p.toy('boomhut')`)).mode, 'she stands on the room\'s floor, the ladder let go'); await t.shot('tmp-shots/y-treehouse-room-land.png');
+    const room = await t.ev(`__p.places('boomhut')`), spot = n => t.ev(`__p.dbg.set.spots.${n}`);
+    { const [x, y, z] = await spot('telescope'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
+    ok(await until(`__p.toy('boomkamer').looking`, 5), 'a real tap on the telescope: she looks out, far over another island'); await t.sleep(1500); await t.shot('tmp-shots/y-treehouse-view-land.png');
+    ok(await until(`!__p.toy('boomkamer').looking`, 4) && (await t.ev('__p.info()')).set === 'boomhut', 'and a moment later she is back in the room');
+    { const [x, y, z] = await spot('hammock'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
+    ok(await until(`__p.toy('boomkamer').hammock === 'in'`, 5), 'a real tap on the hammock: she climbs in and it rocks'); await t.sleep(1200); await t.shot('tmp-shots/y-treehouse-hammock-land.png');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev('__p.keys([])'); ok(await until(`!__p.toy('boomkamer').hammock`, 3), 'a push: out of the hammock again');
+    // out through the hatch at the front: on the ladder at the top, and down
+    await t.ev(`__p.walkTo(${room.start[0]}, ${room.start[1]})`); await t.sleep(1500); await t.ev(`__p.keys(['s'])`);
+    ok(await until(`__p.info().set === 'bos' && __p.toy('boomhut').mode === 'ladder'`, 4), 'walking down over the hatch: out, on the ladder at the top'); ok((await toy()).h > 3, 'up high');
+    ok(await until(`__p.toy('boomhut').mode === null`, 8), 'holding down: down, and off at the foot'); await t.ev('__p.keys([])');
+    // the zipline: up again, into the room, and out through its doorway at the back onto the bar
+    await t.ev(`__p.tap('ladder')`); await until(`__p.toy('boomhut').mode === 'ladder'`, 5); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.info().set === 'boomhut'`, 8), 'up the ladder again, and in'); await t.ev('__p.keys([])'); await t.sleep(1000);
+    { const [x, y, z] = await spot('zipline'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.shot('tmp-shots/y-treehouse-door-land.png'); await t.click(sx, sy); }
+    ok(await until(`__p.toy('boomhut').mode === 'grab' || __p.toy('boomhut').mode === 'zip'`, 6), 'a real tap on the bar in the zipline doorway: she walks through, takes hold, and off she goes'); await t.sleep(2400); await t.shot('tmp-shots/y-zipline-land.png');
+    ok(await until(`__p.toy('boomhut').mode === null`, 9), 'and lets go at the end'); ok(await until(`__p.coins() >= 1`, 3), 'the first ride: a coin'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
+  }
+
+  /* ---------------- the log cabin: in through its door, the workshop, colouring at the easel ---------------- */
+  if (!only || only === 'cabin') {
+    await open('?set=bos', LAND); await t.sleep(1500);
+    const b = await t.ev(`__p.places('bos')`); await t.ev(`__p.placeAt(${b.atelier[0] + 1.5}, ${b.atelier[1] + .4})`); await t.sleep(2200);
+    { const [sx, sy] = await t.ev(`__p.point(${b.atelier[0] - .8}, 1.2, ${b.atelier[1] - 3.1})`); await t.click(sx, sy); }
+    ok(await until(`__p.info().set === 'blokhut'`, 8), 'a real tap on the log cabin: a knock, and she goes in'); await t.sleep(1200); await t.shot('tmp-shots/y-cabin-room-land.png');
+    { const [x, y, z] = await t.ev('__p.dbg.set.spots.easel'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); }
+    ok(await until(`__p.toy('atelier').open`, 6), 'a real tap on the easel: the colouring sheet opens');
+    const box = await t.ev(`(() => { const r = document.querySelector('#artbook canvas').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()`), pot = await t.ev(`(() => { const r = document.querySelector('#artbook .padcard').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+    await t.click(pot[0], pot[1]); await t.sleep(200); await t.click(box[0] + box[2] * .5, box[1] + box[3] * .5); await t.sleep(500); await t.shot('tmp-shots/y-cabin-sheet-land.png');
+    await t.ev(`document.querySelector('#artbook .shop-x').click()`); ok(await until(`!__p.toy('atelier').open && __p.toy('atelier').hung === 1`, 3), 'closed: what she coloured hangs on the wall'); await t.sleep(800); await t.shot('tmp-shots/y-cabin-hung-land.png');
+    { const [x, y, z] = await t.ev('__p.dbg.set.spots.hearth'), [sx, sy] = await t.ev(`__p.point(${x}, ${y}, ${z})`); await t.click(sx, sy); } ok(await until(`__p.toy('atelier').flares === 1`, 2), 'a tap on the fire: it flares up');
+    const r = await t.ev(`__p.places('blokhut')`); await t.ev(`__p.walkTo(${r.start[0]}, ${r.start[1]})`); await t.sleep(1800); await t.ev(`__p.keys(['s'])`); ok(await until(`__p.info().set === 'bos'`, 4), 'walking down off the front: out in the forest again'); await t.ev('__p.keys([])');
   }
 
   /* ---------------- shaking a tree: what falls out ---------------- */
@@ -562,21 +586,24 @@ export default async function (t) {
   /* ---------------- coins and the clothes shop ---------------- */
   if (!only || only === 'shop') {
     await open('?set=dorp', LAND); await t.sleep(1500);
-    const shop = () => t.ev(`__p.toy('winkel')`), coinsAt = () => t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).map(f => [f.x, f.z])`);
+    const shop = () => t.ev(`__p.toy('toonbank')`), coinsAt = () => t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).map(f => [f.x, f.z])`);
     const all = await coinsAt(); ok(all.length >= 5 && (await shop()).coins === 0, `coins lie about the islands (${all.length}), and she has none yet`);
     await t.ev('__p.open()'); const away = await t.ev(`['kasteel', 'regenboog'].map(n => __p.places(n).start)`); for (const c of all.filter(c => away.every(o => Math.hypot(c[0] - o[0], c[1] - o[1]) > 24))) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);   // (not the castle's, reached by flying, nor the rainbow island's, by boat)
-    await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.toy('winkel').coins === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
+    await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.coins() === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
     const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
     const card = id => t.ev(`document.querySelector('.shop-card[data-id=${id}]').click()`), shut = () => t.ev(`document.querySelector('.shop-x').click()`);
-    await t.ev(`__p.tap('winkel')`); ok(await until(`__p.toy('winkel').open`, 6), 'a tap on the shop: she walks to the counter and the shop opens'); await t.sleep(800); await t.shot('tmp-shots/y-shop-sheet-land.png');
-    ok((await t.ev(`__p.toy('winkel').mood`)) === 'wave', 'the shopkeeper waves');
+    { const [sx, sy] = await t.ev(`__p.point(3.8, 1.4, 3.3)`); await t.click(sx, sy); } ok(await until(`__p.info().set === 'winkel'`, 8), 'a real tap on the shop: she walks to its door and goes in, into the shop'); await t.sleep(1200); await t.shot('tmp-shots/y-shop-room-land.png');
+    { const [sx, sy] = await t.ev(`(() => { const q = __p.dbg.figures.find(f => f.name === 'winkelier'); return __p.point(q.x, 1.0, q.z); })()`); await t.click(sx, sy); }
+    ok(await until(`__p.toy('toonbank').open`, 6), 'a real tap on the shopkeeper: she walks to the counter and the shop opens'); await t.sleep(800); await t.shot('tmp-shots/y-shop-sheet-land.png');
+    ok((await t.ev(`__p.toy('toonbank').opened`)) === 1, 'once');
     ok(await t.ev(`!!document.querySelector('.shop-card[data-id=onesie]')`), 'the pink unicorn onesie is for sale');
     await card('strik'); await t.sleep(1200); ok((await shop()).own.length === 0, 'a tap on the bow with too few coins: it only wobbles');
-    await shut(); ok(await until(`!__p.toy('winkel').open`, 2), 'the round cross closes it');
-    await t.ev(`__p.placeAt(${all[1][0] - 1.2}, ${all[1][1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${all[1][0] + .6}, ${all[1][1]})`); ok(await until(`__p.toy('winkel').coins === 2`, 5), 'another coin');
-    await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(800); await t.ev(`__p.tap('winkel')`); ok(await until(`__p.toy('winkel').open`, 8), 'back at the shop'); await t.sleep(500); await card('strik'); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
-    await card('strik'); ok(await until(`!__p.toy('winkel').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
-    await card('strik'); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 4), 'and on again, for free');
+    await shut(); ok(await until(`!__p.toy('toonbank').open`, 2), 'the round cross closes it');
+    { const r = await t.ev(`__p.places('winkel')`); await t.ev(`__p.walkTo(${r.start[0]}, ${r.start[1]})`); await t.sleep(1800); await t.ev(`__p.keys(['s'])`); ok(await until(`__p.info().set === 'dorp'`, 4), 'walking down off the front of the room: out of the shop'); await t.ev('__p.keys([])'); }
+    await t.ev(`__p.placeAt(${all[1][0] - 1.2}, ${all[1][1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${all[1][0] + .6}, ${all[1][1]})`); ok(await until(`__p.coins() === 2`, 5), 'another coin');
+    await t.ev(`__p.placeAt(2.6, 4.2)`); await t.sleep(800); await t.ev(`__p.tap('winkel')`); await until(`__p.info().set === 'winkel'`, 8); await t.sleep(600); await t.ev(`__p.tap('toonbank')`); ok(await until(`__p.toy('toonbank').open`, 8), 'back at the shop'); await t.sleep(500); await card('strik'); ok(await until(`__p.toy('toonbank').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
+    await card('strik'); ok(await until(`!__p.toy('toonbank').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
+    await card('strik'); ok(await until(`__p.toy('toonbank').wearing.includes('strik')`, 4), 'and on again, for free');
     await shut(); await t.sleep(400);
     await t.ev('__p.swap()'); await t.sleep(600); ok(!(await shop()).wearing.includes('strik'), 'her sister has her own things on');
   }

@@ -4,19 +4,19 @@
 //   the ladder     she climbs it herself (Oscar: "i want to climb manually by holding up"): walking into its foot, or a tap on
 //                  it, and she takes hold; holding up (the stick, an arrow, a finger above her) climbs rung by rung, holding
 //                  down climbs down, letting go she just hangs there; down at the foot, down again and she lets go. At the
-//                  top the camera steps back: she is high up
-//   the telescope  a tap (up there): she looks through it, and the picture flies far out to another island, a different
-//                  one each time; a moment later it comes back to her
-//   down           a tap (or ○) up there: she takes hold of the ladder again, and climbs down holding down
+//                  top she goes in through the hut's door: up there is a room (set-boomhut.js; Oscar: "i want to go inside a
+//                  room when entering the treehouse, like when entering a house"), with the telescope, a hammock, the hatch
+//                  back down and a door out to the zipline. Out of the hatch she is on the ladder at the top again
 //   the zipline    (Oscar: "the zipline back to starting island would be fun") a cable from a post at the deck's corner, over
-//                  the forest and the water, to a post in the village. A tap on its hand-bar (up there): she takes hold and
-//                  whizzes down it, the camera wide and following, the unicorn flying after; she drops onto a soft mat in
-//                  the village. The bar slides back up by itself
+//                  the forest and the water, to a post in the village. Out of the room's zipline door she takes hold of its
+//                  hand-bar and whizzes down it, the camera wide and following, the unicorn flying after; she drops onto a
+//                  soft mat in the village. The bar slides back up by itself. (Up on the deck a tap was a push, and a push
+//                  sent her down the ladder: she never got to the bar. Oscar: "i cannot seem to reach the zipline")
 import { THREE, paper, card } from './kit.js';
 
 const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 
-export function treehouse(S, x, z, views = () => []) {   // (views: where the other islands lie; asked when needed, as they are built after this one)
+export function treehouse(S, x, z) {
   const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, 0, z); S.root.add(g);
   const add = (m, px, py, pz, to = g) => { m.position.set(px, py, pz); to.add(m); return m; };
   const DECK = 4.0, DW = 2.4, DD = 1.9, UP = DECK - 2.6;   // (Oscar: "the treehouse can even be higher")
@@ -54,7 +54,7 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   const RUNGS = Math.round(DECK / .33); for (let i = 0; i < RUNGS; i++) add(m3(new THREE.BoxGeometry(.46, .04, .05), '#a97a4e'), 0, -DECK + .25 + i * (DECK - .35) / (RUNGS - 1), 0, ladder);
   S.solid({ x, z: z - .15, r: .62 });
   const [wx, wz] = S.at([x, z]), foot = [wx, wz + DD / 2 + .45], top = [wx - .2, wz + .45], onLadder = wz + DD / 2 + .14;   // (climbing she is just in front of the ladder, not behind it)
-  let mode = null, t = 0, climbs = 0, looks = 0, view = -1, sway = 0, rides = 0, back = -1, h = 0, rung = 0;
+  let mode = null, t = 0, climbs = 0, sway = 0, rides = 0, back = -1, h = 0, rung = 0;
   /* the zipline: from a post at the deck's front right corner to the village's post (set-dorp.js gives where it stands) */
   const ZT = 5.6, uni = S.uni;
   let end = null, A = null, B = null, at = null;
@@ -74,7 +74,7 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   };
   const barTo = p => { bar.position.copy(at(p)); };
   const LOW = { span: 7.5, tall: 5.6, min: 3, rise: -.2, riseTall: -.16, ly: 1.6, yaw: .3, dof: 1.3, range: 1.2, fx: 1, fz: 1, lag: 1 };   // climbing: from the grass, looking up the ladder past her to the deck
-  const toy = { look: [wx, wz + .9], shot: null, rate: .9, lets: o => tapsUp.has(o), step(dt, inp) {
+  const toy = { look: [wx, wz + .9], shot: null, rate: .9, step(dt, inp) {
     t += dt;
     if (mode === 'grab') {   // to the corner, and up on her toes to the bar
       const k = Math.min(1, t / .45), h = at(.012); girl.x = top[0] + (h.x - top[0]) * k; girl.z = top[1] + (h.z + .05 - top[1]) * k; girl.lift = DECK + .04 + Math.sin(k * Math.PI) * .25; girl.poseName = 'up'; girl.view = 'front';
@@ -97,21 +97,19 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
       if (v) { rung += Math.abs(h - was); girl.poseName = Math.floor(rung / .3) % 2 ? 'up' : 'hold'; sway = .06; if (Math.floor(rung / .3) !== Math.floor((rung - Math.abs(h - was)) / .3)) sfx.click(); }
       if (h <= 0 && v < 0 && t > .3) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; girl.z = foot[1]; S.stopPlay(); return; }   // at the foot, down again: off
       if (h <= 0 && (inp.x || inp.act) && t > .3) { mode = null; girl.lift = 0; girl.poseName = null; girl.z = foot[1]; S.stopPlay(); return; }
-      if (h >= DECK) { mode = 'top'; t = 0; climbs++; sfx.hop(); girl.hopV = 1.6; toy.shot = { span: 22, tall: 13, rise: .5, riseTall: .68, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 }; toy.look = [wx, wz + .3]; toy.rate = 1.1; } return; }
-    if (mode === 'top') { const k = Math.min(1, t / .4); girl.x = foot[0] + (top[0] - foot[0]) * k; girl.z = onLadder + (top[1] - onLadder) * k; girl.lift = DECK + .04; girl.poseName = null; girl.view = k < 1 ? 'back' : 'front';
-      if (view >= 0) { if (t > 3.2) { view = -1; t = .4; toy.look = [wx, wz + .3]; toy.shot = { span: 22, tall: 13, rise: .5, riseTall: .68, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 }; } return; }
-      if (inp.act || inp.x || inp.y > 0) { down(); } return; }
+      if (h >= DECK) { mode = 'in'; t = 0; climbs++; sfx.hop(); toy.look = null; toy.shot = null; S.through('boomhut'); } return; }   // at the top: in through the hut's door, into the room up there (set-boomhut.js)
+    if (mode === 'in') { if (t > .22) { mode = null; S.stopPlay(); } }   // (held up there until the cut at .15 s has put her in the room; the camera already looks at her, so it cuts straight to the room's own shot)
   } };
-  const down = () => { if (mode !== 'top') return; mode = 'ladder'; h = DECK - .05; t = 0; view = -1; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 1.6; sfx.hop(); };
-  const look = () => { const V = views(); if (mode !== 'top' || view >= 0 || !V.length) return; view = looks++ % V.length; t = 0; sfx.swish(2); girl.view = 'side'; girl.face = 1;
-    const [vx, vz] = V[view]; toy.look = [vx, vz]; toy.shot = { span: 34, tall: 22, rise: .55, riseTall: .7, dof: .1, range: 8, fx: 1, fz: 1, lag: 1 }; };
+  /** out of the room by its hatch: she is on the ladder at the top, and climbs down holding down */
+  const onTop = () => { mode = 'ladder'; h = DECK - .05; rung = 0; t = .3; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 1.6; S.play(toy); girl.view = 'back'; girl.x = foot[0]; girl.z = onLadder; girl.lift = h; };
+  /** out of the room by its zipline door: at the deck's corner she takes hold of the bar, and away she goes */
+  const onZip = () => { if (!A) { onTop(); return; } back = -1; barTo(.012); mode = 'grab'; t = 0; toy.shot = null; toy.rate = .9; toy.look = [wx, wz + .3]; S.play(toy); sfx.hop(); girl.x = top[0]; girl.z = top[1]; girl.lift = DECK + .04; };
+  S.door('boomhut', [x - .3, z - .45, x - .05, z - .2], [x, z + DD / 2 + .45], [0, 1], false, onTop);   // (the doors' own spots are in the trunk, where she never walks: she only comes out of them)
+  S.door('tokkel', [x + .05, z - .45, x + .3, z - .2], [x, z + DD / 2 + .45], [0, 1], false, onZip);
   const begin = () => { if (S.playing() || mode) return; mode = 'ladder'; h = 0; rung = 0; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); girl.view = 'back'; sfx.hop(); };
-  const climb = () => { if (mode === 'top') { down(); return; } if (S.playing()) return; S.walkThen(foot[0], foot[1], begin, 1.0); };
-  const tapsUp = new Set(); for (const o of [scope, ladder, bar]) o.traverse(m => { if (m.isMesh) tapsUp.add(m); });
-  toy.pad = { x: () => { if (mode === 'top') look(); }, tri: () => { if (mode === 'top' && view < 0 && back < 0 && A) { mode = 'grab'; t = 0; sfx.hop(); } } };   // with a controller, up there: ✕ the telescope, △ the zipline (○ climbs down)
-  S.tap(bar, () => { if (!A) return; if (mode === 'top' && view < 0 && back < 0) { mode = 'grab'; t = 0; sfx.hop(); } else if (!mode) climb(); }, 'zipline');
-  S.tap(ladder, climb, 'ladder'); S.tap(scope, () => { if (mode === 'top') look(); else climb(); }, 'telescope');
-  return { toy, state: () => ({ mode, climbs, looks, view, up: mode === 'top', rides, h }), step({ dt, time }) {
+  const climb = () => { if (S.playing() || mode) return; S.walkThen(foot[0], foot[1], begin, 1.0); };
+  S.tap(bar, () => { if (!mode) climb(); }, 'zipline'); S.tap(ladder, climb, 'ladder'); S.tap(scope, climb, 'telescope');   // (from the grass, everything up there means: up the ladder)
+  return { toy, state: () => ({ mode, climbs, rides, h, back }), step({ dt, time }) {
     if (!A && !end) lay();
     // walking into the foot of the ladder she takes hold of it, as a tap on it does
     if (!mode && !S.playing() && Math.hypot(girl.x - foot[0], girl.z - foot[1]) < .6) { const p = S.pushing(); if (p[1] < -.6) begin(); }

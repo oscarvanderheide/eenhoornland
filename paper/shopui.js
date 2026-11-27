@@ -33,6 +33,8 @@ const CSS = `
 @keyframes shopno{20%{transform:rotate(-7deg)}50%{transform:rotate(6deg)}80%{transform:rotate(-3deg)}}
 .shop-cost{display:flex;justify-content:center;min-height:16px;padding-left:9px}
 .shop-cost img{width:16px;height:16px;margin-left:-9px;opacity:.3;filter:saturate(.2)}
+.shop-cost img.stapel{width:15px;height:19px;margin:-3px 4px 0 -4px}
+.shop-cost{flex-wrap:wrap;max-width:100%;align-items:flex-end}
 .shop-cost img.has{opacity:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 .shop-card.no .shop-cost img:not(.has){animation:shopblink .3s ease-in-out 3}
 @keyframes shopblink{50%{opacity:.9;transform:scale(1.3)}}
@@ -45,7 +47,7 @@ const icons = {};
 const iconOf = id => icons[id] || (icons[id] = cutout(120, 120, g => drawWearIcon(g, id), PAPER, 1).toDataURL());
 let styled = false;
 
-/** o: { kid(), worn(), owns(id), wearing(id), have(), pay(n, [sx, sy], done) -> bool, buy(id), put(id), coin (an image url), prices, sfx, keeper(how) } */
+/** o: { kid(), worn(), owns(id), wearing(id), have(), pay(n, [sx, sy], done) -> bool, buy(id), put(id), coin and stack (image urls: one coin, ten), prices, sfx, keeper(how) } */
 export function openShop(o) {
   if (document.getElementById('shopbook')) return null;
   if (!styled) { styled = true; const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st); }
@@ -76,7 +78,9 @@ export function openShop(o) {
       const own = o.owns(id), on = own && o.wearing(id), n = o.prices[id];
       b.classList.toggle('own', own); b.classList.toggle('on', on); b.classList.toggle('can', !own && have >= n);
       if (own) cost.innerHTML = HEART;
-      else { cost.replaceChildren(...[...Array(n)].map((_, k) => { const im = new Image(); im.src = o.coin; if (k < have) im.className = 'has'; return im; })); }
+      else {   // the price as she sees her own coins: a stack for every ten, then the ones; bright as far as she has them
+        const tens = Math.floor(n / 10), parts = [...[...Array(tens)].map((_, k) => [o.stack, (k + 1) * 10, 'stapel']), ...[...Array(n % 10)].map((_, k) => [o.coin, tens * 10 + k + 1, ''])];
+        cost.replaceChildren(...parts.map(([src, need, cls]) => { const im = new Image(); im.src = src; im.className = [cls, have >= need ? 'has' : ''].join(' ').trim(); return im; })); }
     }
   }
   const close = () => { veil.remove(); removeEventListener('keydown', esc); o.sfx.click(); o.keeper('smile'); };

@@ -20,11 +20,14 @@ import regenboog from './set-regenboog.js';
 import kasteel from './set-kasteel.js';
 import grot from './set-grot.js';
 import hol from './set-hol.js';
+import winkel from './set-winkel.js';
+import boomhut from './set-boomhut.js';
+import blokhut from './set-blokhut.js';
 import { EGG } from './quest.js';
 import { openShop } from './shopui.js';
 import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -282,8 +285,9 @@ function buildSet(def) {
     figure: (name, spec) => { const f = makeFigure(name, spec); f.thing = !!spec.thing || LIFELESS.has(spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
     // a door: walking into `zone` in the direction `dir` is a cut to the door of the same name on another set, where she then
     // stands at its `stand`. S.through(name) takes her through at once (a tap on the house)
-    door: (name, zone, stand, dir, any = false) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir, any }); },   // (`any`: being in the zone is enough, whichever way she came: a way in through water)
+    door: (name, zone, stand, dir, any = false, arrive = null) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir, any, arrive }); },   // (`arrive`: what happens when she comes out of this door: the treehouse puts her on its ladder)   // (`any`: being in the zone is enough, whichever way she came: a way in through water)
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
+    cut: () => { camCut = true; },   // the camera jumps instead of gliding (the treehouse's telescope: from the room to an island far off, and back)
     // for toys (toys.js): take her over, give her back, send her somewhere first, ask where she can stand (the world's measure)
     play, stopPlay, playing: () => playing, walkThen, free: (x, z, fromH) => free(x, z, fromH), heightAt: (x, z) => heightAt(x, z),
     pushing: () => push,   // which way she is pushing right now, in the world's measure ([0, 0]: not at all)
@@ -716,7 +720,7 @@ function stepFallen(dt, tick) {
     else if (o.mode === 'wave') { o.frame = 2; if (o.t > 1.4) { o.mode = 'off'; o.t = 0; } }
     else if (o.mode === 'off') { o.frame = 2; o.x += f.face * 1.3 * dt; o.bob = Math.abs(Math.sin(o.t * 9)) * .05; if (o.t > 2.6) { removeFallen(o); continue; } }
     else if (o.mode === 'held') { const h = handPoint(); o.x = h.x + girl.face * .06; o.z = h.z + .05; o.y = h.y - .08; if (!playing) girl.poseName = 'hold'; f.g.visible = !playing; }
-    else if (o.mode === 'lie' && o.kind === 'munt') { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .5) { takeCoin(o); continue; } }
+    else if (o.mode === 'lie' && o.kind === 'munt') { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .62) { takeCoin(o); continue; } }
     else if (o.mode === 'lie' && o.kind.startsWith('veer')) { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .6) { takeFeather(o); continue; } }
     else if (o.mode === 'lie' && o.age > 45) { removeFallen(o); continue; }
     f.x = o.x; f.z = o.z; f.floatY = f.y = o.y;
@@ -729,17 +733,23 @@ function stepFallen(dt, tick) {
 const purse = { coins: 0, seen: new Set() }, coinRow = document.createElement('div'); coinRow.id = 'coins'; document.body.appendChild(coinRow);
 let coinSrc = null; const coinImg = () => coinSrc || (coinSrc = cutout(THINGS.munt.w, THINGS.munt.h, c => THINGS.munt.draw(c, 0), PAPER, 1).toDataURL());
 const featherImgs = {}; const featherImg = b => featherImgs[b] || (featherImgs[b] = cutout(THINGS['veer-' + b].w, THINGS['veer-' + b].h, c => THINGS['veer-' + b].draw(c, 0), PAPER, 1).toDataURL());
-function showCoins(pop) { coinRow.replaceChildren(...[...Array(purse.coins)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === purse.coins - 1) im.className = 'pop'; return im; }),
-  ...(gear.wings ? [] : gear.feathers).map((b, i) => { const im = new Image(); im.src = featherImg(b); im.className = 'veer' + (pop && i === gear.feathers.length - 1 ? ' pop' : ''); return im; })); }   // (the feathers she has, after the coins: only those she has, never empty places)
+const stackImg = () => stackImg.src || (stackImg.src = cutout(THINGS.stapel.w, THINGS.stapel.h, c => THINGS.stapel.draw(c, 0), PAPER, 1).toDataURL());
+/** her coins: every ten of them a stack, then the ones over (Oscar wants things to cost much more: thirty coins in a row would not fit) */
+function showCoins(pop) { const tens = Math.floor(purse.coins / 10), ones = purse.coins % 10, last = ones ? 'one' : 'ten';
+  coinRow.replaceChildren(...[...Array(tens)].map((_, i) => { const im = new Image(); im.src = stackImg(); im.className = 'stapel' + (pop && last === 'ten' && i === tens - 1 ? ' pop' : ''); return im; }),
+    ...[...Array(ones)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === ones - 1) im.className = 'pop'; return im; }),
+    ...(gear.wings ? [] : gear.feathers).map((b, i) => { const im = new Image(); im.src = featherImg(b); im.className = 'veer' + (pop && i === gear.feathers.length - 1 ? ' pop' : ''); return im; })); }   // (the feathers she has, after the coins: only those she has, never empty places)
 const onScreen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
-function slot(i) { const r = coinRow.getBoundingClientRect(); return [r.left + 17 + i * 26, r.top + 17]; }
+/** where in her row a coin lands or leaves from: just after the last coin (or stack) there is */
+function slot() { const all = [...coinRow.querySelectorAll('img:not(.veer)')], q = all[all.length - 1]; if (!q) { const r = coinRow.getBoundingClientRect(); return [r.left + 17, r.top + 17]; } const r = q.getBoundingClientRect(); return [r.left + r.width * .6, r.top + r.height / 2]; }
 function flyCoin(from, to, done) { const im = new Image(); im.src = coinImg(); im.className = 'flycoin'; im.style.left = from[0] + 'px'; im.style.top = from[1] + 'px'; document.body.appendChild(im);
   requestAnimationFrame(() => requestAnimationFrame(() => { im.style.left = to[0] + 'px'; im.style.top = to[1] + 'px'; im.style.transform = 'rotate(360deg)'; })); setTimeout(() => { im.remove(); done(); }, 720); }
 const coins = {
   have: () => purse.coins,
-  earn(x, y, z, n = 1) { confetti(x, y + .2, z, ['#f2c65c', '#fbf5ea', '#e0a93a'], 10, starGeo, 2); for (let k = 0; k < n; k++) setTimeout(() => { sfx.peep(); flyCoin(onScreen(x, y, z), slot(purse.coins), () => { purse.coins++; showCoins(true); sfx.chime(); }); }, k * 220); },
+  earn(x, y, z, n = 1) { confetti(x, y + .2, z, ['#f2c65c', '#fbf5ea', '#e0a93a'], 10, starGeo, 2); for (let k = 0; k < n; k++) setTimeout(() => { sfx.peep(); flyCoin(onScreen(x, y, z), slot(), () => { purse.coins++; showCoins(true); sfx.chime(); }); }, k * 220); },
   /** pay n coins: they fly from her row to (x, y, z), or to a place on the screen ([sx, sy] as x); false if she has too few */
-  spend(n, x, y, z, done) { if (purse.coins < n) return false; for (let k = 0; k < n; k++) setTimeout(() => { purse.coins--; showCoins(); flyCoin(slot(purse.coins), Array.isArray(x) ? x : onScreen(x, y, z), () => { sfx.peep(); if (k === n - 1 && done) done(); }); }, k * 160); return true; },
+  spend(n, x, y, z, done) { if (purse.coins < n) return false; const fly = Math.min(n, 6), at = () => Array.isArray(x) ? x : onScreen(x, y, z);   // (at most six fly: a dear thing should not take ages)
+    for (let k = 0; k < fly; k++) setTimeout(() => { const from = slot(); purse.coins -= Math.floor(n * (k + 1) / fly) - Math.floor(n * k / fly); showCoins(); flyCoin(from, at(), () => { sfx.peep(); if (k === fly - 1 && done) done(); }); }, k * 170); return true; },
   /** the first time this happens, a coin */
   reward(key, x, y, z) { if (purse.seen.has(key)) return; purse.seen.add(key); setTimeout(() => coins.earn(x, y, z), 700); },
 };
@@ -758,7 +768,7 @@ const redressBoth = () => { girl.redress({ ...wardrobe.on[girl.kid] }); zus.redr
 const closet = {
   owns: id => wardrobe.own.has(id), wearing: id => Object.values(wardrobe.on[girl.kid]).includes(id), worn: () => ({ ...wardrobe.on[girl.kid] }),
   /** the shop's counter (shopui.js): the sheet with the mirror and the cards; `keeper(how)` lets the shopkeeper smile, hold up a dress or wave */
-  open(keeper = () => { }) { return openShop({ kid: () => girl.kid, worn: closet.worn, owns: closet.owns, wearing: closet.wearing, have: coins.have, pay: (n, at, done) => coins.spend(n, at, 0, 0, done), buy: id => closet.buy(id), put: id => closet.put(id), coin: coinImg(), prices: PRICES, sfx, keeper }); },
+  open(keeper = () => { }) { return openShop({ kid: () => girl.kid, worn: closet.worn, owns: closet.owns, wearing: closet.wearing, have: coins.have, pay: (n, at, done) => coins.spend(n, at, 0, 0, done), buy: id => closet.buy(id), put: id => closet.put(id), coin: coinImg(), stack: stackImg(), prices: PRICES, sfx, keeper }); },
   buy(id) { wardrobe.own.add(id); closet.put(id); },
   put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
 };
@@ -820,7 +830,7 @@ function giveWings() {
    camera wide and following, big paper wings beating. In the air a tap anywhere is only where to fly (no toys, no doors),
    over the water too, over the islands only. The same button lands: straight down where there is ground to stand on, or
    first to the nearest such ground. While flying it is the only button (Oscar, in the pixel game: one button to land) */
-const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot']);
+const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot', 'winkel', 'boomhut', 'blokhut']);
 const flyBtn = document.getElementById('fly'); if (flyBtn) flyBtn.style.backgroundImage = `url(${wingIcon().toDataURL()})`;
 function bounds() { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const s of sets) if (!OUTSIDE.has(s.name) && s.box) { x0 = Math.min(x0, s.box[0]); z0 = Math.min(z0, s.box[1]); x1 = Math.max(x1, s.box[2]); z1 = Math.max(z1, s.box[3]); } return [x0 - 4, z0 - 4, x1 + 4, z1 + 4]; }
 const landable = (x, z) => { const fl = floorAt(x, z); return !!fl && !fl.swim && !OUTSIDE.has(fl.set.name) && free(x, z, fl.h); };
@@ -933,6 +943,7 @@ function stepDoors(dt) {
       [uni.x, uni.z] = [[.9, .1], [-.9, .1], [0, 0]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, girl.y, uni)) || stand; uni.y = girl.y;
       for (const f of figures) if (f.follows) { [f.x, f.z] = [[-.9, .35], [.9, .35], [0, .5], [0, 0]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, girl.y, f)); f.y = girl.y; }   // whoever comes along with her comes through too
       target = null; hold = null; balloon.on = false; camCut = true;
+      if (through.twin.arrive) through.twin.arrive();
     }
     if (through.t >= .32) through = null;
     return;
@@ -1515,6 +1526,8 @@ window.__p = {
   walkTo(x, z) { target = goTo(x, z); },
   /** what fell from trees, and (for tests) let the tree nearest her drop this: 'appel', 'rups', 'sok', 'laars', 'vogelaar' */
   coins: () => purse.coins,
+  /** (for tests and screenshots) give her this many coins at once */
+  rich(n) { purse.coins += n; showCoins(true); return purse.coins; },
   seaLife: () => ({ boats: seaLife.boats.map(b => [+b.g.position.x.toFixed(1), +b.g.position.z.toFixed(1), b.g.visible, b.g.parent && b.g.parent.visible]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
   /** riding: whether she is on it, flying, and the unicorn's state */
   ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
