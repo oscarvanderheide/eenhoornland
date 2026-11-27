@@ -4,7 +4,7 @@
 //   mushrooms       four springy ones in a ring: walking onto one bounces her, the big one highest
 //   who lives here  two flamingos in a pink pond (one does as the other does), the parrot on its perch, the rabbit and its holes
 // The rainbow stands in the north, behind everything: nothing tall between her and the camera.
-import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './props.js';
 import { rainbow, paint, mushroom, rainbowTree, BANDS } from './wonders.js';
 import { flamingo, parrot, rabbit } from './critters2.js';
@@ -21,7 +21,9 @@ export default {
     const rect = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
     const { SAND, GRASS, POND, bridge: BR } = regenboogLand();
 
-    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, GROUND.high]]);
+    // the rainbow island's own look (Oscar: the islands felt alike): 'candy land', ground of candy-floss pink, a striped path, clouds resting on the ground, giant sweets
+    const CANDY = paper('#f4d2de', { map: grassMap, bump: grassBump }), MINT = paper('#c6ead8', { map: grassMap, bump: grassBump });
+    shore(S, [[SAND, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, CANDY]]);
     root.add(slab(POND, H_GRASS + .02, .02, P('pond'), whiteEdge));
     for (let x = BR.x0; x < BR.x1; x += .32) root.add(slab(rect(x, BR.z0 - .05, x + .28, BR.z1 + .05), DECK, .06, P('plank'), edgeMat));
     for (let x = BR.x0 + 1.2; x < BR.x1 - .6; x += 1.7) for (const z of [BR.z0, BR.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), P('post')); m.castShadow = true; m.position.set(x, DECK - .6, z); root.add(m); }
@@ -34,7 +36,7 @@ export default {
     const laid = []; let layer = 0;
     const lay = (pts, c, y = H_GRASS) => { const up = .015 + (layer++) * .003; root.add(slab(pts, y + up, up, typeof c === 'string' ? P(c) : c, whiteEdge)); laid.push(pts); return pts; };
     const stepping = (line, seed, cols = ['path']) => { const R2 = rng(seed); line.forEach(([x, z], i) => { const st = slab(circlePts(.2 + R2() * .06, seed + i, 14).map(([px, pz]) => [px * 1.25, pz]), H_GRASS + .025, .025, paper(cols[i % cols.length]), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R2() * 3; root.add(st); laid.push(blob(x, z, .3, .3, 1, 8, 0)); }); };
-    lay(ribbon([[BR.x1 - .3, 0], [-8.6, .3], [-6.2, -.3], [-3.6, .2], [-1.4, .6]], .85, 631), 'path');                       // from the bridge to the middle
+    { const way = [[BR.x1 - .3, 0], [-8.6, .3], [-6.2, -.3], [-3.6, .2], [-1.4, .6]]; lay(ribbon(way, .95, 631), 'path'); lay(ribbon(way, .62, 631), '#cbb9f0'); lay(ribbon(way, .3, 631), '#bfe8d8'); }   // from the bridge to the middle: a path in stripes
     lay(blob(-.2, .9, 2.1, 1.5, 632, 36, .06), 'path');                                                                      // the round place in the middle
     stepping([[-.3, -.8], [-.2, -1.6], [-.1, -2.4]], 640, BANDS);                                                             // up to the rainbow: stones in its colours
     stepping([[1.9, 1.3], [2.9, 1.7], [3.9, 2.1]], 646, BANDS);                                                               // to the pond
@@ -65,10 +67,27 @@ export default {
     };
     // pompom flowers in plots of one colour each, on a cut of greener grass; sprinkles in a ring round every tree and round the middle
     { const spotAt = (x, z) => { const v = [(x + 11) / 22, (z + 7.6) / 15.2]; let i = 0; return sweetSpot(() => v[i++]); }, okAt = (x, z) => !!spotAt(x, z), roomy = (x, z) => okAt(x, z) && okAt(x + 1.2, z) && okAt(x - 1.2, z) && okAt(x, z + .7) && okAt(x, z - .7);
-      findSpots(R, 9, 3.9, R2 => [-11 + R2() * 22, -7.6 + R2() * 15.2], roomy).forEach(([cx, cz], k) => { const col = BANDS[k % BANDS.length], up = .012 + (layer++) * .003; root.add(slab(blob(cx, cz, 1.6, 1.0, 680 + k, 24, .09), H_GRASS + up, up, GROUND.grass, GROUND.grass));
+      findSpots(R, 9, 3.9, R2 => [-11 + R2() * 22, -7.6 + R2() * 15.2], roomy).forEach(([cx, cz], k) => { const col = BANDS[k % BANDS.length], up = .012 + (layer++) * .003; root.add(slab(blob(cx, cz, 1.6, 1.0, 680 + k, 24, .09), H_GRASS + up, up, MINT, MINT));
         plantAt(S, inOval(R, cx, cz, 1.25, .75, 14, .2, okAt).map(([x, z]) => [x, H_GRASS + up, z]), 690 + k, R3 => pompom(R3, col)); });
       const ring = (cx, cz, rx, rz, m) => { const out = []; for (let i = 0; i < m; i++) { const a = i / m * 6.283 + R() * .3, x = cx + Math.cos(a) * rx * (.9 + R() * .25), z = cz + Math.sin(a) * rz * (.9 + R() * .25); if (inPoly(GRASS, x, z) && edgeDist(GRASS, x, z) > .3 && !laid.some(o => inPoly(o, x, z))) out.push([x, H_GRASS, z]); } return out; };
       plantAt(S, [...feet.flatMap(([x, z]) => ring(x, z, .75, .55, 11)), ...ring(-.2, .9, 2.45, 1.8, 34)], 664, sprinkle); }
+    // little clouds resting on the ground, and giant sweets: swirl lollipops and striped candy canes, in groups at the back and the sides
+    const sweetTex = (draw, w = 128, h = 128) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+    const swirl = (a, b) => sweetTex((g, w) => { g.fillStyle = a; g.fillRect(0, 0, w, w); g.strokeStyle = b; g.lineWidth = 9; g.beginPath(); for (let i = 0; i < 160; i++) { const t = i / 160 * 6.283 * 3.2, r = 4 + i / 160 * 58; g.lineTo(64 + Math.cos(t) * r, 64 + Math.sin(t) * r); } g.stroke(); });
+    const stripes = (a, b) => { const t = sweetTex((g, w, h) => { g.fillStyle = a; g.fillRect(0, 0, w, h); g.fillStyle = b; for (let y = -h; y < h * 2; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + 24); g.lineTo(w, y + 40); g.lineTo(0, y + 16); g.fill(); } }); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 3); return t; };
+    const SWIRLS = [['#f4a6c4', '#fbf5ea'], ['#bba6ea', '#fbf5ea'], ['#9ed9cf', '#fbf5ea'], ['#f2d86b', '#e98f8f']].map(([a, b]) => new THREE.MeshStandardMaterial({ map: swirl(a, b), roughness: .9, side: THREE.DoubleSide }));
+    const CANE = new THREE.MeshStandardMaterial({ map: stripes('#fbf5ea', '#e9636f'), roughness: .9 });
+    const lolly = (x, z, r, k) => { const g = new THREE.Group(); g.position.set(x, H_GRASS, z); root.add(g); const st = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, 1.3, 8), paper('#fbf5ea')); st.position.y = .65; st.castShadow = true; g.add(st);
+      const back = card(circlePts(r + .05, 900 + k, 28), .04, whiteEdge); back.position.set(0, 1.3 + r * .85, -.03); back.castShadow = true; g.add(back);
+      const face = new THREE.Mesh(new THREE.CircleGeometry(r, 32), SWIRLS[k % SWIRLS.length]); face.position.set(0, 1.3 + r * .85, .005); g.add(face); S.solid({ x, z, r: .2 }); };
+    const cane = (x, z, k) => { const g = new THREE.Group(); g.position.set(x, H_GRASS, z); g.rotation.y = k % 2 ? .4 : -.3; root.add(g); const st = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 1.5, 12), CANE); st.position.y = .75; st.castShadow = true; g.add(st);
+      const hook = new THREE.Mesh(new THREE.TorusGeometry(.26, .08, 10, 16, Math.PI), CANE); hook.position.set(.26, 1.5, 0); hook.castShadow = true; g.add(hook); S.solid({ x, z, r: .18 }); };
+    const cloud = (x, z, s) => { const g = new THREE.Group(); g.position.set(x, H_GRASS, z); root.add(g); for (const [dx, dy, dz, r] of [[0, .22, 0, .5], [-.5, .14, .05, .36], [.48, .16, 0, .38], [.1, .4, -.05, .34]]) { const m = new THREE.Mesh(new THREE.SphereGeometry(r * s, 14, 10), paper('#fdfaf4')); m.scale.y = .62; m.position.set(dx * s, dy * s, dz * s); m.castShadow = m.receiveShadow = true; g.add(m); } S.solid({ x, z, r: .55 * s }); };
+    const free = (x, z, r = .8) => inPoly(GRASS, x, z) && edgeDist(GRASS, x, z) > r && !inPoly(POND, x, z) && edgeDist(POND, x, z) > .8 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < r) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < r + .3);
+    let k = 0;
+    for (const [x, z, s] of [[-10.2, -3.6, 1.1], [9.6, -5.2, 1.2], [-10.4, 5.4, 1.0], [9.9, 6.1, .9], [-2.6, -6.6, .8], [6.8, -6.4, .7]]) if (free(x, z, .9)) cloud(x, z, s);
+    for (const [x, z, r] of [[-8.6, -5.6, .42], [-7.6, -6.2, .32], [8.0, -4.2, .46], [8.9, -3.4, .34], [-9.4, 3.8, .38], [7.8, 5.2, .4]]) if (free(x, z, .5)) lolly(x, z, r, k++);
+    for (const [x, z] of [[-6.6, -6.4], [10.4, -3.6], [-8.2, 6.3], [8.6, 6.6]]) if (free(x, z, .5)) cane(x, z, k++);
     const grass = meadow(S, 0, sweetSpot, 662, 0, undefined, bunch);
 
     return {
