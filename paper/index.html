@@ -13,10 +13,24 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b9a888,0 3px 8px rgba(0,0,0,.25)}
 #sky{right:calc(env(safe-area-inset-right) + 14px)}
 #home{left:calc(env(safe-area-inset-left) + 14px)}
+#saves{right:calc(env(safe-area-inset-right) + 150px)}
+.btn[hidden]{display:none}
+#savebook{position:fixed;inset:0;z-index:10;background:rgba(40,52,60,.55);display:grid;place-items:center}
+.saverow{display:flex;gap:clamp(12px,3vw,28px);align-items:flex-start}
+.savecol{display:flex;flex-direction:column;align-items:center;gap:12px}
+.savecard{width:clamp(110px,22vw,170px);height:clamp(130px,26vw,200px);border:0;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.18),0 10px 22px rgba(0,0,0,.25);padding:8px}
+.savecard:active{transform:translateY(3px)}
+.savecard.cur{outline:5px solid #fbf7ee;outline-offset:3px}
+.saveface{min-height:52px}
+.savebin{width:52px;height:52px;border-radius:50%;border:0;background:#f3ead8;box-shadow:0 3px 0 #b9a888;display:grid;place-items:center;touch-action:none;cursor:pointer}
+.savebin svg{width:30px;height:30px}
+.savebin.hold{background:#e98f8f;box-shadow:0 0 0 9px #f4b9b9;transition:background 1.3s linear,box-shadow 1.3s linear;animation:binshake .18s linear infinite}
+@keyframes binshake{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+.savebin.gone{visibility:hidden}
 #who{right:calc(env(safe-area-inset-right) + 82px);background-size:92%;background-position:center 30%;background-repeat:no-repeat}
 .btn svg{width:32px;height:32px;grid-area:1/1}
 .btn svg[hidden]{display:none}
-#coins{position:fixed;top:calc(env(safe-area-inset-top) + 24px);left:calc(env(safe-area-inset-left) + 80px);right:180px;display:flex;flex-wrap:wrap;gap:2px;pointer-events:none}
+#coins{position:fixed;top:calc(env(safe-area-inset-top) + 24px);left:calc(env(safe-area-inset-left) + 80px);right:230px;display:flex;flex-wrap:wrap;gap:2px;pointer-events:none}
 #coins img{width:34px;height:34px;margin-right:-10px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 #coins img.pop{animation:coinpop .45s cubic-bezier(.3,1.6,.5,1)}
 @keyframes coinpop{0%{transform:scale(.3)}100%{transform:scale(1)}}
@@ -27,6 +41,7 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
   <svg viewBox="0 0 32 32"><path d="M5 16 16 6l11 10" fill="none" stroke="#6b5a4a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 14v12h14V14" fill="#e3a59a" stroke="#6b5a4a" stroke-width="2.6" stroke-linejoin="round"/><rect x="14" y="19" width="5" height="7" fill="#4f8f8c"/></svg>
 </a>
 <button class="btn" id="who" aria-label="Anna of Fenna"></button>
+<button class="btn" id="saves" aria-label="de drie spellen"><svg viewBox="0 0 32 32"><rect x="4" y="9" width="11" height="15" rx="2.5" fill="#f4a6c4" stroke="#b9708c" stroke-width="1.4" transform="rotate(-10 9 16)"/><rect x="10.5" y="7" width="11" height="15" rx="2.5" fill="#f2c65c" stroke="#b9913a" stroke-width="1.4"/><rect x="17" y="9" width="11" height="15" rx="2.5" fill="#8fd0c8" stroke="#4f9a92" stroke-width="1.4" transform="rotate(10 22 16)"/></svg></button>
 <button class="btn" id="sky" aria-label="dag of avond">
   <svg id="sun" viewBox="0 0 32 32"><g stroke="#d99a3a" stroke-width="2.6" stroke-linecap="round"><path d="M16 2v4M16 26v4M2 16h4M26 16h4M6 6l3 3M23 23l3 3M26 6l-3 3M9 23l-3 3"/></g><circle cx="16" cy="16" r="7" fill="#f2bf4a"/></svg>
   <svg id="moon" viewBox="0 0 32 32" hidden><path d="M21 4a12 12 0 1 0 7 17A10 10 0 0 1 21 4z" fill="#f0d98a" stroke="#c9a84e" stroke-width="1.6"/></svg>

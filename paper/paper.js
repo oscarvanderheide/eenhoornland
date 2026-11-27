@@ -247,7 +247,7 @@ function buildSet(def) {
     land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
     where: () => set.name,   // the set she stands on now
     world: obj => { scene.add(obj); return obj; },   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
-    coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); return coinAt(wx, wz, y); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
+    coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); s.coinN = (s.coinN || 0) + 1; return coinAt(wx, wz, y, s.name + ':' + s.coinN); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
   Object.assign(s, def.build(S));
@@ -670,12 +670,14 @@ const coins = {
   reward(key, x, y, z) { if (purse.seen.has(key)) return; purse.seen.add(key); setTimeout(() => coins.earn(x, y, z), 700); },
 };
 /** a coin lying on the ground somewhere (the world's measure): she walks over it, or taps it, and it is hers */
-function coinAt(x, z, y = heightAt(x, z) ?? 0) {
-  const f = makeFigure('munt', THINGS.munt); f.thing = true; const o = { f, kind: 'munt', x, z, y: y + .02, mode: 'lie', t: 0, age: 0, keep: true, frame: 0 };
+const takenCoins = new Set();   // the coins of this save she has picked up (ids: island and number), so they are not there again
+function coinAt(x, z, y = heightAt(x, z) ?? 0, id = null) {
+  if (id && takenCoins.has(id)) return null;
+  const f = makeFigure('munt', THINGS.munt); f.thing = true; const o = { f, kind: 'munt', x, z, y: y + .02, mode: 'lie', t: 0, age: 0, keep: true, frame: 0, id };
   f.act = () => { f.setFrame(0); f.tilt = 0; f.mesh.scale.x = Math.cos(time * 2.4 + x) * .9 + (Math.cos(time * 2.4 + x) >= 0 ? .1 : -.1); f.bob = .06 + Math.sin(time * 3 + z) * .04; };
   f.onTap = () => takeCoin(o); tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots); fallen.push(o); return o;
 }
-function takeCoin(o) { if (o.gone) return; removeFallen(o); coins.earn(o.x, o.y + .3, o.z); }
+function takeCoin(o) { if (o.gone) return; if (o.id) takenCoins.add(o.id); removeFallen(o); coins.earn(o.x, o.y + .3, o.z); }
 /* what she wears: bought once, then hers (both sisters may wear it), each sister her own things on */
 const wardrobe = { own: new Set(), on: { anna: {}, fenna: {} } };
 const redressBoth = () => { girl.redress({ ...wardrobe.on[girl.kid] }); zus.redress({ ...wardrobe.on[zus.kid] }); };
@@ -999,12 +1001,79 @@ function bakeSea(rows, root) {
   root.add(out); return out;
 }
 bake(theatre); for (const g of hungs) bake(g);
+/* ---------------- saves: three of them, as in the pixel game ----------------
+   For girls who cannot read: each save has its own colour and shows who played it and her egg or unicorn. The game opens
+   the save played last, where she left it; an empty one begins with the dream. What a save keeps: who she is, where the
+   story stands, her tools, her coins (and which coins of the islands she has picked up, and which first times have
+   given a coin), what she owns and has on, where she stands, day or evening. It is written every few seconds while she
+   plays (not while a toy has her) and when the page is closed. The button top right (three little cards) opens the
+   three saves: a tap on one plays it (the page starts again in it); hold the bin under one to start it afresh. ?new
+   starts the save being played afresh (the tests use it) */
+const SLOTS = 3, SLOT_COLS = [['#f4a6c4', '#fbd9e6'], ['#f2c65c', '#fbe9b0'], ['#8fd0c8', '#d2f0ec']], slotKey = n => 'eh-paper-save-' + n;
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } }, del: k => { try { localStorage.removeItem(k); } catch (e) { } } };
+let saveSlot = Math.min(SLOTS, Math.max(1, +store.get('eh-paper-slot') || 1)), saving = true;
+function peekSave(n) { try { const s = JSON.parse(store.get(slotKey(n)) || 'null'); return s && s.stage && s.stage !== 'dream' ? s : null; } catch (e) { return null; } }
+function readSave() { if (ASK.has('new')) { store.del(slotKey(saveSlot)); const u = new URL(location.href); u.searchParams.delete('new'); history.replaceState(null, '', u.href); return null; } return peekSave(saveSlot); }
+let lastSpot = null;
+function writeSave() {
+  if (!STORY || !saving || quest.stage === 'dream') return;
+  if (!playing && !through && floorAt(girl.x, girl.z)) lastSpot = [+girl.x.toFixed(2), +girl.z.toFixed(2)];
+  store.set(slotKey(saveSlot), JSON.stringify({ v: 1, who: girl.kid, stage: quest.stage, gear: { snorkel: gear.snorkel, hook: gear.hook, potion: gear.potion }, coins: purse.coins, seen: [...purse.seen],
+    taken: [...takenCoins], own: [...wardrobe.own], on: wardrobe.on, where: lastSpot, eve: eveTarget, t: Date.now() }));
+  store.set('eh-paper-slot', String(saveSlot));
+}
+function restoreSave(sv) {
+  if (sv.who && sv.who !== girl.kid && FIGS[sv.who]) { const a = girl.kid; girl.become(FIGS[sv.who]); zus.become(FIGS[a]); }
+  quest.stage = sv.stage; Object.assign(gear, sv.gear || {}); purse.coins = sv.coins || 0; for (const k of sv.seen || []) purse.seen.add(k);
+  for (const id of sv.own || []) wardrobe.own.add(id); Object.assign(wardrobe.on, sv.on || {}); redressBoth(); showCoins();
+  uni.away = ['dream', 'zoek', 'ei'].includes(quest.stage); uni.g.visible = !uni.away;
+  if (gear.potion) for (const s of sets) if (s.toys && s.toys.braam && s.toys.braam.openGate) s.toys.braam.openGate();   // the brambles bloomed for her potion
+  eve = eveTarget = sv.eve ? 1 : 0; skyIcon(!!eveTarget);
+  const at = sv.where && floorAt(sv.where[0], sv.where[1]);
+  if (at) { [girl.x, girl.z] = sv.where; standOn(at.set); girl.y = at.h; const u = [[-1, .4], [1, .4], [0, 1]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null) || [girl.x, girl.z]; [uni.x, uni.z] = u; uni.y = heightAt(u[0], u[1]) ?? girl.y;
+    eggF.x = uni.x; eggF.z = uni.z; shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true; }
+  lastSpot = sv.where || null;
+}
+setInterval(writeSave, 4000); addEventListener('pagehide', writeSave); document.addEventListener('visibilitychange', () => { if (document.hidden) writeSave(); });
+function playSlot(n) { writeSave(); saving = false; saveSlot = n; store.set('eh-paper-slot', String(n)); const u = new URL(location.href); u.searchParams.delete('new'); location.replace(u.href); }
+function wipeSlot(n) { store.del(slotKey(n)); if (n === saveSlot) { saving = false; location.replace(location.href); } }
+/* the picker: three big cards in their colours, her face and her egg or unicorn on each; the bin under a card is held to start it afresh */
+const savesBtn = document.getElementById('saves');
+function savePicture(sv) {
+  const hatched = sv && !['dream', 'zoek', 'ei'].includes(sv.stage), spec = hatched ? FIGS.baby : EGG, cv = cutout(spec.w, spec.h, c => spec.draw(c, 0), PAPER, 1);
+  cv.style.cssText = 'width:' + (hatched ? 96 : 64) + 'px;height:auto;display:block' + (sv ? '' : ';opacity:.4'); return cv;
+}
+function faceOf(who) { const sp = FIGS[who], cv = cutout(sp.w, sp.h, c => drawKid(c, who, { view: 'front', pose: 'stand', f: 0, wear: {}, eyes: 'open' }), PAPER, 1), out = document.createElement('canvas'); out.width = out.height = 96;
+  const sw = cv.width * .62; out.getContext('2d').drawImage(cv, (cv.width - sw) / 2, cv.height * .015, sw, sw, 0, 0, 96, 96); out.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#fbf7ee'; return out; }
+function openSaves() {
+  if (document.getElementById('savebook')) return; sfx.chime(); writeSave();
+  const veil = document.createElement('div'); veil.id = 'savebook'; const row = document.createElement('div'); row.className = 'saverow'; veil.appendChild(row); document.body.appendChild(veil);
+  const close = () => veil.remove(); veil.addEventListener('pointerdown', e => { if (e.target === veil) close(); });
+  for (let n = 1; n <= SLOTS; n++) {
+    const sv = peekSave(n), [col, light] = SLOT_COLS[n - 1], colEl = document.createElement('div'); colEl.className = 'savecol';
+    const b = document.createElement('button'); b.className = 'savecard' + (n === saveSlot ? ' cur' : ''); b.style.background = `linear-gradient(${light},${col})`; b.setAttribute('aria-label', 'Spel ' + n);
+    const face = document.createElement('div'); face.className = 'saveface'; if (sv) face.appendChild(faceOf(sv.who || 'anna')); b.appendChild(face); b.appendChild(savePicture(sv));
+    b.onclick = () => { if (n === saveSlot) { sfx.click(); close(); } else { sfx.chime(); playSlot(n); } };
+    colEl.appendChild(b);
+    const bin = document.createElement('button'); bin.className = 'savebin' + (sv ? '' : ' gone'); bin.setAttribute('aria-label', 'Spel ' + n + ' weggooien (vasthouden)');
+    bin.innerHTML = '<svg viewBox="0 0 32 32"><path d="M9 11h14l-1.4 16H10.4z" fill="#e98f8f" stroke="#a85a5a" stroke-width="1.6"/><path d="M7 8h18M13 8V5h6v3" stroke="#a85a5a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+    let held = null; const let_ = () => { bin.classList.remove('hold'); clearTimeout(held); held = null; };
+    bin.addEventListener('pointerdown', e => { e.preventDefault(); bin.classList.add('hold'); held = setTimeout(() => { sfx.thud(); wipeSlot(n); close(); openSaves(); }, 1300); });
+    bin.addEventListener('pointerup', let_); bin.addEventListener('pointerleave', let_); bin.addEventListener('pointercancel', let_);
+    colEl.appendChild(bin); row.appendChild(colEl);
+  }
+}
+if (savesBtn) { if (ASK.has('set')) savesBtn.hidden = true; savesBtn.addEventListener('click', openSaves); }
+
 /* The start. With ?set=... : a look at one island, the unicorn there, as before. Without: the game from its beginning.
    Night, the two sisters asleep in their beds at home, and the dream they share (quest.js). Then it is morning; there is
    no unicorn yet, and the egg is to be found. */
 const STORY = !ASK.has('set');
+const SAVED = STORY ? readSave() : null;   // the save being played (saves, below); with ?set=... nothing is saved
+if (SAVED) for (const id of SAVED.taken || []) takenCoins.add(id);
 loadWorld(STORY ? 'dorp' : SETS[ASK.get('set')] ? ASK.get('set') : 'eiland');
-if (STORY) {
+if (SAVED) restoreSave(SAVED);
+else if (STORY) {
   const home = sets.find(q => q.name === 'huis'); gear.potion = false; quest.stage = 'dream'; uni.away = true; uni.g.visible = false; eve = eveTarget = 1; skyIcon(true);
   [girl.x, girl.z] = home.beds[girl.kid]; girl.y = 0; standOn(home); camCut = true; home.sleep(girl.kid);
 }

@@ -3,7 +3,7 @@
 export default async function (t) {
   const port = process.env.SERVE || 8765, only = process.env.ONLY || '', fs = await import('node:fs'); fs.mkdirSync('tmp-shots', { recursive: true });
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
-  const open = async (q, m) => { await t.send('Emulation.setDeviceMetricsOverride', m); await t.go(`http://127.0.0.1:${port}/paper/${q}`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); };
+  const open = async (q, m) => { await t.send('Emulation.setDeviceMetricsOverride', m); await t.go(`http://127.0.0.1:${port}/paper/${q === '' ? '?new' : q}`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); };
   const DESK = { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false }, LAND = { width: 750, height: 313, deviceScaleFactor: 2, mobile: true };
   const until = async (expr, secs) => { for (let i = 0; i < secs * 20; i++) { const v = await t.ev(expr); if (typeof v === 'string' && v.startsWith('ERR')) { console.log('FAIL the page threw: ' + v); return false; } if (v) return true; await t.sleep(50); } return false; };   // (an error is never a yes)
   const mouse = (type, x, y) => t.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1, pointerType: 'mouse' });
@@ -564,5 +564,29 @@ export default async function (t) {
     await t.ev(`__p.tap('kleren-strik')`); ok(await until(`!__p.toy('winkel').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
     await t.ev(`__p.tap('kleren-strik')`); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 4), 'and on again, for free');
     await t.ev('__p.swap()'); await t.sleep(600); ok(!(await shop()).wearing.includes('strik'), 'her sister has her own things on');
+  }
+
+  /* ---------------- saving: three saves, the one played last opens where she left it ---------------- */
+  if (!only || only === 'save') {
+    const bare = async () => { await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500); };
+    const center = async sel => t.ev(`(r => [r.left + r.width / 2, r.top + r.height / 2])(document.querySelector('${sel}').getBoundingClientRect())`);
+    await open('', LAND); await t.sleep(1500); ok((await t.ev('__p.quest()')).stage === 'dream', 'a fresh save begins with the dream');
+    await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    await t.ev(`__p.quest({ stage: 'baby' })`); const d = await t.ev(`__p.places('dorp')`), c = (await t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).map(f => [f.x, f.z])`))[0], n0 = await t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).length`);
+    await t.ev(`__p.placeAt(${c[0] - 1}, ${c[1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${c[0] + .6}, ${c[1]})`); ok(await until('__p.coins() === 1', 5), 'she picks up a coin');
+    await t.ev(`__p.placeAt(${d.fountain[0]}, ${d.fountain[1]})`); await t.sleep(5000);
+    await bare(); const i1 = await t.ev('__p.info()');
+    ok((await t.ev('__p.quest()')).stage === 'baby' && await t.ev('__p.coins()') === 1, 'the page opened again: the same save, her coin still hers');
+    ok(Math.hypot(i1.girl[0] - d.fountain[0], i1.girl[1] - d.fountain[1]) < 1, 'and she stands where she left off'); ok(await t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).length`) === n0 - 1, 'the coin she took is not lying there again'); await t.shot('tmp-shots/y-save-back-land.png');
+    let [x, y] = await center('#saves'); await t.click(x, y); await t.sleep(500); ok(await t.ev(`document.querySelectorAll('#savebook .savecard').length === 3 && document.querySelectorAll('#savebook .savecard')[0].classList.contains('cur')`), 'the button top right: three saves, the one being played lit'); await t.shot('tmp-shots/y-saves-land.png');
+    [x, y] = await center('#savebook .savecol:nth-child(2) .savecard'); await t.click(x, y); await t.sleep(800); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1200);
+    ok((await t.ev('__p.quest()')).stage === 'dream' && await t.ev('__p.coins()') === 0, 'the second save: empty, so it begins with the dream');
+    [x, y] = await center('#saves'); await t.click(x, y); await t.sleep(500); [x, y] = await center('#savebook .savecol:nth-child(1) .savecard'); await t.click(x, y); await t.sleep(800); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1200);
+    ok((await t.ev('__p.quest()')).stage === 'baby' && await t.ev('__p.coins()') === 1, 'and back in the first, as she left it');
+    [x, y] = await center('#saves'); await t.click(x, y); await t.sleep(500); [x, y] = await center('#savebook .savecol:nth-child(1) .savebin');
+    await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }); await t.sleep(400); await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }); await t.sleep(600);
+    ok(await t.ev(`!!document.getElementById('savebook')`) && (await t.ev('__p.coins()')) === 1, 'a quick tap on the bin does nothing');
+    await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }); await t.sleep(1600); await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+    await t.sleep(800); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1200); ok((await t.ev('__p.quest()')).stage === 'dream', 'held: the save starts afresh, with the dream');
   }
 }
