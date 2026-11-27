@@ -202,7 +202,7 @@ export function seesaw(S, x, y, z) {
   let psi = 1, om = 0, mode = null, t = 0, buf = 0, land = 9, streak = 0, best = 0, air = 0, airV = 0, uair = 0, uairV = 0, uT = 0, uwait = 0, flip = 0, flips = 0, kicks = 0, from = null, was = false, leave = false;
   const endY = s => P + .12 + s * A * Math.sin(psi * TMAX);   // how high an end's seat is (s -1: hers, +1: the unicorn's)
   const seat = () => { girl.x = wx - (A - .05) * Math.cos(psi * TMAX); girl.z = wz + .02; girl.lift = endY(-1) + air; girl.face = 1; girl.view = 'side'; girl.poseName = air > .06 ? 'up' : 'sit'; };
-  const useat = k => { const tx = wx + (A - .05) * Math.cos(psi * TMAX), ty = endY(1) - .12 + uair; uni.busy = true; uni.walking = false; uni.face = -1; uni.x = from[0] + (tx - from[0]) * k; uni.z = from[1] + (wz + .02 - from[1]) * k; uni.lift = ty * k + Math.sin(k * Math.PI) * .5; uni.lean = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
+  const useat = k => { if (uni.away) return; const tx = wx + (A - .05) * Math.cos(psi * TMAX), ty = endY(1) - .12 + uair; uni.busy = true; uni.walking = false; uni.face = -1; uni.x = from[0] + (tx - from[0]) * k; uni.z = from[1] + (wz + .02 - from[1]) * k; uni.lift = ty * k + Math.sin(k * Math.PI) * .5; uni.lean = flip > 0 ? (1 - flip) * Math.PI * 2 : 0; };
   const toy = { look: [wx, wz + .3], step(dt, inp) {
     t += dt; pivot.rotation.z = psi * TMAX;
     if (mode === 'on') { const k = Math.min(1, t / .35); seat(); girl.z = wz + .02 + (1 - k) * .7; girl.lift = endY(-1) * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .6 ? 'sit' : null; useat(k); if (k >= 1) { mode = 'ride'; sfx.hop(); land = 9; streak = 0; } return; }
@@ -215,7 +215,7 @@ export function seesaw(S, x, y, z) {
       // (a finger simply held keeps it going, gently; a push in time with the landing does better)
       if (buf > 0 || (inp.x && land > .45)) { const good = buf > 0 && land < .3; streak = good ? Math.min(4, streak + 1) : 0; best = Math.max(best, streak); om = -(good ? GOOD : KICK); psi = .999; buf = 0; kicks++; sfx.hop(); S.confetti(girl.x, y + .1, girl.z + .1, ['#ecd3a0', '#f7ecd0', '#e2c58a'], good ? 9 : 4, undefined, 1.4); }
     }
-    if (psi <= -1) { uwait -= dt; if (uwait <= 0) { om = UKICK; psi = -.999; } }   // the unicorn's end is down: a beat, and it kicks off
+    if (psi <= -1) { uwait -= dt; if (uwait <= 0) { om = uni.away ? 0 : UKICK; psi = -.999; } }   // the unicorn's end is down: a beat, and it kicks off
     else if (psi < 1) {
       om += G * dt; psi += om * dt;
       if (psi <= -1) { const v = -om; psi = -1; om = 0; uwait = .16; sfx.thud(); airV = v * .5 + streak * .3; }                    // bump: she leaves her seat
@@ -293,13 +293,14 @@ export function frisbee(S, x, y, z) {
   };
   f.act = tick => { f.tilt = fly ? Math.sin(tick * .9) * .14 : 0; };
   return { f, state: () => ({ held, flying: !!fly, fetching: !!fetch, throws, fetched, far, at }), step({ dt }) {
-    if (wash > 0) { wash -= dt; if (wash <= 0) { f.g.visible = true; f.hopV = 1.8; fetch = { phase: 'go', t: 0 }; } return; }
+    if (wash > 0) { wash -= dt; if (wash <= 0) { f.g.visible = true; f.hopV = 1.8; if (!uni.away) fetch = { phase: 'go', t: 0 }; } return; }
     if (fly) {
       const q = fly; q.t += dt; q.v *= Math.exp(-.42 * dt); q.th += q.turn * dt; q.vy += 5 * (Math.min(1.12, (q.v / 5) ** 2) - 1) * dt; q.vy *= Math.exp(-.8 * dt);
       q.x += Math.cos(q.th) * q.v * dt; q.z += Math.sin(q.th) * q.v * dt; q.y += q.vy * dt;
       f.x = q.x; f.z = q.z; f.floatY = f.y = q.y - f.H / 2; f.face = 1;
       const h = S.heightAt(q.x, q.z), floor = h === null ? -.55 : h;
       if (q.y <= floor + .1 || q.t > 8) { far = Math.hypot(q.x - q.x0, q.z - q.z0); fly = null;
+        if (uni.away && h !== null && S.free(q.x, q.z, h)) { at = [q.x, q.z]; sfx.thud(); return; }   // (no unicorn yet: it lies where it fell)
         if (h === null || !S.free(q.x, q.z, h)) { if (h === null) { sfx.splash(); S.confetti(q.x, -.3, q.z, ['#8fc3cc', '#f6efe2', '#7fbcc0'], 12, undefined, 2.4); f.g.visible = false; wash = 1.1; } at = ashore(q.x, q.z, q.x0, q.z0); if (h !== null) fetch = { phase: 'go', t: 0 }; }
         else { at = [q.x, q.z]; sfx.thud(); S.confetti(q.x, h + .08, q.z, ['#ecd3a0', '#f7ecd0'], 5, undefined, 1.2); fetch = { phase: 'go', t: 0 }; } }
       return;

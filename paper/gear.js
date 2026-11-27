@@ -59,8 +59,8 @@ export function hookGap(S, x, z0, z1, deck, planks) {
     if (mode === 'throw') { const k = Math.min(1, t / .28); span(hand, tip.copy(hand).lerp(far, k)); if (k >= 1) { mode = 'pull'; t = 0; sfx.click(); } return; }
     const k = Math.min(1, t / .8), e = k * k * (3 - 2 * k), uk = Math.max(0, Math.min(1, (t - .25) / .8)), ue = uk * uk * (3 - 2 * uk), utoZ = to + (to > from ? .95 : -.95);
     girl.z = from + (to - from) * e; girl.lift = Math.sin(k * Math.PI) * .75; if (k < 1) span(S.hand(), far); else rope.visible = head.visible = false;
-    uni.busy = true; uni.walking = false; uni.x = ufrom[0] + (wx - ufrom[0]) * ue; uni.z = ufrom[1] + (utoZ - ufrom[1]) * ue; uni.lift = Math.sin(uk * Math.PI) * 1.0;
-    if (k >= 1 && uk >= 1) { girl.lift = 0; girl.poseName = null; uni.lift = 0; crossings++; mode = null; girl.hopV = 1.6; sfx.thud(); S.stopPlay(); }
+    if (!uni.away) { uni.busy = true; uni.walking = false; uni.x = ufrom[0] + (wx - ufrom[0]) * ue; uni.z = ufrom[1] + (utoZ - ufrom[1]) * ue; uni.lift = Math.sin(uk * Math.PI) * 1.0; }
+    if (k >= 1 && (uk >= 1 || uni.away)) { girl.lift = 0; girl.poseName = null; uni.lift = 0; crossings++; mode = null; girl.hopV = 1.6; sfx.thud(); S.stopPlay(); }
   } };
   const tap = () => {
     if (S.playing() || mended) return;

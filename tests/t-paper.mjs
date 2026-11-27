@@ -5,7 +5,7 @@ export default async function (t) {
   if (process.env.PHONE) await t.send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 2, mobile: true });
   else await t.send('Emulation.setDeviceMetricsOverride', { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false });
   const pre = process.env.PHONE ? 'tmp-shots/p-phone-' : 'tmp-shots/p-';
-  await t.go(`http://127.0.0.1:${port}/paper/${process.env.WHO ? '?who=' + process.env.WHO : ''}`);   // WHO=fenna plays Fenna
+  await t.go(`http://127.0.0.1:${port}/paper/?set=eiland${process.env.WHO ? '&who=' + process.env.WHO : ''}`);   // WHO=fenna plays Fenna
   for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
   ok(await t.ev('!!window.__p'), 'the island loads');
@@ -64,12 +64,12 @@ export default async function (t) {
   // the readout for a phone (?fps) and the switches that tell what costs what
   await t.ev('__p.wear([])'); await t.sleep(2600);
   const s0 = await t.ev('__p.stats()'); ok(s0.fps > 5 && s0.her > 15 && s0.calls > 20 && s0.shadows && s0.dof && s0.post, `it measures itself (${s0.fps.toFixed(0)} frames a second, she is ${s0.her.toFixed(0)} points tall, ${s0.calls} draws)`);
-  await t.go(`http://127.0.0.1:${port}/paper/?fps&shadows=0&dof=0&dpr=1`);
+  await t.go(`http://127.0.0.1:${port}/paper/?set=eiland&fps&shadows=0&dof=0&dpr=1`);
   for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
   await t.sleep(2600);
   const s1 = await t.ev('__p.stats()'); ok(!s1.shadows && !s1.dof && s1.dpr === 1 && s1.calls < s0.calls && s1.fps > 5, `without shadows and soft focus it still draws, with fewer draws (${s1.calls} against ${s0.calls})`);
   ok(await t.ev("!!document.getElementById('stat') && document.getElementById('stat').textContent.includes('frames a second')"), 'the readout shows'); await t.shot(pre + 'readout.png');
-  await t.go(`http://127.0.0.1:${port}/paper/?fps&post=0`);
+  await t.go(`http://127.0.0.1:${port}/paper/?set=eiland&fps&post=0`);
   for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500);
   await t.sleep(2600); ok((await t.ev('__p.stats()')).fps > 5, 'without the lens pass it still draws'); await t.shot(pre + 'nolens.png');
 }

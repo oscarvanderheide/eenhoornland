@@ -396,4 +396,18 @@ export default async function (t) {
     ok(await until(`__p.toy('frisbee').fetching`, 3), 'the unicorn runs after it'); await t.sleep(900); await t.shot('tmp-shots/y-frisbee-fetch-land.png');
     ok(await until(`__p.toy('frisbee').fetched === 1`, 12), 'and brings it back to her'); const b = await toy(), g = await t.ev('__p.info()'); ok(Math.hypot(b.at[0] - g.girl[0], b.at[1] - g.girl[1]) < 2.2 && await t.ev('__p.uniOk()'), 'it lies at her feet'); await t.sleep(400); await t.shot('tmp-shots/y-frisbee-back-land.png');
   }
+
+  /* ---------------- the start of the game: asleep at home, the shared dream, morning, no unicorn yet; the sisters' button ---------------- */
+  if (!only || only === 'start') {
+    await open('', LAND); await t.sleep(1800);
+    const info = () => t.ev('__p.info()'), who = () => t.ev('__p.who()');
+    const i0 = await info(), w0 = await who(); ok(i0.set === 'huis' && i0.lift > .5 && i0.dreaming && i0.eve > .5, 'the game begins at night, in her bed at home, in a dream'); ok(!w0.uni && w0.girl === 'anna' && w0.zus === 'fenna', 'no unicorn yet; her sister sleeps in the other bed'); await t.sleep(2600); await t.shot('tmp-shots/y-dream-land.png');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); ok((await info()).lift > .5 && (await info()).dreaming, 'she cannot be woken while they dream');
+    await t.sleep(2400); await t.shot('tmp-shots/y-dream-hatch-land.png');
+    ok(await until(`__p.quest().stage === 'zoek'`, 9), 'the dream ends: the egg is to be found'); await t.sleep(1800); const i1 = await info(); ok(i1.eve < .5 && !i1.dreaming, 'and it is morning'); await t.shot('tmp-shots/y-morning-land.png');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(200); await t.ev(`__p.keys([])`); ok(await until(`__p.info().lift === 0 && __p.info().pose === null`, 3), 'a push: she hops out of bed'); await t.sleep(500);
+    const b = await t.ev(`(r => [r.left + r.width / 2, r.top + r.height / 2])(document.getElementById('who').getBoundingClientRect())`); await t.click(b[0], b[1]); await t.sleep(500);
+    const w1 = await who(); ok(w1.girl === 'fenna' && w1.zus === 'anna', 'a tap on the button with her sister\'s face: now she is Fenna, and Anna sleeps'); await t.shot('tmp-shots/y-sister-land.png');
+    const pl = await t.ev(`__p.places('huis')`); await t.ev(`__p.walkTo(${pl.start[0]}, ${pl.start[1] + 1.4})`); ok(await until(`__p.info().set === 'dorp'`, 8), 'out of the front door, into the village'); await t.sleep(1200); ok(!(await who()).uni, 'still without a unicorn'); await t.shot('tmp-shots/y-out-land.png');
+  }
 }

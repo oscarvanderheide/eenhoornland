@@ -6,7 +6,7 @@
 // Passes under MAX percent of the picture (default 0.02: two untouched runs differ in 0.001, a lost duck in far more).
 export default async function (t) {
   const port = process.env.SERVE || 8765, fs = await import('node:fs'); fs.mkdirSync('tmp-shots', { recursive: true });
-  const pre = process.env.PRE || 'now', q = process.env.Q || '', max = +(process.env.MAX || .02);
+  const pre = process.env.PRE || 'now', q = process.env.Q || '?set=eiland', max = +(process.env.MAX || .02);
   const ok = (c, m) => console.log((c ? 'ok   ' : 'FAIL ') + m);
   for (const [name, m] of [['desk', { width: 1200, height: 750, deviceScaleFactor: 1, mobile: false }], ['land', { width: 750, height: 313, deviceScaleFactor: 2, mobile: true }], ['phone', { width: 393, height: 852, deviceScaleFactor: 2, mobile: true }]]) {
     await t.send('Emulation.setDeviceMetricsOverride', m);

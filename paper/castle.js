@@ -63,13 +63,14 @@ export function carousel(S, x, y, z) {
   const ride = k => {
     const th = Math.PI / 2 + a, [gx, gz] = pos(th), [ux, uz] = pos(th + Math.PI);
     girl.x = from[0] + (gx - from[0]) * k; girl.z = from[1] + (gz - from[1]) * k; girl.lift = .52 * k + Math.sin(k * Math.PI) * .35; girl.view = 'side'; girl.poseName = k > .6 ? 'sit' : null; if (Math.abs(w) > .2) girl.face = Math.sign(-Math.sin(th) * w) || 1;
+    if (uni.away) return;
     uni.busy = true; uni.walking = false; uni.x = ufrom[0] + (ux - ufrom[0]) * k; uni.z = ufrom[1] + (uz - ufrom[1]) * k; uni.lift = .36 * k + Math.sin(k * Math.PI) * .45; if (Math.abs(w) > .2) uni.face = Math.sign(Math.sin(th) * w) || 1;
   };
   const toy = { look: [wx, wz + .4], step(dt, inp) {
     t += dt; spin.rotation.y = -a;
     if (mode === 'on') { const k = Math.min(1, t / .4); ride(k); if (k >= 1) { mode = 'ride'; sfx.hop(); } return; }
     if (mode === 'off') { const k = Math.min(1, t / .35), th = Math.PI / 2 + a, [ox, oz] = [wx + Math.cos(th) * 2.35, wz + Math.sin(th) * 2.35], [px, pz] = pos(th), [uox, uoz] = [wx + Math.cos(th + Math.PI) * 2.3, wz + Math.sin(th + Math.PI) * 2.3], [upx, upz] = pos(th + Math.PI);
-      girl.x = px + (ox - px) * k; girl.z = pz + (oz - pz) * k; girl.lift = .52 * (1 - k) + Math.sin(k * Math.PI) * .3; girl.poseName = null; uni.x = upx + (uox - upx) * k; uni.z = upz + (uoz - upz) * k; uni.lift = .36 * (1 - k) + Math.sin(k * Math.PI) * .35;
+      girl.x = px + (ox - px) * k; girl.z = pz + (oz - pz) * k; girl.lift = .52 * (1 - k) + Math.sin(k * Math.PI) * .3; girl.poseName = null; if (!uni.away) { uni.x = upx + (uox - upx) * k; uni.z = upz + (uoz - upz) * k; uni.lift = .36 * (1 - k) + Math.sin(k * Math.PI) * .35; }
       if (k >= 1) { mode = null; S.stopPlay(); } return; }
     if (inp.act) leave = true;
     w += inp.x * 2.4 * dt; w -= w * (leave ? 3.2 : .22) * dt; w = Math.max(-4.2, Math.min(4.2, w)); a += w * dt; turns += Math.abs(w) * dt / (Math.PI * 2); fastest = Math.max(fastest, Math.abs(w));
