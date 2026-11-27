@@ -4,7 +4,7 @@
 // and thrown away by dropSet. Everything is made of the kit (kit.js).
 // Everything is drawn in code: the paper is noise + fibres, the figures are cut-paper shapes on canvases.
 import { THREE, rng, lerp, clamp, paperCanvas, PAPER, tex, paperBump, paper, sheetOf, card, whiteEdge, inPoly, edgeDist, wavyTop, cloudPts, sunPts, circlePts, WATER_Y } from './kit.js';
-import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR } from './figures.js';
+import { FIGS, cutout, WALK, drawKid, kidPoints, drawBalloon, BALLOON, WEAR, KID } from './figures.js';
 import eiland from './set-eiland.js';
 import dorp from './set-dorp.js';
 import bos from './set-bos.js';
@@ -1043,8 +1043,10 @@ function savePicture(sv) {
   const hatched = sv && !['dream', 'zoek', 'ei'].includes(sv.stage), spec = hatched ? FIGS.baby : EGG, cv = cutout(spec.w, spec.h, c => spec.draw(c, 0), PAPER, 1);
   cv.style.cssText = 'width:' + (hatched ? 96 : 64) + 'px;height:auto;display:block' + (sv ? '' : ';opacity:.4'); return cv;
 }
-function faceOf(who) { const sp = FIGS[who], cv = cutout(sp.w, sp.h, c => drawKid(c, who, { view: 'front', pose: 'stand', f: 0, wear: {}, eyes: 'open' }), PAPER, 1), out = document.createElement('canvas'); out.width = out.height = 96;
-  const sw = cv.width * .62; out.getContext('2d').drawImage(cv, (cv.width - sw) / 2, cv.height * .015, sw, sw, 0, 0, 96, 96); out.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#fbf7ee'; return out; }
+function faceOf(who) { const out = faceCut(who, 96); out.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#fbf7ee'; return out; }
+/** her face, cut square round the middle of her head (each sister's own measure: Fenna is drawn taller), `px` wide */
+function faceCut(who, px) { const sp = FIGS[who], S2 = 1.5, cv = cutout(sp.w, sp.h, c => drawKid(c, who, { view: 'front', pose: 'stand', f: 0, wear: {}, eyes: 'open' }), PAPER, S2), o = KID[who], hx = kidPoints(who, 'front').top[0], hy = o.headY - o.head * .12, r = o.head * 1.42;
+  const out = document.createElement('canvas'); out.width = out.height = px; out.getContext('2d').drawImage(cv, (hx - r) * S2, (hy - r) * S2, 2 * r * S2, 2 * r * S2, 0, 0, px, px); return out; }
 function openSaves() {
   if (document.getElementById('savebook')) return; sfx.chime(); writeSave();
   const veil = document.createElement('div'); veil.id = 'savebook'; const row = document.createElement('div'); row.className = 'saverow'; veil.appendChild(row); document.body.appendChild(veil);
@@ -1079,8 +1081,7 @@ else if (STORY) {
 }
 /* the button with her sister's face: a tap, and she is her sister (who was asleep at home, and now the other one is) */
 const whoBtn = document.getElementById('who');
-function showWho() { if (!whoBtn) return; const sp = FIGS[zus.kid], cv = cutout(sp.w, sp.h, c => drawKid(c, zus.kid, { view: 'front', pose: 'stand', f: 0, wear: {}, eyes: 'open' }), PAPER, 1.25), out = document.createElement('canvas'); out.width = out.height = 128;
-  const sw = cv.width * .62; out.getContext('2d').drawImage(cv, (cv.width - sw) / 2, cv.height * .015, sw, sw, 0, 0, 128, 128); whoBtn.style.backgroundImage = `url(${out.toDataURL()})`; }
+function showWho() { if (!whoBtn) return; whoBtn.style.backgroundImage = `url(${faceCut(zus.kid, 128).toDataURL()})`; whoBtn.style.backgroundSize = '100%'; whoBtn.style.backgroundPosition = 'center'; }
 function swapSisters() { if (playing || through) return false; const a = girl.kid, b = zus.kid; girl.become(FIGS[b]); zus.become(FIGS[a]); redressBoth(); showWho(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + .8, girl.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, starGeo, 2.2); return true; }
 if (whoBtn) { showWho(); whoBtn.addEventListener('click', swapSisters); }
 
