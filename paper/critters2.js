@@ -123,3 +123,39 @@ export function seal(S, x, z, y) {
     else if (t > 3.2) mode = null;
   } };
 }
+
+/* ---------------- the rainbow island ---------------- */
+/** a flamingo on one leg. A tap: it dips its head, then spreads its wings. `friend`: another flamingo, who does the same a moment later */
+export function flamingo(S, x, z, name = 'flamingo') {
+  const { sfx } = S, f = make(S, 'flamingo', x, z, name); let t = -1, shows = 0, friend = null, due = -1;
+  const show = () => { if (t >= 0) return false; t = 0; shows++; sfx.peep(); return true; };
+  f.onTap = () => { if (show() && friend) friend.later(.45); };
+  f.act = () => f.setFrame(t < 0 ? 0 : t < .9 ? 1 : 2);
+  return { f, later(s) { due = s; }, pair(o) { friend = o; }, state: () => ({ frame: f.frame, shows }), step({ dt }) {
+    if (due >= 0) { due -= dt; if (due < 0) show(); }
+    if (t < 0) return; const was = t; t += dt; if (was < .9 && t >= .9) { f.hopV = 1.8; sfx.flutter(); } if (t > 2.3) t = -1;
+  } };
+}
+/** the parrot on its perch (`y`: how high the perch is). A tap: it spreads its wings and squawks twice */
+export function parrot(S, x, z, y) {
+  const { sfx } = S, f = make(S, 'papegaai', x, z); let t = -1, talks = 0, said = 0; f.floatY = f.y = y; f.face = -1;
+  f.onTap = () => { if (t >= 0) return; t = 0; talks++; said = 0; f.hopV = 1.4; };
+  f.act = () => f.setFrame(t < 0 ? 0 : t < .5 ? 1 : (Math.floor(t / .18) % 2 ? 0 : 2));
+  return { f, state: () => ({ frame: f.frame, talks }), step({ dt }) { if (t < 0) return; t += dt; if (said < 2 && t > .5 + said * .45) { said++; sfx.squawk(); } if (t > 1.5) t = -1; } };
+}
+/** the rabbit and its holes (`holes`: [x, z] in the set's measure; it sits by the first). A tap: it hops down the nearest
+ *  hole, and a moment later peeks out of the next one. A tap on the peeking rabbit: found! Out it jumps, and sits there */
+export function rabbit(S, holes) {
+  const { sfx } = S, H = holes.map(p => S.at(p)), f = make(S, 'konijn', holes[0][0] + .55, holes[0][1] + .1); let mode = null, t = 0, at = 0, found = 0, dives = 0, from = null;
+  f.onTap = () => {
+    if (mode === 'peek') { mode = 'out'; t = 0; found++; f.hopV = 3; sfx.peep(); S.confetti(f.x, f.y + .4, f.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 10, S.starGeo, 2); }
+    else if (!mode) { mode = 'in'; t = 0; dives++; from = [f.x, f.z]; f.hopV = 2.4; sfx.hop(); }
+  };
+  f.act = () => f.setFrame(mode === 'in' ? (t < .25 ? 1 : 2) : mode === 'peek' ? 3 : mode === 'out' ? (t < .3 ? 1 : 2) : 0);
+  return { f, state: () => ({ frame: f.frame, mode, found, dives, at }), step({ dt }) {
+    if (!mode) return; t += dt;
+    if (mode === 'in') { const k = Math.min(1, t / .4); f.x = from[0] + (H[at][0] - from[0]) * k; f.z = from[1] + (H[at][1] + .02 - from[1]) * k; if (k >= 1) { mode = 'gone'; t = 0; f.g.visible = false; S.confetti(f.x, f.y + .1, f.z, ['#c9a878', '#e6c98f'], 6, undefined, 1.4); } }
+    else if (mode === 'gone' && t > 1.3) { at = (at + 1) % H.length; f.x = H[at][0]; f.z = H[at][1] + .02; f.g.visible = true; mode = 'peek'; t = 0; }
+    else if (mode === 'out') { const k = Math.min(1, t / .4); f.x = H[at][0] + .55 * k; f.z = H[at][1] + .02 + .08 * k; if (k >= 1) mode = null; }
+  } };
+}

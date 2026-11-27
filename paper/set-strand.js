@@ -48,7 +48,8 @@ export default {
     lay(ribbon([[0, BR.z1 - .2], [.3, -6.2], [-.4, -3.6], [.2, -1.2], [1.2, 1.6], [1.9, 4.6], [2.0, PIER.z0 + .3]], .85, 531), 'path');     // from the bridge down to the pier
     stepping([[1.6, -2.6], [2.9, -2.9], [4.2, -3.1], [5.5, -3.2], [6.8, -3.3], [8.1, -3.35]], 540);                                       // east, to the lighthouse
     stepping([[-.9, -4.4], [-1.9, -4.2], [-2.9, -3.9]], 550);                                                                             // west, up onto the dune
-    stepping([[.4, 1.6], [-.6, 2.2], [-1.6, 2.7]], 555);                                                                                  // to the sandcastle
+    stepping([[.4, 1.6], [-.6, 2.2], [-1.6, 2.7]], 555);
+    stepping([[3.4, .7], [4.8, .5], [6.2, .2], [8.6, .1], [10.0, .0], [11.4, -.05], [12.8, -.05], [14.0, 0]], 557);                                                   // east, to the bridge to the rainbow island (set-regenboog.js)                                                                                  // to the sandcastle
 
     /* ---------------- things ---------------- */
     const light = lighthouse(S, 11.5, H_ROCK, -3.6), castle = sandcastle(S, -3.4, H_SAND, 3.2), bunch = bouquet(S);

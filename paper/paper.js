@@ -13,8 +13,9 @@ import wei from './set-wei.js';
 import { THINGS } from './things.js';
 import { PROPS } from './people.js';
 import strand from './set-strand.js';
+import regenboog from './set-regenboog.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -413,6 +414,7 @@ const sfx = {
   note(f) { tone(f, 1.7, 'sine', .07); tone(f * 2, 1.1, 'sine', .018); },
   whirr() { noise(.7, .035, 2600); tone(1200, .5, 'triangle', .012, .7, 22); },
   click() { tone(900, .04, 'square', .04, .7); },
+  squawk() { tone(880, .14, 'square', .035, 1.35); setTimeout(() => tone(700, .16, 'square', .03, .75), 130); },
   /** somebody says hello: two soft voiced notes */
   hello() { tone(294, .26, 'triangle', .045, 1.18, 5); setTimeout(() => tone(370, .36, 'triangle', .045, .92, 5), 190); },
   /** the accordion: a few long, soft, breathing notes out of the island's own chord (never plucked: every note swells and fades) */

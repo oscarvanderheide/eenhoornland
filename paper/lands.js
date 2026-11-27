@@ -16,7 +16,7 @@ export const ORIGIN = { eiland: [0, 0], dorp: [0, 0], bos: [1.2 * K, -12.5 * K -
 export const BACK = ORIGIN.bos[1] - 8.2 * K - 5 + 16;
 /** The worlds: every set of a world exists at once, built at the start (a far set costs nothing while it is out of view).
  *  The first test island is a world of its own; everything else is one world, joined by bridges and doors */
-export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand']];
+export const WORLDS = [['eiland'], ['dorp', 'bos', 'huis', 'wei', 'strand', 'regenboog']];
 
 export function dorpLand() {
   // the terrace: a card with round corners (a blob would leave the street no room along its front)
@@ -59,5 +59,14 @@ export function strandLand() {
     SAND: blob(0, 0, 15.5, 9.2, 501, 96, .04), DUNE: blob(-7.2, -3.6, 5.6, 3.2, 502, 56, .05),      // the beach; a green dune in the north-west
     ROCK: blob(11.4, -3.4, 2.5, 1.9, 503, 36, .06), SEALROCK: blob(5.4, 14.4, 1.05, .75, 504, 24, .07),   // the lighthouse's rock; the seal's rock, out by the pier's end
     bridge: { x0: -.6, x1: .6, z0: -9.0 - SOUTH_GAP - .6, z1: -8.3 },
+  };
+}
+
+/** the rainbow island, east of the beach over a long bridge (its own, running west). Made at its real size */
+ORIGIN.regenboog = [ORIGIN.strand[0] + 15.0 + 12 + 11.2, ORIGIN.strand[1]];
+export function regenboogLand() {
+  return {
+    SAND: blob(0, 0, 11.6, 8.2, 601, 80, .04), GRASS: blob(0, -.1, 10.8, 7.4, 602, 80, .04), POND: blob(6.6, 2.6, 1.9, 1.3, 603, 32, .06),
+    bridge: { x0: -(11.2 + 12 + .7), x1: -10.6, z0: -.6, z1: .6 },
   };
 }

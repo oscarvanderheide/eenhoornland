@@ -307,4 +307,26 @@ export default async function (t) {
     await t.ev(`__p.tap('zeehond')`); await t.sleep(500); ok((await toy('zeehond')).mode === 'clap', 'a tap on the seal: it claps'); await t.ev(`__p.tap('zeehond')`); await t.sleep(400); ok((await toy('zeehond')).frame === 2, 'a tap on the clapping seal: a ball on its nose'); await t.shot('tmp-shots/y-seal-land.png');
     await t.ev(`__p.placeAt(${pl.start[0] - 2.5}, ${pl.start[1] + 2.4})`); await t.sleep(2400); await tapOn('palm'); await t.sleep(1200); ok((await toy('palm')).nuts === 1, 'a tap on a palm: it shakes and a coconut drops'); await t.shot('tmp-shots/y-palm-land.png');
   }
+
+  /* ---------------- the rainbow island: the ride over the rainbow, paint and footprints, mushrooms, flamingos, parrot, rabbit ---------------- */
+  if (!only || only === 'rainbow') {
+    await open('?set=regenboog', LAND); await t.sleep(1500);
+    const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('regenboog')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
+    ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('strand')`)).castle[0]}, ${(await t.ev(`__p.places('strand')`)).castle[1]})`), 'the bridge joins the rainbow island to the beach');
+    // paint: through the red puddle, and on
+    await t.ev(`__p.placeAt(${pl.paint[0] - 1.6}, ${pl.paint[1] - 1.2})`); await t.sleep(2200); await t.ev(`__p.keys(['d'])`); await t.sleep(1700); await t.ev(`__p.keys([])`); await t.sleep(300);
+    const pa = await toy('verf'); ok(pa.dips === 1 && pa.prints >= 3, `through a puddle of paint: her steps leave prints (${pa.prints} so far, ${pa.left} to go)`); await t.shot('tmp-shots/y-paint-land.png');
+    // a mushroom
+    const sp = await t.ev(`__p.dbg.set.spots.paddenstoel`); await t.ev(`__p.placeAt(${sp[0] + 1.6}, ${sp[2] + .1})`); await t.sleep(2000); await t.ev(`__p.keys(['a'])`); await t.sleep(700); await t.shot('tmp-shots/y-shroom-land.png'); await t.ev(`__p.keys([])`); await t.sleep(300);
+    ok((await toy('paddenstoel')).bounces >= 1, 'walking onto the big mushroom: it bounces her');
+    // the animals
+    await by('flamingo', -1.6, 1.4); await t.ev(`__p.tap('flamingo')`); await t.sleep(1300); ok((await toy('flamingo')).frame === 2 && (await toy('flamingo2')).shows === 1, 'a tap on a flamingo: it spreads its wings, and the other one does the same'); await t.shot('tmp-shots/y-flamingo-land.png');
+    await t.ev(`__p.tap('papegaai')`); await t.sleep(700); ok((await toy('papegaai')).talks === 1 && (await toy('papegaai')).frame !== 1, 'a tap on the parrot: it squawks');
+    await by('konijn', -1.2, 1.3); await t.ev(`__p.tap('konijn')`); ok(await until(`__p.toy('konijn').mode === 'peek'`, 5), 'a tap on the rabbit: down a hole, and it peeks out of another'); await t.shot('tmp-shots/y-rabbit-land.png');
+    await t.ev(`__p.tap('konijn')`); await t.sleep(700); const rb = await toy('konijn'); ok(rb.found === 1 && !rb.mode, 'a tap on the peeking rabbit: found, and out it jumps');
+    // the rainbow
+    await t.ev(`__p.placeAt(${pl.bow[0] - 2.5}, ${pl.bow[1] + 1.6})`); await t.sleep(2400); await tapOn('regenboog'); ok(await until(`__p.toy('regenboog').mode === 'ride'`, 8), 'a tap on the rainbow: she walks to its foot and is carried up');
+    ok(await until(`__p.toy('regenboog').high > 4`, 6), 'over the top'); await t.sleep(250); await t.shot('tmp-shots/y-bow-top-land.png');
+    ok(await until(`__p.toy('regenboog').mode === null`, 8), 'and down the other side'); await t.sleep(700); const g = await t.ev('__p.info()'); ok(g.lift === 0 && g.h !== null, 'she stands on the grass again'); await t.shot('tmp-shots/y-bow-down-land.png');
+  }
 }
