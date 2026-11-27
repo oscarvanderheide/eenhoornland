@@ -2,7 +2,7 @@
 // cave's rock and the rest in grey card. Reached from the village over the north bridge, through the gate (paper.js).
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
+import { shore, meadow, bouquet, pinwheel, cabin, witchHouse, GROUND } from './props.js';
 import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora.js';
 import { musician, witch } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
@@ -115,14 +115,17 @@ export default {
       hert: deer(S, [[ox - .4, oz + .2], [ox + 2.6, oz - 2.4], [ox - 3.4, oz - 2.2]]), zwijn: boars(S, nx + 5.2, nz + 2.6), eekhoorn2: squirrel(S, cx - 5.2, cz - 3.4, 1.3, 'eekhoorn2', [cx - 5.7, cz - 3.6, .1]), eekhoorn3: squirrel(S, ox + 4.6, oz + 2.8, 1.2, 'eekhoorn3', [ox + 5.1, oz + 2.6, .1]) };
     befriend(S, live.hert, { byTap: false, isFriend: (st => () => st().mode === 'friend')(live.hert.state), own: false, speed: 2.4, gap: 1.4 });   // the forest's companion: the fawn, once it has come to her (she waits quietly), comes along (companion.js)
     // the picnic in the clearing: she sits down and the hedgehog and the squirrel come and sit with her (picnic.js); butterflies about
-    const heks = witch(S, cx - .7, cz - .25);   // the witch and her pot, in the clearing where the paths meet (folk.js)
+    // the witch's house: her own corner of the forest, south of the picnic's glade, off every path (Oscar: "she needs her own little house")
+    const [hwx, hwz] = [-10.5, 8.8]; lay(blob(hwx - .3, hwz + .6, 2.8, 1.9, 239, 40, .06), paper('#7f9e6a'));
+    const house = witchHouse(S, hwx, H_GRASS, hwz);
+    const heks = witch(S, hwx - 2.0, hwz + 1.5);   // the witch and her pot, outside her door, left of it (folk.js)
     const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
       listen: { seat: [hx - 1.25, hz + .75], loop: 4.6, guests: [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3] } });   // she sits and listens, and the forest's animals come   // (folk.js)
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); },
       toys: { ...live, ...flies, heks, harpist: harp, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
@@ -131,7 +134,7 @@ export default {
         { name: 'bos', span: 13, rise: .3 },
       ],
       spots: { grot: [rx, .6, mouthZ] },
-      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], witch: [cx - 1.0, cz + 1.1], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
+      places: { start: [BR[0] - .3, BR[1] - 2.2], hert: [ox - .4, oz + 2.4], zwijn: [nx + 5.2, nz + 4.4], picnic: [gx - .2, gz + 1.3], witch: [hwx - 2.3, hwz + 2.85], harp: [hx - .9, hz + 1.2], clearing: [cx + 1.6, cz + .4], grot: [rx, mouthZ + .5], atelier: [ax, az + 1.5], orchard: [ox, oz], nook: [nx, nz], oak: [tx, tz + 1.1] },
     };
   },
 };

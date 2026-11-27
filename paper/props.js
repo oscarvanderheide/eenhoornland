@@ -407,3 +407,39 @@ export function pondDress(S, pts, cx, cz, y, seed = 7) {
       r.m.position.set(r.at[0], y + .05, r.at[1]); r.m.scale.setScalar(.35 + p * 1.3); r.m.material.opacity = .6 * Math.min(1, p * 6) * (1 - p); }
   } };
 }
+
+/* ---------------- the witch's house ---------------- */
+/** The witch's own little house, in a corner of the forest (Oscar: "she needs her own little house"): lilac walls under a
+ *  tall crooked roof of dark plum paper, a round-topped green door, a round window that glows in the evening, a crooked
+ *  chimney that puffs little paper clouds, and pumpkins by the door (they grow nowhere else). (x, z): the middle of the
+ *  house; its front looks south, to the camera. Gives back step({ dt, eve }) */
+export function witchHouse(S, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const add = (m, px, py, pz, to = g) => { m.position.set(px, py, pz); to.add(m); return m; };
+  const W = 1.7, D = 1.4, H = 1.25;
+  add(m3(new THREE.BoxGeometry(W, H, D), '#b9a3d6'), 0, H / 2, 0);                                               // the walls
+  add(m3(new THREE.BoxGeometry(W + .12, .12, D + .12), '#8f7aa8'), 0, .06, 0);                                    // a sill of darker paper at the foot
+  { const roof = m3(new THREE.ConeGeometry(1.35, 1.75, 4, 1), '#5f4778'); roof.rotation.y = Math.PI / 4; roof.scale.set(1.05, 1, .92); const tilt = new THREE.Group(); tilt.position.set(0, H, 0); tilt.rotation.z = -.07; g.add(tilt); add(roof, .04, .86, 0, tilt);
+    const tip = m3(new THREE.ConeGeometry(.12, .5, 6), '#5f4778'); tip.rotation.z = -.55; add(tip, .17, 1.8, 0, tilt);                     // its tip bends over
+    const star = card([[0, .1], [.03, .03], [.1, .03], [.045, -.015], [.065, -.09], [0, -.045], [-.065, -.09], [-.045, -.015], [-.1, .03], [-.03, .03]], .015, paper('#f2c65c')); star.position.set(.33, 2.0, .05); star.rotation.z = -.4; tilt.add(star); }
+  // the door: rounded at the top, green, with a little gold knob, on two steps
+  { const arch = [[-.27, 0], [.27, 0], [.27, .5]]; for (let i = 1; i < 12; i++) arch.push([Math.cos(i / 12 * Math.PI) * .27, .5 + Math.sin(i / 12 * Math.PI) * .27]); arch.push([-.27, .5]);
+    add(card(arch, .04, paper('#5f8f6e')), -.25, .12, D / 2 + .02); add(m3(new THREE.SphereGeometry(.035, 8, 6), '#f2c65c'), -.08, .48, D / 2 + .06);
+    add(m3(new THREE.BoxGeometry(.7, .1, .3), '#a39e94'), -.25, .05, D / 2 + .15); }
+  // the round window: warm light in the evening
+  const glow = new THREE.MeshStandardMaterial({ color: '#3d3452', emissive: '#ffcf86', emissiveIntensity: 0, roughness: .8 });
+  { const win = new THREE.Mesh(new THREE.CircleGeometry(.2, 20), glow); win.userData.live = true; add(win, .45, .78, D / 2 + .025);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.21, .035, 6, 20), paper('#7a5a3e')); add(ring, .45, .78, D / 2 + .03);
+    add(m3(new THREE.BoxGeometry(.02, .4, .02), '#7a5a3e'), .45, .78, D / 2 + .04); add(m3(new THREE.BoxGeometry(.4, .02, .02), '#7a5a3e'), .45, .78, D / 2 + .04); }
+  // the crooked chimney, and its puffs
+  { const ch = m3(new THREE.BoxGeometry(.24, .7, .24), '#8f7aa8'); ch.rotation.z = .12; add(ch, .5, H + .75, -.25); }
+  const puffs = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 7), paper('#efe9f2')); m.userData.live = true; m.castShadow = false; g.add(m); return { m, off: i / 3 }; });
+  // pumpkins by the door
+  for (const [px, pz, s] of [[.95, D / 2 + .35, 1], [1.25, D / 2 + .05, .75], [.62, D / 2 + .5, .6]]) { const p = m3(new THREE.SphereGeometry(.2 * s, 12, 8), '#e8893a'); p.scale.y = .72; add(p, px, .14 * s, pz); add(m3(new THREE.CylinderGeometry(.025, .03, .1, 5), '#6f9057'), px, .3 * s, pz); }
+  S.solid({ x, z, r: 1.05 }); S.solid({ x: x + .95, z: z + D / 2 + .35, r: .25 }); S.solid({ x: x + 1.25, z: z + D / 2 + .05, r: .2 });
+  let t = 0;
+  return { g, step({ dt, eve = 0 }) {
+    t += dt; glow.emissiveIntensity += ((eve > .5 ? 1.5 : .05) - glow.emissiveIntensity) * Math.min(1, dt * 3);
+    for (const p of puffs) { const k = (t * .3 + p.off) % 1; p.m.position.set(.55 + k * .35 + Math.sin(k * 6) * .06, H + 1.15 + k * 1.1, -.25); p.m.scale.setScalar(.5 + k * .9); p.m.visible = k < .92; }
+  } };
+}
