@@ -9,6 +9,7 @@ import { shore, meadow, bouquet, flowerBed, pinwheel, fountain, bench, lantern, 
 import { castle, carousel } from './castle.js';
 import { peacock, dragon } from './critters2.js';
 import { kasteelLand, BACK } from './lands.js';
+import { cypress, topiary, roseHedge, pennant, goldBall } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', path: '#efe6dc', court: '#e6ddd2', rock: '#bdb6c9', rock2: '#cbc5d6' };
@@ -38,13 +39,14 @@ export default {
     stepping([[-2.6, 1.7], [-3.4, 2.4], [-4.1, 3.0]], 745);                                                  // to the peacock's lawn
 
     /* ---------------- things ---------------- */
-    const burg = castle(S, 0, H_GRASS, -4.9), turn = carousel(S, 6.4, H_GRASS, 3.0), well = fountain(S, 0, H_GRASS + .015, .5), bunch = bouquet(S);
-    const beds = [-1, 1].map(s => flowerBed(S, s * 2.5, H_GRASS, -2.75, 760 + s, bunch, 2.6, 1.5, s < 0 ? ['#f4a6c4', '#bba6ea'] : ['#f2c65c', '#e98f8f']));
+    const burg = castle(S, 0, H_GRASS, -4.9), turn = carousel(S, 6.4, H_GRASS, 3.0), well = goldBall(S, 0, H_GRASS + .015, .5), bunch = bouquet(S);   // (a fountain stands on the village square; the court has a golden ball)
+    const beds = [];   // (flower beds are her garden's; here: rose hedges and clipped bushes, flora.js)
+    for (const s of [-1, 1]) { roseHedge(S, s * 1.3, -2.9, s * 3.9, -2.9, H_GRASS, 760 + s); roseHedge(S, s * 3.9, -2.9, s * 3.9, -1.5, H_GRASS, 764 + s); }
+    for (const [x, z, k] of [[-1.25, -1.9, 'two'], [1.25, -1.9, 'two'], [-4.7, .2, 'cone'], [4.7, .2, 'cone'], [-2.9, 2.6, 'ball'], [2.2, 3.0, 'ball'], [-7.6, 1.2, 'cone'], [-7.6, -1.2, 'cone']]) topiary(S, x, H_GRASS, z, k);
     root.add(slab(blob(-7.0, -2.6, 1.3, .9, 735, 20, .08), .34, .34, P('rock2'), P('rock'))); S.solid({ x: -7.0, z: -2.6, r: 1.0 });   // the dragon's rock
     const live = { pauw: peacock(S, -4.8, 3.6), draakje: dragon(S, -5.9, -1.5) };
-    const benches = [bench(S, -3.3, H_GRASS, -.9), bench(S, 3.2, H_GRASS, -.9)];
-    const lamps = [[-8.4, 1.3], [-1.3, -3.3], [1.3, -3.3], [3.4, 3.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
-    const mills = [pinwheel(S, -2.2, H_GRASS, 4.6, '#f4a6c4', '#f6efe2'), pinwheel(S, 9.2, H_GRASS, .4, '#bba6ea', '#f2c65c')];
+    const benches = [], lamps = [], mills = [];
+    for (const [x, z, c] of [[-9.0, 1.3, '#e98f8f'], [-9.0, -1.3, '#bba6ea'], [-1.25, -3.7, '#f2c65c'], [1.25, -3.7, '#f2c65c'], [3.6, 4.6, '#8fc3e0']]) pennant(S, x, H_GRASS, z, c);
 
     /* ---------------- trees at the back and the sides; flowers ---------------- */
     const keepOff = [[-5.2, -6.6, 5.2, 7.8], [3.4, -.2, 9.6, 7.6], [-9.2, -4.4, -4.2, 7.4], [BR.x1 - 1, -2.2, -7.6, 2.2]];
@@ -53,9 +55,9 @@ export default {
       const x = -10.6 + R() * 21.2, z = -7.8 + R() * 15.6, c = cols[n % cols.length];
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .7) continue;
       if (keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.6)) continue;
-      S.lollipop(x, z, H_GRASS, .5 + R() * .3, c[0], c[1], 770 + n, 1 + R() * .5); n++;
+      cypress(S, x, H_GRASS, z, 2.0 + R() * 1.2, n % 2 ? '#5f8665' : '#6f9670'); n++;   // tall dark cypresses: the castle's own
     }
-    const grass = meadow(S, 230, R2 => {
+    const grass = meadow(S, 0, R2 => {
       const x = -10.6 + R2() * 21.2, z = -7.8 + R2() * 15.6;
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;
       if (Math.abs(x) < 4.2 && z < -1.6 || Math.hypot(x - 6.4, z - 3.0) < 2.7) return null;   // (clear ground before the castle and round the carousel)
@@ -69,7 +71,7 @@ export default {
         burg.step(e); turn.step(e); well.step(e); bunch.step(e); grass.step(e);
         for (const q of [...beds, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, kasteel: burg, draaimolen: turn, fontein: well, tuin: beds[1], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, kasteel: burg, draaimolen: turn, bal: well, bos: bunch, gras: grass },
       shots: [
         { name: 'brug-kasteel', zone: [BR.x0 + .9, -1.5, BR.x1 - .2, 1.5], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },
         { name: 'poort', zone: [-4.6, -4.2, 4.6, -.9], span: 17, tall: 11, rise: .26 },   // before the castle: low and far enough back to see its roofs

@@ -13,6 +13,7 @@ import { butterfly } from './critters.js';
 import { baker, painter } from './folk.js';
 import { sheep, lamb, otter } from './critters2.js';
 import { gift, SNORKEL } from './gear.js';
+import { scatter, goldGrass } from './flora.js';
 import { weiLand, BACK } from './lands.js';
 
 const H_SAND = -.32, H_GRASS = 0, H_HILL = .48, H_TOP = .96;
@@ -80,8 +81,8 @@ export default {
     const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: lamb(S, 6.5, 4.4), otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [23.5, -4.45]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
-    const lamps = [[-9.2, 3.3], [X[0] + 2.4, X[1] + 1.3], [8.6, .1], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
-    const mills = [pinwheel(S, 8.2, H_GRASS, 6.1, '#9ed9cf', '#f2c65c'), pinwheel(S, -8.0, H_HILL, -4.4, '#f4a6c4', '#f6efe2')];
+    const lamps = [[X[0] + 2.4, X[1] + 1.3], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
+    const mills = [];   // (the toy windmills are the village's)
     const clocks = [[-9.5, 5.5], [-8.6, 6.4], [-7.4, 5.3], [1.6, 6.6], [10.2, 4.4], [11.3, 5.5], [-11.0, -1.4], [8.2, -2.7], [13.6, -2.0], [15.5, 2.4]].map(([x, z], i) => dandelion(S, x, H_GRASS, z, i + 1));
     const flies = { vlinder1: butterfly(S, -6.5, 4.6, 'w1'), vlinder2: butterfly(S, 9.5, -1.6, 'w2', '#bba6ea', '#f6efe2'), vlinder3: butterfly(S, 22.0, .6, 'w3', '#f2c65c', '#e98f8f') };
 
@@ -100,7 +101,10 @@ export default {
       if (!on || edgeDist(on, x, z) < .3 || (on === GRASS && edgeDist(HILL, x, z) < .3) || (on === HILL && edgeDist(TOP, x, z) < .3) || inPoly(POOL, x, z) || edgeDist(POOL, x, z) < .3 || inPoly(CLIFF, x, z) || edgeDist(CLIFF, x, z) < .3) return null;
       if (laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || Math.abs(x - 3.2) < 1.5 && z > -6.9 && z < -3.4 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
       return [x, on === TOP ? H_TOP : on === HILL ? H_HILL : H_GRASS, z];
-    }, 462, 4.6, undefined, bunch);
+    }, 462, 6.5, ['#a9c078', '#b9cc86', '#9cb56c'], bunch);
+    // golden grass in seed, in drifts: the meadow's own (flora.js)
+    { const drifts = [[-10.5, 5.5, 3.2], [9.5, 3.5, 3.4], [14, -3, 3], [-9, -1.5, 2.6], [20.5, 3.2, 3], [1, 7, 2.6]];
+      scatter(S, 150, R2 => { const [dx, dz, dr] = drifts[Math.floor(R2() * drifts.length)], a = R2() * 6.28, r = Math.sqrt(R2()) * dr, x = dx + Math.cos(a) * r, z = dz + Math.sin(a) * r * .7; const on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null; if (!on || edgeDist(on, x, z) < .4 || inPoly(HILL, x, z) || inPoly(POOL, x, z) || edgeDist(POOL, x, z) < .4 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .3) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .6)) return null; return [x, H_GRASS, z]; }, 463, goldGrass); }
 
     const NOTES = [392, 440, 523.3, 587.3, 659.3]; let sung = 0, hopping = false;
     const [px0, pz0] = S.at([18.9, -3.4]), [px1, pz1] = S.at([28.1, -2.7]), sx = stones.map(s => S.at([s.x, s.z])[0]);
@@ -118,7 +122,7 @@ export default {
         else if (hopping) { hopping = false; if (!S.playing()) girl.lift = 0; }
         stones.forEach((s, i) => { const on = !S.playing() && !(girl.lift > .05) && Math.abs(girl.x - S.at([s.x, s.z])[0]) < .5 && Math.abs(girl.z - S.at([s.x, s.z])[1]) < .5; if (on && !s.on) { s.dip = 1; sung++; sfx.note(NOTES[i]); S.confetti(...S.at([s.x, s.z]).flatMap((v, k) => k ? [.12, v] : [v]), ['#bfe3ea', '#f6efe2'], 5, undefined, 1.2); } s.on = on; if (s.dip > 0) s.dip = Math.max(0, s.dip - dt * 3); s.g.position.y = -.05 * Math.sin(s.dip * Math.PI); });
       },
-      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, molen: mills[0], bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) }, duiken: { state: () => ({ found, snorkel: S.gear.snorkel, swimming: !!girl.swimming }) } },
+      toys: { ...flies, ...folk, ...herd, vlieger: theKite, ballon: theBalloon, bos: bunch, gras: grass, bank: benches[0], paardenbloem: clocks[0], stenen: { state: () => ({ sung }) }, duiken: { state: () => ({ found, snorkel: S.gear.snorkel, swimming: !!girl.swimming }) } },
       shots: [
         { name: 'heuvel', zone: [-10.6, -9.4, .6, -2.3], span: 17, tall: 9.5, rise: .4 },          // on the hill: further back, to see the meadow below and the kite above
         { name: 'waterval', zone: [18.4, -6.2, 29.2, -.5], span: 12.5, rise: .4 },                  // at the pool: looking down on the stones

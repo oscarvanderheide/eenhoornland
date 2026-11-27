@@ -10,6 +10,7 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { palm, parasol, lighthouse, sandcastle } from './beach.js';
 import { crab, gull, turtle, seal } from './critters2.js';
 import { strandLand, BACK } from './lands.js';
+import { scatter, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 
 const H_SAND = -.32, H_DUNE = 0, H_ROCK = -.02, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', rock: '#bdb6c9', rock2: '#cbc5d6', path: '#f3e6c4' };
@@ -55,9 +56,10 @@ export default {
     const light = lighthouse(S, 11.5, H_ROCK, -3.6), castle = sandcastle(S, -3.4, H_SAND, 3.2), bunch = bouquet(S);
     const palms = [[-12.2, -1.2, 1], [-10.6, 2.4, 2], [-4.2, -6.6, 3], [5.6, -6.6, 4], [8.6, -6.9, 5], [7.0, -7.3, 6], [-1.9, -7.7, 7]].map(([x, z, n]) => palm(S, x, inPoly(DUNE, x, z) ? H_DUNE : H_SAND, z, 560 + n, 2.3 + (n % 3) * .3));
     parasol(S, -7.6, H_SAND, 3.3); parasol(S, 7.4, H_SAND, 1.2, '#9ed9cf', '#fbf5ea');
-    const benches = [bench(S, -8.6, H_SAND, 3.5), bench(S, -7.4, H_DUNE, -3.9)];
-    const lamps = [[1.3, -7.2], [-5.6, -2.6], [3.2, 6.6], [9.3, -2.0]].map(([x, z], n) => lantern(S, x, inPoly(DUNE, x, z) ? H_DUNE : H_SAND, z, n));
-    const mills = [pinwheel(S, -1.9, H_SAND, 4.3, '#f2c65c', '#e98f8f'), pinwheel(S, -9.6, H_DUNE, -3.0, '#9ed9cf', '#f6efe2')];
+    const benches = [bench(S, -8.6, H_SAND, 3.5)];
+    const lamps = [];   // (the lighthouse is the beach's light)
+    rowboat(S, 10.6, H_SAND, 4.4, .5); driftwood(S, -11.2, H_SAND, 5.4, .4); driftwood(S, 4.4, H_SAND, -5.6, -.3, 1.1); driftwood(S, -1.6, H_SAND, 7.4, 1.1, .9);
+    const mills = [];
     const live = {
       krab: crab(S, 5.2, 3.6, [[5.2, 3.6], [8.2, 5.0], [3.9, 1.2]]),
       schildpad: turtle(S, -6.2, 6.4, [[-6.2, 6.4], [-2.6, 7.2], [-10.2, 5.2]]),
@@ -65,7 +67,9 @@ export default {
       zeehond: seal(S, 5.4, 14.45, -.3),
     };
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
-    const grass = meadow(S, 90, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 3, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
+    const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
+    scatter(S, 110, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .2 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 563, beachGrass);   // the dune's own grass (flora.js)
+    scatter(S, 16, R2 => { const x = -14 + R2() * 28, z = -8 + R2() * 16; if (!inPoly(SAND, x, z) || edgeDist(SAND, x, z) < .6 || inPoly(DUNE, x, z) || inPoly(ROCK, x, z) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .3) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .8)) return null; return [x, H_SAND, z]; }, 564, starfish);
     { const R = rng(571), cols = ['#fbf5ea', '#f4c6b8', '#e8d5b0', '#cbc5d6', '#f6dfa6'];
       for (let i = 0, n = 0; i < 900 && n < 60; i++) { const x = -15 + R() * 30, z = -9 + R() * 18; if (!inPoly(SAND, x, z) || edgeDist(SAND, x, z) < .5 || inPoly(DUNE, x, z) || inPoly(ROCK, x, z) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .2) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .7)) continue;
         const st = slab(circlePts(.05 + R() * .06, 580 + n, 9).map(([px, pz]) => [px * (1 + R() * .5), pz]), H_SAND + .03, .03, paper(cols[n % cols.length]), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R() * 3; root.add(st); n++; } }

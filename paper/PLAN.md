@@ -51,6 +51,21 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - Later, perhaps: a spot of bubbles where she dives into a cut-paper sea seen from the side (fish, an octopus, a clam), as its own little set behind a "door", like her bedroom.
 - Who gives them to her: the otter, who dives for them, is the obvious somebody.
 
+## Every island its own (Oscar, 2026-11-27)
+
+"all the areas need to feel unique. now i see like all the same elements like the flowers and mills and grass tufts everywhere. that doesnt make it feel like exploring a new area." So: **nothing grows or stands on two islands.** A shared maker is fine for how a thing works, not for how an island looks. What each has (`flora.js` holds everything that is not the village's):
+
+| Island | Trees | On the ground | Small things | Light at night |
+|---|---|---|---|---|
+| Village | round lollipop trees, a few pines | grass tufts, wild flowers, her garden's beds | toy windmills, benches, the fountain, the stall | lanterns |
+| Forest | pines only, small and tall; the oak | ferns, toadstools, fallen leaves, mossy stones, a few flowers to pick | the picnic, the cabin | (none yet) |
+| Meadow | trees in blossom | flowers everywhere, dandelion clocks, drifts of golden grass | the kite, the balloon, two benches | two lanterns on the path |
+| Beach | palms | sand, shells, starfish, beach grass on the dune | parasols, driftwood, a rowing boat, the sandcastle | the lighthouse |
+| Rainbow island | candy-floss trees | pompom flowers, sprinkles, paint | springy mushrooms, the rainbow | (none yet) |
+| Castle | tall cypresses | a mown lawn | clipped bushes in pots, rose hedges, pennants, a golden ball that spins | (none yet) |
+
+Still shared and to be judged: the bench (village, meadow, beach), the lantern (village, meadow), the plank bridges, picking flowers (village, forest, meadow).
+
 ## Paper or folded card
 
 Oscar asked whether what lives should be paper. The rule now:

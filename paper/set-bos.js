@@ -3,6 +3,7 @@
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
+import { scatter, fern, toadstool, fallenLeaf } from './flora.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
@@ -73,17 +74,19 @@ export default {
       if (Math.abs(x - ax) < 1.9 && Math.abs(z - az) < 1.9 || Math.abs(x - BR[0]) < 1.3 && z > BR[1] - 3.4 || Math.abs(x - rx) < 2.6 && z > rz) continue;   // nothing between the cave's mouth and the camera: the shot there is close and low, and a tree in front would hide her
       if (sights.some(([px, pz]) => Math.abs(x - px) < 1.9 && z > pz - .4 && z < pz + 5.5)) continue;   // a clear view from the camera (in the south) to each place where something lives: no trees folding away here (Oscar), so none are planted in the way
       if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.15)) continue;
-      if (pineTree) S.pine(x, z, H_GRASS, 1.4 + R() * .8, ['#5f8665', '#6f9670', '#547a5c', '#7fa676'][n % 4]); else S.lollipop(x, z, H_GRASS, .45 + R() * .3, c[0], c[1], 400 + n, 1 + R() * .6);
+      S.pine(x, z, H_GRASS, pineTree ? 1.4 + R() * .8 : 2.1 + R() * .9, ['#5f8665', '#6f9670', '#547a5c', '#7fa676'][n % 4]);   // a forest of pines, small and tall (the round trees are the village's)
       n++;
     }
 
     // the forest floor: tufts (darker than the village's) and a few flowers, thicker in the clearings
-    const bunch = bouquet(S), grass = meadow(S, 340, R2 => {
+    const floorSpot = R2 => {
       const x = (-15 + R2() * 35) * K, z = (-7.6 + R2() * 15.2) * K, on = inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_E, x, z) ? GRASS_E : null;
       if (!on || edgeDist(on, x, z) < .3 || inPoly(ROCK, x, z) || edgeDist(ROCK, x, z) < .25 || Math.abs(x - ax) < 1.5 && Math.abs(z - az) < 1.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
       return [x, H_GRASS + (laid.some(o => inPoly(o, x, z)) ? .018 : 0), z];
-    }, 402, 1.6, ['#7a9a5c', '#8fae6e', '#6f9057'], bunch);
-    const mill = pinwheel(S, cx + 2.2, H_GRASS, cz + 1.4, '#f2c65c', '#f6efe2');   // a toy windmill somebody left in the clearing
+    };
+    // the forest's own floor (flora.js): ferns, toadstools, fallen leaves; and a few flowers to pick, no tufts
+    scatter(S, 170, floorSpot, 403, fern); scatter(S, 60, floorSpot, 404, toadstool); scatter(S, 130, floorSpot, 405, fallenLeaf);
+    const bunch = bouquet(S), grass = meadow(S, 36, floorSpot, 402, 10, ['#7a9a5c', '#8fae6e', '#6f9057'], bunch);
 
     // a tree each for the two squirrels that live away from the oak
     S.lollipop(cx - 5.7, cz - 3.6, H_GRASS, .7, '#7fa676', '#a3c08c', 480, 1.5); S.lollipop(ox + 5.1, oz + 2.6, H_GRASS, .65, '#93b071', '#b3c98d', 481, 1.4);
@@ -97,8 +100,8 @@ export default {
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
     return {
-      step: e => { for (const c of Object.values(live)) c.step(e); mill.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); },
-      toys: { ...live, ...flies, molen: mill, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
+      step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); },
+      toys: { ...live, ...flies, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },
       start: [BR[0] - .3, BR[1] - 2.2], uni: [BR[0] + .6, BR[1] - 1.6],
       shadow: { follow: 20 }, back: BACK, sky: 2,
       shots: [

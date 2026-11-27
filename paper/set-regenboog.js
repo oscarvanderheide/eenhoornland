@@ -9,6 +9,7 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { rainbow, paint, mushroom, BANDS } from './wonders.js';
 import { flamingo, parrot, rabbit } from './critters2.js';
 import { regenboogLand, BACK } from './lands.js';
+import { scatter, cottonTree, pompom, sprinkle } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', path: '#f6ead8', pond: '#f4c6d4', hole: '#6f5a48' };
@@ -47,9 +48,7 @@ export default {
     // the parrot's perch, and the rabbit's holes
     { const p = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, 1.25, 6), P('post')); p.position.set(4.4, .625, -2.2); p.castShadow = true; root.add(p); const bar = new THREE.Mesh(new THREE.BoxGeometry(.6, .05, .05), P('post')); bar.position.set(4.4, 1.23, -2.2); root.add(bar); S.solid({ x: 4.4, z: -2.2, r: .1 }); }
     for (const [x, z] of [[3.2, 4.6], [5.4, 5.2], [1.9, 5.6]]) { const h = slab(circlePts(.3, 660 + Math.round(x * 10), 14).map(([a, b]) => [a * 1.3, b * .8]), H_GRASS + .03, .03, P('hole'), paper('#c9a878')); h.position.set(x, 0, z); root.add(h); laid.push(blob(x, z, .5, .4, 1, 8, 0)); }
-    const benches = [bench(S, -3.2, H_GRASS, -1.6)];
-    const lamps = [[-8.9, 1.5], [2.3, -.6]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));
-    const mills = [pinwheel(S, 2.6, H_GRASS, 3.0, '#f2d86b', '#8fc3e0'), pinwheel(S, -9.4, H_GRASS, -1.2, '#bba6ea', '#f4a6c4')];
+    const benches = [], lamps = [], mills = [];   // (benches, lanterns and windmills belong to the village)
 
     /* ---------------- trees in six colours, at the back and the sides; flowers everywhere ---------------- */
     const keepOff = [[-5.4, -5.2, 5.4, 7.6], [-9.8, -4.6, -4.6, 3.4], [BR.x1 - 1, -2.2, -7.6, 2.2], [2.6, .6, 9.4, 7.4], [-6.4, 2.0, 2.2, 7.4]];
@@ -58,14 +57,16 @@ export default {
       const x = -11 + R() * 22, z = -7.6 + R() * 15, c = BANDS[n % BANDS.length];
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .7 || inPoly(POND, x, z) || edgeDist(POND, x, z) < 1) continue;
       if (keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.6)) continue;
-      S.lollipop(x, z, H_GRASS, .5 + R() * .3, c, '#fbf7ee', 670 + n, 1 + R() * .5); n++;
+      cottonTree(S, x, H_GRASS, z, 670 + n, [c, '#fbf7ee']); n++;   // candy-floss trees: this island's own (flora.js)
     }
-    const grass = meadow(S, 260, R2 => {
+    const sweetSpot = R2 => {
       const x = -11 + R2() * 22, z = -7.6 + R2() * 15.2;
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || inPoly(POND, x, z) || edgeDist(POND, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;
       if ([[-5.6, 2.6, 1.8, 5.6], [-8.8, -3.9, -5.2, -.8]].some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) return null;   // (clear ground round the paint and the mushrooms)
       return [x, H_GRASS, z];
-    }, 662, 4, ['#b9d08a', '#c9d79a', '#a8c47c'], bunch);
+    };
+    scatter(S, 130, sweetSpot, 663, pompom); scatter(S, 260, sweetSpot, 664, sprinkle);   // pompom flowers, and sprinkles on the ground
+    const grass = meadow(S, 0, sweetSpot, 662, 0, undefined, bunch);
 
     return {
       start: [BR.x1 + 1.2, 0], uni: [BR.x1 + .4, .6],
@@ -74,7 +75,7 @@ export default {
         bow.step(e); pots.step(e); bunch.step(e); grass.step(e);
         for (const q of [...shrooms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass },
       shots: [
         { name: 'brug-regenboog', zone: [BR.x0 + .9, -1.5, BR.x1 - .2, 1.5], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },
         { name: 'boog', zone: [-4.8, -5.4, 4.8, -1.2], span: 17, tall: 10, rise: .3 },   // by the rainbow: far enough back to see the whole arch
