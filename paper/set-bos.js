@@ -3,7 +3,7 @@
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, cabin, GROUND } from './props.js';
-import { scatter, fern, toadstool, fallenLeaf } from './flora.js';
+import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora.js';
 import { hedgehog, owl, squirrel, butterfly, deer, boars } from './critters.js';
 import { picnic } from './picnic.js';
 import { bosLand, BACK, SPREAD } from './lands.js';
@@ -85,8 +85,14 @@ export default {
       return [x, H_GRASS + (laid.some(o => inPoly(o, x, z)) ? .018 : 0), z];
     };
     // the forest's own floor (flora.js): ferns, toadstools, fallen leaves; and a few flowers to pick, no tufts
-    scatter(S, 170, floorSpot, 403, fern); scatter(S, 60, floorSpot, 404, toadstool); scatter(S, 130, floorSpot, 405, fallenLeaf);
-    const bunch = bouquet(S), grass = meadow(S, 36, floorSpot, 402, 10, ['#7a9a5c', '#8fae6e', '#6f9057'], bunch);
+    // planted, not scattered (PLAN.md): beds of ferns, fairy rings of toadstools, carpets of fallen leaves, three plots of bluebells
+    const spotAt = (x, z) => { const v = [(x / K + 15) / 35, (z / K + 7.6) / 15.2]; let i = 0; return floorSpot(() => v[i++]); }, okAt = (x, z) => !!spotAt(x, z), anywhere = R2 => [(-15 + R2() * 35) * K, (-7.6 + R2() * 15.2) * K], FR = rng(403);
+    const fernBeds = findSpots(FR, 18, 3.1, anywhere, okAt), rings = findSpots(FR, 7, 4.6, anywhere, okAt, fernBeds), carpets = findSpots(FR, 12, 3.4, anywhere, okAt, rings), bells = findSpots(FR, 3, 7, anywhere, (x, z) => okAt(x, z) && okAt(x + 1.3, z) && okAt(x - 1.3, z), fernBeds);
+    plantAt(S, fernBeds.flatMap(([cx, cz]) => inOval(FR, cx, cz, 1.0, .7, 8, .3, okAt).map(([x, z]) => spotAt(x, z))), 403, fern);
+    plantAt(S, rings.flatMap(([cx, cz]) => [0, 1, 2, 3, 4, 5, 6].map(i => spotAt(cx + Math.cos(i / 7 * 6.283) * .55, cz + Math.sin(i / 7 * 6.283) * .42)).filter(Boolean)), 404, toadstool);
+    plantAt(S, carpets.flatMap(([cx, cz]) => inOval(FR, cx, cz, 1.1, .75, 11, .16, okAt).map(([x, z]) => spotAt(x, z))), 405, fallenLeaf);
+    const flowers = bells.flatMap(([cx, cz]) => inOval(FR, cx, cz, 1.2, .7, 12, .26, okAt).map(([x, z, rr]) => [...spotAt(x, z), { kind: 'spike', col: '#bba6ea', big: 1.25 - rr * .35 }])); let fi = 0;
+    const bunch = bouquet(S), grass = meadow(S, flowers.length, () => flowers[fi++] || null, 402, 0, ['#7a9a5c', '#8fae6e', '#6f9057'], bunch);
 
     // a tree each for the two squirrels that live away from the oak
     S.lollipop(cx - 5.7, cz - 3.6, H_GRASS, .7, '#7fa676', '#a3c08c', 480, 1.5); S.lollipop(ox + 5.1, oz + 2.6, H_GRASS, .65, '#93b071', '#b3c98d', 481, 1.4);

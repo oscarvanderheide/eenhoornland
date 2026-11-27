@@ -50,13 +50,8 @@ export default {
 
     /* ---------------- trees at the back and the sides; flowers ---------------- */
     const keepOff = [[-5.2, -6.6, 5.2, 7.8], [3.4, -.2, 9.6, 7.6], [-9.2, -4.4, -4.2, 7.4], [BR.x1 - 1, -2.2, -7.6, 2.2]];
-    const cols = [['#f4a6c4', '#f8dde4'], ['#bba6ea', '#ddd2f4'], ['#93b071', '#b3c98d'], ['#f6efe2', '#fcf8f1']], R = rng(761); let n = 0;
-    for (let i = 0; i < 1500 && n < 12; i++) {
-      const x = -10.6 + R() * 21.2, z = -7.8 + R() * 15.6, c = cols[n % cols.length];
-      if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .7) continue;
-      if (keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.6)) continue;
-      cypress(S, x, H_GRASS, z, 2.0 + R() * 1.2, n % 2 ? '#5f8665' : '#6f9670'); n++;   // tall dark cypresses: the castle's own
-    }
+    // cypresses stand in rows, as in a castle's garden: three stepping up on each side of the castle, a pair by the east shore
+    [[-5.7, -5.7, 3.0], [-6.9, -5.1, 2.6], [-8.1, -4.3, 2.2], [5.7, -5.7, 3.0], [6.9, -5.1, 2.6], [8.1, -4.3, 2.2], [9.5, -2.0, 2.4], [9.7, -.5, 2.1]].forEach(([x, z, h], k) => cypress(S, x, H_GRASS, z, h, k % 2 ? '#5f8665' : '#6f9670'));
     const grass = meadow(S, 0, R2 => {
       const x = -10.6 + R2() * 21.2, z = -7.8 + R2() * 15.6;
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;

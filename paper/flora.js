@@ -14,6 +14,13 @@ const mesh = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.
 const pickOf = (R, list) => list[Math.floor(R() * list.length)];
 export function scatter(S, n, pick, seed, make) { const R = rng(seed); let k = 0; for (let tries = 0; k < n && tries < n * 40; tries++) { const at = pick(R); if (!at) continue; const o = make(R, k++); o.position.set(at[0], at[1], at[2]); S.root.add(o); } return k; }
 
+/** room for `n` things at least `apart` from each other (and from `taken`): tries spots from `at(R)` ([x, z]) that `ok(x, z)` allows */
+export function findSpots(R, n, apart, at, ok, taken = []) { const out = []; for (let tries = 0; out.length < n && tries < n * 500; tries++) { const [x, z] = at(R); if (!ok(x, z) || out.some(([px, pz]) => Math.hypot(px - x, pz - z) < apart) || taken.some(([px, pz]) => Math.hypot(px - x, pz - z) < apart * .6)) continue; out.push([x, z]); } return out; }
+/** `n` places inside an oval, thicker towards its middle, at least `gap` apart: [x, z, how far out (0 the middle, 1 the rim)] */
+export function inOval(R, cx, cz, rx, rz, n, gap, ok) { const out = []; for (let tries = 0; out.length < n && tries < n * 60; tries++) { const a = R() * 6.283, rr = Math.pow(R(), .75), x = cx + Math.cos(a) * rx * rr, z = cz + Math.sin(a) * rz * rr; if ((ok && !ok(x, z)) || out.some(([px, pz]) => Math.hypot(px - x, pz - z) < gap)) continue; out.push([x, z, rr]); } return out; }
+/** plant a list of places [x, y, z] with `make` */
+export function plantAt(S, list, seed, make) { let i = 0; return scatter(S, list.length, () => list[i++] || null, seed, make); }
+
 /* ---------------- the forest ---------------- */
 const FERN = [[0, 0], [.1, .055], [.16, .03], [.24, .07], [.3, .035], [.38, .06], [.5, 0], [.38, -.035], [.3, -.015], [.24, -.045], [.16, -.015], [.1, -.035]];
 const fernGeo = card(FERN, .012, paper('#5f8665')).geometry;
@@ -69,7 +76,7 @@ export function cottonTree(S, x, y, z, seed = 1, cols = ['#f4c6d4', '#f8dde4']) 
   for (const [dx, dy, dz, r] of [[0, .3, 0, .46], [.3, .12, .1, .32], [-.28, .16, .05, .34], [.05, .62, -.02, .3], [-.05, .2, .26, .28]]) { const p = mesh(new THREE.SphereGeometry(r, 10, 8), cols[Math.floor(R() * cols.length)]); p.position.set(dx, h + dy, dz); p.scale.y = .85; g.add(p); }
   S.solid({ x, z, r: .12 });
 }
-export function pompom(R) { const g = new THREE.Group(), h = .16 + R() * .2, st = mesh(new THREE.CylinderGeometry(.008, .01, h, 4), '#b9d08a'); st.position.y = h / 2; g.add(st); const b = mesh(new THREE.SphereGeometry(.05 + R() * .04, 8, 6), pickOf(R, SWEET)); b.position.y = h + .04; g.add(b); return g; }
+export function pompom(R, col) { const g = new THREE.Group(), h = .16 + R() * .2, st = mesh(new THREE.CylinderGeometry(.008, .01, h, 4), '#b9d08a'); st.position.y = h / 2; g.add(st); const b = mesh(new THREE.SphereGeometry(.05 + R() * .04, 8, 6), col || pickOf(R, SWEET)); b.position.y = h + .04; g.add(b); return g; }
 const sprinkleGeo = new THREE.BoxGeometry(.1, .02, .032);
 export function sprinkle(R) { const f = new THREE.Mesh(sprinkleGeo, paper(pickOf(R, SWEET))); f.receiveShadow = true; f.rotation.y = R() * 6.28; f.position.y = .012; const g = new THREE.Group(); g.add(f); return g; }
 

@@ -69,7 +69,7 @@ Still shared and to be judged: the bench (village, meadow, beach), the lantern (
 
 ## How things are planted (Oscar, 2026-11-27)
 
-"the filling of the grass with things like flowers and whatnot feels very messy ... without the flowers and the tufts it feels empty. but now its just like objects randomly scattered throughout the grass fields." The answer tried on the meadow first (`set-wei.js`, "planting, composed"); the other islands still scatter at random until he has judged it.
+"the filling of the grass with things like flowers and whatnot feels very messy ... without the flowers and the tufts it feels empty. but now its just like objects randomly scattered throughout the grass fields." Tried on the meadow first (`set-wei.js`, "planting, composed"); he said "MUCH better do it for all", and every island is planted this way now. The helpers are `findSpots`, `inOval` and `plantAt` in `flora.js`.
 
 Where the idea comes from: the remake of Link's Awakening (a toy diorama with soft focus, as ours is: flowers stand in small tidy groups on plain ground), Animal Crossing (flowers in beds and clusters, the ground itself carries the pattern), garden design in drifts (one plant per drift, as Piet Oudolf plants), and model railways (grass and flowers gather at the foot of things; bare ground between). Lumino City itself leaves most of its ground plain card.
 
@@ -78,6 +78,17 @@ Where the idea comes from: the remake of Link's Awakening (a toy diorama with so
 3. **Tall things stand at the back and the sides**: golden grass, trees. Trees stand in groves of two or three of one colour, with tufts at their feet, and never where they would hide her on a path.
 4. **Every patch and grove is placed by hand** in the set file; only the places inside a patch are left to chance.
 5. Small loose things of one kind stand together too (the dandelion clocks have two corners of their own).
+
+How each island does it:
+
+| Island | Patches | Trees | Its own twist |
+|---|---|---|---|
+| Meadow | nine flower patches placed by hand on darker grass, three drifts of golden grass | six groves of blossom trees, by hand | the dandelions' two corners |
+| Village | ten flower plots (daisies or tulips, one colour each) on paler grass, nine tight clumps of tufts | twelve groves: round trees of one colour, or pines | tufts at the foot of every tree; places found by chance among what is free, never with a path close behind a tree |
+| Forest | eighteen beds of ferns, twelve carpets of fallen leaves, three plots of bluebells | pines, as before | seven fairy rings of toadstools |
+| Beach | thirteen clumps of beach grass on the dune | palms, by hand | the shells lie where the sea left them: a line along the south shore and two heaps; starfish in threes |
+| Rainbow island | nine plots of pompoms, one colour each, on greener grass | six groves of candy-floss trees, one colour each | sprinkles in a ring round every tree and round the middle |
+| Castle | none: a mown lawn | eight cypresses in rows beside the castle and by the east shore, by hand | the clipped bushes and rose hedges already stood in order |
 
 ## Paper or folded card
 

@@ -13,6 +13,7 @@ import { hen, chick, pig, duck, butterfly } from './critters.js';
 import { farm, well, scarecrow } from './farm.js';
 import { grandma, gardener, fisher, player } from './folk.js';
 import { dolphin } from './critters2.js';
+import { findSpots, inOval } from './flora.js';
 import { dorpLand, bosLand, weiLand, ORIGIN, BACK, SPREAD } from './lands.js';
 
 /** a tile of the pixel game's map -> a place on this set (the fountain square is the middle; 0.6 of a step per tile, spread out by SPREAD) */
@@ -147,28 +148,35 @@ export default {
     const flipper = dolphin(S, EAST);   // leaps over her once on every crossing of the long bridge (critters2.js)
     theFountain.tapped = () => { if (theFarm.holding() && !theFarm.full()) S.walkThen(SQ[0], SQ[1] + 1.45, () => theFarm.fill(), 1.6); };
 
-    /* ---------------- trees: real ones, as many as a village has ---------------- */
-    const busy = [[-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[F[0] - 9.5, F[1] - 3.6, F[0] + 8.5, F[1] + 4.6], [3.4 * K - 3.2, 4.3 * K - 4.2, 3.4 * K + 4, 4.3 * K + 2.2], [.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);   // (the last three: the view from the square up the stairs to her door, the square itself with its view from the south, round the pond)   // her house and its doorstep, where the swing throws her, the playground's view to the camera, the pen, the arch, where the slide lets her off
-    const cols = [['#93b071', '#b3c98d'], ['#d8b35a', '#e8cd85'], ['#d9806c', '#e9a48f'], ['#7fa676', '#a3c08c']];
-    const R = rng(91); let n = 0;
-    for (let i = 0; i < 1400 && n < 38; i++) {
-      const x = (-14 + R() * 24) * K, z = (-8 + R() * 21) * K, r = .42 + R() * .3, c = cols[Math.floor(R() * cols.length)], pineTree = R() < .3;
-      const on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null;
-      if (!on || edgeDist(on, x, z) < .5 || (on !== HIGH && inPoly(HIGH, x, z)) || (on !== HIGH && edgeDist(HIGH, x, z) < .7) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .5) continue;
-      if (busy.some(([x0, z0, x1, z1]) => x > x0 - .35 && x < x1 + .35 && z > z0 - .35 && z < z1 + .35) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) continue;
-      if (S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.3)) continue;
-      const y = on === HIGH ? H_HIGH : H_GRASS;
-      if (pineTree) S.pine(x, z, y, 1.3 + R() * .6, ['#6f9670', '#7fa676', '#5f8665'][n % 3]); else S.lollipop(x, z, y, r, c[0], c[1], 100 + n, .9 + R() * .55);
-      n++;
-    }
-    // the grass is not bare: tufts in twos and threes, and a flower here and there (never on a path or a patch)
-    const grass = meadow(S, 290, R2 => {
-      const x = (-15.5 + R2() * 26) * K, z = (-8 + R2() * 21) * K, on = inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null;
-      if (!on || edgeDist(on, x, z) < .3 || (on !== HIGH && edgeDist(HIGH, x, z) < .3) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .25 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22)) return null;
-      if (Math.abs(x - .3 * K) < 1.5 && z > -5.5 * K - 1.1 && z < -5.5 * K + 2.2 || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45)) return null;
-      if (Math.abs(Math.abs(x - .3 * K) - 3.7) < 2.3 && Math.abs(z - (-5.5 * K + .15)) < 1.5) return null;   // not in the planted beds
-      return [x, on === HIGH ? H_HIGH : H_GRASS, z];
-    }, 401, 2.5, undefined, bunch);
+    /* ---------------- trees and grass, planted (PLAN.md, "How things are planted") ----------------
+       Groves of two or three trees of one kind; flower plots of one kind and colour on a paler cut of grass; tufts in
+       tight clumps and at the foot of the trees. Bare lawn between. Where a grove or a plot stands is found by chance among
+       the places that are free (the village is big, and full of things); never where a tree would hide her on a path. */
+    const busy = [[-3.8, -7, 4.4, -2.9], [-10.6, -1.3, -2.0, .4], [-8.6, 2.0, .4, 5.6], [7.5, 2.5, 9.5, 5], [-4.2, .4, -1.6, 2.2]].map(kz).concat([[F[0] - 9.5, F[1] - 3.6, F[0] + 8.5, F[1] + 4.6], [3.4 * K - 3.2, 4.3 * K - 4.2, 3.4 * K + 4, 4.3 * K + 2.2], [.3 * K - 2.8, -2.9 * K - .3, .3 * K + 2.8, -.45 * K - 1.6], [SQ[0] - 4.6, SQ[1] - 3.6, SQ[0] + 4.6, SQ[1] + 5.2], [pcx - 4.2, pcz - 4.2, pcx + 4.6, pcz + 4.8]]);
+    const groundAt = (x, z) => inPoly(HIGH, x, z) ? HIGH : inPoly(GRASS, x, z) ? GRASS : inPoly(GRASS_W, x, z) ? GRASS_W : inPoly(GRASS_S, x, z) ? GRASS_S : null, yAt = (x, z) => groundAt(x, z) === HIGH ? H_HIGH : H_GRASS;
+    const anywhere = R2 => [(-15.5 + R2() * 26) * K, (-8 + R2() * 21) * K];
+    const treeGround = (x, z) => { const on = groundAt(x, z); if (!on || edgeDist(on, x, z) < .5 || (on !== HIGH && edgeDist(HIGH, x, z) < .7) || inPoly(POND, x, z) || edgeDist(POND, x, z) < .5) return false;
+      if (busy.some(([x0, z0, x1, z1]) => x > x0 - .35 && x < x1 + .35 && z > z0 - .35 && z < z1 + .35) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .55)) return false;
+      for (let d = .8; d < 4.4; d += .6) if (laid.some(o => inPoly(o, x, z - d))) return false;   // a path close behind it: the tree would hide her there
+      return true; };
+    const R = rng(91), KINDS = [['#93b071', '#b3c98d'], 'pine', ['#d8b35a', '#e8cd85'], ['#7fa676', '#a3c08c'], 'pine', ['#d9806c', '#e9a48f']], feet = []; let n = 0;
+    findSpots(R, 12, 4.8, anywhere, (x, z) => treeGround(x, z) && !S.solids.some(s => Math.hypot(s.x - x, s.z - z) < 1.6)).forEach(([gx, gz], k) => {
+      const kind = KINDS[k % KINDS.length], many = 2 + (k % 2), a0 = R() * 6.283, mine = [];
+      for (let i = 0; i < many; i++) { const a = a0 + i / many * 6.283, x = gx + Math.cos(a) * (.7 + R() * .3), z = gz + Math.sin(a) * (.5 + R() * .25); if (!treeGround(x, z) || mine.some(([px, pz]) => Math.hypot(px - x, pz - z) < .85)) continue; mine.push([x, z]); const y = yAt(x, z);
+        if (kind === 'pine') S.pine(x, z, y, 1.3 + R() * .6, ['#6f9670', '#7fa676', '#5f8665'][n % 3]); else S.lollipop(x, z, y, .42 + R() * .3, kind[0], kind[1], 100 + n, .9 + R() * .55); n++; feet.push([x, y, z]); }
+    });
+    const grassOk = (x, z) => { const on = groundAt(x, z); return !!on && edgeDist(on, x, z) > .3 && (on === HIGH || edgeDist(HIGH, x, z) > .3) && !inPoly(POND, x, z) && edgeDist(POND, x, z) > .25 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22)
+      && !(Math.abs(x - .3 * K) < 1.5 && z > -5.5 * K - 1.1 && z < -5.5 * K + 2.2) && !(Math.abs(Math.abs(x - .3 * K) - 3.7) < 2.3 && Math.abs(z - (-5.5 * K + .15)) < 1.5) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .45); };
+    const roomy = (x, z) => grassOk(x, z) && [[1.7, 0], [-1.7, 0], [0, 1.0], [0, -1.0]].every(([dx, dz]) => grassOk(x + dx, z + dz) && yAt(x + dx, z + dz) === yAt(x, z));
+    const PLOTS = [['daisy', ['#f2efe6']], ['tulip', ['#e98f8f', '#d9706c']], ['daisy', ['#f4a6c4']], ['daisy', ['#f2efe6', '#f2c65c']], ['tulip', ['#f2c65c']], ['daisy', ['#b9a3e0']]], planted = [];
+    const plots = findSpots(R, 10, 5.4, anywhere, roomy);
+    plots.forEach(([cx, cz], k) => { const [kind, cs] = PLOTS[k % PLOTS.length], rx = 1.5 + R() * .55, rz = .85 + R() * .3, base = yAt(cx, cz), up = .012 + (layer++) * .003, mat = base === H_HIGH ? grassP : highP;
+      root.add(slab(blob(cx, cz, rx + .4, rz + .35, 700 + k, 26, .09), base + up, up, mat, mat));
+      inOval(R, cx, cz, rx, rz, 13, .27, grassOk).forEach(([x, z, rr], i) => planted.push([x, base + up, z, { kind, col: cs[i % cs.length], big: 1.25 - rr * .35 }]));
+      for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + R(), x = cx + Math.cos(a) * (rx + .15), z = cz + Math.sin(a) * (rz + .12); if (grassOk(x, z)) planted.push([x, base + up, z, { tuft: true }]); } });
+    findSpots(R, 9, 3.8, anywhere, grassOk, plots).forEach(([cx, cz]) => inOval(R, cx, cz, .6, .38, 5, .17, grassOk).forEach(([x, z]) => planted.push([x, yAt(x, z), z, { tuft: true }])));   // tufts in tight clumps
+    for (const [x, y, z] of feet) for (const dx of [-.32, .3]) if (grassOk(x + dx, z + .18)) planted.push([x + dx, y, z + .18, { tuft: true }]);                                       // and at the foot of every tree
+    let pi = 0; const grass = meadow(S, planted.length, () => planted[pi++] || null, 401, 0, undefined, bunch);
 
     const [sx, sz] = T(31.5, 36.6);
     return {

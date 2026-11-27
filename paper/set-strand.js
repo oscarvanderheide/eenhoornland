@@ -10,7 +10,7 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { palm, parasol, lighthouse, sandcastle } from './beach.js';
 import { crab, gull, turtle, seal } from './critters2.js';
 import { strandLand, BACK } from './lands.js';
-import { scatter, beachGrass, starfish, driftwood, rowboat } from './flora.js';
+import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
 
 const H_SAND = -.32, H_DUNE = 0, H_ROCK = -.02, DECK = -.12;
@@ -72,11 +72,16 @@ export default {
     };
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
     const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
-    scatter(S, 110, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .2 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 563, beachGrass);   // the dune's own grass (flora.js)
-    scatter(S, 16, R2 => { const x = -14 + R2() * 28, z = -8 + R2() * 16; if (!inPoly(SAND, x, z) || edgeDist(SAND, x, z) < .6 || inPoly(DUNE, x, z) || inPoly(ROCK, x, z) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .3) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .8)) return null; return [x, H_SAND, z]; }, 564, starfish);
-    { const R = rng(571), cols = ['#fbf5ea', '#f4c6b8', '#e8d5b0', '#cbc5d6', '#f6dfa6'];
-      for (let i = 0, n = 0; i < 900 && n < 60; i++) { const x = -15 + R() * 30, z = -9 + R() * 18; if (!inPoly(SAND, x, z) || edgeDist(SAND, x, z) < .5 || inPoly(DUNE, x, z) || inPoly(ROCK, x, z) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .2) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .7)) continue;
-        const st = slab(circlePts(.05 + R() * .06, 580 + n, 9).map(([px, pz]) => [px * (1 + R() * .5), pz]), H_SAND + .03, .03, paper(cols[n % cols.length]), whiteEdge); st.position.set(x, 0, z); st.rotation.y = R() * 3; root.add(st); n++; } }
+    // planted, not scattered (PLAN.md): beach grass in clumps round the dune, the shells where the sea left them (a line along
+    // the south shore, and two heaps), starfish in threes by the water
+    { const BR2 = rng(563), duneOk = (x, z) => inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .22 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5);
+      const sandOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .5 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .7) && !(x > PIER.x0 - .6 && x < PIER.x1 + .6 && z > PIER.z0 - 1.5);
+      plantAt(S, findSpots(BR2, 13, 1.6, R2 => [-13.5 + R2() * 12.5, -7.2 + R2() * 7.2], duneOk).flatMap(([cx, cz]) => inOval(BR2, cx, cz, .5, .34, 5, .16, duneOk).map(([x, z]) => [x, H_DUNE, z])), 563, beachGrass);
+      const shore = x => { for (let z = 9.6; z > 0; z -= .05) if (inPoly(SAND, x, z) && edgeDist(SAND, x, z) > 1.0) return z; return null; }, cols = ['#fbf5ea', '#f4c6b8', '#e8d5b0', '#cbc5d6', '#f6dfa6'], shells = [];
+      for (let x = -12.4; x < 12.6; x += .2 + BR2() * .3) { const z0 = shore(x); if (z0 === null) continue; const z = z0 - .15 + Math.sin(x * 1.3) * .22 + (BR2() - .5) * .2; if (sandOk(x, z)) shells.push([x, z]); }
+      for (const [hx, hz] of [[-5.6, 1.2], [6.6, -1.4]]) for (const [x, z] of inOval(BR2, hx, hz, .5, .34, 9, .13, sandOk)) shells.push([x, z]);
+      shells.forEach(([x, z], k) => { const st = slab(circlePts(.05 + BR2() * .06, 580 + k, 9).map(([px, pz]) => [px * (1 + BR2() * .5), pz]), H_SAND + .03, .03, paper(cols[k % cols.length]), whiteEdge); st.position.set(x, 0, z); st.rotation.y = BR2() * 3; root.add(st); });
+      plantAt(S, [[-9.6, 6.0], [7.2, 6.6], [12.2, 2.2]].flatMap(([cx, cz]) => inOval(BR2, cx, cz, .5, .36, 3, .28, sandOk).map(([x, z]) => [x, H_SAND, z])), 564, starfish); }
 
     return {
       start: [0, -7.4], uni: [-.8, -7.0],

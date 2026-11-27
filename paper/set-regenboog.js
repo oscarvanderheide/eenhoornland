@@ -9,7 +9,7 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { rainbow, paint, mushroom, BANDS } from './wonders.js';
 import { flamingo, parrot, rabbit } from './critters2.js';
 import { regenboogLand, BACK } from './lands.js';
-import { scatter, cottonTree, pompom, sprinkle } from './flora.js';
+import { findSpots, inOval, plantAt, cottonTree, pompom, sprinkle } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
 const COL = { plank: '#c9a878', post: '#8d6a48', path: '#f6ead8', pond: '#f4c6d4', hole: '#6f5a48' };
@@ -52,20 +52,22 @@ export default {
 
     /* ---------------- trees in six colours, at the back and the sides; flowers everywhere ---------------- */
     const keepOff = [[-5.4, -5.2, 5.4, 7.6], [-9.8, -4.6, -4.6, 3.4], [BR.x1 - 1, -2.2, -7.6, 2.2], [2.6, .6, 9.4, 7.4], [-6.4, 2.0, 2.2, 7.4]];
-    const R = rng(661); let n = 0;
-    for (let i = 0; i < 1500 && n < 14; i++) {
-      const x = -11 + R() * 22, z = -7.6 + R() * 15, c = BANDS[n % BANDS.length];
-      if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .7 || inPoly(POND, x, z) || edgeDist(POND, x, z) < 1) continue;
-      if (keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.6)) continue;
-      cottonTree(S, x, H_GRASS, z, 670 + n, [c, '#fbf7ee']); n++;   // candy-floss trees: this island's own (flora.js)
-    }
+    // planted, not scattered (PLAN.md): groves of candy-floss trees of one colour, at the back and the sides
+    const R = rng(661), feet = [], treeOk = (x, z) => inPoly(GRASS, x, z) && edgeDist(GRASS, x, z) > .7 && !inPoly(POND, x, z) && edgeDist(POND, x, z) > 1 && !keepOff.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1) && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .7) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < 1.3); let n = 0;
+    findSpots(R, 6, 3.6, R2 => [-11 + R2() * 22, -7.6 + R2() * 15], treeOk).forEach(([gx, gz], k) => { const a0 = R() * 6.283, many = 2 + (k % 2), mine = [];
+      for (let i = 0; i < many; i++) { const a = a0 + i / many * 6.283, x = gx + Math.cos(a) * (.75 + R() * .3), z = gz + Math.sin(a) * (.5 + R() * .25); if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .6 || mine.some(([px, pz]) => Math.hypot(px - x, pz - z) < .9)) continue; mine.push([x, z]); cottonTree(S, x, H_GRASS, z, 670 + n, [BANDS[k % BANDS.length], '#fbf7ee']); feet.push([x, z]); n++; } });
     const sweetSpot = R2 => {
       const x = -11 + R2() * 22, z = -7.6 + R2() * 15.2;
       if (!inPoly(GRASS, x, z) || edgeDist(GRASS, x, z) < .3 || inPoly(POND, x, z) || edgeDist(POND, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null;
       if ([[-5.6, 2.6, 1.8, 5.6], [-8.8, -3.9, -5.2, -.8]].some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) return null;   // (clear ground round the paint and the mushrooms)
       return [x, H_GRASS, z];
     };
-    scatter(S, 130, sweetSpot, 663, pompom); scatter(S, 260, sweetSpot, 664, sprinkle);   // pompom flowers, and sprinkles on the ground
+    // pompom flowers in plots of one colour each, on a cut of greener grass; sprinkles in a ring round every tree and round the middle
+    { const spotAt = (x, z) => { const v = [(x + 11) / 22, (z + 7.6) / 15.2]; let i = 0; return sweetSpot(() => v[i++]); }, okAt = (x, z) => !!spotAt(x, z), roomy = (x, z) => okAt(x, z) && okAt(x + 1.2, z) && okAt(x - 1.2, z) && okAt(x, z + .7) && okAt(x, z - .7);
+      findSpots(R, 9, 3.9, R2 => [-11 + R2() * 22, -7.6 + R2() * 15.2], roomy).forEach(([cx, cz], k) => { const col = BANDS[k % BANDS.length], up = .012 + (layer++) * .003; root.add(slab(blob(cx, cz, 1.6, 1.0, 680 + k, 24, .09), H_GRASS + up, up, GROUND.grass, GROUND.grass));
+        plantAt(S, inOval(R, cx, cz, 1.25, .75, 14, .2, okAt).map(([x, z]) => [x, H_GRASS + up, z]), 690 + k, R3 => pompom(R3, col)); });
+      const ring = (cx, cz, rx, rz, m) => { const out = []; for (let i = 0; i < m; i++) { const a = i / m * 6.283 + R() * .3, x = cx + Math.cos(a) * rx * (.9 + R() * .25), z = cz + Math.sin(a) * rz * (.9 + R() * .25); if (inPoly(GRASS, x, z) && edgeDist(GRASS, x, z) > .3 && !laid.some(o => inPoly(o, x, z))) out.push([x, H_GRASS, z]); } return out; };
+      plantAt(S, [...feet.flatMap(([x, z]) => ring(x, z, .75, .55, 11)), ...ring(-.2, .9, 2.45, 1.8, 34)], 664, sprinkle); }
     const grass = meadow(S, 0, sweetSpot, 662, 0, undefined, bunch);
 
     return {
