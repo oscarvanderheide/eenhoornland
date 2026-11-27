@@ -235,9 +235,9 @@ function buildSet(def) {
     sister: () => zus.kid,   // which of the two is at home asleep
     zus: () => zus,   // her sister herself: a toy may ask her out to play (zus.out), and she goes back to bed when it lets her go
     morning: () => { eveTarget = 0; skyIcon(false); },
-    findEgg: (x, z) => { quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
+    findEgg: (x, z) => { coins.reward('ei', x, 1, z); quest.stage = 'ei'; eggF.x = x; eggF.z = z; eggF.y = heightAt(x, z) ?? 0; eggF.hopV = 2.6; },   // the egg is hers: it hops along behind her
     eggAt: () => [eggF.x, eggF.z],
-    hatch: (x, z) => { quest.stage = 'baby'; eggShow = 0; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
+    hatch: (x, z) => { coins.reward('uitgekomen', x, 1, z); quest.stage = 'baby'; eggShow = 0; uni.away = false; uni.x = x; uni.z = z; uni.y = heightAt(x, z) ?? 0; uni.hopV = 3.6; sfx.neigh(); confetti(x, uni.y + .9, z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 26, starGeo, 3); },   // the egg opens: from now on the unicorn is with her
     water: (h, pts) => { s.floors.push({ h, pts: pts.map(W), swim: true }); },   // light water: a floor only for somebody with a snorkel, and she swims on it
     offer: fn => { offers.push(fn); s.offers.push(fn); },   // something she holds that whoever she taps next may be given
     hand: () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); },   // where her two hands are, in the world: for what she carries
@@ -247,6 +247,7 @@ function buildSet(def) {
     land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
     where: () => set.name,   // the set she stands on now
     world: obj => { scene.add(obj); return obj; },   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
+    coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); return coinAt(wx, wz, y); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
   Object.assign(s, def.build(S));
@@ -598,7 +599,7 @@ const threadMat = new THREE.MeshBasicMaterial({ color: '#f6efe2' });
 function shake(t) {
   if ((t.next || 0) > time || playing) return; t.next = time + 4 + Math.random() * 5;
   const p = new THREE.Vector3(); t.g.getWorldPosition(p); shakes++;
-  const r = Math.random(), what = shakes === 1 ? 'fruit' : r < .48 ? 'fruit' : r < .76 ? 'rups' : r < .88 ? 'sok' : r < .95 ? 'laars' : 'vogelaar';
+  const r = Math.random(), what = shakes === 1 ? 'fruit' : r < .44 ? 'fruit' : r < .7 ? 'rups' : r < .8 ? 'sok' : r < .86 ? 'laars' : r < .94 ? 'munt' : 'vogelaar';
   dropFrom(what === 'fruit' ? (t.kind === 'pine' ? 'denappel' : 'appel') : what, p, p.y + t.top, t.kind);
 }
 function dropFrom(kind, p, top, tree = 'leaf') {
@@ -616,6 +617,7 @@ function tapFallen(o) {
   if (playing) return;
   if (o.kind === 'rups') { if (o.mode === 'hang') { o.mode = 'up'; o.t = 0; o.f.hopV = 1.2; sfx.peep(); } return; }
   if (o.kind === 'vogelaar') { o.f.hopV = 2; sfx.hello(); return; }
+  if (o.kind === 'munt') { takeCoin(o); return; }
   if (o.mode !== 'lie' || heldFall === o) return;
   walkThen(o.x - girl.face * .35, o.z + .1, () => { if (o.mode !== 'lie') return; hands.take(o, () => { if (heldFall === o) { heldFall = null; o.mode = 'lie'; o.x = girl.x + girl.face * .4; o.z = girl.z + .15; o.y = heightAt(o.x, o.z) ?? girl.y; o.age = 0; girl.poseName = null; } }); heldFall = o; o.mode = 'held'; sfx.hop(); }, .9);
 }
@@ -643,10 +645,45 @@ function stepFallen(dt, tick) {
     else if (o.mode === 'wave') { o.frame = 2; if (o.t > 1.4) { o.mode = 'off'; o.t = 0; } }
     else if (o.mode === 'off') { o.frame = 2; o.x += f.face * 1.3 * dt; o.bob = Math.abs(Math.sin(o.t * 9)) * .05; if (o.t > 2.6) { removeFallen(o); continue; } }
     else if (o.mode === 'held') { const h = handPoint(); o.x = h.x + girl.face * .06; o.z = h.z + .05; o.y = h.y - .08; if (!playing) girl.poseName = 'hold'; f.g.visible = !playing; }
+    else if (o.mode === 'lie' && o.kind === 'munt') { if (!playing && Math.hypot(girl.x - o.x, girl.z - o.z) < .5) { takeCoin(o); continue; } }
     else if (o.mode === 'lie' && o.age > 45) { removeFallen(o); continue; }
     f.x = o.x; f.z = o.z; f.floatY = f.y = o.y;
   }
 }
+/* ---------------- coins: what she has is a row of paper coins at the top (no numbers: the girls count by looking) ----------------
+   Coins lie about on the islands (S.coinAt), now and then one falls out of a shaken tree, and the first time she does a
+   few special things she gets one (S.coins.reward). Each coin she gets flies from where it was to her row. At the shop
+   (props.js shop) they fly from her row to what she buys */
+const purse = { coins: 0, seen: new Set() }, coinRow = document.createElement('div'); coinRow.id = 'coins'; document.body.appendChild(coinRow);
+let coinSrc = null; const coinImg = () => coinSrc || (coinSrc = cutout(THINGS.munt.w, THINGS.munt.h, c => THINGS.munt.draw(c, 0), PAPER, 1).toDataURL());
+function showCoins(pop) { coinRow.replaceChildren(...[...Array(purse.coins)].map((_, i) => { const im = new Image(); im.src = coinImg(); if (pop && i === purse.coins - 1) im.className = 'pop'; return im; })); }
+const onScreen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera), r = canvas.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };
+function slot(i) { const r = coinRow.getBoundingClientRect(); return [r.left + 17 + i * 26, r.top + 17]; }
+function flyCoin(from, to, done) { const im = new Image(); im.src = coinImg(); im.className = 'flycoin'; im.style.left = from[0] + 'px'; im.style.top = from[1] + 'px'; document.body.appendChild(im);
+  requestAnimationFrame(() => requestAnimationFrame(() => { im.style.left = to[0] + 'px'; im.style.top = to[1] + 'px'; im.style.transform = 'rotate(360deg)'; })); setTimeout(() => { im.remove(); done(); }, 720); }
+const coins = {
+  have: () => purse.coins,
+  earn(x, y, z, n = 1) { confetti(x, y + .2, z, ['#f2c65c', '#fbf5ea', '#e0a93a'], 10, starGeo, 2); for (let k = 0; k < n; k++) setTimeout(() => { sfx.peep(); flyCoin(onScreen(x, y, z), slot(purse.coins), () => { purse.coins++; showCoins(true); sfx.chime(); }); }, k * 220); },
+  /** pay n coins: they fly from her row to (x, y, z); false if she has too few */
+  spend(n, x, y, z, done) { if (purse.coins < n) return false; for (let k = 0; k < n; k++) setTimeout(() => { purse.coins--; showCoins(); flyCoin(slot(purse.coins), onScreen(x, y, z), () => { sfx.peep(); if (k === n - 1 && done) done(); }); }, k * 160); return true; },
+  /** the first time this happens, a coin */
+  reward(key, x, y, z) { if (purse.seen.has(key)) return; purse.seen.add(key); setTimeout(() => coins.earn(x, y, z), 700); },
+};
+/** a coin lying on the ground somewhere (the world's measure): she walks over it, or taps it, and it is hers */
+function coinAt(x, z, y = heightAt(x, z) ?? 0) {
+  const f = makeFigure('munt', THINGS.munt); f.thing = true; const o = { f, kind: 'munt', x, z, y: y + .02, mode: 'lie', t: 0, age: 0, keep: true, frame: 0 };
+  f.act = () => { f.setFrame(0); f.tilt = 0; f.mesh.scale.x = Math.cos(time * 2.4 + x) * .9 + (Math.cos(time * 2.4 + x) >= 0 ? .1 : -.1); f.bob = .06 + Math.sin(time * 3 + z) * .04; };
+  f.onTap = () => takeCoin(o); tapTarget(f.g, () => tapFigure(f), baseTaps, baseSpots); fallen.push(o); return o;
+}
+function takeCoin(o) { if (o.gone) return; removeFallen(o); coins.earn(o.x, o.y + .3, o.z); }
+/* what she wears: bought once, then hers (both sisters may wear it), each sister her own things on */
+const wardrobe = { own: new Set(), on: { anna: {}, fenna: {} } };
+const redressBoth = () => { girl.redress({ ...wardrobe.on[girl.kid] }); zus.redress({ ...wardrobe.on[zus.kid] }); };
+const closet = {
+  owns: id => wardrobe.own.has(id), wearing: id => Object.values(wardrobe.on[girl.kid]).includes(id),
+  buy(id) { wardrobe.own.add(id); closet.put(id); },
+  put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
+};
 const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); };
 
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
@@ -975,7 +1012,7 @@ if (STORY) {
 const whoBtn = document.getElementById('who');
 function showWho() { if (!whoBtn) return; const sp = FIGS[zus.kid], cv = cutout(sp.w, sp.h, c => drawKid(c, zus.kid, { view: 'front', pose: 'stand', f: 0, wear: {}, eyes: 'open' }), PAPER, 1.25), out = document.createElement('canvas'); out.width = out.height = 128;
   const sw = cv.width * .62; out.getContext('2d').drawImage(cv, (cv.width - sw) / 2, cv.height * .015, sw, sw, 0, 0, 128, 128); whoBtn.style.backgroundImage = `url(${out.toDataURL()})`; }
-function swapSisters() { if (playing || through) return false; const a = girl.kid, b = zus.kid; girl.become(FIGS[b]); zus.become(FIGS[a]); showWho(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + .8, girl.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, starGeo, 2.2); return true; }
+function swapSisters() { if (playing || through) return false; const a = girl.kid, b = zus.kid; girl.become(FIGS[b]); zus.become(FIGS[a]); redressBoth(); showWho(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + .8, girl.z, ['#f2a7c0', '#b9a3e8', '#9fd8d0', '#eac15a'], 14, starGeo, 2.2); return true; }
 if (whoBtn) { showWho(); whoBtn.addEventListener('click', swapSisters); }
 
 /* ---------------- the readout (?fps): how smoothly it runs here and how big she is on this screen ---------------- */

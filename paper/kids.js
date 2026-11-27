@@ -117,6 +117,20 @@ function headwear(g, kind, hx, hy, r, side) {
   }
 }
 
+/** a thing to wear on its own, for the shop's rack: drawn in the middle of a 120 x 120 canvas */
+export function drawWearIcon(g, id) {
+  if (WEAR.head.includes(id)) { headwear(g, id, 60, id === 'kroon' ? 104 : id === 'hoed' ? 92 : id === 'krans' ? 96 : 100, 34, false); return; }
+  if (id === 'ketting') { beads(g, [0, 1, 2, 3, 4, 5, 6].map(i => [60 + (i / 3 - 1) * 30, 40 + Math.sin(i / 6 * Math.PI) * 40])); return; }
+  if (id === 'knuffel') { rabbit(g, 60, 26); return; }
+  if (id === 'ballon') { g.save(); g.translate(20, 8); drawBalloon(g); g.restore(); return; }
+  if (id === 'vleugels') { wing(g, 54, 64, -1, .9); wing(g, 66, 64, 1, .9); return; }
+  const d = DRESS[id], rb = id === 'jurkregenboog', body = S([[44, 20], [76, 20], [80, 44], [100, 104], [20, 104], [40, 44]]);
+  piece(g, rb ? RAINBOW[0] : d[0], body);
+  if (rb) RAINBOW.forEach((c, i) => { if (i) ink(g, c, P([[40 - i * 3, 44 + i * 10], [80 + i * 3, 44 + i * 10], [83 + i * 3, 54 + i * 10], [37 - i * 3, 54 + i * 10]])); });
+  else ink(g, d[1], P([[24, 96], [96, 96], [100, 104], [20, 104]]));
+  piece(g, '#FBF3E6', E(60, 22, 12, 6), .4);
+}
+
 /* ---------- the three views ---------- */
 function kidSide(g, o, R, wear, eyes) {
   const { cx, sh } = R, hy = o.headY, r = o.head, legR = 8;

@@ -83,6 +83,7 @@ export default {
     const folk = { bakker: baker(S, 4.75, -4.35), schilder: painter(S, 15.9, -3.9), fluitist: musician(S, 'fluitist', PEOPLE2.fluitist, PROPS2.noot2, -8.2, -3.5, { sound: () => S.sfx.flute(), play: [0, 1], rest: 2, end: 3, from: [.45, .98] }) };   // the baker by his door, the painter painting the waterfall (folk.js)
     const herd = { schaap: sheep(S, 5.2, 5.1), schaap2: sheep(S, 7.5, 5.9, 'schaap2'), lam: befriend(S, lamb(S, 6.5, 4.4), { hop: 2.2, speed: 2.6, hello: () => S.sfx.peep() }),   /* the meadow's companion: it bounds along after her (companion.js) */ otter: otter(S, 21.6, -1.75, [[21.6, -1.75], [25.6, -1.9], [21.6, -4.3]], o => { if (!S.gear.snorkel && !S.playing()) { found++; present([o.x, .35, o.z], () => { S.gear.snorkel = true; }); } }) };   // critters2.js
     herd.schaap2.f.face = -1;
+    for (const [cx, cz] of [[-6.0, -5.2], [8.0, 6.6], [28.0, -2.0], [-1.2, 8.6]]) S.coinAt(cx, cz);   // coins lying about: on the hill's top, by the sheep, at the far end, in the south
     herd.ster = star(S, [[-5.3, H_TOP + .22, -6.0], [-2.1, H_HILL + .22, -4.2], [1.5, H_GRASS + .22, 1.0]]);   // the warm star that hatches the egg: on the hill's top, then lower, then by the crossing
     const benches = [bench(S, -3.0, H_HILL, -4.5), bench(S, 29.6, H_GRASS, -3.6)];
     const lamps = [[X[0] + 2.4, X[1] + 1.3], [17.3, -.4]].map(([x, z], n) => lantern(S, x, H_GRASS, z, n));

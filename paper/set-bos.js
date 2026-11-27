@@ -118,6 +118,7 @@ export default {
     // the witch's house: her own corner of the forest, south of the picnic's glade, off every path (Oscar: "she needs her own little house")
     const [hwx, hwz] = [-10.5, 8.8]; lay(blob(hwx - .3, hwz + .6, 2.8, 1.9, 239, 40, .06), paper('#7f9e6a'));
     const house = witchHouse(S, hwx, H_GRASS, hwz);
+    for (const [cx, cz] of [[hx + .6, hz - .4], [nx + .8, nz + .6], [ox + 1.4, oz - 1.2], [gx + 1.6, gz - .8]]) S.coinAt(cx, cz);   // coins lying about: in the harp's glade, the nook, the orchard, the picnic's glade
     const heks = witch(S, hwx - 2.0, hwz + 1.5);   // the witch and her pot, outside her door, left of it (folk.js)
     const harp = musician(S, 'harpist', PEOPLE2.harpist, PROPS2.noot2, hx - .2, hz - .2, { sound: () => S.sfx.harp(), play: [0, 1], rest: 0, end: 3, from: [.33, 1.0], sink: .09, solid: .5,
       listen: { seat: [hx - 1.25, hz + .75], loop: 4.6, guests: [live.egel, live.eekhoorn, live.eekhoorn2, live.eekhoorn3] } });   // she sits and listens, and the forest's animals come   // (folk.js)

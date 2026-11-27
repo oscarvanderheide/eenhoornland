@@ -15,7 +15,12 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
 #home{left:calc(env(safe-area-inset-left) + 14px)}
 #who{right:calc(env(safe-area-inset-right) + 82px);background-size:92%;background-position:center 30%;background-repeat:no-repeat}
 .btn svg{width:32px;height:32px;grid-area:1/1}
-.btn svg[hidden]{display:none}   /* (an svg does not hide by the hidden attribute alone: the moon hung under the sun) */
+.btn svg[hidden]{display:none}
+#coins{position:fixed;top:calc(env(safe-area-inset-top) + 24px);left:calc(env(safe-area-inset-left) + 80px);right:180px;display:flex;flex-wrap:wrap;gap:2px;pointer-events:none}
+#coins img{width:34px;height:34px;margin-right:-10px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+#coins img.pop{animation:coinpop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes coinpop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+.flycoin{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;z-index:5;transition:left .7s cubic-bezier(.4,0,.6,1),top .7s cubic-bezier(.3,-.4,.6,1),transform .7s}   /* (an svg does not hide by the hidden attribute alone: the moon hung under the sun) */
 </style>
 <canvas id="c"></canvas>
 <a class="btn" id="home" href="../" aria-label="Eenhoornland">

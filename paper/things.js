@@ -129,6 +129,12 @@ function drawMand(g) {
 }
 
 // a red apple with a leaf
+/** a coin: round and golden, a lighter ring, a little star pressed in */
+function drawMunt(g) {
+  piece(g, '#E0A93A', E(32, 32, 26, 26)); piece(g, '#F2C65C', E(32, 32, 21, 21), .3);
+  ink(g, '#E0A93A', P([[32, 18], [36, 28], [46, 28], [38, 34], [41, 44], [32, 38], [23, 44], [26, 34], [18, 28], [28, 28]]));
+  ink(g, 'rgba(255,255,255,.55)', E(23, 22, 4, 6, .6));
+}
 /* ---------- what falls out of a tree when it is shaken (paper.js) ---------- */
 /** a caterpillar hanging head down from its thread: 0 and 1 wriggle */
 function drawRups(g, f) {
@@ -203,6 +209,7 @@ export const THINGS = {
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
   schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
   peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
+  munt: { w: 64, h: 64, draw: drawMunt, frames: 1, size: .2, does: ['coin'] },
   rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },
   sok: { w: 90, h: 110, draw: drawSok, frames: 1, size: .22, does: ['sock'] },
   denappel: { w: 60, h: 78, draw: drawDenappel, frames: 1, size: .2, does: ['pinecone'] },

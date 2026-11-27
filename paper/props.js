@@ -1,6 +1,8 @@
 // Things that stand on more than one set, built from the kit. Each takes the set's toolbox S and where to stand.
 import { THREE, lerp, paper, sheetOf, slab, card, edgeMat, grassMap, grassBump, sandMap, sandBump } from './kit.js';
 import { THINGS } from './things.js';
+import { drawWearIcon } from './kids.js';
+import { E, U, S as S2, piece, ink } from './cut.js';
 
 /** the printed papers the ground is cut from */
 export const GROUND = {
@@ -442,4 +444,41 @@ export function witchHouse(S, x, y, z) {
     t += dt; glow.emissiveIntensity += ((eve > .5 ? 1.5 : .05) - glow.emissiveIntensity) * Math.min(1, dt * 3);
     for (const p of puffs) { const k = (t * .3 + p.off) % 1; p.m.position.set(.55 + k * .35 + Math.sin(k * 6) * .06, H + 1.15 + k * 1.1, -.25); p.m.scale.setScalar(.5 + k * .9); p.m.visible = k < .92; }
   } };
+}
+
+/* ---------------- the clothes shop on the village square ---------------- */
+/** (Oscar: "the starting area should have the shop where we can buy outfits") A wooden rack with two rails and a garland of
+ *  little flags; on it hang the eleven things to wear, each a paper card with its price under it in coins (no numbers).
+ *  A tap on one: she walks over; if she has the coins they fly from her row to the card, and she has it on at once.
+ *  Hers already: a tap puts it on, or takes it off. Too few coins: the card gives a little wobble. A pink ribbon on a
+ *  card says it is hers; a heart says she has it on. (x, z): the rack's middle, its front to the south */
+export const PRICES = { strik: 2, krans: 3, hoed: 3, kroon: 6, ketting: 3, knuffel: 3, ballon: 2, jurkgeel: 4, jurkblauw: 4, jurkregenboog: 8, vleugels: 6 };
+export function shop(S, x, z, y = 0) {
+  const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const RW = 3.6, add = (w, h, d, col, px, py, pz) => { const m = m3(new THREE.BoxGeometry(w, h, d), col); m.position.set(px, py, pz); g.add(m); return m; };
+  for (const s of [-1, 1]) { add(.09, 1.95, .09, '#a97a4e', s * RW / 2, .975, 0); add(.5, .06, .3, '#8d6a48', s * RW / 2, .03, 0); }
+  const RAILS = [1.78, 1.08]; for (const ry of RAILS) { const r = m3(new THREE.CylinderGeometry(.025, .025, RW, 8), '#c79a66'); r.rotation.z = Math.PI / 2; r.position.set(0, ry, 0); g.add(r); }
+  for (let i = 0; i < 13; i++) { const fl = card([[-.07, 0], [.07, 0], [0, -.13]], .01, paper(['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'][i % 4], { side: THREE.DoubleSide })); fl.position.set(-RW / 2 + .15 + i * (RW - .3) / 12, 1.98 - Math.sin(i / 12 * Math.PI) * .12, .02); g.add(fl); }
+  S.wall(x, z, RW / 2 + .1, .2);
+  const ROWS = [['strik', 'krans', 'hoed', 'kroon', 'ketting', 'knuffel', 'ballon'], ['jurkgeel', 'jurkblauw', 'jurkregenboog', 'vleugels']];
+  const cards = [];
+  ROWS.forEach((row, ri) => row.forEach((id, i) => {
+    const n = PRICES[id], spec = { w: 120, h: 160, frames: 3, size: .6, thing: true, draw(c, fr) {
+      drawWearIcon(c, id);
+      if (fr === 0) for (let k = 0; k < n; k++) { const cx = 60 + (k - (n - 1) / 2) * 13, cy = 140; piece(c, '#E0A93A', E(cx, cy, 6.5, 6.5), .3); ink(c, '#F2C65C', E(cx, cy, 4.4, 4.4)); }
+      else if (fr === 1) { piece(c, '#F4A6C4', U(E(48, 140, 11, 7, .4), E(72, 140, 11, 7, -.4)), .4); piece(c, '#E98F8F', E(60, 140, 5, 5)); }
+      else piece(c, '#E98F8F', S2([[60, 152], [44, 136], [46, 126], [54, 124], [60, 131], [66, 124], [74, 126], [76, 136]]), .5);
+    } };
+    const f = S.figure('kleren-' + id, spec), px = -RW / 2 + .4 + i * (RW - .8) / Math.max(1, row.length - 1), [wx, wz] = S.at([x + px, z + .06]);
+    f.x = wx; f.z = wz; f.floatY = f.y = y + RAILS[ri] - f.H - .02;
+    const hook = m3(new THREE.TorusGeometry(.05, .008, 4, 10, Math.PI), '#7a5a3e'); hook.position.set(px, RAILS[ri] - .015, .03); g.add(hook);
+    f.act = () => f.setFrame(S.closet.wearing(id) ? 2 : S.closet.owns(id) ? 1 : 0);
+    f.onTap = () => { if (S.playing()) return; S.walkThen(wx, wz + .95, () => {
+      girl.view = 'back';
+      if (S.closet.owns(id)) { S.closet.put(id); f.hopV = 1.6; return; }
+      if (!S.coins.spend(n, f.x, f.y + f.H * .6, f.z, () => { S.closet.buy(id); f.hopV = 2; })) { f.hopV = 1.4; f.wob = 1; sfx.peep(); }
+    }, 1.0); };
+    cards.push({ id, f });
+  }));
+  return { state: () => ({ coins: S.coins.have(), own: cards.filter(c => S.closet.owns(c.id)).map(c => c.id), wearing: cards.filter(c => S.closet.wearing(c.id)).map(c => c.id) }), places: { front: S.at([x, z + 1.1]) } };
 }

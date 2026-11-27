@@ -549,4 +549,20 @@ export default async function (t) {
     await t.ev(`__p.drop('vogelaar')`); await t.sleep(1300); ok((await fall()).some(o => o.kind === 'vogelaar' && o.mode === 'dazed'), 'and once in a while, a birdwatcher tumbles out'); await t.shot('tmp-shots/y-shake-man-land.png');
     ok(await until(`!__p.fallen().some(o => o.kind === 'vogelaar')`, 8), 'he waves, and wanders off');
   }
+
+  /* ---------------- coins and the clothes shop ---------------- */
+  if (!only || only === 'shop') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    const shop = () => t.ev(`__p.toy('winkel')`), coinsAt = () => t.ev(`__p.dbg.figures.filter(f => f.name === 'munt' && f.g.visible).map(f => [f.x, f.z])`);
+    const all = await coinsAt(); ok(all.length >= 5 && (await shop()).coins === 0, `coins lie about the islands (${all.length}), and she has none yet`);
+    await t.ev('__p.open()'); for (const c of all) ok(await t.ev(`__p.canReach(${c[0]}, ${c[1]})`), `she can walk to the coin at ${c.map(v => v.toFixed(1))}`);
+    await t.ev(`__p.placeAt(${all[0][0] - 1.2}, ${all[0][1]})`); await t.sleep(1500); await t.ev(`__p.walkTo(${all[0][0] + .6}, ${all[0][1]})`); ok(await until(`__p.toy('winkel').coins === 1`, 5), 'she walks over a coin: it flies up to her row'); await t.shot('tmp-shots/y-coin-land.png');
+    const front = (await t.ev(`__p.places('dorp')`)).fountain; await t.ev(`__p.placeAt(4.6, 5.0)`); await t.sleep(2500); await t.shot('tmp-shots/y-shop-land.png');
+    await t.ev(`__p.tap('kleren-strik')`); await t.sleep(2200); ok((await shop()).own.length === 0, 'a tap on the bow with too few coins: it only wobbles');
+    await t.ev(`__p.placeAt(${all[1][0] - 1.2}, ${all[1][1]})`); await t.sleep(1200); await t.ev(`__p.walkTo(${all[1][0] + .6}, ${all[1][1]})`); ok(await until(`__p.toy('winkel').coins === 2`, 5), 'another coin');
+    await t.ev(`__p.placeAt(4.6, 5.0)`); await t.sleep(2200); await t.ev(`__p.tap('kleren-strik')`); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 6), 'with two coins: they fly to the bow, and she has it on'); ok((await shop()).coins === 0, 'and the coins are spent'); await t.sleep(600); await t.shot('tmp-shots/y-shop-bought-land.png');
+    await t.ev(`__p.tap('kleren-strik')`); ok(await until(`!__p.toy('winkel').wearing.includes('strik')`, 4) && (await shop()).own.includes('strik'), 'a tap again: she takes it off, and it is still hers');
+    await t.ev(`__p.tap('kleren-strik')`); ok(await until(`__p.toy('winkel').wearing.includes('strik')`, 4), 'and on again, for free');
+    await t.ev('__p.swap()'); await t.sleep(600); ok(!(await shop()).wearing.includes('strik'), 'her sister has her own things on');
+  }
 }

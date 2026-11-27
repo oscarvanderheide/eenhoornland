@@ -6,7 +6,7 @@
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, stall, pondDress, GROUND } from './props.js';
+import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, stall, pondDress, shop, GROUND } from './props.js';
 import { swing, slide, seesaw, plane } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
@@ -146,6 +146,9 @@ export default {
     const potion = { holding: () => S.gear.potion, full: () => S.gear.potion, hint() { }, pourThen(done) { S.sfx.swish(3); const h = S.hand(); S.confetti(h.x + S.girl.face * .5, h.y + .2, h.z, ['#f4a6c4', '#f8dde4', '#bba6ea', '#f2c65c'], 18, S.starGeo, 2.4); setTimeout(done, 650); return true; } };
     S.shared.can = theFarm;
     const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, potion, STORY.drankje, 0);
+    // the clothes shop: a rack on the green between the square and the unicorns' meadow (props.js shop); and coins lying about, here and there
+    const theShop = shop(S, 4.6, 3.4, H_GRASS);
+    for (const [cx, cz] of [[-17.5, 2.0], [-8.2, 18.0], [6.2, 7.3], [13.8, -5.2], [15.0, 3.7]]) S.coinAt(cx, cz);
     // the zipline's post: where the ride from the treehouse in the forest ends (the cable and the ride are the forest's, treehouse.js)
     { const [zx, zz] = T(43.5, 35.5), zy = inPoly(HIGH, zx, zz) ? H_HIGH : H_GRASS;
       put(new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, 3.0, 8), paper('#8d6a48')), zx, zy + 1.5, zz).castShadow = true; put(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .08), paper('#7a5a3e')), zx, zy + 2.85, zz).castShadow = true;
@@ -194,7 +197,7 @@ export default {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
       step: e => { pondLook.step(e.time); HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); thePlane.step(e); theStall.step(e); },
-      toys: { ...live, ...flies, ...folk, dolfijn: flipper, vliegtuig: thePlane, kraam: theStall, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, wip: theSeesaw, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
+      toys: { winkel: theShop, ...live, ...flies, ...folk, dolfijn: flipper, vliegtuig: thePlane, kraam: theStall, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, wip: theSeesaw, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),
       // how the camera looks at each part (see the director in paper.js). On a bridge the camera looks straight along it:
