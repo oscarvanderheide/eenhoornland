@@ -337,7 +337,7 @@ export default async function (t) {
   if (!only || only === 'castle') {
     await open('?set=kasteel', LAND); await t.sleep(1500);
     const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('kasteel')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
-    ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('wei')`)).far[0]}, ${(await t.ev(`__p.places('wei')`)).far[1]})`), 'the bridge joins the castle to the meadow');
+    ok(!(await t.ev(`__p.canReach(${(await t.ev(`__p.places('wei')`)).far[0]}, ${(await t.ev(`__p.places('wei')`)).far[1]})`)), 'mountains all round and no bridge: from the castle the meadow cannot be walked to (it is reached by flying)');
     await t.ev(`__p.placeAt(${pl.gate[0] + 2.6}, ${pl.gate[1] + 1.6})`); await t.sleep(2600);
     await tapOn('raam0'); await t.sleep(900); ok((await toy('kasteel')).open[0] && !(await toy('kasteel')).open[1], 'a tap on a window of the castle: its shutters open, the others stay shut');
     await tapOn('raam2'); await t.sleep(900); ok((await toy('kasteel')).open[2], 'the high window too'); await t.shot('tmp-shots/y-castle-windows-land.png');
