@@ -219,7 +219,7 @@ export default async function (t) {
     const s2 = (await toy('stenen')).sung; ok(s2 - s1 >= 3, `walking over the pool: the stones sing (${s2 - s1} notes)`); await t.shot('tmp-shots/y-stones-land.png');
     // the balloon
     await t.ev(`__p.placeAt(${w.balloon[0]}, ${w.balloon[1]})`); await t.sleep(2400); await tapOn('ballon'); ok(await until(`__p.toy('ballon').mode === 'up'`, 5), 'a tap on the balloon: she climbs in and it goes up');
-    ok(await until(`__p.toy('ballon').mode === 'top'`, 9), 'up to the top of its rope'); await t.sleep(2500); const cam = await t.ev('__p.cam()'); ok(cam.pos[1] > 40, `the camera has gone far back (${cam.pos[1].toFixed(0)} high)`); await t.shot('tmp-shots/y-balloon-top-land.png');
+    ok(await until(`__p.toy('ballon').mode === 'top'`, 9), 'up to the top of its rope'); await t.sleep(2500); const cam = await t.ev('__p.cam()'); ok(cam.pos[1] > 40, `the camera has gone far back (${cam.pos[1].toFixed(0)} high)`); await t.shot('tmp-shots/y-balloon-top-land.png'); { const st = await t.ev('__p.stats()'); console.log(`     (from the balloon: ${st.calls} draws, ${(st.tris / 1000).toFixed(0)}k triangles, ${st.fps.toFixed(0)} frames a second here)`); }
     await t.ev(`__p.keys(['a'])`); await t.sleep(200); await t.ev(`__p.keys([])`); ok(await until(`__p.toy('ballon').mode === null`, 9), 'a push: it comes down and she hops out');
     await t.sleep(2500); const g = (await t.ev('__p.info()')); ok(g.h !== null && Math.abs(g.girl[2]) < .2, 'she stands on the grass again'); await t.shot('tmp-shots/y-balloon-down-land.png');
   }

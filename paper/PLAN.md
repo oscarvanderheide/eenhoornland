@@ -273,8 +273,13 @@ What was asked: go on with the rest of the world, more to interact with, people 
 13. **The sea in pieces**, and **the fruit stall**; the last grey stand-ins taken away.
 14. **What she holds is given to the living only** (`thing` on a card, `LIFELESS` in `paper.js`).
 15. **The rainbow island** (`set-regenboog.js`, `wonders.js`) and **the castle** (`set-kasteel.js`, `castle.js`), as described above. Joined by plain bridges: no new gates were invented, the open questions are Oscar's.
-16. **Numbers with all seven sets** on the test machine, phone size: built in about 520 ms; at her door 198 draws and 318k triangles; elsewhere 110 to 215 draws and 200k to 480k triangles.
-17. **Two traps met tonight, for whoever works on this next.** A `//` comment added in the middle of a one-line statement swallows the rest of the line (the page then fails to load while `node --check` can still pass on other files): comments go on a line of their own. And the tests' `until` took an error from the page for a yes; it no longer does, and a broken page now shows as failures.
+16. **Numbers with all seven sets** on the test machine, phone size: built in about 520 ms; at her door 198 draws and 318k triangles; elsewhere 110 to 215 draws and 200k to 480k triangles. **From the balloon everything is in view at once: 312 draws and 672k triangles** (60 frames a second on the test machine). That is the heaviest picture in the game and the first place to read the phone.
+17. **Traps met tonight, for whoever works on this next.**
+    - A `//` comment added in the middle of a one-line statement swallows the rest of the line, and the page does not load. Comments go on a line of their own.
+    - **`node --check file.js` catches nothing here**: it does not read these files as modules and says yes to a broken one (tried on purpose). `sh tests/parse.sh` feeds each file in as a module and does catch it. The real proof stays the page itself: the smoke run's "no errors on the page".
+    - The tests' `until` took an error from the page for a yes, so a part could pass on a page that never loaded. It no longer does.
+    - **A card that is put away still took taps**: the accordion's notes, the bun and the apple wait at the middle of the world, which is the fountain square, and a tap on the ground there landed on a note. Hidden cards take no tap now (`pickAt`, `nearTap`).
+18. **The rides were tried with a finger as well as keys** (phone size, a press beside her and a press on her). Seesaw: a short press beside her is one kick; a finger held there keeps it going (three kicks in three and a half seconds, no streak); a touch on her gets off. Carousel: a finger held beside her for a second and a half brings it to about full speed; a touch on her stops it and they get off.
 
 ### What to look at first, and what is not right yet
 
@@ -282,7 +287,6 @@ What was asked: go on with the rest of the world, more to interact with, people 
 - **The phone.** Seven sets now exist at once. Triangles are 320k at her door and up to 480k on the meadow; draws about 200. Nothing was measured on the phone. `?set=dorp&fps` shows the readout.
 - **The unicorn stands in the way** now and then: it walks onto the sandcastle's heap and in front of things she wants to tap.
 - **Trees can hide her** on the meadow and the beach where I did not clear a view (the tree-folding is still switched off, as asked).
-- **From the balloon the sea has an edge** on the far right: the waves stop and flat deep water goes on.
 - **Only the first bridge has a dolphin**; the bakery, the cave, the cabin and the castle have no inside; the lighthouse cannot be climbed.
 - **The castle's window people are village and forest animals** (owl, chick, squirrel): cards that were there. If the castle should have people of its own, they need drawing.
 - **The seesaw's kick is a push to the side** (stick, key, or a finger held beside her), by the one rule of the toys; a touch on her gets off. A finger simply held keeps it going gently; a push in time with the landing builds the streak. Whether small hands find that, only playing will tell.

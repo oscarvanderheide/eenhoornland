@@ -632,7 +632,8 @@ function pickAt(cx, cy) {
   ray.setFromCamera(ndc, camera);
   const hits = ray.intersectObjects([...baseTaps, ...sets.flatMap(s => s.taps), ...sets.flatMap(s => s.ground), ...seaRows.map(r => r.m)], false);
   // a figure is a rectangle of card with a cutout on it: only the cutout (and a finger's width round it) takes the tap
-  return hits.find(h => !h.object.userData.fig || solidAt(h.object.userData.fig, h.uv)) || null;
+  // (and a card that is put away, a bun not yet handed out, a note not yet played, takes no tap at all)
+  return hits.find(h => !h.object.userData.fig || (h.object.userData.fig.g.visible && solidAt(h.object.userData.fig, h.uv))) || null;
 }
 /** a finger that hit nothing: was it within a finger's width of something that answers a tap? Measured on the screen, so a
  *  thing that is small because the camera stands far back is as easy to hit as a big one (everything is at least 48 points across) */
@@ -640,6 +641,7 @@ function nearTap(cx, cy, reach = 24) {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = reach;
   for (const s of [...baseSpots, ...sets.flatMap(q => q.tapSpots)]) {
     const f = s.obj.children[0]?.children[0]?.userData.fig;
+    if (f && !f.g.visible) continue;
     if (f) v.set(f.x, f.y + f.H * .45, f.z); else v.copy(s.c || (s.c = new THREE.Box3().setFromObject(s.obj).getCenter(new THREE.Vector3())));
     v.project(camera); if (v.z > 1) continue;
     const d = Math.hypot(r.left + (v.x + 1) / 2 * r.width - cx, r.top + (1 - v.y) / 2 * r.height - cy); if (d < bd) { bd = d; best = s; }
