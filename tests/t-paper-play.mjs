@@ -460,4 +460,17 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${d.thorns[0]}, ${d.thorns[1]})`); await t.sleep(2400); await tapAt(d.thorns[0] + 1.1, .5, d.thorns[1]); ok(await until(`__p.toy('braam').open`, 8), 'a tap on the brambles with the potion: they bloom and open'); await t.sleep(700); await t.shot('tmp-shots/y-thorns-bloom-land.png');
     ok(await t.ev(`__p.canReach(${w.cross[0]}, ${w.cross[1]})`), 'and the meadow can be walked to');
   }
+
+  /* ---------------- the hatching: the shy warm star on the meadow, and the egg that follows her ---------------- */
+  if (!only || only === 'hatch') {
+    await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    const star = () => t.ev(`__p.toy('ster')`), w = await t.ev(`__p.places('wei')`);
+    await t.ev(`__p.placeAt(${w.top[0] + 2.2}, ${w.top[1] + .9})`); await t.sleep(2400); await t.ev(`__p.tap('ster')`); await t.sleep(600); ok((await star()).frame === 3 && (await star()).at === 0, 'without an egg the star only sleeps'); await t.shot('tmp-shots/y-star-asleep-land.png');
+    await t.sleep(3000); await t.ev(`__p.quest({ stage: 'ei' })`); await t.sleep(2500); ok((await star()).frame === 0, 'with the egg behind her it wakes, and looks shy');
+    await t.ev(`__p.tap('ster')`); await t.sleep(1200); ok((await star()).at === 1, 'a tap: it hops away'); await t.shot('tmp-shots/y-star-hop-land.png');
+    await t.ev(`__p.placeAt(${w.hill[0] + 1.2}, ${w.hill[1] + .4})`); await t.sleep(2200); await t.ev(`__p.tap('ster')`); await t.sleep(1200); ok((await star()).at === 2, 'and again');
+    await t.ev(`__p.placeAt(${w.cross[0] + 1.2}, ${w.cross[1] + .6})`); await t.sleep(3000); await t.ev(`__p.tap('ster')`); await t.sleep(1900); ok((await star()).mode === 'warm', 'the third time it stays: it beams and flies to the egg'); await t.shot('tmp-shots/y-star-warm-land.png');
+    ok(await until(`__p.quest().stage === 'baby' && __p.who().uni`, 6), 'the egg cracks and opens: the unicorn is there'); await t.sleep(500); await t.shot('tmp-shots/y-hatched-land.png');
+    await t.ev(`__p.walkTo(${w.cross[0] - 3}, ${w.cross[1]})`); await t.sleep(3000); const i1 = await t.ev('__p.info()'); ok(Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.4, 'and it follows her');
+  }
 }

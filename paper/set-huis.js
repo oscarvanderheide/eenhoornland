@@ -89,7 +89,7 @@ export default {
       step({ dt }) { light.intensity += ((lit ? 1.9 : 0) - light.intensity) * Math.min(1, dt * 6); bulbMat.emissiveIntensity = lit ? 1.6 : .15; theDream.step(dt); for (const [who, b] of Object.entries(beds)) b.flap.visible = S.sister() === who || (Math.abs(girl.lean || 0) > 1 && Math.abs(girl.x - S.at([b.x, b.z])[0]) < 1.2); },
       // for the stage: where each sister lies ([x, z, which way she faces]), and the game's start: asleep, the dream, then morning
       beds: Object.fromEntries(Object.entries(beds).map(([who, b]) => [who, [...S.at([b.x - b.side * LIE.feet, b.z]), -b.side * Math.PI / 2]])), bedY: 0, lie: LIE.lift,
-      sleep(who) { lit = false; beds[who].sleep(); theDream.start(() => { S.quest.stage = 'zoek'; S.morning(); lit = false; }); },
+      sleep(who) { lit = false; beds[who].sleep(); theDream.start(() => { if (S.quest.stage === 'dream') S.quest.stage = 'zoek'; S.morning(); lit = false; }); },
       shots: [{ name: 'kamer', ax: 0, az: -.1, fx: .3, fy: .2, fz: .25, lag: 1, span: 7.4, tall: 5.6, rise: .36, riseTall: .5 }],
       spots: { bed: [beds.anna.x, .6, beds.anna.z], lamp: [0, .8, -D / 2 + .3] },
       places: { start: [0, D / 2 - .95], bed: [beds.anna.x + .25, beds.anna.z + .78], middle: [0, .2] },

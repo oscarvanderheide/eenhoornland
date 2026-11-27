@@ -5,6 +5,7 @@
 //                the otter in the pool (taps its pebble, dives, comes up somewhere else)
 //   the beach    the crab (dances, digs in), the gull (flaps up, lands), the turtle (tucks in), the seal (claps, balances a ball)
 import { ANIMALS2 } from './animals2.js';
+import { STORY } from './story.js';
 
 const near = (f, girl, r) => Math.hypot(f.x - girl.x, f.z - girl.z) < r;
 const look = (f, girl) => { f.face = girl.x < f.x ? -1 : 1; };
@@ -178,5 +179,37 @@ export function dragon(S, x, z) {
     if (t < 0) { if (near(f, girl, 3)) look(f, girl); return; }
     t += dt; for (const p of pops) if (!p.done && t > p.at) { p.done = true; sfx.hop(); S.confetti(p.x, f.y + 2.6 + (p.at * 7 % 1), f.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea', '#e98f8f'], 22, S.starGeo, 3.2); }
     if (t > (n === 0 ? 1.5 : .9)) { t = -1; pops = []; }
+  } };
+}
+
+/* ---------------- the story's star ---------------- */
+/** The warm little star of the meadow: it hatches the egg. `spots`: three places [x, y, z] in the set's measure. It is
+ *  shy: a tap, or her walking up close, and it hops away to its next place, twice. At the third place it stays; a tap, and
+ *  it beams, flies to the egg that hops behind her, and circles it: the egg cracks, opens, and the unicorn is there (and
+ *  the star is gone: its warmth is in the unicorn now). Without an egg behind her it sleeps (a tap: a peep, and it sleeps on). */
+export function star(S, spots) {
+  const { girl, sfx } = S, f = S.figure('ster', STORY.ster), P = spots.map(([x, y, z]) => { const [wx, wz] = S.at([x, z]); return [wx, y, wz]; });
+  let at = 0, mode = null, t = 0, from = null, hops = 0, done = false, cracked = 0; f.x = P[0][0]; f.z = P[0][2]; f.floatY = f.y = P[0][1];
+  const egg = () => S.quest.stage === 'ei', ease = k => k * k * (3 - 2 * k);
+  const go = () => {
+    if (mode || done) return;
+    if (!egg()) { f.hopV = 1.4; sfx.peep(); return; }
+    if (at < P.length - 1) { from = P[at]; at++; mode = 'hop'; t = 0; hops++; sfx.peep(); }
+    else { mode = 'fly'; t = 0; from = [f.x, f.y, f.z]; sfx.hello(); }
+  };
+  f.onTap = go;
+  f.act = tick => { f.setFrame(mode === 'hop' ? 1 : mode === 'fly' || mode === 'warm' ? 2 : egg() ? 0 : 3); f.tilt = mode === 'warm' ? Math.sin(tick * .8) * .2 : 0; };
+  return { f, state: () => ({ at, hops, mode, done, frame: f.frame }), step({ dt }) {
+    f.g.visible = !done && S.quest.stage !== 'baby';
+    if (!mode) { if (egg() && !done && at < P.length - 1 && near(f, girl, 1.0) && girl.walking) go(); return; }
+    t += dt;
+    if (mode === 'hop') { const k = Math.min(1, t / .8), e = ease(k), to = P[at]; f.x = from[0] + (to[0] - from[0]) * e; f.z = from[2] + (to[2] - from[2]) * e; f.floatY = f.y = from[1] + (to[1] - from[1]) * e + Math.sin(k * Math.PI) * 1.4; if (k >= 1) mode = null; return; }
+    const [ex, ez] = S.eggAt(), ey = (S.heightAt(ex, ez) ?? 0) + .7;
+    if (mode === 'fly') { const k = Math.min(1, t / 1.1), e = ease(k); f.x = from[0] + (ex - from[0]) * e; f.z = from[2] + (ez + .06 - from[2]) * e; f.floatY = f.y = from[1] + (ey - from[1]) * e + Math.sin(k * Math.PI) * .8; if (k >= 1) { mode = 'warm'; t = 0; cracked = 0; } return; }
+    // warming the egg: round and round it
+    f.x = ex + Math.cos(t * 5) * .46; f.z = ez + .06 + Math.sin(t * 5) * .12; f.floatY = f.y = ey + Math.sin(t * 3) * .1;
+    if (t > .9 && cracked < 1) { cracked = 1; S.eggFrame(1); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 6, undefined, 1.4); }
+    if (t > 2.0 && cracked < 2) { cracked = 2; S.eggFrame(2); sfx.click(); S.confetti(ex, ey - .2, ez + .1, ['#fbf5ea', '#f2c65c'], 8, undefined, 1.6); }
+    if (t > 3.0) { done = true; mode = null; f.g.visible = false; S.confetti(f.x, f.y + .2, f.z, ['#f2c65c', '#f6dfa6', '#fbf5ea'], 18, S.starGeo, 2.6); S.hatch(ex, ez); }
   } };
 }
