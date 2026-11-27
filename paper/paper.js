@@ -754,7 +754,7 @@ function showRide() { if (!rideBtn) return; const can = gear.grown && !uni.away 
    in the forest, the gull on the beach, the peacock at the castle; again whenever that feather is still missing). She
    picks it up by walking over it; the feathers she has show after her coins. Given all three, the witch brews them into
    wings (folk.js): giveWings */
-const BIRDS = ['uil', 'meeuw', 'pauw'];
+const BIRDS = ['uil', 'meeuw', 'papegaai'];   // (the parrot's, not the peacock's: the castle can only be reached by flying, with the wings)
 const feathers = {
   wants: bird => gear.grown && !gear.wings && !gear.feathers.includes(bird) && !fallen.some(o => o.kind === 'veer-' + bird && !o.gone),
   drop(bird, x, y, z) { dropFrom('veer-' + bird, new THREE.Vector3(x, heightAt(x, z) ?? 0, z), y, 'leaf'); },

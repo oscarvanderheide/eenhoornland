@@ -315,7 +315,7 @@ export default async function (t) {
   if (!only || only === 'rainbow') {
     await open('?set=regenboog', LAND); await t.sleep(1500);
     const toy = n => t.ev(`__p.toy('${n}')`), pl = await t.ev(`__p.places('regenboog')`), at = n => t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === '${n}'))`), by = async (n, dx = -1.4, dz = 1.2) => { const [x, z] = await at(n); await t.ev(`__p.placeAt(${x + dx}, ${z + dz})`); await t.sleep(2400); };
-    ok(await t.ev(`__p.canReach(${(await t.ev(`__p.places('strand')`)).castle[0]}, ${(await t.ev(`__p.places('strand')`)).castle[1]})`), 'the bridge joins the rainbow island to the beach');
+    ok(!(await t.ev(`__p.canReach(${(await t.ev(`__p.places('strand')`)).castle[0]}, ${(await t.ev(`__p.places('strand')`)).castle[1]})`)), 'no bridge to the beach any more: the boat goes there');
     // paint: through the red puddle, and on
     await t.ev(`__p.placeAt(${pl.paint[0] - 1.6}, ${pl.paint[1] - 1.2})`); await t.sleep(2200); await t.ev(`__p.keys(['d'])`); await t.sleep(2400); await t.ev(`__p.keys([])`); await t.sleep(300);
     const pa = await toy('verf'); ok(pa.dips === 1 && pa.prints >= 3, `through a puddle of paint: her steps leave prints (${pa.prints} so far, ${pa.left} to go)`); await t.shot('tmp-shots/y-paint-land.png');
@@ -617,8 +617,8 @@ export default async function (t) {
     const fv = (await t.ev('__p.fallen()')).find(o => o.kind === 'veer-uil'); ok(fv && fv.mode === 'lie', 'a tap on the owl: a feather drifts down'); await t.shot('tmp-shots/y-feather-owl-land.png');
     await t.ev(`__p.walkTo(${fv.at[0]}, ${fv.at[1]})`); ok(await until(`__p.ride().feathers.includes('uil')`, 6), 'she walks over it: the feather is hers, beside her coins');
     await t.ev(`__p.tap('uil')`); await t.sleep(2600); ok(!(await t.ev('__p.fallen()')).some(o => o.kind === 'veer-uil'), 'the owl gives only one');
-    for (const [b, n] of [['meeuw', 'meeuw'], ['pauw', 'pauw']]) { const p = await at(n); await t.ev(`__p.placeAt(${p[0] + 1.6}, ${p[1] + 1.4})`); await t.sleep(2400); await t.ev(`__p.tap('${n}')`); await t.sleep(2600); ok((await t.ev('__p.fallen()')).some(o => o.kind === 'veer-' + b), `the ${n}: a feather of its own`); await t.shot(`tmp-shots/y-feather-${b}-land.png`); }
-    await t.ev(`__p.gear({ feathers: ['uil', 'meeuw', 'pauw'] })`); await t.ev(`__p.placeAt(${bos.witch[0] - .9}, ${bos.witch[1] + .3})`); await t.sleep(2600);
+    for (const [b, n] of [['meeuw', 'meeuw'], ['papegaai', 'papegaai']]) { const p = await at(n); await t.ev(`__p.placeAt(${p[0] + 1.6}, ${p[1] + 1.4})`); await t.sleep(2400); await t.ev(`__p.tap('${n}')`); await t.sleep(2600); ok((await t.ev('__p.fallen()')).some(o => o.kind === 'veer-' + b), `the ${n}: a feather of its own`); await t.shot(`tmp-shots/y-feather-${b}-land.png`); }
+    await t.ev(`__p.gear({ feathers: ['uil', 'meeuw', 'papegaai'] })`); await t.ev(`__p.placeAt(${bos.witch[0] - .9}, ${bos.witch[1] + .3})`); await t.sleep(2600);
     await t.ev(`__p.tap('heks')`); await t.sleep(900); ok((await toy('heks')).mode === 'wings', 'with all three: into the pot they go'); await t.shot('tmp-shots/y-wings-brew-land.png');
     ok(await until(`__p.ride().wings`, 4), 'a boil of stars, and the unicorn has wings'); ok((await r()).feathers.length === 0, 'the feathers are used up'); await t.sleep(800); await t.shot('tmp-shots/y-wings-land.png');
   }
@@ -640,9 +640,9 @@ export default async function (t) {
   /* ---------------- the save keeps the grown unicorn, her wings and the feathers she has ---------------- */
   if (!only || only === 'savewings') {
     await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
-    await t.ev('__p.hatched()'); await t.ev(`__p.gear({ grown: true, wings: false, feathers: ['uil', 'pauw'] })`); await t.sleep(5000);
+    await t.ev('__p.hatched()'); await t.ev(`__p.gear({ grown: true, wings: false, feathers: ['uil', 'papegaai'] })`); await t.sleep(5000);
     await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500);
-    const a = await t.ev('__p.ride()'); ok(a.grown && !a.wings && a.feathers.join() === 'uil,pauw', 'opened again: the grown unicorn, and the two feathers she had');
+    const a = await t.ev('__p.ride()'); ok(a.grown && !a.wings && a.feathers.join() === 'uil,papegaai', 'opened again: the grown unicorn, and the two feathers she had');
     await t.ev(`__p.gear({ wings: true, feathers: [] })`); await t.sleep(5000); await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500);
     ok((await t.ev('__p.ride()')).wings, 'and her wings'); await t.shot('tmp-shots/y-save-wings-land.png');
   }
@@ -660,5 +660,17 @@ export default async function (t) {
     await btn(1); await t.sleep(300); ok(await t.ev('__p.hop("girl") >= 0'), '○: a hop');
     const w0 = (await t.ev('__p.who()')).girl; await btn(4); await t.sleep(400); ok((await t.ev('__p.who()')).girl !== w0, 'L1: the other sister');
     await btn(9); await t.sleep(500); ok(await t.ev(`!!document.getElementById('savebook')`), 'Options: the three saves'); await btn(1); await t.sleep(300); ok(!(await t.ev(`!!document.getElementById('savebook')`)), '○ closes them');
+  }
+
+  /* ---------------- the boat between the beach and the rainbow island ---------------- */
+  if (!only || only === 'boat') {
+    await open('?set=strand', LAND); await t.sleep(1500);
+    const b = () => t.ev(`__p.toy('boot')`), s0 = await b();
+    ok(!(await t.ev(`__p.canReach(${s0.stands[1][0]}, ${s0.stands[1][1]})`)), 'the rainbow island cannot be walked to');
+    await t.ev(`__p.placeAt(${s0.stands[0][0] - 2.5}, ${s0.stands[0][1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'row'`, 6), 'a tap on the boat: she walks out on the jetty, climbs in, and they row');
+    await t.sleep(2500); await t.shot('tmp-shots/y-boat-land.png'); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 10), 'across, and out onto the rainbow island\'s jetty');
+    const i1 = await t.ev('__p.info()'); ok(i1.lift === 0 && Math.hypot(i1.uni[0] - i1.girl[0], i1.uni[1] - i1.girl[1]) < 2.5, 'her unicorn came along');
+    await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'row'`, 6), 'and back again'); ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'strand'`, 12), 'on the beach');
+    await t.ev(`__p.placeAt(${s0.stands[1][0]}, ${s0.stands[1][1]})`); await t.sleep(400); ok(await until(`__p.toy('boot').empty`, 3), 'she waits on the far jetty: the boat comes over by itself'); ok(await until(`__p.toy('boot').at === 1 && !__p.toy('boot').empty`, 8), 'and lies there for her');
   }
 }

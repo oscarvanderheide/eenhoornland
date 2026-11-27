@@ -51,7 +51,6 @@ export default {
     root.add(slab(blob(-7.0, -2.6, 1.3, .9, 735, 20, .08), .34, .34, P('rock2'), P('rock'))); S.solid({ x: -7.0, z: -2.6, r: 1.0 });   // the dragon's rock
     for (const [cx, cz] of [[5.0, 6.9], [-4.6, 5.6], [1.2, 2.8], [BR.x0 + 2.6, .8]]) S.coinAt(cx, cz);   // coins lying about: by the carousel, on the peacock's lawn, in the court, on the west side
     const live = { pauw: peacock(S, -4.8, 3.6), draakje: befriend(S, dragon(S, -5.9, -1.5), { speed: 2.2, hop: 1.3 }),   /* the castle's companion (companion.js) */ trompetter: musician(S, 'trompetter', PEOPLE2.trompetter, PROPS2.noot2, -2.45, -3.7, { sound: () => S.sfx.horn(), play: [0, 1], rest: 2, end: 3, from: [.68, 1.2], long: 3.6 }) };
-    S.featherFrom(live.pauw.f, 'pauw');   // the peacock's feather for the wings (paper.js)
     const benches = [], lamps = [], mills = [];
     for (const [x, z, c] of [[-9.0, 1.3, '#e98f8f'], [-9.0, -1.3, '#bba6ea'], [-1.25, -3.7, '#f2c65c'], [1.25, -3.7, '#f2c65c'], [3.6, 4.6, '#8fc3e0']]) pennant(S, x, H_GRASS, z, c);
 

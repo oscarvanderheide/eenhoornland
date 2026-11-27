@@ -10,7 +10,8 @@ import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './prop
 import { palm, parasol, lighthouse, sandcastle } from './beach.js';
 import { crab, gull, turtle, seal } from './critters2.js';
 import { befriend } from './companion.js';
-import { strandLand, BACK } from './lands.js';
+import { strandLand, regenboogLand, ORIGIN, BACK } from './lands.js';
+import { ferry } from './boat.js';
 import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
 import { frisbee } from './toys.js';
@@ -69,7 +70,8 @@ export default {
     parasol(S, -7.6, H_SAND, 3.3); parasol(S, 7.4, H_SAND, 1.2, '#9ed9cf', '#fbf5ea');
     const benches = [bench(S, -8.6, H_SAND, 3.5)];
     const lamps = [];   // (the lighthouse is the beach's light)
-    rowboat(S, 10.6, H_SAND, 4.4, .5); driftwood(S, -11.2, H_SAND, 5.4, .4); driftwood(S, 4.4, H_SAND, -5.6, -.3, 1.1); driftwood(S, -1.6, H_SAND, 7.4, 1.1, .9);
+    driftwood(S, -11.2, H_SAND, 5.4, .4);   // (the little blue boat is the real one now, at its jetty: boat.js)
+    driftwood(S, 4.4, H_SAND, -5.6, -.3, 1.1); driftwood(S, -1.6, H_SAND, 7.4, 1.1, .9);
     const mills = [];
     for (const [cx, cz] of [[-7.6, -2.0], [9.4, -.8], [2.4, 15.4], [-5.0, 7.8]]) S.coinAt(cx, cz);   // coins lying about: on the dune, by the lighthouse, at the end of the pier, by the turtle
     const live = {
@@ -79,6 +81,12 @@ export default {
       zeehond: seal(S, 5.4, 14.45, -.3),
     };
     S.featherFrom(live.meeuw.f, 'meeuw');   // the gull's feather for the wings (paper.js)
+    // the boat to the rainbow island, at a short jetty where the bridge used to start (boat.js): the rainbow island's end of it is its jetty (set-regenboog.js)
+    const RB = regenboogLand().bridge, rbX = ORIGIN.regenboog[0] - ORIGIN.strand[0], JX = rbX + RB.x0, JE = JX + 2.2;   // (where the old bridge met the beach, in the beach's measure)
+    for (let x = JX; x < JE; x += .32) root.add(slab([[x, RB.z0 - .05], [x + .28, RB.z0 - .05], [x + .28, RB.z1 + .05], [x, RB.z1 + .05]], -.12, .06, paper('#c9a878'), edgeMat));
+    for (const x of [JX + 1.1, JE - .15]) for (const z of [RB.z0, RB.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), paper('#8d6a48')); m.castShadow = true; m.position.set(x, -.72, z); root.add(m); }
+    S.floorBox(-.12, JX, RB.z0, JE, RB.z1);
+    const theBoat = ferry(S, [{ stand: S.at([JE - .3, 0]), moor: S.at([JE + 1.2, 0]) }, { stand: S.at([rbX + RB.x1 - 1.9, 0]), moor: S.at([rbX + RB.x1 - 3.4, 0]) }]);
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
     const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
     // planted, not scattered (PLAN.md): beach grass in clumps round the dune, the shells where the sea left them (a line along
@@ -96,10 +104,11 @@ export default {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
+        theBoat.step(e);
         light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, boot: theBoat, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal

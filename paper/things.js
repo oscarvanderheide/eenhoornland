@@ -138,7 +138,7 @@ const featherOf = (vane, shaft, extra) => g => {
 };
 const drawVeerUil = featherOf('#B88B5C', '#7A5A3E', g => { for (const [x, y] of [[24, 40], [37, 52], [26, 70], [36, 86]]) ink(g, '#F1DDB4', E(x, y, 3.2, 2.4)); });
 const drawVeerMeeuw = featherOf('#FBF7EE', '#B8BFC6', g => { ink(g, '#AEB6BE', S([[24, 86], [32, 108], [40, 86], [32, 92]])); });
-const drawVeerPauw = featherOf('#6FAF8A', '#3E7A5E', g => { piece(g, '#5FA8A0', E(31, 34, 10, 12), .3); piece(g, '#F2C65C', E(31, 34, 6.5, 8), .2); piece(g, '#2E5E8A', E(31, 35, 3.6, 4.6), .1); });
+const drawVeerPapegaai = featherOf('#E8505B', '#A83A44', g => { ink(g, '#F2C65C', S([[22, 60], [40, 60], [34, 84], [28, 84]])); ink(g, '#5FA8D8', S([[24, 86], [38, 86], [32, 106]])); });   // the parrot's: red, a yellow band, a blue tip
 /** the rainbow fruit from the rainbow island's tree: round, in bands of the rainbow, a leaf on top */
 function drawRegenboog(g) {
   piece(g, '#7A5A3E', C(40, 22, 42, 10, 2.4)); piece(g, '#7FB069', S([[42, 16], [52, 6], [64, 10], [64, 10], [54, 18]]));
@@ -228,7 +228,7 @@ export const THINGS = {
   peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
   'veer-uil': { w: 62, h: 124, draw: drawVeerUil, frames: 1, size: .34, does: ['owl feather'] },
   'veer-meeuw': { w: 62, h: 124, draw: drawVeerMeeuw, frames: 1, size: .34, does: ['gull feather'] },
-  'veer-pauw': { w: 62, h: 124, draw: drawVeerPauw, frames: 1, size: .34, does: ['peacock feather'] },
+  'veer-papegaai': { w: 62, h: 124, draw: drawVeerPapegaai, frames: 1, size: .34, does: ['parrot feather'] },
   regenboog: { w: 80, h: 84, draw: drawRegenboog, frames: 1, size: .26, does: ['rainbow fruit'] },
   munt: { w: 64, h: 64, draw: drawMunt, frames: 1, size: .2, does: ['coin'] },
   rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },

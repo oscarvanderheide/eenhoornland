@@ -25,11 +25,12 @@ export default {
     const CANDY = paper('#f4d2de', { map: grassMap, bump: grassBump }), MINT = paper('#c6ead8', { map: grassMap, bump: grassBump });
     shore(S, [[SAND, H_SAND, .55, GROUND.sand], [GRASS, H_GRASS, .32, CANDY]]);
     root.add(slab(POND, H_GRASS + .02, .02, P('pond'), whiteEdge));
-    for (let x = BR.x0; x < BR.x1; x += .32) root.add(slab(rect(x, BR.z0 - .05, x + .28, BR.z1 + .05), DECK, .06, P('plank'), edgeMat));
-    for (let x = BR.x0 + 1.2; x < BR.x1 - .6; x += 1.7) for (const z of [BR.z0, BR.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), P('post')); m.castShadow = true; m.position.set(x, DECK - .6, z); root.add(m); }
+    // no bridge from the beach any more (Oscar: the boat, as in the pixel game): a short jetty where the boat comes in (boat.js, set-strand.js)
+    const J0 = BR.x1 - 2.2; for (let x = J0; x < BR.x1; x += .32) root.add(slab(rect(x, BR.z0 - .05, x + .28, BR.z1 + .05), DECK, .06, P('plank'), edgeMat));
+    for (const x of [J0 + .15, BR.x1 - 1.1]) for (const z of [BR.z0, BR.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), P('post')); m.castShadow = true; m.position.set(x, DECK - .6, z); root.add(m); }
 
     S.sea({ land: [SAND], x0: -40, x1: 32, z0: -24, z1: 26, deep: [230, 180, 0, 0], fine: 1.8 });
-    S.floorBox(DECK, BR.x0, BR.z0, BR.x1, BR.z1);
+    S.floorBox(DECK, J0, BR.z0, BR.x1, BR.z1);
     S.water(H_GRASS, POND); S.floor(H_GRASS, GRASS); S.floor(H_SAND, SAND, .22);
 
     /* ---------------- paths ---------------- */
@@ -47,6 +48,7 @@ export default {
     const pots = paint(S, [{ x: -4.6, z: 3.4, r: .62, col: '#e98f8f' }, { x: -2.2, z: 4.6, r: .56, col: '#8fc3e0' }, { x: .6, z: 4.2, r: .6, col: '#f2d86b' }], H_GRASS);
     const shrooms = [mushroom(S, -7.0, H_GRASS, -3.2, .42, '#e98f8f', .6), mushroom(S, -6.0, H_GRASS, -2.3, .5, '#f2b56b', 1), mushroom(S, -7.2, H_GRASS, -1.5, .62, '#bba6ea', 1.6), mushroom(S, -8.2, H_GRASS, -2.5, .36, '#9ed9a0', .3)];
     const live = { flamingo: flamingo(S, 6.2, 2.5), flamingo2: flamingo(S, 7.3, 2.9, 'flamingo2'), papegaai: parrot(S, 4.4, -2.2, 1.25), konijn: rabbit(S, [[3.2, 4.6], [5.4, 5.2], [1.9, 5.6]]) };
+    S.featherFrom(live.papegaai.f, 'papegaai', -.4);   // the parrot's feather for the wings (paper.js): red, a yellow band, a blue tip
     live.flamingo.pair(live.flamingo2); live.flamingo2.pair(live.flamingo); live.flamingo2.f.face = -1; for (const q of [live.flamingo, live.flamingo2]) q.f.floatY = q.f.y = H_GRASS + .02;
     // the parrot's perch, and the rabbit's holes
     { const p = new THREE.Mesh(new THREE.CylinderGeometry(.035, .04, 1.25, 6), P('post')); p.position.set(4.4, .625, -2.2); p.castShadow = true; root.add(p); const bar = new THREE.Mesh(new THREE.BoxGeometry(.6, .05, .05), P('post')); bar.position.set(4.4, 1.23, -2.2); root.add(bar); S.solid({ x: 4.4, z: -2.2, r: .1 }); }
