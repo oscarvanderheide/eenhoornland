@@ -91,3 +91,21 @@ export function player(S, x, z) {
     else if (t > 1.4) mode = null;
   } };
 }
+
+/** Any other musician (the guitar on the beach, the harp in the forest, the flute on the meadow, the herald at the castle):
+ *  silent until tapped; then they play for a few seconds (frames `o.play`, taking turns), notes float up from `o.from`
+ *  ([dx, dy] from the card's middle bottom), and they end with frame `o.end` (a bow, a wave). At rest: frame `o.rest`.
+ *  `o.sound` makes the music (one of the stage's soft instruments); `o.lift` seats them on something. */
+export function musician(S, name, spec, note, x, z, o) {
+  const f = make(S, name, spec, x, z, o.solid ?? .34); if (o.lift) f.lift = o.lift; if (o.face) f.face = o.face;
+  const notes = [0, 1, 2].map(i => { const n = S.figure(name + 'noot' + i, note); n.g.visible = false; n.act = () => n.setFrame(i % 2); return { n, t: -1, side: 1 }; });
+  const from = o.from || [.3, 1.1], long = o.long || 4.8; let mode = null, t = 0, plays = 0, next = 0, sent = 0;
+  f.onTap = () => { if (mode) return; mode = 'play'; t = 0; next = .25; plays++; o.sound(); };
+  f.act = tick => f.setFrame(mode === 'play' ? o.play[Math.floor(tick / 3) % o.play.length] : mode === 'end' ? o.end : o.rest);
+  return { f, state: () => ({ frame: f.frame, plays, playing: mode === 'play', notes: notes.filter(q => q.t >= 0).length }), step({ dt }) {
+    for (const q of notes) if (q.t >= 0) { q.t += dt; const k = q.t / 1.9; q.n.x = f.x + f.face * from[0] + q.side * k * .5 + Math.sin(q.t * 3) * .08; q.n.z = f.z + .06; q.n.floatY = q.n.y = (f.y || 0) + (f.lift || 0) + from[1] + k * 1.2; if (k >= 1) { q.t = -1; q.n.g.visible = false; } }
+    if (!mode) return; t += dt;
+    if (mode === 'play') { next -= dt; if (next <= 0) { next = .95; const q = notes.find(q => q.t < 0); if (q) { q.t = 0; q.side = sent++ % 2 ? 1 : -1; q.n.g.visible = true; } } if (t > long) { mode = 'end'; t = 0; f.hopV = 1.2; } }
+    else if (t > 1.4) mode = null;
+  } };
+}

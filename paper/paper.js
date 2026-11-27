@@ -398,6 +398,14 @@ function tone(freq, dur, type = 'sine', vol = .12, slide = 0, vib = 0) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + dur);
   o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .05);
 }
+/** one soft note: `at` seconds from now, `len` long, through a low-pass at `cut`; `rise` is how slowly it starts */
+function voice(freq, at, len, type, vol, cut, rise = .02, vib = 0) {
+  const a = audio(); if (!a) return; const t = a.currentTime + .03 + at, o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter();
+  o.type = type; o.frequency.value = freq; lp.type = 'lowpass'; lp.frequency.value = cut;
+  if (vib) { const l = a.createOscillator(), lg = a.createGain(); l.frequency.value = vib; lg.gain.value = freq * .006; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + len + .1); }
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + rise); g.gain.exponentialRampToValueAtTime(.0008, t + len);
+  o.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o.stop(t + len + .05);
+}
 function noise(dur, vol = .08, hp = 1200) {
   const a = audio(); if (!a) return; const t = a.currentTime, b = a.createBuffer(1, a.sampleRate * dur, a.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
@@ -435,6 +443,12 @@ const sfx = {
   squeeze() { const a = audio(); if (!a) return; const ch = CHORDS[tune.chord] || CHORDS[0], t0 = a.currentTime + .05, lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400; lp.connect(a.destination);
     [2, 3, 1, 2, 3].forEach((n, i) => { const f = ch[n] * 2, t = t0 + i * .95, g = a.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.04, t + .25); g.gain.setValueAtTime(.04, t + .8); g.gain.linearRampToValueAtTime(0, t + 1.4); g.connect(lp);
       for (const [type, det, v] of [['sawtooth', -6, .5], ['square', 7, .22]]) { const o = a.createOscillator(), og = a.createGain(); o.type = type; o.frequency.value = f; o.detune.value = det; og.gain.value = v; o.connect(og); og.connect(g); o.start(t); o.stop(t + 1.45); } }); },
+  /* The other musicians. Like the accordion, each plays out of the island's own chord of the moment, softly, and only
+     when asked. `voice` plays one note with a soft start and a long fade through a low-pass, so nothing is a sharp chime. */
+  strum() { const ch = CHORDS[tune.chord] || CHORDS[0]; [0, 1.5, 3.0].forEach((at, k) => ch.forEach((f, i) => voice(f * (i < 2 ? 2 : 1), at + (k % 2 ? 3 - i : i) * .045, 1.7, 'triangle', .03, 1300, .012))); },
+  harp() { const ch = CHORDS[tune.chord] || CHORDS[0], run = [ch[0], ch[1], ch[2], ch[3], ch[0] * 2, ch[1] * 2, ch[2] * 2, ch[3] * 2, ch[2] * 2, ch[0] * 2, ch[3], ch[1]]; run.forEach((f, i) => voice(f * 2, i * .34, 2.6, 'sine', .034, 2400, .01)); },
+  flute() { const ch = CHORDS[tune.chord] || CHORDS[0]; [2, 3, 2, 1, 3].forEach((n, i) => voice(ch[n] * 4, i * .95, 1.25, 'sine', .04, 3000, .16, 5)); },
+  horn() { const ch = CHORDS[tune.chord] || CHORDS[0]; [[0, 0, .7], [1, .8, .7], [2, 1.6, 1.9]].forEach(([n, at, len]) => voice(ch[n] * 2, at, len, 'sawtooth', .028, 950, .09)); },
   chime() { [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .5, 'sine', .06), i * 90)); },
 };
 
