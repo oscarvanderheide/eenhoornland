@@ -72,6 +72,8 @@ const skyMat = new THREE.ShaderMaterial({
 });
 const sky = new THREE.Mesh(new THREE.CylinderGeometry(46, 46, 40, 48, 1, true, Math.PI * .35, Math.PI * 1.3), skyMat);
 sky.position.set(0, 16, 4); scene.add(sky);
+// above and beyond the painted sky (looking up from the grass at the treehouse) the background is the sky's own top colour
+const skyTop = [new THREE.Color().setRGB(.42, .74, .78, THREE.SRGBColorSpace), new THREE.Color().setRGB(.22, .24, .45, THREE.SRGBColorSpace)]; scene.background = skyTop[0].clone();
 scene.fog = new THREE.Fog('#efd2b4', 30, 95);
 
 const theatre = new THREE.Group(); theatre.name = 'theatre'; scene.add(theatre);
@@ -117,9 +119,10 @@ const world = { ms: 0 };
      yaw             turned round her, in radians: plus looks from the east. Keep it small: 'up' on the stick is always away
                      from the camera, so a wide turn would bend her path while the shot changes
      dof, range      how strong the soft focus is, and how deep the sharp part (2 = twice as deep)
-     play            false for a shot she only walks through (a bridge): she may be too small there to tap things */
-const SHOT_KEYS = ['ax', 'az', 'fx', 'fy', 'fz', 'lag', 'span', 'tall', 'rise', 'riseTall', 'yaw', 'dof', 'range'];
-const SHOT_DEF = { ax: 0, az: 0, fx: 1, fy: .5, fz: 1, lag: 1, span: 14, tall: 8, rise: .28, riseTall: .5, yaw: 0, dof: 1, range: 1, pad: .8, play: true };
+     play            false for a shot she only walks through (a bridge): she may be too small there to tap things
+     ly, min         how far above her the camera looks (a toy's shot: up the ladder), and how close it may come (8 steps, or less) */
+const SHOT_KEYS = ['ax', 'az', 'fx', 'fy', 'fz', 'lag', 'span', 'tall', 'rise', 'riseTall', 'yaw', 'dof', 'range', 'ly', 'min'];
+const SHOT_DEF = { ax: 0, az: 0, fx: 1, fy: .5, fz: 1, lag: 1, span: 14, tall: 8, rise: .28, riseTall: .5, yaw: 0, dof: 1, range: 1, ly: 0, min: 8, pad: .8, play: true };
 const SHOT0 = { ...SHOT_DEF, name: 'eiland', fx: .7, fz: .6, lag: .8, span: 12.5, tall: 7.5 };   // the test island's, and the look it was approved with
 let shot = SHOT0, camYaw = 0, shotChanges = 0;
 const cam = { ...SHOT0 };   // what the camera is doing right now: on its way to `shot`
@@ -1036,7 +1039,7 @@ function frame(now) {
 
   // day and evening: the sun is pulled up out of view and the moon let down on its thread
   eve += (eveTarget - eve) * Math.min(1, dt * 1.6);
-  skyMat.uniforms.eve.value = eve; post.uniforms.eve.value = eve;
+  skyMat.uniforms.eve.value = eve; post.uniforms.eve.value = eve; scene.background.copy(skyTop[0]).lerp(skyTop[1], eve);
   key.color.copy(C('#ffdcae', '#a9b8ea', eve)); key.intensity = lerp(3.1, 1.0, eve);
   hemi.color.copy(C('#cfe6e4', '#6a6fa0', eve)); hemi.groundColor.copy(C('#8a6f58', '#4a3848', eve)); hemi.intensity = lerp(.85, 1.05, eve);
   fill.intensity = lerp(.45, .25, eve);
@@ -1051,12 +1054,12 @@ function frame(now) {
 
   // camera: a still diorama shot that leans a little towards her
   { const next = shotFor(girl.x, girl.z); if (next !== shot) { shot = next; shotChanges++; }
-    const want = playing && playing.shot ? { ...shot, ...playing.shot } : shot, k = camCut ? 1 : 1 - Math.exp(-dt * (playing && playing.shot ? .9 : 1.7)); for (const n of SHOT_KEYS) cam[n] += (want[n] - cam[n]) * k;   // (a toy may bring its own way of looking: the balloon pulls the camera far back)
+    const want = playing && playing.shot ? { ...shot, ...playing.shot } : shot, k = camCut ? 1 : 1 - Math.exp(-dt * (playing && playing.shot ? playing.rate || .9 : 1.7)); for (const n of SHOT_KEYS) cam[n] += (want[n] - cam[n]) * k;   // (a toy may bring its own way of looking: the balloon pulls the camera far back)
     const vw = portrait ? cam.tall : cam.span, tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
-    camDist = clamp(vw / 2 / tanH, 8, 110); camH = camDist * (portrait ? cam.riseTall : cam.rise);
+    camDist = clamp(vw / 2 / tanH, cam.min, 110); camH = camDist * (portrait ? cam.riseTall : cam.rise);
     { const far = Math.max(0, camDist - 45); scene.fog.near = 30 + far * 1.6; scene.fog.far = 95 + far * 3; const cf = 140 + far * 3; if (Math.abs(camera.far - cf) > 1) { camera.far = cf; camera.updateProjectionMatrix(); post.uniforms.far.value = cf; } }   // from far back, the haze and the end of the picture move back too
     const [lx, lz] = playing && playing.look ? playing.look : [girl.x, girl.z];   // on a toy the camera looks at the toy, not at her going to and fro
-    camLook.lerp(new THREE.Vector3(cam.ax + (lx - cam.ax) * cam.fx, girl.y * cam.fy + .5, cam.az + (lz - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
+    camLook.lerp(new THREE.Vector3(cam.ax + (lx - cam.ax) * cam.fx, girl.y * cam.fy + .5 + cam.ly, cam.az + (lz - cam.az) * cam.fz), camCut ? 1 : Math.min(1, dt * 2)); camCut = false;
     camPos.set(cam.ax + (camLook.x - cam.ax) * cam.lag + Math.sin(cam.yaw) * camDist, camLook.y + camH, camLook.z + Math.cos(cam.yaw) * camDist);
     camera.position.copy(camPos); camera.lookAt(camLook);
     camYaw = Math.atan2(camPos.x - camLook.x, camPos.z - camLook.z);

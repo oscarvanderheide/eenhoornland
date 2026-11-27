@@ -513,11 +513,11 @@ export default async function (t) {
     await open('?set=bos', LAND); await t.sleep(1500);
     const toy = () => t.ev(`__p.toy('boomhut')`), b = await t.ev(`__p.places('bos')`);
     await t.ev(`__p.placeAt(${b.oak[0] - 1.4}, ${b.oak[1] + 1.6})`); await t.sleep(2600); await t.shot('tmp-shots/y-treehouse-land.png');
-    await t.ev(`__p.tap('ladder')`); await t.sleep(1500); ok((await toy()).mode === 'up', 'a tap on the rope ladder: she climbs up'); await t.shot('tmp-shots/y-treehouse-climb-land.png');
-    ok(await until(`__p.toy('boomhut').up`, 4), 'and is up on the deck'); await t.sleep(1600); await t.shot('tmp-shots/y-treehouse-top-land.png');
-    const [sx, sy] = await t.ev(`__p.point(${b.oak[0] + .8}, 3.2, ${b.oak[1] - .65})`); await t.click(sx, sy); ok(await until(`__p.toy('boomhut').view === 0`, 2), 'a real tap on the telescope: she looks out to another island');
+    await t.ev(`__p.tap('ladder')`); await t.sleep(2600); ok((await toy()).mode === 'up', 'a tap on the rope ladder: she climbs up'); await t.shot('tmp-shots/y-treehouse-climb-land.png');
+    ok(await until(`__p.toy('boomhut').up`, 5), 'and is up on the deck'); await t.sleep(1600); await t.shot('tmp-shots/y-treehouse-top-land.png');
+    const [sx, sy] = await t.ev(`__p.point(${b.oak[0] + .8}, 4.6, ${b.oak[1] - .65})`); await t.click(sx, sy); ok(await until(`__p.toy('boomhut').view === 0`, 2), 'a real tap on the telescope: she looks out to another island');
     await t.sleep(2200); await t.shot('tmp-shots/y-treehouse-view-land.png'); ok(await until(`__p.toy('boomhut').view === -1`, 3) && (await toy()).up, 'and a moment later the picture comes back to her, still up there');
     await t.ev(`__p.tap('telescope')`); await t.sleep(300); ok((await toy()).view === 1, 'the next look shows the next island'); await t.sleep(3600);
-    await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('boomhut').mode === null`, 4), 'a touch: she climbs down again');
+    await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('boomhut').mode === null`, 5), 'a touch: she climbs down again');
   }
 }
