@@ -129,6 +129,11 @@ function drawMand(g) {
 }
 
 // a red apple with a leaf
+/** a hazelnut: 0 whole in its brown shell, 1 cracked open, the pale nut showing */
+function drawNoot(g, f) {
+  if (f === 1) { piece(g, '#8A5E3A', S([[8, 30], [10, 46], [22, 50], [22, 34]])); piece(g, '#8A5E3A', S([[40, 30], [38, 46], [26, 50], [26, 34]])); piece(g, '#F1DDB4', E(24, 30, 9, 11)); ink(g, 'rgba(255,255,255,.5)', E(21, 26, 2.4, 3.6)); return; }
+  piece(g, '#9A6A40', E(24, 32, 15, 16)); piece(g, '#C9A36E', S([[10, 22], [16, 12], [24, 8], [32, 12], [38, 22], [24, 20]])); ink(g, 'rgba(255,255,255,.35)', E(18, 34, 3, 6, .3));
+}
 function drawAppel(g) {
   piece(g, '#7A5A3E', C(32, 28, 35, 16, 1.9));
   piece(g, '#7FB069', S([[35, 22], [42, 10], [54, 12], [54, 12], [47, 23]]));
@@ -145,4 +150,5 @@ export const THINGS = {
   ei: { w: 60, h: 70, draw: drawEi, frames: 1, size: .2, does: ['egg'] },
   mand: { w: 150, h: 126, draw: drawMand, frames: 1, size: .45, does: ['basket'] },
   appel: { w: 64, h: 70, draw: drawAppel, frames: 1, size: .18, does: ['apple'] },
+  noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
 };

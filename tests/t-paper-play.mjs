@@ -165,6 +165,9 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${pl.picnic[0] + 1.6}, ${pl.picnic[1] + 1.4})`); await t.sleep(2800);
     await tapAt(pl.picnic[0] - .3, .1, pl.picnic[1] - 1.5); ok(await until(`__p.toy('picknick').mode === 'sit'`, 6), 'a tap on the picnic cloth: she walks over and sits down on it');
     ok(await until(`__p.toy('picknick').cheered`, 22), 'the hedgehog and the squirrel come and sit with her'); await t.shot('tmp-shots/y-picnic-land.png');
+    await tapAt(pl.picnic[0] - .52, .25, pl.picnic[1] - 1.62); ok(await until(`__p.toy('picknick').eating === 'appel'`, 2), 'sitting, a real tap on the basket: she takes an apple'); await t.sleep(1100); await t.shot('tmp-shots/y-picnic-apple-land.png');
+    ok(await until(`__p.toy('picknick').apples === 1`, 3) && (await toy('picknick')).mode === 'sit', 'and eats it, bite by bite, and stays sitting');
+    await t.ev(`__p.tap('noten')`); await t.sleep(700); await t.shot('tmp-shots/y-picnic-nut-land.png'); ok(await until(`__p.toy('picknick').nuts === 1`, 3), 'a tap on the nuts: she cracks one and eats it');
     await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('picknick').mode === null`, 3), 'a push and she is up');
     await t.sleep(2500); ok(!(await toy('egel')).there && !(await toy('eekhoorn')).there, 'and her guests go home');
     // the wind: a gust crosses, and the windmill in the clearing spins

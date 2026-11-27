@@ -212,7 +212,7 @@ function buildSet(def) {
     floorBox: (h, x0, z0, x1, z1) => { s.floors.push({ h, box: [x0 + ox, z0 + oz, x1 + ox, z1 + oz] }); },
     wall: (cx, cz, hx, hz) => { const w = [cx + ox, cz + oz, hx, hz]; s.walls.push(w); return w; },   // (gives the wall back: a gate opens by making it nothing wide)
     solid: o => { s.local.push(o); s.solids.push({ ...o, x: o.x + ox, z: o.z + oz }); return o; }, solids: s.local,   // S.solids: what stands here so far, in the set's own measure
-    tap: (obj, fn) => tapTarget(obj, fn),
+    tap: (obj, fn, name) => { tapTarget(obj, fn); if (name) s.names[name] = fn; },   // (a name: the tests can tap it by name)
     // a lamp the set may light (two per set). The stage has only two real lights and gives them to the lit lamps nearest her
     lamp: (i, color, distance, decay) => (s.lamps[i] = { color, distance, decay, intensity: 0, position: new THREE.Vector3() }),
     figure: (name, spec) => { const f = makeFigure(name, spec); f.thing = !!spec.thing || LIFELESS.has(spec); s.figs.push(f); tapTarget(f.g, () => tapFigure(f)); return f; },
@@ -734,6 +734,7 @@ function groundPoint(cx, cy) {
 canvas.addEventListener('pointerdown', e => {
   audio(); canvas.setPointerCapture(e.pointerId);
   if (playing) {   // while she plays the finger belongs to the toy: on her it lets go, beside her it pushes that way
+    if (playing.lets) { const hit = pickAt(e.clientX, e.clientY); if (hit && hit.object.userData.tap && playing.lets(hit.object)) { hit.object.userData.tap(hit); return; } }   // (unless the toy lets a few things of its own be tapped: the picnic's food)
     const [hx, hy] = herOnScreen(); if (Math.hypot(e.clientX - hx, e.clientY - hy) < 34) playAct = true; else hold = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), since: time };
     return;
   }
