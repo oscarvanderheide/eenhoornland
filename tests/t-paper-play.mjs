@@ -422,12 +422,19 @@ export default async function (t) {
     ok(!(await t.ev(`__p.canReach(${pl.two[0]}, ${pl.two[1]})`)), 'the vines hang across the way');
     for (const n of ['zwam0', 'zwam1', 'zwam2']) { await tapSpot(n); await t.sleep(450); }
     const h1 = await hol(); ok(h1.lit.every(Boolean) && h1.opened[0], 'a tap lights each mushroom; all three alight, and the vines lift'); await t.sleep(900); await t.shot('tmp-shots/y-hol-1b-land.png');
-    await t.ev(`__p.placeAt(${pl.two[0] - 1.9}, ${pl.two[1] + 1.15})`); await t.sleep(2200); await t.shot('tmp-shots/y-hol-2-land.png'); await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('hol').onPlate`, 8), 'walking into the stone rolls it along its groove onto the plate'); await t.ev(`__p.keys([])`); ok((await hol()).opened[1], 'and the stone door sinks'); await t.sleep(900);
+    ok(!(await t.ev(`__p.canReach(${pl.three[0]}, ${pl.three[1]})`)), 'the second room is shut by its stone door'); await t.sleep(400); await t.shot('tmp-shots/y-hol-1c-land.png');
+    // the stone is not in line with its plate: roll it across, then up
+    { const off = [pl.stone[0] + 5.6, pl.stone[1] - 1.5], st = async () => (await hol()).stone, plate = (await hol()).plate;
+      await t.ev(`__p.placeAt(${pl.stone[0] - 1.0}, ${pl.stone[1]})`); await t.sleep(2200); await t.shot('tmp-shots/y-hol-2-land.png');
+      await t.ev(`__p.keys(['d'])`); ok(await until(`__p.toy('hol').stone[0] > ${plate[0] - .06}`, 8), 'walking into the stone: it rolls the way she walks'); await t.ev(`__p.keys([])`); await t.sleep(300);
+      const s1 = await st(); ok(!(await hol()).onPlate, 'level with the plate, but not on it yet');
+      await t.ev(`__p.placeAt(${s1[0] + off[0]}, ${s1[1] + off[1] + 1.0})`); await t.sleep(1500); await t.ev(`__p.keys(['w'])`); ok(await until(`__p.toy('hol').onPlate`, 8), 'from below it, walking up: onto the plate it rolls'); await t.ev(`__p.keys([])`); }
+    ok((await hol()).opened[1], 'and the stone door sinks'); await t.sleep(900);
     await t.ev(`__p.placeAt(${pl.three[0] - 1.5}, ${pl.three[1]})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-3-land.png'); await tapSpot('kristal2'); await t.sleep(900); ok((await hol()).dir === 1 && !(await hol()).opened[2], 'a tap turns the crystal: the beam swings to the bud (a flower opens, the door stays)'); await t.shot('tmp-shots/y-hol-3b-land.png');
     await tapSpot('kristal2'); await t.sleep(1000); ok((await hol()).dir === 2 && (await hol()).opened[2], 'again: the beam is on the sun-stone, and the petal door opens'); await t.sleep(900); await t.shot('tmp-shots/y-hol-3c-land.png');
     await t.ev(`__p.placeAt(${pl.nest[0] - .9}, ${pl.nest[1] + .5})`); await t.sleep(2400); await t.shot('tmp-shots/y-hol-4-land.png'); await t.ev(`__p.tap('nestei')`); ok(await until(`__p.quest().stage === 'ei'`, 9), 'a tap on the egg in its nest: she takes it, and it is hers'); await t.sleep(600); await t.shot('tmp-shots/y-hol-egg-land.png');
     await t.ev(`__p.walkTo(${pl.two[0]}, ${pl.two[1]})`); await t.sleep(3500); const w = await t.ev('__p.who()'), g = await t.ev('__p.info()'); ok(Math.hypot(w.egg[0] - g.girl[0], w.egg[1] - g.girl[1]) < 2.2, 'the egg hops along behind her'); await t.shot('tmp-shots/y-hol-follow-land.png');
-    await t.ev(`__p.walkTo(${pl.start[0] + .4}, ${pl.start[1] + .95})`); ok(await until(`__p.info().set === 'bos'`, 14), 'and out into the forest again'); await t.sleep(1200); const w2 = await t.ev('__p.who()'), g2 = await t.ev('__p.info()'); ok(Math.hypot(w2.egg[0] - g2.girl[0], w2.egg[1] - g2.girl[1]) < 2.6, 'the egg came out with her'); await t.shot('tmp-shots/y-egg-forest-land.png');
+    await t.ev(`__p.walkTo(${pl.start[0] + .4}, ${pl.start[1] + .95})`); ok(await until(`__p.info().set === 'bos'`, 26), 'and out into the forest again'); await t.sleep(1200); const w2 = await t.ev('__p.who()'), g2 = await t.ev('__p.info()'); ok(Math.hypot(w2.egg[0] - g2.girl[0], w2.egg[1] - g2.girl[1]) < 2.6, 'the egg came out with her'); await t.shot('tmp-shots/y-egg-forest-land.png');
   }
 
   /* ---------------- the other musicians: guitar on the beach, harp hidden in the forest, flute on the hill, the herald at the castle ---------------- */
