@@ -42,5 +42,6 @@ export function picnic(S, x, y, z, guests) {
   const take = kind => () => { if (mode === 'sit') { if (!eat) { eat = { kind, t: 0, n: 0 }; sfx.hop(); } } else if (!S.playing()) sitDown(take(kind)); };
   S.tap(g, () => sitDown());
   basket.onTap = take('appel'); bowl.onTap = take('noot');
+  toy.pad = { x: take('appel'), tri: take('noot') };   // with a controller, sitting: ✕ an apple, △ a nut (○ gets up)
   return { toy, state: () => ({ mode, sits, cheered, there: guests.map(q => q.guest.there()), eating: eat ? eat.kind : null, apples, nuts }) };
 }

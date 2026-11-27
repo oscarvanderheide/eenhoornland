@@ -926,6 +926,54 @@ function pickAt(cx, cy) {
 }
 /** a finger that hit nothing: was it within a finger's width of something that answers a tap? Measured on the screen, so a
  *  thing that is small because the camera stands far back is as easy to hit as a big one (everything is at least 48 points across) */
+/* ---------------- a game controller (a PS5 DualSense, an Xbox pad: the browser's 'standard' layout), as in the pixel game ----------------
+   Oscar: "i want to be able to play this with playstation controller like pixel art game". Everything here is tapped where
+   it stands, and with a controller she walks up to it anyway, so ✕ does what is nearest her (an animal, somebody, a toy,
+   a thing; a tree only when nothing else is near; a little paper arrow shows above what it will be). Toys that offer two
+   things take ✕ and △ for them (the picnic: an apple, a nut; up in the treehouse: the telescope, the zipline).
+     left stick, d-pad   walk (ride, fly, and on a toy: push)       ✕   do what is nearest        ○   hop, or off a toy
+     △   a toy's second thing, or hello to the unicorn                 L1  the other sister          L2  on or off her unicorn
+     R2  up in the air, and down again                                 R1  day or evening            Options  the three saves
+   In the three saves: the stick picks one, ✕ plays it, ○ closes them. (A browser shows a controller to the page only after a button on it is pressed) */
+const PB = { X: 0, O: 1, SQ: 2, TRI: 3, L1: 4, R1: 5, L2: 6, R2: 7, OPT: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+const pad = { on: false, prev: [], move: [0, 0], pick: 0, lastMove: 0 };
+const spotAt = s => { const f = s.obj.children[0]?.children[0]?.userData.fig; if (f) return f.g.visible ? new THREE.Vector3(f.x, f.y + (f.lift || 0) + f.H * .45, f.z) : null; return s.c || (s.c = new THREE.Box3().setFromObject(s.obj).getCenter(new THREE.Vector3())); };
+function nearestThing() {
+  let best = null, bd = 2.4; const trees = new Set(sets.flatMap(q => q.trees.map(t => t.g)));
+  for (const s of [...baseSpots, ...sets.flatMap(q => q.tapSpots)]) {
+    const f = s.obj.children[0]?.children[0]?.userData.fig; if (f === girl || (f === uni && !inHand && !heldFall) || f === zus || (f && f.thing && !f.onTap)) continue;   // (and not a picture that does nothing: the fruit on the stall's counter)   // (the unicorn only to give her something)
+    const v = spotAt(s); if (!v || Math.abs(v.y - girl.y) > 3) continue;
+    let d = Math.hypot(v.x - girl.x, v.z - girl.z) * (trees.has(s.obj) ? 1.8 : 1); if ((v.x - girl.x) * girl.face < -.4) d += .4;   // (what is in front of her first; trees last)
+    if (d < bd) { bd = d; best = s; } }
+  return best;
+}
+const padMark = new THREE.Mesh(new THREE.ConeGeometry(.09, .2, 4), paper('#f4a6c4')); padMark.rotation.x = Math.PI; padMark.visible = false; scene.add(padMark);
+function readPad() {
+  const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(g => g && g.connected); if (!gp) { pad.move = [0, 0]; padMark.visible = false; return; }
+  const b = i => !!gp.buttons[i] && gp.buttons[i].pressed, press = i => b(i) && !pad.prev[i];
+  let x = gp.axes[0] || 0, y = gp.axes[1] || 0; if (Math.hypot(x, y) < .22) x = y = 0;
+  if (b(PB.LEFT)) x = -1; if (b(PB.RIGHT)) x = 1; if (b(PB.UP)) y = -1; if (b(PB.DOWN)) y = 1;
+  pad.move = [x, y]; if (x || y || gp.buttons.some(q => q.pressed)) pad.on = true;
+  const book = document.getElementById('savebook');
+  if (book) {   // the three saves: the stick picks one, ✕ plays it, ○ closes
+    const cards = [...book.querySelectorAll('.savecard')]; if (Math.abs(x) > .5 && performance.now() - pad.lastMove > 260) { pad.pick = (pad.pick + (x > 0 ? 1 : cards.length - 1)) % cards.length; pad.lastMove = performance.now(); }
+    cards.forEach((c, i) => c.classList.toggle('padsel', i === pad.pick)); pad.move = [0, 0];
+    if (press(PB.X)) cards[pad.pick]?.click(); if (press(PB.O) || press(PB.OPT)) book.remove();
+  } else {
+    if (press(PB.X)) { if (playing) { if (playing.pad && playing.pad.x) playing.pad.x(); else playAct = true; } else if (!through) { const s = nearestThing(); if (s) { try { s.fn(); } catch (e) { } } else { girl.hopV = 3.2; sfx.hop(); } } }
+    if (press(PB.O)) { if (playing) playAct = true; else { girl.hopV = 3.2; sfx.hop(); } }
+    if (press(PB.TRI)) { if (playing) { if (playing.pad && playing.pad.tri) playing.pad.tri(); } else if (!uni.away) tapFigure(uni); }
+    if (press(PB.L1)) swapSisters();
+    if (press(PB.L2)) { if (ride.on) { if (!flight.on) dismount(); } else mount(); }
+    if (press(PB.R2)) { if (flight.on) land(); else takeOff(); }
+    if (press(PB.R1)) skyBtn.click();
+    if (press(PB.OPT)) { pad.pick = saveSlot - 1; openSaves(); }
+  }
+  pad.prev = gp.buttons.map(q => q.pressed);
+  // the little arrow over what ✕ will do
+  const s = pad.on && !playing && !through && !flight.on ? nearestThing() : null, v = s && spotAt(s);
+  padMark.visible = !!v; if (v) padMark.position.set(v.x, v.y + .55 + Math.sin(time * 5) * .06, v.z);
+}
 function nearTap(cx, cy, reach = 24) {
   const r = canvas.getBoundingClientRect(), v = new THREE.Vector3(); let best = null, bd = reach;
   for (const s of [...baseSpots, ...sets.flatMap(q => q.tapSpots)]) {
@@ -1226,13 +1274,14 @@ function frame(now) {
 
   // her input
   let ix = 0, iz = 0;
+  readPad(); ix += pad.move[0]; iz += pad.move[1];   // (the controller's stick, like the keys)
   if (keys.has('arrowleft') || keys.has('a')) ix -= 1; if (keys.has('arrowright') || keys.has('d')) ix += 1;
   if (keys.has('arrowup') || keys.has('w')) iz -= 1; if (keys.has('arrowdown') || keys.has('s')) iz += 1;
   if (flight.landing) ix = iz = 0;   // (coming down to land: she is set on where she lands)
   if (ix || iz) { target = null; [ix, iz] = toFloor(ix, iz); }   // the stick: left is left on the screen, up is away from the camera, whatever the shot
   if (hold && !flight.landing && performance.now() - hold.t > 220) { const p = groundPoint(hold.x, hold.y); if (p) target = { x: p.x, z: p.z }; }
   if (playing) {
-    let px = 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
+    let px = Math.abs(pad.move[0]) > .5 ? Math.sign(pad.move[0]) : 0; if (keys.has('arrowleft') || keys.has('a')) px -= 1; if (keys.has('arrowright') || keys.has('d')) px += 1;
     if (hold) { const [hx] = herOnScreen(); if (Math.abs(hold.x - hx) > 14) px = Math.sign(hold.x - hx); if (hold.up !== undefined && time - Math.max(hold.up, hold.since + .28) > 0) hold = null; }   // a quick tap still pushes for a moment
     const act = playAct; playAct = false; playing.step(dt, { x: px, act }); ix = iz = 0; target = null;
   }

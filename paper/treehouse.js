@@ -104,6 +104,7 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   const begin = () => { if (S.playing() || mode) return; mode = 'up'; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); };
   const climb = () => { if (mode === 'top') { down(); return; } if (S.playing()) return; S.walkThen(foot[0], foot[1], begin, 1.0); };
   const tapsUp = new Set(); for (const o of [scope, ladder, bar]) o.traverse(m => { if (m.isMesh) tapsUp.add(m); });
+  toy.pad = { x: () => { if (mode === 'top') look(); }, tri: () => { if (mode === 'top' && view < 0 && back < 0 && A) { mode = 'grab'; t = 0; sfx.hop(); } } };   // with a controller, up there: ✕ the telescope, △ the zipline (○ climbs down)
   S.tap(bar, () => { if (!A) return; if (mode === 'top' && view < 0 && back < 0) { mode = 'grab'; t = 0; sfx.hop(); } else if (!mode) climb(); }, 'zipline');
   S.tap(ladder, climb, 'ladder'); S.tap(scope, () => { if (mode === 'top') look(); else climb(); }, 'telescope');
   return { toy, state: () => ({ mode, climbs, looks, view, up: mode === 'top', rides }), step({ dt, time }) {

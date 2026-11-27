@@ -646,4 +646,19 @@ export default async function (t) {
     await t.ev(`__p.gear({ wings: true, feathers: [] })`); await t.sleep(5000); await t.go(`http://127.0.0.1:${port}/paper/`); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1500);
     ok((await t.ev('__p.ride()')).wings, 'and her wings'); await t.shot('tmp-shots/y-save-wings-land.png');
   }
+
+  /* ---------------- a game controller: walk with the stick, ✕ does what is nearest ---------------- */
+  if (!only || only === 'pad') {
+    await open('?set=dorp', LAND); await t.sleep(1500);
+    // a pretend controller: the page asks navigator.getGamepads() every frame
+    await t.ev(`(() => { const st = window.__pad = { axes: [0, 0, 0, 0], buttons: [...Array(17)].map(() => ({ pressed: false, value: 0 })), connected: true, id: 'test pad', mapping: 'standard' }; navigator.getGamepads = () => [st]; })()`);
+    const btn = async (i, ms = 120) => { await t.ev(`__pad.buttons[${i}].pressed = true`); await t.sleep(ms); await t.ev(`__pad.buttons[${i}].pressed = false`); await t.sleep(120); };
+    const g0 = (await t.ev('__p.info()')).girl; await t.ev('__pad.axes[0] = 1'); await t.sleep(900); await t.ev('__pad.axes[0] = 0'); const g1 = (await t.ev('__p.info()')).girl;
+    ok(g1[0] - g0[0] > 1, 'the stick walks her');
+    const st = await t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === 'mand'))`); await t.ev(`__p.placeAt(${st[0] - .6}, ${st[1] + 1.1})`); await t.sleep(1800);
+    await btn(0); ok(await until(`__p.toy('kraam').held`, 5), '✕ near the stall: she takes an apple');
+    await btn(1); await t.sleep(300); ok(await t.ev('__p.hop("girl") >= 0'), '○: a hop');
+    const w0 = (await t.ev('__p.who()')).girl; await btn(4); await t.sleep(400); ok((await t.ev('__p.who()')).girl !== w0, 'L1: the other sister');
+    await btn(9); await t.sleep(500); ok(await t.ev(`!!document.getElementById('savebook')`), 'Options: the three saves'); await btn(1); await t.sleep(300); ok(!(await t.ev(`!!document.getElementById('savebook')`)), '○ closes them');
+  }
 }
