@@ -92,15 +92,22 @@ export function flowerBed(S, cx, y, cz, seed, bunch, w = 3.6, d = 2.0, tints = [
   S.root.add(slab(bed, y + .012, .012, paper('#c6d795', { map: grassMap, bump: grassBump }), paper('#a9bf7c')));
   const stone = new THREE.SphereGeometry(.075, 7, 5); for (let i = 0; i < 26; i++) { const a = i / 26 * 6.283, p = new THREE.Mesh(stone, paper(i % 2 ? '#f4ecdc' : '#e6dccb')); p.scale.set(1.2, .55, 1); p.position.set(cx + Math.cos(a) * (w / 2 + .06), y + .03, cz + Math.sin(a) * (d / 2 + .06)); p.castShadow = p.receiveShadow = true; S.root.add(p); }
   const plant = (kind, x, z, big, col) => { const f = bloom(kind, R, big, col); f.position.set(x, y + .012, z); S.root.add(f); return f; };
-  for (let i = 0; i < 5; i++) plant('sun', cx + (i - 2) * w * .17, cz - d * .3 + Math.abs(i - 2) * .06, 1.25);                       // the back: sunflowers, the middle one furthest back
-  for (let i = 0; i < 7; i++) plant('daisy', cx + (i - 3) * w * .12, cz + d * .32 - Math.abs(i - 3) * .05, .85, i % 2 ? '#f2efe6' : '#f4a6c4');   // the front: daisies, white and pink in turn
-  for (const s of [-1, 1]) plant('spike', cx + s * w * .4, cz + .02, 1.2, '#bba6ea');
-  const tulips = [];
-  for (let i = 0; i < 6; i++) {
-    const x = cx + (i - 2.5) * w * .12, z = cz + .02, what = { kind: 'tulip', seed: seed * 31 + i + 1, big: 1.35, col: tints[i % 2] }, f = bloom(what.kind, rnd(what.seed), what.big, what.col); f.position.set(x, y + .012, z); S.root.add(f); f.userData.live = true; S.glue(f);
-    const o = { f, at: S.at([x, z]), back: 0 }; tulips.push(o);
-    S.tap(f, () => { if (S.playing() || !f.visible) return; S.walkThen(o.at[0], o.at[1] + .75, () => { if (!f.visible) return; f.visible = false; o.back = 40 + R() * 20; bunch.add(o.at[0], y, o.at[1], what); }, 1.3); });
-  }
+  // Posies, not rows (Oscar, 2026-11-27: "groups with different combinations of flowers"): five groups in the bed, three at the
+  // back and two in front, each a few tall flowers of one kind in the middle with a ring of small ones of another kind round
+  // them. The two beds beside her house are planted differently (`tints` says which). The tulips, in the two front posies, can be picked.
+  const A = tints[0] === '#e98f8f', sx = w / 3.6, sz = d / 2.0, tulips = [];
+  const ring = (gx, gz, kind, col, m, r = .31, big = .82) => { for (let i = 0; i < m; i++) { const a = i / m * 6.283 + gx; plant(kind, cx + gx + Math.cos(a) * r, cz + gz + Math.sin(a) * r * .72, big, col); } };
+  const middle = (gx, gz, kind, col, pts, big = 1.25) => pts.forEach(([dx, dz]) => plant(kind, cx + gx + dx, cz + gz + dz, big, col));
+  const TRIO = [[0, -.1], [-.13, .07], [.13, .07]], PAIR = [[-.14, 0], [.14, 0]], ONE = [[0, 0]];
+  const back = A ? [['sun', null, ONE, 'daisy', '#f2efe6'], ['sun', null, PAIR, 'spike', '#bba6ea'], ['rose', null, TRIO, 'daisy', '#f4a6c4']]
+                 : [['rose', null, TRIO, 'daisy', '#f2c65c'], ['spike', '#9ed9cf', TRIO, 'daisy', '#f2efe6'], ['sun', null, ONE, 'spike', '#f4a6c4']];
+  back.forEach(([kind, col, pts, rk, rc], k) => { const gx = (k - 1) * 1.08 * sx, gz = (-.48 - (k === 1 ? .08 : 0)) * sz; ring(gx, gz, rk, rc, rk === 'spike' ? 4 : 5); middle(gx, gz, kind, col, pts, kind === 'sun' ? 1.25 : 1.15); });
+  [[-.58, tints[0], A ? '#f2c65c' : '#f2efe6'], [.58, tints[1], A ? '#f2efe6' : '#b9a3e0']].forEach(([gx0, tcol, rc], g) => {
+    const gx = gx0 * sx, gz = .42 * sz; ring(gx, gz, 'daisy', rc, 5, .3, .78);
+    TRIO.forEach(([dx, dz], i) => { const x = cx + gx + dx * 1.15, z = cz + gz + dz, what = { kind: 'tulip', seed: seed * 31 + g * 3 + i + 1, big: 1.35, col: tcol }, f = bloom(what.kind, rnd(what.seed), what.big, what.col); f.position.set(x, y + .012, z); S.root.add(f); f.userData.live = true; S.glue(f);
+      const o = { f, at: S.at([x, z]), back: 0 }; tulips.push(o);
+      S.tap(f, () => { if (S.playing() || !f.visible) return; S.walkThen(o.at[0], o.at[1] + .75, () => { if (!f.visible) return; f.visible = false; o.back = 40 + R() * 20; bunch.add(o.at[0], y, o.at[1], what); }, 1.3); }); });
+  });
   return { state: () => ({ tulips: tulips.map(o => ({ at: o.at, there: o.f.visible })) }), step({ dt }) { for (const o of tulips) if (o.back > 0) { o.back -= dt; if (o.back <= 0) o.f.visible = true; } } };
 }
 /** The fountain: a round basin of pale stone, a pillar, a bowl on top, and water that leaps in paper drops (three cut-outs of

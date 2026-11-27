@@ -384,4 +384,16 @@ export default async function (t) {
     const i1 = await t.ev('__p.info()'); ok(i1.girl[1] < b.lip[1] - 3 && i1.lift === 0 && await t.ev('__p.uniOk()'), 'she and the unicorn stand on the far side'); await t.shot('tmp-shots/y-gap-over-land.png');
     await tapOn('paalnoord'); ok(await until(`__p.toy('kloof').crossings === 2`, 8), 'and back again the same way'); await t.sleep(600); ok((await t.ev('__p.info()')).girl[1] > b.lip[1] - 1.5, 'she is on the beach side again');
   }
+
+  /* ---------------- the frisbee on the beach: she throws it, the unicorn brings it back ---------------- */
+  if (!only || only === 'frisbee') {
+    await open('?set=strand', LAND); await t.sleep(1500);
+    const toy = () => t.ev(`__p.toy('frisbee')`), p0 = (await toy()).at;
+    await t.ev(`__p.placeAt(${p0[0] - 1.6}, ${p0[1] + .9})`); await t.sleep(2400); await t.shot('tmp-shots/y-frisbee-land.png');
+    await t.ev(`__p.tap('frisbee')`); ok(await until(`__p.toy('frisbee').held`, 5), 'a tap on the frisbee: she picks it up'); await t.sleep(400);
+    await t.ev(`__p.tap('frisbee')`); await t.sleep(600); ok((await toy()).flying, 'a tap on it in her hands: she throws it'); await t.shot('tmp-shots/y-frisbee-fly-land.png');
+    ok(await until(`!__p.toy('frisbee').flying`, 9), 'it sails and lands'); const a = await toy(); ok(a.far > 4, `a good way off (${a.far.toFixed(1)} steps)`);
+    ok(await until(`__p.toy('frisbee').fetching`, 3), 'the unicorn runs after it'); await t.sleep(900); await t.shot('tmp-shots/y-frisbee-fetch-land.png');
+    ok(await until(`__p.toy('frisbee').fetched === 1`, 12), 'and brings it back to her'); const b = await toy(), g = await t.ev('__p.info()'); ok(Math.hypot(b.at[0] - g.girl[0], b.at[1] - g.girl[1]) < 2.2 && await t.ev('__p.uniOk()'), 'it lies at her feet'); await t.sleep(400); await t.shot('tmp-shots/y-frisbee-back-land.png');
+  }
 }

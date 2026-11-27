@@ -273,3 +273,48 @@ export function plane(S, x, y, z) {
     else { f.x = at[0]; f.z = at[1]; f.floatY = undefined; f.lean = 0; f.face = 1; }
   } };
 }
+
+/* ---------------- the frisbee ---------------- */
+const DISC = (cx, cy, rx, ry) => { const p = []; for (let i = 0; i < 22; i++) { const a = i / 22 * 6.283; p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p; };
+const FRISBEE = { w: 130, h: 70, frames: 1, size: .19, thing: true, draw(g) { piece(g, '#e98f8f', P(DISC(65, 36, 54, 22))); piece(g, '#fbf5ea', P(DISC(65, 33, 36, 13)), .4); piece(g, '#f2c65c', P(DISC(65, 32, 15, 5.5)), .4); } };
+/** A frisbee (Oscar likes playing with the ball: "maybe we can have a frisbee on the beach"). It lies on the sand. A tap:
+ *  she picks it up. A tap on it in her hands: she throws it the way she faces. It sails level while it is fast, bends
+ *  towards the camera, sinks as it slows, and lands. Then the unicorn runs after it and brings it back to her. From the sea
+ *  it comes back to the shore first. */
+export function frisbee(S, x, y, z) {
+  const { girl, uni, sfx } = S, f = S.figure('frisbee', FRISBEE), [hx, hz] = S.at([x, z]), me = {};
+  let at = [hx, hz], held = false, fly = null, fetch = null, throws = 0, fetched = 0, far = 0, wash = 0;
+  const down = () => { held = false; girl.poseName = null; at = [girl.x + girl.face * .5, girl.z + .2]; };
+  const ashore = (px, pz, sx, sz) => { for (let k = 0; k <= 60; k++) { const qx = px + (sx - px) * k / 60, qz = pz + (sz - pz) * k / 60, h = S.heightAt(qx, qz); if (h !== null && S.free(qx, qz, h)) return [qx, qz]; } return [sx, sz]; };
+  f.onTap = () => {
+    if (fly || fetch || wash > 0 || S.playing()) return;
+    if (held) { held = false; S.hands.free(me); girl.poseName = null; throws++; const d = girl.face || 1; fly = { x: girl.x + d * .3, y: S.hand().y + .1, z: girl.z + .1, v: 6.2, th: d > 0 ? 0 : Math.PI, turn: d * .22, vy: .5, t: 0, x0: girl.x, z0: girl.z }; sfx.swish(3); return; }
+    S.walkThen(at[0] - .35, at[1] + .15, () => { S.hands.take(me, down); held = true; sfx.hop(); }, 1.0);
+  };
+  f.act = tick => { f.tilt = fly ? Math.sin(tick * .9) * .14 : 0; };
+  return { f, state: () => ({ held, flying: !!fly, fetching: !!fetch, throws, fetched, far, at }), step({ dt }) {
+    if (wash > 0) { wash -= dt; if (wash <= 0) { f.g.visible = true; f.hopV = 1.8; fetch = { phase: 'go', t: 0 }; } return; }
+    if (fly) {
+      const q = fly; q.t += dt; q.v *= Math.exp(-.42 * dt); q.th += q.turn * dt; q.vy += 5 * (Math.min(1.12, (q.v / 5) ** 2) - 1) * dt; q.vy *= Math.exp(-.8 * dt);
+      q.x += Math.cos(q.th) * q.v * dt; q.z += Math.sin(q.th) * q.v * dt; q.y += q.vy * dt;
+      f.x = q.x; f.z = q.z; f.floatY = f.y = q.y - f.H / 2; f.face = 1;
+      const h = S.heightAt(q.x, q.z), floor = h === null ? -.55 : h;
+      if (q.y <= floor + .1 || q.t > 8) { far = Math.hypot(q.x - q.x0, q.z - q.z0); fly = null;
+        if (h === null || !S.free(q.x, q.z, h)) { if (h === null) { sfx.splash(); S.confetti(q.x, -.3, q.z, ['#8fc3cc', '#f6efe2', '#7fbcc0'], 12, undefined, 2.4); f.g.visible = false; wash = 1.1; } at = ashore(q.x, q.z, q.x0, q.z0); if (h !== null) fetch = { phase: 'go', t: 0 }; }
+        else { at = [q.x, q.z]; sfx.thud(); S.confetti(q.x, h + .08, q.z, ['#ecd3a0', '#f7ecd0'], 5, undefined, 1.2); fetch = { phase: 'go', t: 0 }; } }
+      return;
+    }
+    f.g.visible = !(held && S.playing());
+    if (fetch) {   // the unicorn runs to it, takes it, and brings it to her
+      fetch.t += dt; const goal = fetch.phase === 'go' ? at : [girl.x, girl.z], dx = goal[0] - uni.x, dz = goal[1] - uni.z, d = Math.hypot(dx, dz) || 1;
+      if (S.playing() || fetch.t > 10 || Math.hypot(girl.x - uni.x, girl.z - uni.z) > 22) { if (fetch.phase === 'bring') at = [uni.x + uni.face * .4, uni.z + .15]; uni.busy = false; fetch = null; }
+      else { uni.busy = true; const reach = fetch.phase === 'go' ? .55 : 1.3;
+        if (d > reach) { S.move(uni, dx / d * 3.6 * dt, dz / d * 3.6 * dt); uni.walking = true; if (Math.abs(dx) > .1) uni.face = Math.sign(dx); }
+        else if (fetch.phase === 'go') { fetch.phase = 'bring'; uni.hopV = 1.6; sfx.hop(); }
+        else { at = [uni.x + uni.face * .45, uni.z + .16]; fetched++; uni.busy = false; fetch = null; uni.hopV = 2.2; sfx.neigh(); } }
+      if (fetch && fetch.phase === 'bring') { f.x = uni.x + uni.face * .34; f.z = uni.z + .05; f.floatY = f.y = (uni.y || 0) + .46; return; }
+    }
+    if (held) { if (S.playing()) return; girl.poseName = 'hold'; const h = S.hand(); f.x = h.x + girl.face * .1; f.z = h.z + .05; f.floatY = f.y = h.y - .06; }
+    else { f.x = at[0]; f.z = at[1]; f.floatY = undefined; }
+  } };
+}
