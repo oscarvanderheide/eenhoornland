@@ -73,3 +73,22 @@ export function mushroom(S, x, y, z, r = .5, col = '#e98f8f', power = 1) {
     if (squash > .01) { t += dt; squash *= Math.exp(-dt * 5); const k = Math.sin(t * 22) * squash; cap.scale.set(1 + k * .18, 1 - k * .3, 1 + k * .18); } else cap.scale.set(1, 1, 1);
   } };
 }
+
+/* ---------------- the rainbow tree ---------------- */
+/** The tree in the middle of the rainbow island: a pale trunk, a big round crown of cloud-white paper, and fruit in
+ *  every colour of the rainbow hanging from it. A tap shakes it, and a rainbow fruit falls (one at a time: while one lies
+ *  about, the tree only rustles). Given to the baby unicorn, the fruit makes her grow (paper.js growUni) */
+export function rainbowTree(S, x, y, z) {
+  const g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g);
+  const mesh = (geo, col) => { const m = new THREE.Mesh(geo, paper(col)); m.castShadow = m.receiveShadow = true; return m; };
+  const trunk = mesh(new THREE.CylinderGeometry(.16, .26, 2.0, 10), '#e8d9c4'); trunk.position.y = 1.0; g.add(trunk);
+  const crown = new THREE.Group(); crown.userData.live = true; crown.position.y = 2.0; g.add(crown);
+  const PASTEL = ['#f8d3d8', '#fbe0c4', '#fbf0bc', '#d5efd2', '#cfe6f4', '#e2d8f4'];   // the crown in the rainbow's colours, pale
+  [[0, .55, 0, .95], [-.8, .25, .1, .7], [.82, .28, .05, .72], [-.35, .95, -.1, .62], [.4, .98, -.05, .64], [0, .2, .45, .6]].forEach(([dx, dy, dz, r], i) => { const c = mesh(new THREE.SphereGeometry(r, 14, 10), PASTEL[i]); c.scale.y = .82; c.position.set(dx, dy, dz); crown.add(c); });
+  // the fruit hangs under the crown's edge, on little stalks, where it shows
+  BANDS.forEach((c, i) => { const a = (i + .5) / BANDS.length * Math.PI, px = Math.cos(a) * 1.0, pz = .25 + Math.sin(a) * .45, fr = mesh(new THREE.SphereGeometry(.12, 10, 8), c); fr.position.set(px, -.22 - (i % 2) * .12, pz); crown.add(fr); const st = mesh(new THREE.CylinderGeometry(.012, .012, .22, 4), '#7a5a3e'); st.position.set(px, -.06 - (i % 2) * .06, pz); crown.add(st); });
+  S.glue(crown); S.solid({ x, z, r: .35 });
+  let wob = 0, shakes = 0;
+  S.tap(g, () => { wob = 1; shakes++; S.sfx.rustle(); if (S.lying('regenboog') === 0) S.dropFrom('regenboog', x + .7, z + .6, y + 2.2); }, 'regenboogboom');
+  return { state: () => ({ shakes, fruit: S.lying('regenboog') }), step({ dt, time }) { if (wob > 0) { wob = Math.max(0, wob - dt * 1.6); crown.rotation.z = Math.sin(time * 22) * .06 * wob; } } };
+}

@@ -129,6 +129,13 @@ function drawMand(g) {
 }
 
 // a red apple with a leaf
+/** the rainbow fruit from the rainbow island's tree: round, in bands of the rainbow, a leaf on top */
+function drawRegenboog(g) {
+  piece(g, '#7A5A3E', C(40, 22, 42, 10, 2.4)); piece(g, '#7FB069', S([[42, 16], [52, 6], [64, 10], [64, 10], [54, 18]]));
+  const B = ['#E98F8F', '#F2B56B', '#F2D86B', '#9ED9A0', '#8FC3E0', '#BBA6EA'];
+  g.save(); piece(g, B[0], E(40, 50, 28, 28)); if (g.colour) { g.beginPath(); g.ellipse(40, 50, 26, 26, 0, 0, 6.283); g.clip(); B.forEach((c, i) => { g.fillStyle = c; g.fillRect(10, 24 + i * 9, 60, 9.5); }); } g.restore();
+  ink(g, 'rgba(255,255,255,.55)', E(30, 38, 5, 8, .5));
+}
 /** a coin: round and golden, a lighter ring, a little star pressed in */
 function drawMunt(g) {
   piece(g, '#E0A93A', E(32, 32, 26, 26)); piece(g, '#F2C65C', E(32, 32, 21, 21), .3);
@@ -209,6 +216,7 @@ export const THINGS = {
   noot: { w: 48, h: 54, draw: drawNoot, frames: 2, size: .11, does: ['whole', 'cracked'] },
   schaal: { w: 130, h: 100, draw: drawSchaal, frames: 1, size: .26, does: ['a bowl of nuts'] },
   peer: { w: 70, h: 80, draw: drawPeer, frames: 1, size: .2, does: ['pear'] },
+  regenboog: { w: 80, h: 84, draw: drawRegenboog, frames: 1, size: .26, does: ['rainbow fruit'] },
   munt: { w: 64, h: 64, draw: drawMunt, frames: 1, size: .2, does: ['coin'] },
   rups: { w: 60, h: 122, draw: drawRups, frames: 2, size: .4, does: ['wriggle', 'wriggle'] },
   sok: { w: 90, h: 110, draw: drawSok, frames: 1, size: .22, does: ['sock'] },

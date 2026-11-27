@@ -6,7 +6,7 @@
 // The rainbow stands in the north, behind everything: nothing tall between her and the camera.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
 import { shore, meadow, bouquet, pinwheel, bench, lantern, GROUND } from './props.js';
-import { rainbow, paint, mushroom, BANDS } from './wonders.js';
+import { rainbow, paint, mushroom, rainbowTree, BANDS } from './wonders.js';
 import { flamingo, parrot, rabbit } from './critters2.js';
 import { regenboogLand, BACK } from './lands.js';
 import { findSpots, inOval, plantAt, cottonTree, pompom, sprinkle } from './flora.js';
@@ -41,6 +41,7 @@ export default {
 
     /* ---------------- things ---------------- */
     const bow = rainbow(S, 0, H_GRASS, -3.6), bunch = bouquet(S);
+    const fruitTree = rainbowTree(S, 1.8, H_GRASS, 1.6);   // the rainbow tree, in the island's open middle: its fruit makes the baby unicorn grow (wonders.js)
     const pots = paint(S, [{ x: -4.6, z: 3.4, r: .62, col: '#e98f8f' }, { x: -2.2, z: 4.6, r: .56, col: '#8fc3e0' }, { x: .6, z: 4.2, r: .6, col: '#f2d86b' }], H_GRASS);
     const shrooms = [mushroom(S, -7.0, H_GRASS, -3.2, .42, '#e98f8f', .6), mushroom(S, -6.0, H_GRASS, -2.3, .5, '#f2b56b', 1), mushroom(S, -7.2, H_GRASS, -1.5, .62, '#bba6ea', 1.6), mushroom(S, -8.2, H_GRASS, -2.5, .36, '#9ed9a0', .3)];
     const live = { flamingo: flamingo(S, 6.2, 2.5), flamingo2: flamingo(S, 7.3, 2.9, 'flamingo2'), papegaai: parrot(S, 4.4, -2.2, 1.25), konijn: rabbit(S, [[3.2, 4.6], [5.4, 5.2], [1.9, 5.6]]) };
@@ -74,17 +75,17 @@ export default {
       start: [BR.x1 + 1.2, 0], uni: [BR.x1 + .4, .6],
       shadow: { follow: 20 }, back: BACK, sky: 3,
       step(e) {
-        bow.step(e); pots.step(e); bunch.step(e); grass.step(e);
+        bow.step(e); pots.step(e); bunch.step(e); grass.step(e); fruitTree.step(e);
         for (const q of [...shrooms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass },
+      toys: { ...live, boom: fruitTree, regenboog: bow, verf: pots, paddenstoel: shrooms[2], bos: bunch, gras: grass },
       shots: [
         { name: 'brug-regenboog', zone: [BR.x0 + .9, -1.5, BR.x1 - .2, 1.5], span: 26, tall: 13, rise: .42, dof: .7, range: 2.2, play: false },
         { name: 'boog', zone: [-4.8, -5.4, 4.8, -1.2], span: 17, tall: 10, rise: .3 },   // by the rainbow: far enough back to see the whole arch
         { name: 'regenboog', span: 15, tall: 8.5, rise: .32 },
       ],
       spots: { regenboog: [2.55, 2.55, -3.6], paddenstoel: [-7.2, .6, -1.5] },
-      places: { start: [BR.x1 + 1.2, 0], middle: [-.2, 1.2], bow: [-.1, -2.2], paint: [-4.6, 4.6], pond: [5.2, 3.6], shrooms: [-5.6, -1.2], rabbit: [3.4, 5.9], west: [BR.x0 + 2, 0] },
+      places: { start: [BR.x1 + 1.2, 0], middle: [-.2, 1.2], tree: [1.8, 3.0], bow: [-.1, -2.2], paint: [-4.6, 4.6], pond: [5.2, 3.6], shrooms: [-5.6, -1.2], rabbit: [3.4, 5.9], west: [BR.x0 + 2, 0] },
     };
   },
 };

@@ -589,4 +589,21 @@ export default async function (t) {
     await t.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }); await t.sleep(1600); await t.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
     await t.sleep(800); for (let i = 0; i < 20 && !(await t.ev('!!window.__p')); i++) await t.sleep(500); await t.sleep(1200); ok((await t.ev('__p.quest()')).stage === 'dream', 'held: the save starts afresh, with the dream');
   }
+
+  /* ---------------- the rainbow fruit: the unicorn grows, and she rides it ---------------- */
+  if (!only || only === 'ride') {
+    await open('', LAND); await t.sleep(1500); await t.ev(`__p.quest({ stage: 'zoek' })`); await t.ev(`__p.keys(['d'])`); await t.sleep(300); await t.ev(`__p.keys([])`); await t.sleep(900);
+    await t.ev('__p.open()');
+    const rb = await t.ev(`__p.places('regenboog')`), r = () => t.ev('__p.ride()');
+    await t.ev(`__p.placeAt(${rb.tree[0] - 1.2}, ${rb.tree[1] + .6})`); await t.ev('__p.hatched()'); await t.sleep(2600); ok(!(await r()).grown && !(await r()).button, 'a baby unicorn: no riding yet, no button');
+    await t.ev(`__p.tap('regenboogboom')`); await t.sleep(1800); ok(await t.ev(`__p.fallen().some(o => o.kind === 'regenboog' && o.mode === 'lie')`), 'a tap on the rainbow tree: a rainbow fruit falls'); await t.shot('tmp-shots/y-tree-fruit-land.png');
+    await t.ev(`__p.tap('val-regenboog')`); ok(await until(`__p.fallen().some(o => o.kind === 'regenboog' && o.mode === 'held')`, 5), 'she picks it up');
+    await t.sleep(400); await t.ev(`__p.tap('unicorn')`); await t.sleep(1400); await t.shot('tmp-shots/y-grow-land.png'); ok(await until(`__p.ride().grown`, 3), 'given to the baby: she eats it, and grows');
+    await t.sleep(2200); ok((await r()).button, 'the ride button shows'); await t.shot('tmp-shots/y-grown-land.png');
+    const [bx, by] = await t.ev(`(r => [r.left + r.width / 2, r.top + r.height / 2])(document.getElementById('ride').getBoundingClientRect())`); await t.click(bx, by); await t.sleep(700);
+    ok((await r()).on, 'a tap on the button: she is on her unicorn'); await t.shot('tmp-shots/y-ride-land.png');
+    const g0 = (await t.ev('__p.info()')).girl; await t.ev(`__p.walkTo(${rb.middle[0] - 3}, ${rb.middle[1] + 1})`); await t.sleep(2000); const g1 = await t.ev('__p.info()'), u1 = await t.ev('__p.uniAt ? __p.uniAt() : null');
+    ok((await r()).on && Math.hypot(g1.girl[0] - g0[0], g1.girl[1] - g0[1]) > 2, 'and they ride off together'); await t.shot('tmp-shots/y-riding-land.png');
+    await t.click(bx, by); await t.sleep(600); ok(!(await r()).on && (await t.ev('__p.info()')).lift === 0, 'the button again: she slides off');
+  }
 }

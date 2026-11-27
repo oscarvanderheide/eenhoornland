@@ -72,7 +72,7 @@ export function drawBabyBack(g, f) {
   piece(g, u.mint, E(cx + 7 + k, 142, 9, 12, -.3), .7); piece(g, u.lilac, E(cx - 7 + k, 134, 10, 12, .3), .7); piece(g, u.pink, E(cx + k, 120, 13, 15), .7);
 }
 /** the grown unicorn: tall and slender, a long horn, a flowing mane and tail, wings folded on her side */
-export function drawGrown(g, f) {
+export function drawGrown(g, f, wing = true) {
   const s = swing(f), u = UNI;
   piece(g, u.shade, C(104, 196, 102 - s * 9, 262, 10, 8)); piece(g, u.hoof2, E(105 - s * 9, 268, 12, 7));
   piece(g, u.shade, C(178, 196, 180 + s * 9, 262, 10, 8)); piece(g, u.hoof2, E(183 + s * 9, 268, 12, 7));
@@ -85,10 +85,12 @@ export function drawGrown(g, f) {
   piece(g, u.body, S([[158, 178], [166, 136], [184, 108], [206, 96], [226, 106], [222, 140], [214, 192]]));
   piece(g, u.body, C(116, 196, 112 - s * 9, 266, 12, 9)); piece(g, u.hoof, E(115 - s * 9, 272, 13, 8));
   piece(g, u.body, C(190, 196, 192 + s * 9, 266, 12, 9)); piece(g, u.hoof, E(195 + s * 9, 272, 13, 8));
-  // the folded wing: a rounded shoulder and long feathers sweeping back, a pastel row under a pearl row
+  // the folded wing: a rounded shoulder and long feathers sweeping back, a pastel row under a pearl row (only once she has her wings)
+  if (wing) {
   piece(g, u.lilac, S([[174, 170], [166, 150], [140, 142], [110, 146], [80, 158], [98, 164], [76, 174], [100, 178], [86, 190], [116, 186], [126, 196], [148, 186]]), .8);
   piece(g, '#FFFDF8', S([[176, 166], [170, 144], [148, 134], [120, 136], [92, 148], [110, 154], [90, 164], [114, 168], [104, 180], [130, 176], [140, 186], [158, 178]]), .8);
   line(g, u.shade, 2, [[150, 150], [112, 158]]); line(g, u.shade, 2, [[156, 160], [120, 170]]);
+  }
   g.save(); g.translate(-8, 24);
   // head and muzzle
   piece(g, u.body, U(E(228, 82, 35, 32, -.1), E(250, 100, 21, 18, .3)));
@@ -113,5 +115,6 @@ export const FIGS = {
   fenna: { w: 200, h: 276, kid: 'fenna', draw: kidDraw('fenna', 'side'), front: kidDraw('fenna', 'front'), back: kidDraw('fenna', 'back'), frames: 1 + WALK, size: 1.38 },
   baby: { w: 220, h: 200, draw: drawBaby, front: drawBabyFront, back: drawBabyBack, frames: 1 + WALK, size: .95 },
   grown: { w: 280, h: 284, draw: drawGrown, frames: 1 + WALK, size: 1.75 },
+  groot: { w: 280, h: 284, draw: (g, f) => drawGrown(g, f, false), frames: 1 + WALK, size: 1.75 },   // grown, before she has her wings
 };
 

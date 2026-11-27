@@ -246,7 +246,10 @@ function buildSet(def) {
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
     land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
     where: () => set.name,   // the set she stands on now
-    world: obj => { scene.add(obj); return obj; },   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
+    world: obj => { scene.add(obj); return obj; },
+    dropFrom: (kind, x, z, top) => { const [wx, wz] = W([x, z]); dropFrom(kind, new THREE.Vector3(wx, heightAt(wx, wz) ?? 0, wz), top, 'leaf'); },   // something falls out of a tree here (the set's measure; top: how high)
+    lying: kind => fallen.filter(o => o.kind === kind && !o.gone).length,   // how many of these lie about (or are held) just now
+    grown: () => gear.grown,   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
     coins, closet, coinAt: (x, z, y) => { const [wx, wz] = W([x, z]); s.coinN = (s.coinN || 0) + 1; return coinAt(wx, wz, y, s.name + ':' + s.coinN); },   // her coins; what she wears; a coin lying somewhere (the set's measure)
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
@@ -304,7 +307,7 @@ function loadWorld(name) {
   // the theatre stands behind everything that exists
   theatre.position.z = Math.min(...sets.map(s => s.back || 0)); { const k = Math.max(...sets.map(s => s.sky || 1)); sky.scale.set(k, 1, k); }
   [girl.x, girl.z] = set.start; [uni.x, uni.z] = set.uni; uni.face = 1;
-  gear.snorkel = gear.hook = gear.potion = name !== group[0]; quest.stage = 'baby'; uni.away = false; eggShow = 0;
+  gear.snorkel = gear.hook = gear.potion = gear.grown = gear.wings = name !== group[0]; quest.stage = 'baby'; uni.away = false; eggShow = 0; uni.become(FIGS[gear.grown ? 'grown' : 'baby']);
   if (name !== group[0]) openGates();   // started beyond the village (a look at one island): the ways there are open
   // a new world is a cut: the camera is there at once
   shot = set.shots[set.shots.length - 1]; shot = shotFor(girl.x, girl.z); Object.assign(cam, shot); camCut = true;
@@ -565,7 +568,7 @@ function stepWater(dt) {
 /** Where the story stands (quest.js): 'dream' at the very start, 'zoek' while the egg is to be found, 'baby' once the unicorn is with her */
 const quest = { stage: 'baby' }, shared = {}; let eggShow = 0;
 /** Her tools (gear.js): what she has for good. A start somewhere beyond the village has them all, like the open gates */
-const gear = { snorkel: false, hook: false, potion: false };
+const gear = { snorkel: false, hook: false, potion: false, grown: false, wings: false, feathers: [] };   // (grown: the unicorn ate the rainbow fruit; wings: the witch brewed them from three feathers)
 /** the cards that are things, not somebody: nobody gives them a flower (the scarecrow and its birds do count as somebody) */
 const LIFELESS = new Set([...Object.entries(THINGS).filter(([n]) => n !== 'vogelverschrikker' && n !== 'vogel').map(([, v]) => v), ...Object.values(PROPS)]);
 /* Her hands: she carries one thing at a time. Whatever she takes says so (and how to put itself down); taking the next
@@ -594,7 +597,7 @@ function tapFigure(f) {
    gets it. Sometimes a caterpillar comes down on its thread, wriggles, and climbs back up (at a tap, or after a while).
    Now and then a sock flutters down, or a boot; and once in a long while a birdwatcher tumbles out, sits a moment dazed,
    waves, and wanders off. What lies about long enough is gone again. */
-const fallen = [], EATS = new Set(['appel', 'denappel']); let shakes = 0, heldFall = null;
+const fallen = [], EATS = new Set(['appel', 'denappel', 'regenboog']); let shakes = 0, heldFall = null;
 const threadMat = new THREE.MeshBasicMaterial({ color: '#f6efe2' });
 function shake(t) {
   if ((t.next || 0) > time || playing) return; t.next = time + 4 + Math.random() * 5;
@@ -623,6 +626,7 @@ function tapFallen(o) {
 }
 offers.push(who => {   // what fell from a tree, given to whoever she taps next: fruit is eaten, anything else makes them jump
   const o = heldFall; if (!o) return false; heldFall = null; hands.free(o); girl.poseName = null; removeFallen(o);
+  if (o.kind === 'regenboog' && who === uni && !gear.grown) { growUni(); return o.kind; }   // the rainbow fruit: the baby grows
   who.hopV = EATS.has(o.kind) ? 2.6 : 3.4; if (EATS.has(o.kind)) sfx.munch(); else sfx.boing();
   confetti(who.x, (who.y || 0) + .7, who.z, EATS.has(o.kind) ? ['#d9574f', '#f6efe2', '#a77e54'] : ['#e98f8f', '#f6efe2', '#f2c65c'], 9, undefined, 1.8); return o.kind;
 });
@@ -686,11 +690,38 @@ const closet = {
   buy(id) { wardrobe.own.add(id); closet.put(id); },
   put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
 };
+/* ---------------- the unicorn grows, and she rides it ----------------
+   The rainbow island's tree drops a rainbow fruit when shaken (set-regenboog.js); given to the baby unicorn, she eats it
+   and grows (a moment to watch: the camera comes close, stars, and she stands there big). From then on a round button
+   bottom right (the unicorn's head) puts her on its back: she rides wherever she walks, faster; the button again and she
+   slides off. A toy or a door gets her off first. Riding is a way of walking, not a toy: taps still go where she rides */
+const ride = { on: false, t: 0, moving: false }, BACK = .8;
+function growUni() {
+  gear.grown = true; sfx.neigh(); uni.hopV = 3.4;
+  const w = { look: [uni.x, uni.z], shot: { span: 6.4, tall: 4.6, rise: .24, riseTall: .38, fx: 1, fz: 1, lag: 1, dof: 1.4, range: .8 }, t: 0, step(dt) { this.t += dt;
+    if (this.t > .7 && !this.grew) { this.grew = true; uni.become(FIGS[gear.wings ? 'grown' : 'groot']); uni.hopV = 3; sfx.chime(); confetti(uni.x, uni.y + 1.2, uni.z, ['#e98f8f', '#f2b56b', '#f2d86b', '#9ed9a0', '#8fc3e0', '#bba6ea'], 34, starGeo, 3.2); }
+    if (this.t > 2.6) { stopPlay(); coins.reward('groot', uni.x, uni.y + 1.6, uni.z); } } };
+  confetti(uni.x, uni.y + .6, uni.z, ['#f2c65c', '#fbf5ea'], 12, starGeo, 2); play(w);
+}
+function mount() { if (ride.on || !gear.grown || uni.away || playing || through || flight.on) return; if (inHand) { const d = inHand.drop; inHand = null; d(); }
+  ride.on = true; ride.t = 0; uni.busy = true; target = null; sfx.neigh(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f8dde4'], 8, starGeo, 1.8); }
+function dismount(quick) { if (!ride.on) return; ride.on = false; uni.busy = false; uni.lift = 0; girl.lift = 0; girl.poseName = null; girl.view = 'front';
+  if (!quick) { const side = [[girl.face * .9, .2], [-girl.face * .9, .2], [0, .8]].map(([dx, dz]) => [girl.x + dx, girl.z + dz]).find(([x, z]) => heightAt(x, z) !== null && free(x, z, heightAt(x, z), uni)); if (side) [uni.x, uni.z] = side; girl.hopV = 2.4; sfx.hop(); } }
+function stepRide(dt) {
+  if (!ride.on) return; ride.t += dt; const k = Math.min(1, ride.t / .3);
+  ride.moving = girl.walking; girl.walking = false;   // (she sits; the unicorn walks)
+  uni.x = girl.x + girl.face * .08; uni.z = girl.z - .06; uni.face = girl.face; uni.walking = ride.moving; uni.view = 'side'; uni.lift = flight.alt;
+  girl.poseName = 'sit'; girl.view = 'side'; girl.lift = BACK * k + Math.sin(k * Math.PI) * .4 + flight.alt;
+}
+const rideBtn = document.getElementById('ride');
+if (rideBtn) rideBtn.addEventListener('click', e => { e.stopPropagation(); if (ride.on) { if (!flight.on) dismount(); } else mount(); });
+function showRide() { if (!rideBtn) return; const can = gear.grown && !uni.away && !playing && !through && !flight.on; rideBtn.hidden = !can; rideBtn.classList.toggle('on', ride.on); }
+const flight = { on: false, alt: 0 };   // (flying: slice 3)
 const handPoint = () => { girl.g.updateMatrixWorld(true); return girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).hold); };
 
 /* ---------------- toys: something that takes her over for a while (toys.js) ---------------- */
 let playing = null, playAct = false;
-function play(toy) { playing = toy; target = null; playAct = false; }
+function play(toy) { if (ride.on) dismount(true); playing = toy; target = null; playAct = false; }
 function stopPlay() { playing = null; girl.lift = 0; girl.lean = 0; girl.poseName = null; target = null; uni.busy = false; uni.lift = 0; uni.lean = 0; }
 /** send her to a spot and do something when she is there (or as near as she can get, if that is within `near`) */
 function walkThen(x, z, then, near = .3) { if (Math.hypot(girl.x - x, girl.z - z) < .2) { then(); return; } target = goTo(x, z, { then, near }); }
@@ -739,7 +770,7 @@ const herOnScreen = () => { const v = new THREE.Vector3(girl.x, girl.y + (girl.l
 let doorArmed = true, through = null, push = [0, 0];
 const fadeEl = document.body.appendChild(document.createElement('div'));
 fadeEl.style.cssText = 'position:fixed;inset:0;background:#2c2226;opacity:0;pointer-events:none;z-index:4;transition:opacity .13s linear';
-function goThrough(d) { const twin = sets.flatMap(q => q.doors).find(q => q.name === d.name && q !== d); if (!twin || through) return; through = { twin, t: 0, done: false }; fadeEl.style.opacity = 1; sfx.door(1); }
+function goThrough(d) { if (ride.on) dismount(true); const twin = sets.flatMap(q => q.doors).find(q => q.name === d.name && q !== d); if (!twin || through) return; through = { twin, t: 0, done: false }; fadeEl.style.opacity = 1; sfx.door(1); }
 function stepDoors(dt) {
   if (through) {
     through.t += dt;
@@ -1018,13 +1049,13 @@ let lastSpot = null;
 function writeSave() {
   if (!STORY || !saving || quest.stage === 'dream') return;
   if (!playing && !through && floorAt(girl.x, girl.z)) lastSpot = [+girl.x.toFixed(2), +girl.z.toFixed(2)];
-  store.set(slotKey(saveSlot), JSON.stringify({ v: 1, who: girl.kid, stage: quest.stage, gear: { snorkel: gear.snorkel, hook: gear.hook, potion: gear.potion }, coins: purse.coins, seen: [...purse.seen],
+  store.set(slotKey(saveSlot), JSON.stringify({ v: 1, who: girl.kid, stage: quest.stage, gear: { ...gear, feathers: [...gear.feathers] }, coins: purse.coins, seen: [...purse.seen],
     taken: [...takenCoins], own: [...wardrobe.own], on: wardrobe.on, where: lastSpot, eve: eveTarget, t: Date.now() }));
   store.set('eh-paper-slot', String(saveSlot));
 }
 function restoreSave(sv) {
   if (sv.who && sv.who !== girl.kid && FIGS[sv.who]) { const a = girl.kid; girl.become(FIGS[sv.who]); zus.become(FIGS[a]); }
-  quest.stage = sv.stage; Object.assign(gear, sv.gear || {}); purse.coins = sv.coins || 0; for (const k of sv.seen || []) purse.seen.add(k);
+  quest.stage = sv.stage; Object.assign(gear, sv.gear || {}); gear.feathers = [...(gear.feathers || [])]; if (gear.grown) uni.become(FIGS[gear.wings ? 'grown' : 'groot']); purse.coins = sv.coins || 0; for (const k of sv.seen || []) purse.seen.add(k);
   for (const id of sv.own || []) wardrobe.own.add(id); Object.assign(wardrobe.on, sv.on || {}); redressBoth(); showCoins();
   uni.away = ['dream', 'zoek', 'ei'].includes(quest.stage); uni.g.visible = !uni.away;
   if (gear.potion) for (const s of sets) if (s.toys && s.toys.braam && s.toys.braam.openGate) s.toys.braam.openGate();   // the brambles bloomed for her potion
@@ -1040,7 +1071,7 @@ function wipeSlot(n) { store.del(slotKey(n)); if (n === saveSlot) { saving = fal
 /* the picker: three big cards in their colours, her face and her egg or unicorn on each; the bin under a card is held to start it afresh */
 const savesBtn = document.getElementById('saves');
 function savePicture(sv) {
-  const hatched = sv && !['dream', 'zoek', 'ei'].includes(sv.stage), spec = hatched ? FIGS.baby : EGG, cv = cutout(spec.w, spec.h, c => spec.draw(c, 0), PAPER, 1);
+  const hatched = sv && !['dream', 'zoek', 'ei'].includes(sv.stage), spec = hatched ? (sv.gear && sv.gear.grown ? FIGS.groot : FIGS.baby) : EGG, cv = cutout(spec.w, spec.h, c => spec.draw(c, 0), PAPER, 1);
   cv.style.cssText = 'width:' + (hatched ? 96 : 64) + 'px;height:auto;display:block' + (sv ? '' : ';opacity:.4'); return cv;
 }
 function faceOf(who) { const out = faceCut(who, 96); out.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#fbf7ee'; return out; }
@@ -1134,19 +1165,21 @@ function frame(now) {
   // never stuck: if she ever stands where she could not walk (a toy let her off inside a tree), she steps to the nearest spot where she can
   if (!playing) { const h = heightAt(girl.x, girl.z); if (h === null || !free(girl.x, girl.z, h)) search: for (let r = .2; r < 4; r += .2) for (let a = 0; a < 12; a++) { const x = girl.x + Math.cos(a * .5236) * r, z = girl.z + Math.sin(a * .5236) * r, hh = heightAt(x, z); if (hh !== null && free(x, z, hh)) { girl.x = x; girl.z = z; break search; } } }
   // (swimming is slower than walking)
-  const speed = girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
+  const speed = ride.on ? 3.6 : girl.swimming ? 1.45 : 2.3, il = Math.hypot(ix, iz); push = il ? [ix / il, iz / il] : [0, 0]; stepDoors(dt); stepWater(dt); stepWind(dt, stepped); stepTune(dt);
   girl.walking = false;
   if (il > 0) {
     const mx = ix / il * speed * dt, mz = iz / il * speed * dt;
     if (move(girl, mx, mz)) girl.walking = true; else if (target && !hold) { const q = target; target = null; if (q.then && Math.hypot(q.x - girl.x, q.z - girl.z) < q.near) q.then(); }
     { const [sx] = toScreen(ix, iz); if (Math.abs(sx) > .2 * il) girl.face = Math.sign(sx); }
   }
-  // the unicorn walks after her
+  // the unicorn walks after her (or carries her)
+  stepRide(dt); showRide();
   {
     const dx = girl.x - uni.x, dz = girl.z - uni.z, d = Math.hypot(dx, dz);
     uni.walking = false;
     uni.g.visible = !uni.away;
-    if (uni.busy || uni.away) { /* a toy has the unicorn (the seesaw): it stays where the toy puts it; or it is not hatched yet */ }
+    if (ride.on) { uni.g.visible = true; }
+    else if (uni.busy || uni.away) { /* a toy has the unicorn (the seesaw): it stays where the toy puts it; or it is not hatched yet */ }
     else if (d > 1.35) { const s = Math.min(3.2, (d - 1.1) * 3) * dt; if (move(uni, dx / d * s, dz / d * s)) uni.walking = true; else if (d > 4) { const cands = [[girl.x - girl.face * .9, girl.z + .3], [girl.x, girl.z - .9], [girl.x, girl.z + .9], [girl.x, girl.z]]; const [cx, cz] = cands.find(([x, z]) => heightAt(x, z) !== null); uni.x = cx; uni.z = cz; } if (Math.abs(dx) > .3) uni.face = Math.sign(dx); }
   }
 
@@ -1263,6 +1296,11 @@ window.__p = {
   walkTo(x, z) { target = goTo(x, z); },
   /** what fell from trees, and (for tests) let the tree nearest her drop this: 'appel', 'rups', 'sok', 'laars', 'vogelaar' */
   coins: () => purse.coins,
+  /** riding: whether she is on it, flying, and the unicorn's state */
+  ride: () => ({ on: ride.on, fly: flight.on, alt: flight.alt, grown: gear.grown, wings: gear.wings, feathers: [...gear.feathers], button: rideBtn ? !rideBtn.hidden : false }),
+  mount: () => (ride.on ? dismount() : mount(), ride.on),
+  hatched: () => { quest.stage = 'baby'; uni.away = false; uni.x = girl.x - 1; uni.z = girl.z + .3; uni.y = heightAt(uni.x, uni.z) ?? 0; },   // (for tests: as if the egg had hatched here)
+  grow: () => { gear.grown = true; uni.become(FIGS[gear.wings ? 'grown' : 'groot']); },
   fallen: () => fallen.map(o => ({ kind: o.kind, mode: o.mode, at: [o.x, o.z], y: o.y })),
   drop(kind) { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); dropFrom(kind, p, p.y + t.top, t.kind); },
   tree() { const t = set.trees.slice().sort((a, b) => Math.hypot(a.x + set.ox - girl.x, a.z + set.oz - girl.z) - Math.hypot(b.x + set.ox - girl.x, b.z + set.oz - girl.z))[0]; const p = new THREE.Vector3(); t.g.getWorldPosition(p); return [p.x, p.y + t.top, p.z, t.kind]; },
