@@ -5,6 +5,10 @@
 //   the telescope  a tap (up there): she looks through it, and the picture flies far out to another island, a different
 //                  one each time; a moment later it comes back to her
 //   down           a tap on the ladder again, or a touch: she climbs down
+//   the zipline    (Oscar: "the zipline back to starting island would be fun") a cable from a post at the deck's corner, over
+//                  the forest and the water, to a post in the village. A tap on its hand-bar (up there): she takes hold and
+//                  whizzes down it, the camera wide and following, the unicorn flying after; she drops onto a soft mat in
+//                  the village. The bar slides back up by itself
 import { THREE, paper, card } from './kit.js';
 
 const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
@@ -47,10 +51,43 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   const RUNGS = Math.round(DECK / .33); for (let i = 0; i < RUNGS; i++) add(m3(new THREE.BoxGeometry(.46, .04, .05), '#a97a4e'), 0, -DECK + .25 + i * (DECK - .35) / (RUNGS - 1), 0, ladder);
   S.solid({ x, z: z - .15, r: .62 });
   const [wx, wz] = S.at([x, z]), foot = [wx, wz + DD / 2 + .45], top = [wx - .2, wz + .45];
-  let mode = null, t = 0, climbs = 0, looks = 0, view = -1, sway = 0;
+  let mode = null, t = 0, climbs = 0, looks = 0, view = -1, sway = 0, rides = 0, back = -1;
+  /* the zipline: from a post at the deck's front right corner to the village's post (set-dorp.js gives where it stands) */
+  const ZT = 5.6, uni = S.uni;
+  let end = null, A = null, B = null, at = null;
+  add(m3(new THREE.CylinderGeometry(.05, .06, 2.2, 6), '#7a5a3e'), DW / 2 - .15, DECK + 1.1, DD / 2 - .1);   // the cable's post on the deck
+  const bar = new THREE.Group(); bar.visible = false; S.root.add(bar);   // (in the world's measure once the cable is laid: see lay)
+  { const wheel = m3(new THREE.CylinderGeometry(.07, .07, .05, 12), '#e0b453'); wheel.rotation.x = Math.PI / 2; bar.add(wheel);
+    for (const s of [-1, 1]) { const r = m3(new THREE.CylinderGeometry(.012, .012, .62, 4), '#d8c9a8'); r.position.set(s * .2, -.33, 0); r.rotation.z = -s * .3; bar.add(r); }
+    const grip = m3(new THREE.CylinderGeometry(.035, .035, .55, 8), '#d9706c'); grip.rotation.z = Math.PI / 2; grip.position.y = -.62; bar.add(grip); }
+  /** the cable: laid once the village (built after this island when the game starts here) has said where its post is */
+  const lay = () => {
+    end = S.shared.zipEnd; if (!end) return;
+    A = new THREE.Vector3(...[S.at([x + DW / 2 - .15, z + DD / 2 - .1])].map(([ax, az]) => [ax, DECK + 2.15, az])[0]); B = new THREE.Vector3(end.top[0], end.top[2], end.top[1]);
+    at = p => { const v = A.clone().lerp(B, p); v.y -= .9 * Math.sin(Math.PI * p); return v; };
+    const curve = new THREE.CatmullRomCurve3(Array.from({ length: 25 }, (_, i) => at(i / 24)));
+    const cable = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, .018, 5), paper('#5a4e66')); cable.castShadow = true; S.world(cable);
+    S.world(bar); bar.visible = true; barTo(.012);
+  };
+  const barTo = p => { bar.position.copy(at(p)); };
   const LOW = { span: 7.5, tall: 5.6, min: 3, rise: -.2, riseTall: -.16, ly: 1.6, yaw: .3, dof: 1.3, range: 1.2, fx: 1, fz: 1, lag: 1 };   // climbing: from the grass, looking up the ladder past her to the deck
   const toy = { look: [wx, wz + .9], shot: null, rate: .9, lets: o => tapsUp.has(o), step(dt, inp) {
     t += dt;
+    if (mode === 'grab') {   // to the corner, and up on her toes to the bar
+      const k = Math.min(1, t / .45), h = at(.012); girl.x = top[0] + (h.x - top[0]) * k; girl.z = top[1] + (h.z + .05 - top[1]) * k; girl.lift = DECK + .04 + Math.sin(k * Math.PI) * .25; girl.poseName = 'up'; girl.view = 'front';
+      if (k >= 1) { mode = 'zip'; t = 0; rides++; sfx.whoosh(); toy.rate = 1.6; toy.shot = { span: 15, tall: 10, rise: .4, riseTall: .55, ly: 0, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 }; } return; }
+    if (mode === 'zip') {   // down the cable: slow at first, then whizzing, a little slower again at the end
+      const k = Math.min(1, t / ZT), p = .012 + .975 * k * k * (3 - 2 * k), v = at(Math.min(.987, p));
+      barTo(Math.min(.987, p)); girl.poseName = 'up'; { const h = S.hand(); girl.x += v.x - h.x; girl.z = v.z + .05; girl.lift = (girl.lift || 0) + (v.y - .64 - h.y); }   // her hands on the grip (measured: the pose decides where they are) girl.view = 'side'; girl.face = Math.sign(B.x - A.x) || 1; girl.lean = Math.sin(t * 3) * .06;
+      toy.look = [girl.x, girl.z]; toy.shot.ly = Math.max(0, girl.lift * .75);
+      if (uni && !uni.away) { const u = at(Math.max(.012, Math.min(.987, p) - .05)); uni.busy = true; uni.x = u.x; uni.z = u.z + .1; uni.lift = u.y - 1.6 - uni.y + Math.sin(t * 5) * .1; uni.face = girl.face; }
+      if (Math.floor(t * 1.4) !== Math.floor((t - dt) * 1.4)) sfx.swish(1);
+      if (k >= 1) { mode = 'drop'; t = 0; } return; }
+    if (mode === 'drop') {   // she lets go, onto the mat
+      const k = Math.min(1, t / .4), [mx, mz] = end.at, h0 = at(.987); girl.x = h0.x + (mx - h0.x) * k; girl.z = h0.z + .05 + (mz - h0.z - .05) * k; girl.lean = 0;
+      girl.lift = Math.max(0, (h0.y - .62 - 1.2 - girl.y) * (1 - k) + Math.sin(k * Math.PI) * .3); girl.poseName = k < .6 ? 'up' : null;
+      if (uni && !uni.away) { uni.x = mx - 1.0; uni.z = mz + .2; uni.lift = Math.max(0, uni.lift * (1 - k)); }
+      if (k >= 1) { mode = null; girl.lift = 0; girl.poseName = null; girl.view = 'front'; sfx.thud(); girl.hopV = 2.4; S.confetti(girl.x, girl.y + .6, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf'], 14, S.starGeo, 2.2); if (uni && !uni.away) { uni.lift = 0; uni.hopV = 3; } back = 0; toy.shot = null; S.stopPlay(); } return; }
     if (mode === 'up') {   // rung by rung: her back to us, the ladder swaying; the camera low on the grass, looking up
       const k = Math.min(1, t / 3.4); girl.view = 'back'; girl.x = foot[0]; girl.z = foot[1] - .45; girl.lift = DECK * k; girl.poseName = Math.floor(t / .24) % 2 ? 'up' : 'hold'; sway = .06;
       if (Math.floor(t / .24) !== Math.floor((t - dt) / .24)) sfx.click();
@@ -65,9 +102,12 @@ export function treehouse(S, x, z, views = () => []) {   // (views: where the ot
   const look = () => { const V = views(); if (mode !== 'top' || view >= 0 || !V.length) return; view = looks++ % V.length; t = 0; sfx.swish(2); girl.view = 'side'; girl.face = 1;
     const [vx, vz] = V[view]; toy.look = [vx, vz]; toy.shot = { span: 34, tall: 22, rise: .55, riseTall: .7, dof: .1, range: 8, fx: 1, fz: 1, lag: 1 }; };
   const climb = () => { if (mode === 'top') { down(); return; } if (S.playing()) return; S.walkThen(foot[0], foot[1], () => { if (S.playing()) return; mode = 'up'; t = 0; toy.shot = LOW; toy.look = [wx, wz + .9]; toy.rate = 2.4; S.play(toy); }, 1.0); };
-  const tapsUp = new Set(); for (const o of [scope, ladder]) o.traverse(m => { if (m.isMesh) tapsUp.add(m); });
+  const tapsUp = new Set(); for (const o of [scope, ladder, bar]) o.traverse(m => { if (m.isMesh) tapsUp.add(m); });
+  S.tap(bar, () => { if (!A) return; if (mode === 'top' && view < 0 && back < 0) { mode = 'grab'; t = 0; sfx.hop(); } else if (!mode) climb(); }, 'zipline');
   S.tap(ladder, climb, 'ladder'); S.tap(scope, () => { if (mode === 'top') look(); else climb(); }, 'telescope');
-  return { toy, state: () => ({ mode, climbs, looks, view, up: mode === 'top' }), step({ dt, time }) {
+  return { toy, state: () => ({ mode, climbs, looks, view, up: mode === 'top', rides }), step({ dt, time }) {
+    if (!A && !end) lay();
+    if (back >= 0) { back += dt; const k = Math.min(1, back / 3.5); barTo(.987 - (.987 - .012) * k * k * (3 - 2 * k)); if (k >= 1) back = -1; }   // the bar slides back up by itself
     sway = Math.max(0, sway - dt * .1); ladder.rotation.x = Math.sin(time * 4) * sway; flag.rotation.y = Math.sin(time * 2.2) * .35;
   } };
 }

@@ -519,5 +519,9 @@ export default async function (t) {
     await t.sleep(2200); await t.shot('tmp-shots/y-treehouse-view-land.png'); ok(await until(`__p.toy('boomhut').view === -1`, 3) && (await toy()).up, 'and a moment later the picture comes back to her, still up there');
     await t.ev(`__p.tap('telescope')`); await t.sleep(300); ok((await toy()).view === 1, 'the next look shows the next island'); await t.sleep(3600);
     await t.ev(`__p.keys(['d'])`); await t.sleep(150); await t.ev('__p.keys([])'); ok(await until(`__p.toy('boomhut').mode === null`, 5), 'a touch: she climbs down again');
+    // the zipline: up again, a tap on the hand-bar, and down the cable to the village
+    await t.ev(`__p.tap('ladder')`); ok(await until(`__p.toy('boomhut').up`, 6), 'up the ladder again'); await t.sleep(1200);
+    await t.ev(`__p.tap('zipline')`); ok(await until(`__p.toy('boomhut').mode === 'zip'`, 2), 'a tap on the zipline\'s bar: she takes hold and off she goes'); await t.sleep(2400); await t.shot('tmp-shots/y-zipline-land.png');
+    ok(await until(`__p.toy('boomhut').mode === null`, 8), 'and lets go at the end'); await t.sleep(800); const i = await t.ev('__p.info()'); ok(i.set === 'dorp' && i.lift === 0, `she is down in the village (${i.set})`); await t.shot('tmp-shots/y-zipline-landed-land.png');
   }
 }

@@ -146,6 +146,11 @@ export default {
     const potion = { holding: () => S.gear.potion, full: () => S.gear.potion, hint() { }, pourThen(done) { S.sfx.swish(3); const h = S.hand(); S.confetti(h.x + S.girl.face * .5, h.y + .2, h.z, ['#f4a6c4', '#f8dde4', '#bba6ea', '#f2c65c'], 18, S.starGeo, 2.4); setTimeout(done, 650); return true; } };
     S.shared.can = theFarm;
     const thorns = bramble(S, EAST.x0 + 3.6, DECK, 2.4 * K, 1.2, potion, STORY.drankje, 0);
+    // the zipline's post: where the ride from the treehouse in the forest ends (the cable and the ride are the forest's, treehouse.js)
+    { const [zx, zz] = T(43.5, 35.5), zy = inPoly(HIGH, zx, zz) ? H_HIGH : H_GRASS;
+      put(new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, 3.0, 8), paper('#8d6a48')), zx, zy + 1.5, zz).castShadow = true; put(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .08), paper('#7a5a3e')), zx, zy + 2.85, zz).castShadow = true;
+      put(new THREE.Mesh(new THREE.CylinderGeometry(.55, .6, .1, 16), paper('#9fc4c9')), zx - .5, zy + .05, zz + .6).castShadow = true;   // a soft round mat to land on
+      S.solid({ x: zx, z: zz, r: .16 }); S.shared.zipEnd = { at: S.at([zx - .5, zz + .6]), top: [...S.at([zx, zz]), zy + 2.85] }; }
     // the people of the village (folk.js): grandma knitting on the square's bench, the accordion player on the square, the gardener asleep
     // in his wheelbarrow by the carrots, the fisherman at the pond
     const folk = { oma: grandma(S, SQ[0] + 2.3, SQ[1] - 3.0, benches[2]), muzikant: player(S, SQ[0] - 2.35, SQ[1] - 1.25), tuinman: gardener(S, F[0] - 4.4, F[1] - 2.9, theFarm), visser: fisher(S, pcx + 2.62, pcz - .4, -1) };

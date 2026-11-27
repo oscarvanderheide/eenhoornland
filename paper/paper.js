@@ -245,6 +245,7 @@ function buildSet(def) {
     move: (f, dx, dz) => move(f, dx, dz),   // for whoever lives here: a step that minds walls and edges; false if there was no way
     land: (x, z) => s.floors.some(f => f.pts && !f.swim && f.h !== null && inPoly(f.pts, x, z)),   // is this spot (the world's measure) on this island's own ground (not a bridge, not the water)?
     where: () => set.name,   // the set she stands on now
+    world: obj => { scene.add(obj); return obj; },   // a thing that belongs to no one island (the zipline's cable over the water), in the world's measure: never put away with an island
     middle: name => { const q = sets.find(q => q.name === name); return q ? [q.ox, q.oz] : null; },   // where another island lies (its own 0, 0, in the world's measure): for the telescope
   };
   Object.assign(s, def.build(S));
