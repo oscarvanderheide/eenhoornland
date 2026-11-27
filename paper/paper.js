@@ -441,7 +441,7 @@ const zus = fig('zus', girl.kid === 'anna' ? 'fenna' : 'anna'); zus.g.visible = 
 function stepSister() {
   if (zus.out) { zus.g.visible = true; zus.asleep = false; return; }   // out playing (the seesaw)
   const home = sets.find(q => q.name === 'huis' && q.beds); zus.g.visible = !!home; if (!home) return;
-  const b = home.beds[zus.kid]; zus.x = b[0]; zus.z = b[1]; zus.floatY = zus.y = home.bedY || 0; zus.lift = home.lie; zus.lean = b[2]; zus.poseName = null; zus.view = 'front'; zus.asleep = true;
+  const b = home.beds[zus.kid]; zus.x = b[0]; zus.z = b[1]; zus.floatY = zus.y = home.bedY || 0; zus.lift = home.lie; zus.lean = b[2]; zus.poseName = b[2] > 0 ? 'bedL' : 'bedR'; zus.view = 'front'; zus.asleep = true;
 }
 /* the mask and snorkel she wears while she swims: a card of its own on her face */
 const mask = makeFigure('snorkel', SNORKEL); mask.thing = true; mask.g.visible = false; let bubble = 0;

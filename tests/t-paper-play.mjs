@@ -155,7 +155,8 @@ export default async function (t) {
     const pg = await t.ev(`(f => [f.x, f.z])(__p.dbg.figures.find(f => f.name === 'varken'))`); await t.ev(`__p.walkTo(${pg[0] - 1.3}, ${pg[1] + .4})`); await t.sleep(2600); await t.ev(`__p.tap('varken')`); ok(await until(`__p.toy('boerderij').fed === 1`, 3), 'a tap on the pig: it gets the carrot'); await t.shot('tmp-shots/y-farm-fed-land.png');
     // the scarecrow's birds
     await t.ev(`__p.placeAt(${pl.crow[0] + 4.5}, ${pl.crow[1] + 1.5})`); await t.sleep(4200); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'from a way off the birds sit on the scarecrow');
-    await t.ev(`__p.placeAt(${pl.crow[0]}, ${pl.crow[1]})`); await t.sleep(1500); ok((await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: up they fly'); await t.shot('tmp-shots/y-farm-crow-land.png');
+    await t.ev(`__p.placeAt(${pl.crow[0] + 1}, ${pl.crow[1] + .8})`); await t.sleep(1500); ok(!(await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she comes close: the birds stay');
+    await t.ev(`__p.tap('vogelverschrikker')`); await t.sleep(1500); ok((await t.ev(`__p.toy('vogelverschrikker')`)).up, 'she rocks the scarecrow: up they fly'); await t.shot('tmp-shots/y-farm-crow-land.png');
   }
 
   if (!only || only === 'forest') {

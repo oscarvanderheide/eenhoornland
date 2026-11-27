@@ -60,20 +60,22 @@ export default {
     // how a sleeper lies (her feet that far from the bed's middle towards its foot, that high), and her blanket fitted to her: from just past
     // her feet to her neck along her (u), from the mattress up over her body (v), just in front of her card: it goes with her, her head stays free
     // (the blanket stands a little in front of her card, which turns towards the camera and would otherwise come through it)
-    const LIE = { feet: .5, lift: .6 }, BLS = { anna: { w: .62, h: .46, u: .19, v: .07 }, fenna: { w: .8, h: .46, u: .3, v: .07 } };   // (Fenna is the taller: her neck is further from her feet)
+    const LIE = { feet: .5, lift: .62 };
     for (const [who, s, quilt] of [['anna', -1, 'pink'], ['fenna', 1, 'yellow']]) {
       const g = new THREE.Group(); g.position.set(s * 1.72, 0, -D / 2 + .62); root.add(g);
       const add = (m, x, y, z) => { m.position.set(x, y, z); g.add(m); return m; };
       add(box(1.6, .26, .9, 'wood'), 0, .2, 0); for (const lx of [-.72, .72]) for (const lz of [-.38, .38]) add(box(.09, .14, .09, 'wood2'), lx, .07, lz);
       add(box(.1, .78, .94, 'wood2'), s * .8, .46, 0);                                                    // the headboard, at the wall's end
       add(box(1.52, .12, .84, 'sheet'), 0, .39, 0);
-      const pil = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), P('sheet')); pil.scale.set(1.25, .45, 1.5); pil.castShadow = true; add(pil, s * .5, .5, 0);
+      // the empty bed's pillow: a flat paper cushion lying on the sheet (asleep, her own drawing has its pillow under her head)
+      const pil = new THREE.Mesh(new THREE.BoxGeometry(.42, .05, .6), P('sheet')); pil.castShadow = true; pil.position.set(s * .5, .47, 0);
       S.wall(s * 1.72, -D / 2 + .62, .86, .5);
       // her blanket, drawn on paper and standing at the bed's front: lying flat when the bed is empty, drawn up over whoever lies here
       const [bc, bl] = quilt === 'pink' ? ['#ef9fb8', '#f8c6d6'] : ['#efcb58', '#f7e29a'];
-      const flat = new THREE.Group(), flap = new THREE.Group(); flat.userData.live = flap.userData.live = true; flap.visible = false; g.add(flat, flap);
-      { const m = blanketCard(bc, bl, s < 0, false, 1.08, .3); m.position.set(-s * .27, .5, .46); flat.add(m); const BL = BLS[who], u = blanketCard(bc, bl, s < 0, true, BL.w, BL.h); u.position.set(-s * LIE.feet + s * BL.u, LIE.lift + BL.v, .27); flap.add(u); }   // (over the mattress's front edge, up to a soft hump at her chest; her head on the pillow stays out)
-      beds[who] = { g, flap, flat, x: s * 1.72, z: -D / 2 + .62, side: s };
+      // (when somebody sleeps here the blanket is part of her drawing, kids.js 'bedL' / 'bedR', and this one is put away)
+      const flat = new THREE.Group(); flat.userData.live = true; g.add(flat); flat.add(pil);
+      { const m = blanketCard(bc, bl, s < 0, false, 1.08, .3); m.position.set(-s * .27, .5, .46); flat.add(m); }
+      beds[who] = { g, flat, x: s * 1.72, z: -D / 2 + .62, side: s };
     }
     put(box(.5, .46, .42, 'wood'), 0, .23, -D / 2 + .3); S.wall(0, -D / 2 + .3, .3, .26);
     const lampG = new THREE.Group(); lampG.position.set(0, .46, -D / 2 + .3); root.add(lampG);
@@ -97,7 +99,7 @@ export default {
         if (mode === 'on') { const k = Math.min(1, t / .32); girl.x = bx - b.side * .25; girl.z = bz + (1 - k) * .75; girl.lift = .5 * k + Math.sin(k * Math.PI) * .3; girl.poseName = k > .5 ? 'sit' : null; girl.view = 'side'; girl.face = -b.side; if (k >= 1) { mode = 'bed'; t = 0; sfx.hop(); } return; }
         if (mode === 'bed') { const dreaming = S.quest.stage === 'dream'; girl.asleep = dreaming || t > 1.1; girl.z = bz;
           // asleep she lies down: the doll laid along the bed, her head on the pillow (Oscar: "they sit now instead of lying down")
-          if (girl.asleep) { girl.x = bx - b.side * LIE.feet; girl.lift = LIE.lift; girl.lean = -b.side * Math.PI / 2; girl.poseName = null; girl.view = 'front'; }
+          if (girl.asleep) { girl.x = bx - b.side * LIE.feet; girl.lift = LIE.lift; girl.lean = -b.side * Math.PI / 2; girl.poseName = b.side < 0 ? 'bedL' : 'bedR'; girl.view = 'front'; }
           else { girl.x = bx - b.side * .25; girl.lift = .5; girl.lean = 0; girl.poseName = 'sit'; girl.view = 'side'; girl.face = -b.side; }
           if (!dreaming && (inp.act || inp.x)) { mode = 'off'; t = 0; girl.asleep = false; girl.lean = 0; girl.x = bx - b.side * .25; girl.view = 'side'; } return; }
         const k = Math.min(1, t / .3); girl.z = bz + k * .78; girl.lift = .5 * (1 - k) + Math.sin(k * Math.PI) * .25; girl.poseName = null;
@@ -111,7 +113,7 @@ export default {
     return {
       start: [0, D / 2 - .95], uni: [.9, D / 2 - .8],
       shadow: { follow: 20 },
-      step({ dt }) { light.intensity += ((lit ? 1.9 : 0) - light.intensity) * Math.min(1, dt * 6); bulbMat.emissiveIntensity = lit ? 1.6 : .15; theDream.step(dt); for (const [who, b] of Object.entries(beds)) b.flat.visible = !(b.flap.visible = S.sister() === who || (Math.abs(girl.lean || 0) > 1 && Math.abs(girl.x - S.at([b.x, b.z])[0]) < 1.2)); },
+      step({ dt }) { light.intensity += ((lit ? 1.9 : 0) - light.intensity) * Math.min(1, dt * 6); bulbMat.emissiveIntensity = lit ? 1.6 : .15; theDream.step(dt); for (const [who, b] of Object.entries(beds)) b.flat.visible = !(S.sister() === who || (Math.abs(girl.lean || 0) > 1 && Math.abs(girl.x - S.at([b.x, b.z])[0]) < 1.2)); },
       // for the stage: where each sister lies ([x, z, which way she faces]), and the game's start: asleep, the dream, then morning
       beds: Object.fromEntries(Object.entries(beds).map(([who, b]) => [who, [...S.at([b.x - b.side * LIE.feet, b.z]), -b.side * Math.PI / 2]])), bedY: 0, lie: LIE.lift,
       sleep(who) { lit = false; beds[who].sleep(); theDream.start(() => { if (S.quest.stage === 'dream') S.quest.stage = 'zoek'; S.morning(); lit = false; }); },

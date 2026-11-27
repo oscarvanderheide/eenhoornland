@@ -12,7 +12,6 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
   background:#f3ead8;box-shadow:0 3px 0 #b9a888,0 6px 14px rgba(0,0,0,.25);cursor:pointer;display:grid;place-items:center;text-decoration:none}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b9a888,0 3px 8px rgba(0,0,0,.25)}
 #sky{right:calc(env(safe-area-inset-right) + 14px)}
-#home{left:calc(env(safe-area-inset-left) + 14px)}
 #saves{right:calc(env(safe-area-inset-right) + 150px)}
 .btn.bottom{top:auto;bottom:calc(env(safe-area-inset-bottom) + 16px);width:66px;height:66px}
 #ride{right:calc(env(safe-area-inset-right) + 16px)}
@@ -37,7 +36,7 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
 #who{right:calc(env(safe-area-inset-right) + 82px);background-size:92%;background-position:center 30%;background-repeat:no-repeat}
 .btn svg{width:32px;height:32px;grid-area:1/1}
 .btn svg[hidden]{display:none}
-#coins{position:fixed;top:calc(env(safe-area-inset-top) + 24px);left:calc(env(safe-area-inset-left) + 80px);right:230px;display:flex;flex-wrap:wrap;gap:2px;pointer-events:none}
+#coins{position:fixed;top:calc(env(safe-area-inset-top) + 24px);left:calc(env(safe-area-inset-left) + 18px);right:230px;display:flex;flex-wrap:wrap;gap:2px;pointer-events:none}
 #coins img{width:34px;height:34px;margin-right:-10px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
 #coins img.veer{width:20px;height:40px;margin:0 2px 0 8px}
 #coins img.pop{animation:coinpop .45s cubic-bezier(.3,1.6,.5,1)}
@@ -45,9 +44,6 @@ html,body{margin:0;height:100%;background:#2c3b45;overflow:hidden;-webkit-user-s
 .flycoin{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;pointer-events:none;z-index:5;transition:left .7s cubic-bezier(.4,0,.6,1),top .7s cubic-bezier(.3,-.4,.6,1),transform .7s}   /* (an svg does not hide by the hidden attribute alone: the moon hung under the sun) */
 </style>
 <canvas id="c"></canvas>
-<a class="btn" id="home" href="../" aria-label="Eenhoornland">
-  <svg viewBox="0 0 32 32"><path d="M5 16 16 6l11 10" fill="none" stroke="#6b5a4a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 14v12h14V14" fill="#e3a59a" stroke="#6b5a4a" stroke-width="2.6" stroke-linejoin="round"/><rect x="14" y="19" width="5" height="7" fill="#4f8f8c"/></svg>
-</a>
 <button class="btn" id="who" aria-label="Anna of Fenna"></button>
 <button class="btn" id="saves" aria-label="de drie spellen"><svg viewBox="0 0 32 32"><rect x="4" y="9" width="11" height="15" rx="2.5" fill="#f4a6c4" stroke="#b9708c" stroke-width="1.4" transform="rotate(-10 9 16)"/><rect x="10.5" y="7" width="11" height="15" rx="2.5" fill="#f2c65c" stroke="#b9913a" stroke-width="1.4"/><rect x="17" y="9" width="11" height="15" rx="2.5" fill="#8fd0c8" stroke="#4f9a92" stroke-width="1.4" transform="rotate(10 22 16)"/></svg></button>
 <button class="btn bottom" id="ride" aria-label="op de eenhoorn" hidden></button>

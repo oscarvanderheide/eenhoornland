@@ -6,7 +6,7 @@
 //   grown        a tap pulls one out: it pops up into her hand, and whoever she taps next gets it (the pig, her unicorn, ...)
 //   the row      empty, it is seeds again after a while
 // When something is missing (no can, an empty can) the thing she needs gives a little hop: there is no wrong.
-// Also here: the scarecrow, with three birds that fly up when she comes close and settle again when she has gone.
+// Also here: the scarecrow, with three birds that fly up when she rocks it and settle again after.
 import { THREE, paper, card, slab, blob } from './kit.js';
 import { THINGS } from './things.js';
 
@@ -115,18 +115,17 @@ export function farm(S, { can: canAt, well: theWell, rows: rowsAt, y = 0 }) {
   };
 }
 
-/** the scarecrow: a paper card on its post. A tap and it rocks from side to side; its three birds (paper too) fly up when
- *  she comes close, and settle on its arms again when she has gone */
+/** the scarecrow: a paper card on its post. A tap and it rocks from side to side, and its three birds (paper too) fly up
+ *  and circle, then settle on its arms again (Oscar: they should not go away when she comes close, only when she plays with it) */
 export function scarecrow(S, x, y, z) {
   const { girl, sfx } = S, [wx, wz] = S.at([x, z]), f = S.figure('vogelverschrikker', THINGS.vogelverschrikker);
   f.x = wx; f.z = wz; S.solid({ x, z, r: .12 });
   let wob = 0, up = 0, calm = 0, flights = 0;
-  f.onTap = () => { wob = 1.6; sfx.rustle(); };
+  f.onTap = () => { wob = 1.6; sfx.rustle(); if (up < .3) { flights++; sfx.flutter(); } calm = 3.5; };
   f.act = tick => f.setFrame(wob > 0 ? 1 + (Math.floor(tick / 2) % 2) : 0);
   const arm = f.H * .6, birds = [-.55, .2, .6].map((bx, i) => { const b = S.figure('vogel' + (i + 1), THINGS.vogel); b.act = tick => b.setFrame(up > .15 ? 1 + (tick % 2) : 0); return { b, bx, a: i * 2.1, r: 1.3 + i * .35, h: 2.4 + i * .25 }; });
   return { f, state: () => ({ up: up > .5, flights, wob: wob > 0 }), step({ dt }) {
-    const d = Math.hypot(girl.x - wx, girl.z - wz);
-    if (d < 2.8) { if (up === 0) { flights++; sfx.flutter(); } calm = 3.5; } else calm = Math.max(0, calm - dt);
+    calm = Math.max(0, calm - dt);
     up += ((calm > 0 ? 1 : 0) - up) * Math.min(1, dt * 2.2); if (up < .01) up = 0;
     if (wob > 0) wob -= dt;
     for (const o of birds) {

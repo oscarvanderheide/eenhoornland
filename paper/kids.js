@@ -4,7 +4,7 @@
 //   drawKid(g, 'anna', { view: 'side' | 'front' | 'back', pose, f, wear: { head, neck, hand, dress, back }, eyes })
 //   kidPoints('anna', view, pose, f) -> where her hand, the top of her head and her seat are (for things she holds or sits on)
 // Plain (no pose, nothing on) she is drawn exactly as before the dolls had joints.
-import { E, S, C, U, P, piece, ink, swing } from './cut.js';
+import { E, S, C, U, P, piece, ink, line, swing } from './cut.js';
 
 export const KID = {
   anna: { skin: '#F4CDB0', skin2: '#E2B293', hair: '#EEC363', hair2: '#D4A648', dress: '#F58DB9', dress2: '#DC6A9E', collar: '#FBF3E6', shoe: '#5BAEE8', shoe2: '#3E8DCB', clip: '#FF6FA5',
@@ -212,8 +212,38 @@ function kidFB(g, o, R, wear, eyes, back) {
   smile(g, cx, hy + 17, .4, Math.PI - .4);
 }
 
+/* ---------- asleep in bed: her pillow and her blanket are part of her drawing ----------
+   (Oscar: the blanket "should be more like its part of the character", and the 3D pillow swallowed her head.) She is drawn
+   from the front and the card is laid on its side; 'bedL': the bed's mattress is to the drawing's left (the pillow lies
+   there, under her head), 'bedR' the other way. Her blanket goes from her chin to past her toes. */
+const QUILT = { anna: ['#EF9FB8', '#F8C6D6'], fenna: ['#EFCB58', '#F7E29A'] };
+function pillow(g, o, cx, d) {
+  const hy = o.headY, r = o.head, px = cx - d * r * .78;
+  piece(g, '#FBF5EA', S([[px - r * .62, hy - r * 1.45], [px + r * .62, hy - r * 1.5], [px + r * .7, hy], [px + r * .62, hy + r * 1.5], [px - r * .62, hy + r * 1.45], [px - r * .7, hy]]), .5);
+  line(g, 'rgba(120,100,90,.18)', 2, [[px - d * r * .3, hy - r * 1.1], [px - d * r * .42, hy], [px - d * r * .3, hy + r * 1.1]]);
+}
+function quilt(g, o, who, cx, d) {
+  const [col, light] = QUILT[who] || QUILT.anna, y0 = o.headY + o.head * .72, y1 = o.foot + 10, hw = 50;
+  // the edge away from the mattress is soft (a hump over her tummy and her knees), the side on the mattress straight
+  const up = cx + d * hw, dn = cx - d * hw, mid = (a, k) => [cx + d * (hw + a), y0 + (y1 - y0) * k];
+  const pts = [[dn, y0 - 2], [cx, y0 - 6], mid(-4, 0), mid(4, .3), mid(-2, .55), mid(3, .78), [up - d * 4, y1], [cx, y1 + 4], [dn, y1], [dn - d * 2, (y0 + y1) / 2]];
+  piece(g, col, S(pts), 1.2);
+  if (g.colour) {
+    g.save(); g.beginPath(); S(pts)(g); g.clip();
+    const sq = 22; for (let y = y0 - 10; y < y1 + 10; y += sq) for (let x = cx - 70; x < cx + 70; x += sq) if (Math.round((x - cx + 70 + y - y0 + 10) / sq) % 2 === 0) { g.fillStyle = light; g.fillRect(x, y, sq, sq); }
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.4; g.setLineDash([4, 3.5]);
+    for (let y = y0 - 10 + sq; y < y1; y += sq) { g.beginPath(); g.moveTo(cx - 70, y); g.lineTo(cx + 70, y); g.stroke(); }
+    for (let x = cx - 70 + sq; x < cx + 70; x += sq) { g.beginPath(); g.moveTo(x, y0 - 10); g.lineTo(x, y1 + 10); g.stroke(); }
+    g.restore();
+  }
+  // the folded-back white hem under her chin
+  piece(g, '#FBF7EE', S([[dn, y0 - 3], [cx, y0 - 7], [up - d * 2, y0 - 3], [up - d * 2, y0 + 9], [cx, y0 + 6], [dn, y0 + 9]]), .6);
+}
+
 /** draw a sister: who 'anna' | 'fenna'; f is the walk drawing (1..WALK) when pose is 'walk' */
 export function drawKid(g, who, { view = 'side', pose = 'stand', f = 0, wear = NONE, eyes = 'open' } = {}) {
+  const bed = pose === 'bedL' ? 1 : pose === 'bedR' ? -1 : 0;
+  if (bed) { const o = KID[who], R = rig(o, 'front', 'stand', 0); pillow(g, o, R.cx, bed); kidFB(g, o, R, wear || NONE, eyes, false); quilt(g, o, who, R.cx, bed); return; }
   const o = KID[who], R = rig(o, view, pose, f);
   if (view === 'side') kidSide(g, o, R, wear || NONE, eyes); else kidFB(g, o, R, wear || NONE, eyes, view === 'back');
 }
