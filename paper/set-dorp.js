@@ -6,7 +6,7 @@
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
-import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, stall, GROUND } from './props.js';
+import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, stall, pondDress, GROUND } from './props.js';
 import { swing, slide, seesaw, plane } from './toys.js';
 import { dog, ball } from './dog.js';
 import { hen, chick, pig, duck, butterfly } from './critters.js';
@@ -64,6 +64,7 @@ export default {
     // the pond lies well west of the playground, in the middle of the west lobe (Oscar: they were too close)
     const [pcx, pcz] = [-11.6 * K, .5 * K], POND = blob(pcx, pcz, 2.2, 1.75, 86, 40, .05);
     root.add(slab(POND, H_GRASS + .02, .02, P('water'), whiteEdge));
+    const pondLook = pondDress(S, POND, pcx, pcz, H_GRASS, 86);   // the deeper middle, the pebbles round it, lily pads, ripples (props.js)
 
     S.sea({ land: [SAND, SAND_S, SAND_W], x0: -60, x1: 60, z0: -22, z1: 34, deep: [230, 170, 0, 0], fine: 1.8 });
 
@@ -187,7 +188,7 @@ export default {
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest
-      step: e => { HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); thePlane.step(e); theStall.step(e); },
+      step: e => { pondLook.step(e.time); HOUSE.step(e); theSwing.step(e); theSeesaw.step(e); theBall.step(e.dt); theDog.step(e); for (const c of Object.values(live)) c.step(e); for (const m of mills) m.step(e); theFarm.step(e); crow.step(e); theFountain.step(e); for (const b of beds) b.step(e); bunch.step(e); grass.step(e); for (const l of lamps) l.step(e); for (const b of Object.values(flies)) b.step(e); for (const b of benches) b.step(e); thorns.step(e); for (const q of Object.values(folk)) q.step(e); flipper.step(e); thePlane.step(e); theStall.step(e); },
       toys: { ...live, ...flies, ...folk, dolfijn: flipper, vliegtuig: thePlane, kraam: theStall, braam: thorns, molen: mills[0], fontein: theFountain, bank: benches[2], lantaarn: lamps[0], tuin: beds[1], bos: bunch, gras: grass, boerderij: theFarm, vogelverschrikker: crow, wip: theSeesaw, swing: theSwing, slide: theSlide, dog: theDog, ball: { state: () => ({ at: [theBall.x, theBall.z], lift: theBall.lift, held: !!theBall.held, kicks: theBall.kicks, moving: theBall.moving() }) } },
       names: { house: HOUSE.toggle },
       info: () => ({ door: HOUSE.open }),

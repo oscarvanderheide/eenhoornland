@@ -369,3 +369,41 @@ export function stall(S, x, z, y) {
     if (held) { apple.g.visible = !S.playing(); if (apple.g.visible) { girl.poseName = 'hold'; const h = S.hand(); apple.x = h.x + girl.face * .05; apple.z = h.z + .05; apple.floatY = apple.y = h.y - .07; } }
   } };
 }
+
+/* ---------------- the village pond, made to read as water ---------------- */
+/** Dresses a pond (Oscar: "now its just like a blue patch and its not clear its water at all"): a deeper blue in the
+ *  middle, a ring of round pebbles at the edge, a little group of lily pads with one pink flower, and white paper ripples
+ *  that slowly spread and fade. `pts`: the pond's outline in the set's measure; (cx, cz) its middle; y its water. Gives
+ *  back step(time) for the ripples */
+export function pondDress(S, pts, cx, cz, y, seed = 7) {
+  let s = seed; const R = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const g = new THREE.Group(); S.root.add(g);
+  // the deeper middle: a second, darker sheet
+  const inner = pts.map(([x, z]) => [cx + (x - cx) * .6, cz + (z - cz) * .6]);
+  g.add(slab(inner, y + .03, .008, paper('#5f93ab'), paper('#5f93ab')));
+  // pebbles all round the edge, a little outside it
+  const PEB = new THREE.SphereGeometry(.12, 9, 6), COLS = ['#cfc8ba', '#bdb5a6', '#ddd6c8', '#aaa395', '#c6bfb0'];
+  const n = pts.length; let per = 0; for (let i = 0; i < n; i++) { const [a, b] = [pts[i], pts[(i + 1) % n]]; per += Math.hypot(b[0] - a[0], b[1] - a[1]); }
+  for (let d = 0, i = 0, run = 0; d < per; d += .22 + R() * .09) {
+    while (i < n) { const [a, b] = [pts[i], pts[(i + 1) % n]], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (run + L >= d) break; run += L; i++; }
+    if (i >= n) break;
+    const [a, b] = [pts[i], pts[(i + 1) % n]], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, k = (d - run) / L, x = a[0] + (b[0] - a[0]) * k, z = a[1] + (b[1] - a[1]) * k;
+    const ox = x - cx, oz = z - cz, ol = Math.hypot(ox, oz) || 1, out = .04 + R() * .07;
+    const m = new THREE.Mesh(PEB, paper(COLS[Math.floor(R() * COLS.length)])); m.castShadow = m.receiveShadow = true;
+    m.position.set(x + ox / ol * out, y + .02, z + oz / ol * out); m.scale.set(.85 + R() * .55, .45 + R() * .3, .7 + R() * .4); m.rotation.y = R() * 6.3; g.add(m);
+  }
+  // lily pads by the west edge: round, with a notch; one pink flower
+  const pad = (r, notch) => { const p = []; for (let i = 0; i <= 22; i++) { const a = notch + .35 + i / 22 * (Math.PI * 2 - .7); p.push([Math.cos(a) * r, Math.sin(a) * r]); } p.push([0, 0]); return p; };
+  const lx = cx - (Math.max(...pts.map(p => cx - p[0])) - .65), lz = cz - .15;
+  for (const [dx, dz, r] of [[0, 0, .26], [.38, .22, .2], [.12, -.36, .17], [-.16, .34, .14]]) { const c = card(pad(r, R() * 6.3), .01, paper('#86ad6e')); c.rotation.x = -Math.PI / 2; c.position.set(lx + dx, y + .045, lz + dz); g.add(c); }
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, pt = card([[-.035, 0], [0, .11], [.035, 0]], .01, paper(i % 2 ? '#f4a6c4' : '#f8c6d8', { side: THREE.DoubleSide })); pt.position.set(lx + Math.cos(a) * .03, y + .06, lz + Math.sin(a) * .03); pt.rotation.set(-.5, -a + Math.PI / 2, 0); g.add(pt); }
+  const heart = new THREE.Mesh(new THREE.SphereGeometry(.03, 8, 5), paper('#f2c65c')); heart.position.set(lx, y + .08, lz); g.add(heart);
+  // ripples: thin white rings on the water that spread slowly and fade, then start again somewhere else
+  const ring = (r, w) => { const o = [], h = []; for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; o.push([Math.cos(a) * r, Math.sin(a) * r]); h.unshift([Math.cos(a) * (r - w), Math.sin(a) * (r - w)]); } return card(o, .004, null, null, [h]); };
+  const spots = () => { const a = R() * 6.3, k = .15 + R() * .45, far = Math.max(...pts.map(p => Math.hypot(p[0] - cx, p[1] - cz))) * .62; return [cx + Math.cos(a) * far * k, cz + Math.sin(a) * far * k * .8]; };
+  const ripples = [0, 1, 2, 3].map(i => { const m = ring(.32, .028); m.material = new THREE.MeshBasicMaterial({ color: '#f4f8f6', transparent: true, opacity: 0, depthWrite: false }); m.rotation.x = -Math.PI / 2; m.userData.live = true; m.renderOrder = 2; g.add(m); return { m, off: i / 4, at: spots(), last: 0 }; });
+  return { step(time) {
+    for (const r of ripples) { const p = (time * .16 + r.off) % 1; if (p < r.last) r.at = spots(); r.last = p;
+      r.m.position.set(r.at[0], y + .05, r.at[1]); r.m.scale.setScalar(.35 + p * 1.3); r.m.material.opacity = .6 * Math.min(1, p * 6) * (1 - p); }
+  } };
+}
