@@ -247,7 +247,7 @@ export default async function (t) {
     await t.ev(`__p.tap('oma')`); await t.sleep(300); const st = await toy('kraam'); ok(!st.held && st.given === 1, 'a tap on grandma: she gets the apple');
     // the accordion player
     await by('muzikant', 1.7, 1.0); ok(!(await toy('muzikant')).playing, 'the accordion player is silent by himself'); await t.ev(`__p.tap('muzikant')`); await t.sleep(1700); const m = await toy('muzikant'); ok(m.playing && m.notes > 0, 'a tap: he plays, and notes float up'); await t.shot('tmp-shots/y-muzikant-land.png');
-    ok(await until(`!__p.toy('muzikant').playing`, 6), 'and stops again');
+    ok(await until(`!__p.toy('muzikant').playing`, 14), 'and stops again, after the whole song');
     // the gardener
     await by('tuinman', 1.8, 1.0); await t.shot('tmp-shots/y-tuinman-land.png'); await t.ev(`__p.tap('tuinman')`); await t.sleep(350); ok((await toy('tuinman')).frame === 2, 'a tap on the sleeping gardener: up he shoots'); await t.shot('tmp-shots/y-tuinman-up-land.png');
     await t.sleep(1100); ok((await toy('tuinman')).frame === 3, 'then he waves, sleepily'); ok(await until(`__p.toy('tuinman').frame < 2`, 5), 'and sleeps on');

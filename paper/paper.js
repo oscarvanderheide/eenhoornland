@@ -1435,7 +1435,7 @@ const camLook = new THREE.Vector3(0, 0, .5), camPos = new THREE.Vector3(); let t
 const UP = new THREE.Vector3(0, 1, 0), sunDir = new THREE.Vector3(), sunRight = new THREE.Vector3(), sunUp = new THREE.Vector3();
 let last = performance.now(), tick = 0, acc = 0, time = 0, wacc = 0, still = false;   // still: the clock of the stop motion stands (for comparing screenshots)
 function frame(now) {
-  const dt = Math.min(.05, (now - last) / 1000); last = now; time += dt;
+  const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now; time += dt;   // (never back: the first frame's stamp can be from before the world was built, and the clock started seconds below zero)
   acc += dt; let stepped = false; while (acc >= STEP) { acc -= STEP; if (!still) tick++; stepped = true; }
   wacc += dt; let wsteps = 0; while (wacc >= WSTEP) { wacc -= WSTEP; wsteps++; }
 
@@ -1693,6 +1693,9 @@ window.__p = {
   /** what she is playing on (a toy's own state), or null */
   toy(name) { const q = sets.map(s => s.toys && s.toys[name]).find(Boolean); return q ? { ...q.state(), on: playing === q.toy } : null; },
   /** (for tests) call a toy's own helper: __p.call('zaal', 'solve') */
+  clock: () => time,
+  /** (for tests) which toy plays now: its look and shot, to tell which */
+  playing: () => playing ? { look: playing.look || null, shot: playing.shot ? Object.keys(playing.shot) : null, keys: Object.keys(playing).slice(0, 12) } : null,
   call(name, fn, ...args) { const q = sets.map(s => s.toys && s.toys[name]).find(Boolean); return q && q[fn] ? q[fn](...args) ?? true : null; },
   /** can she walk from where she starts to this spot? */
   canReach(x, z) { const r = this.reach(.15, [[x, z]]); return r.extra[0]; },
