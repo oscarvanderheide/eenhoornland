@@ -110,6 +110,40 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - **A trampoline** on the meadow (trampoline.js): push as she lands to go higher (a somersault when high), steer in the air to drift; the mat throws her back to the middle, too far out and she flies off onto the grass.
 - Found on the way: lamps placed in the world's measure never lit (the cave's light too); fixed.
 
+## The castle: the end of the story (Oscar, 2026-11-28)
+
+"for the castle ... its like the end of the game and right now we can sit on the throne in the castle and thats it? ... take
+some inspiration from paper mario games ... some puzzles (appropriate for my daughters of course). and some sort of magical
+interaction (dont rush it please). and then like a feast with all the characters from the entire world. and the girls dancing
+... and then they get tired and fall asleep. and the unicorn flies them home and brings them to bed. and then a new cycle
+starts where they dream about an egg."
+
+How it goes (first version, 2026-11-28; each step is something she does, never something to read):
+
+1. **The hall is asleep.** In through the castle's gate: the great hall is pale and quiet, the banners grey. At the back a tall
+   golden door with three empty star-shaped sockets above it. Somewhere a little castle kitten.
+2. **Three small puzzles, each a star for the door** (toddler-sized: no fail, no timer, everything answers a touch):
+   - *The crooked paintings*: three portraits (her unicorn, the little dragon, the peacock) hang askew or upside down; a tap
+     turns one a quarter; when all three hang straight their faces smile and a star flies to the door.
+   - *The shapes*: a star, a heart and a moon, paper blocks lying about the hall; three stands with the same shapes on top.
+     She carries a block (a tap) to a stand (a tap): the right one clicks in with a sparkle, a wrong one wobbles and waits.
+   - *The kitten*: hides behind one of three things (a big vase, a chest, a curtain) with its tail peeking out; a tap there
+     and out it pops; three times found and it brings her the last star.
+3. **The magic.** With three stars in, the golden door swings open: up to the top of the tower, at night under a sky full of
+   paper stars. Her unicorn's horn glows. One star shines brighter: she taps it, and a line of light runs to the next that
+   lights up; star by star she draws a big unicorn in the sky. Then it comes alive: a shooting star, the picture glows, magic
+   rains down, and the camera goes far up and back.
+4. **The feast.** Back in the hall everything unfolds like a pop-up book: colour runs into the banners, a long table rises
+   from the floor, and one by one everybody from the islands pops up round it (the baker, the painter, the musicians, the
+   shopkeeper, the witch, the gardener, the fisherman, grandma, the ice cream man, the candy floss lady, animals...). Food
+   on the table to tap and eat. Her sister is there too.
+5. **Dance mode.** A tap on the music box: a happy dance tune, and everybody dances (hops, turns, sways); when the music
+   stops, everybody freezes (a freeze dance); a tap and it plays again. After a few dances: yawns.
+6. **Home to bed.** The candles go low; the girls sit by the fire and their eyes close. The picture dips to dark. Their
+   unicorn flies them home through the night, slowly, over the sea and the islands (a wide, quiet shot), to the house and
+   into bed. A dream cloud: a new egg. The story begins again (her clothes, coins and tools stay; the unicorn will hatch and
+   grow again).
+
 ## Every island its own (Oscar, 2026-11-27)
 
 "all the areas need to feel unique. now i see like all the same elements like the flowers and mills and grass tufts everywhere. that doesnt make it feel like exploring a new area." So: **nothing grows or stands on two islands.** A shared maker is fine for how a thing works, not for how an island looks. What each has (`flora.js` holds everything that is not the village's):

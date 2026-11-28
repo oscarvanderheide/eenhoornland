@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Papieren kaarten 4</title>
+<!-- A sheet of the fourth batch of cut-paper cards (paper/cards4.js): every frame of each next to Anna, and all of them at phone size. -->
+<style>
+html,body{margin:0;min-height:100%;background:#d9c7a7}
+body{font:600 15px/1.3 ui-rounded,"SF Pro Rounded",system-ui,sans-serif;color:#5a4636;padding-bottom:60px}
+h2{margin:34px 0 0;text-align:center;font-size:17px;letter-spacing:.04em;color:#7a6250}
+.row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 26px;padding:26px 28px 0;box-sizing:border-box}
+.row canvas{filter:drop-shadow(2px 5px 5px rgba(60,40,30,.35))}
+.fr{display:flex;flex-direction:column;align-items:center;gap:6px}
+.fr span{font-weight:500;font-size:12px;opacity:.7}
+.name{padding:8px 28px 0;letter-spacing:.02em}
+#phone canvas{filter:drop-shadow(1px 3px 3px rgba(60,40,30,.3))}
+</style>
+<div id="sheet"><div id="dieren"></div></div>
+<h2>op de telefoon</h2><div id="phone" class="row"></div>
+<script type="module">
+import { CARDS4 } from './cards4.js';
+import { FIGS, cutout, paperCanvas } from './figures.js';
+const grain = paperCanvas(512, 7);
+const bg = paperCanvas(512, 3, 1200, 1.3);
+document.body.style.backgroundImage = `url(${bg.toDataURL()})`; document.body.style.backgroundBlendMode = 'multiply';
+const BIG = 150, PHONE = 50, phone = document.getElementById('phone');
+/** a card at `px` points per step of the world: its height is the figure's size, its width follows */
+const card = (f, fr, px) => { const c = cutout(f.w, f.h, g => f.draw(g, fr), grain); c.style.height = f.size * px + 'px'; c.style.width = f.size * px * f.w / f.h + 'px'; return c; };
+const anna = px => card(FIGS.anna, 0, px);
+
+phone.append(anna(PHONE));
+/** one row per figure: Anna for scale, then every frame with its number and what it is; frame 0 also goes on the phone strip */
+function rows(figs, into) {
+  for (const [k, a] of Object.entries(figs)) {
+    const row = document.createElement('div'); row.className = 'row'; row.id = 'row-' + k; row.append(anna(BIG));
+    for (let f = 0; f < a.frames; f++) { const b = document.createElement('div'); b.className = 'fr'; const s = document.createElement('span'); s.textContent = f + ' ' + (a.does[f] || '?'); b.append(card(a, f, BIG), s); row.append(b); }
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = `${k}  (${a.size})`;
+    into.append(row, name);
+    phone.append(card(a, 0, PHONE));
+  }
+}
+rows(CARDS4, document.getElementById('dieren'));
+
+/* checks for the sheet: no frame touches the edge of its card, every frame has a name and is its own drawing */
+const bad = [], room = {};
+/** how many units of empty canvas lie between the card and each edge: left, top, right, bottom */
+const gap = (d, w, h) => { let x0 = w, x1 = -1, y0 = h, y1 = -1; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return [x0, y0, w - 1 - x1, h - 1 - y1]; };
+const data = (a, f) => cutout(a.w, a.h, g => a.draw(g, f), null, 1).getContext('2d').getImageData(0, 0, a.w, a.h).data;
+const differ = (p, q) => { let k = 0; for (let i = 3; i < p.length; i += 4) if (Math.abs(p[i] - q[i]) + Math.abs(p[i - 1] - q[i - 1]) + Math.abs(p[i - 3] - q[i - 3]) > 24) k++; return k; };
+/** per frame too, so a figure's ground line can be checked: the bottom gap of every frame that stands on it should be the same */
+const each = {};
+for (const [k, a] of Object.entries(CARDS4)) {
+  if (a.does.length !== a.frames) bad.push(`${k}: ${a.frames} frames but ${a.does.length} names`);
+  const all = []; each[k] = [];
+  for (let f = 0; f < a.frames; f++) {
+    const d = data(a, f); all.push(d); let edge = 0, any = 0;
+    for (let x = 0; x < a.w; x++) edge += d[x * 4 + 3] + d[((a.h - 1) * a.w + x) * 4 + 3];
+    for (let y = 0; y < a.h; y++) edge += d[y * a.w * 4 + 3] + d[(y * a.w + a.w - 1) * 4 + 3];
+    for (let i = 3; i < d.length; i += 4) if (d[i]) any++;
+    if (edge) bad.push(`${k} frame ${f}: touches the edge of its card`);
+    const gp = gap(d, a.w, a.h); each[k].push(gp);
+    room[k] = gp.map((v, i) => Math.min(v, room[k] ? room[k][i] : 99));
+    if (any < a.w * a.h * .12) bad.push(`${k} frame ${f}: hardly anything is drawn`);
+    for (let e = 0; e < f; e++) if (differ(all[e], d) < 30) bad.push(`${k}: frame ${f} looks like frame ${e}`);
+  }
+}
+window.__bad = bad; window.__room = room; window.__each = each; window.__ready = true;
+</script>

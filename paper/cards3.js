@@ -453,7 +453,26 @@ function drawHangstoel(g) {
   piece(g, '#f4a6c4', E(100, 196, 46, 40), .3); piece(g, '#f8c6d8', E(100, 268, 58, 18), .3);
   ink(g, '#fbe3ea', E(84, 182, 12, 9));
 }
+/** the castle's kitten: a little ginger cat with a white chest. 0 sits and looks, 1 happy (eyes shut, a paw up, tail high) */
+function drawPoes(g, f) {
+  const o = '#F2B56B', o2 = '#E2955A', w = '#FCF8F1';
+  piece(g, o2, C(118, 150, 138, f ? 70 : 108, 9));                                      // the tail
+  piece(g, o, E(82, 138, 42, 34)); piece(g, w, E(78, 146, 22, 20), .3);                 // body and chest
+  piece(g, o, E(58, 164, 12, 8)); piece(g, o, E(100, 166, 12, 8));                       // the front paws
+  if (f) piece(g, o, C(104, 140, 118, 104, 8));                                          // a paw up
+  piece(g, o, S([[52, 74], [58, 42], [74, 64]])); piece(g, o, S([[92, 64], [108, 42], [112, 74]]));   // ears
+  ink(g, '#F4A6C4', S([[57, 66], [60, 50], [69, 63]])); ink(g, '#F4A6C4', S([[97, 63], [105, 50], [107, 66]]));
+  piece(g, o, E(82, 84, 34, 30));                                                        // the head
+  for (const [x, y] of [[66, 72], [82, 66], [98, 72]]) ink(g, o2, E(x, y, 3, 6));         // stripes
+  if (f) { line(g, '#33262E', 2.4, [[66, 86], [70, 82], [74, 86]]); line(g, '#33262E', 2.4, [[90, 86], [94, 82], [98, 86]]); }
+  else { eye(g, 70, 86, 4.6); eye(g, 94, 86, 4.6); }
+  ink(g, '#E8808F', S([[79, 94], [85, 94], [82, 98]])); ink(g, 'rgba(240,120,150,.4)', E(62, 96, 7, 5)); ink(g, 'rgba(240,120,150,.4)', E(102, 96, 7, 5));
+}
+/** only the kitten's tail, sticking out from where it hides: it curls one way, then the other */
+function drawStaart(g, f) { piece(g, '#E2955A', S([[20, 96], [26, 60], [38, 34], [54, 22], [64, 30], [52, 40], [42, 62], [36, 96]].map(([x, y]) => [f ? 80 - x : x, y]))); }
 export const CARDS3 = {
+  poes: { w: 160, h: 180, draw: drawPoes, frames: 2, size: .62, does: ['sit', 'happy'] },
+  staart: { w: 80, h: 100, draw: drawStaart, frames: 2, size: .4, does: ['curl', 'curl'] },
   hangstoel: { w: 200, h: 320, draw: drawHangstoel, frames: 1, size: 2.1, does: ['chair'] },
   kijker: { w: 170, h: 200, draw: drawKijker, frames: 1, size: 1.15, does: ['telescope'] },
   koe: { w: 260, h: 220, draw: drawKoe, frames: 4, size: 1.35, does: ['stand', 'walk', 'walk', 'moo'] },

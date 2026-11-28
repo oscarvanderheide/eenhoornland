@@ -18,6 +18,7 @@ import { hookGap } from './gear.js';
 import { frisbee, kite } from './toys.js';
 import { digging, sealBall, iceCream, lifeguard, sunbather } from './beach2.js';
 import { CARDS3 } from './cards3.js';
+import { lagoon } from './lagoon.js';
 import { musician } from './folk.js';
 import { PEOPLE2, PROPS2 } from './people2.js';
 
@@ -53,6 +54,7 @@ export default {
     post(HEAD.x1, HEAD.z0 + .1);
 
     S.sea({ land: [SAND, SEALROCK], x0: -40, x1: 40, z0: -26, z1: 30, deep: [230, 180, 0, 0], fine: 1.8 });
+    const pool = lagoon(S, { y: H_SAND, cx: 5.9, cz: 6.1, rx: 3.05, rz: 1.42 });   // the bathing lagoon in the south-east, between the pier and the lifeguard: anybody swims there (lagoon.js; its water before the sand's floor)
 
     S.floorBox(DECK, BR.x0, BR.z0, BR.x1, BR.z1); S.floorBox(DECK, PIER.x0, PIER.z0, PIER.x1, HEAD.z0 + .1); S.floorBox(DECK, HEAD.x0, HEAD.z0, HEAD.x1, HEAD.z1);
     S.floor(H_ROCK, ROCK); S.floor(H_DUNE, DUNE); S.floor(H_SAND, SAND, .22);
@@ -83,12 +85,12 @@ export default {
       meeuw: gull(S, [[perch[0][0], perch[0][1], DECK + .9], [perch[1][0], perch[1][1], DECK + .9], [perch[2][0], perch[2][1], DECK + .9]]),
       zeehond: seal(S, 5.4, 14.45, -.3),
     };
-    S.featherFrom(live.meeuw.f, 'meeuw');
+    S.featherFrom(live.meeuw.f, 'meeuw'); pool.wade(live.krab.f);   // (the crab, following her into the lagoon, is in it up to its middle)
     // more to do, and more people (beach2.js): the spade and the treasure, the seal's ball, the fish kite, the ice cream man, the lifeguard, the sunbather
-    const digOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .7 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z)) && !(x > PIER.x0 - .4 && x < PIER.x1 + .4 && z > PIER.z0 - .4);
+    const digOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .7 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z)) && !(x > PIER.x0 - .4 && x < PIER.x1 + .4 && z > PIER.z0 - .4) && !pool.has(x, z);
     const spade = digging(S, -1.6, 4.0, H_SAND, [-8.8, 5.6], digOk), sealToy = sealBall(S, live.zeehond, [1.2, 14.7], DECK);
     const fishKite = kite(S, -9.6, H_DUNE, -3.2, () => true, CARDS3.viskite, 'viskite');   // (the whole beach is windy)
-    const people = { ijsverkoper: iceCream(S, -5.6, .3), badmeester: lifeguard(S, 7.4, 7.0), zonnebader: sunbather(S, 10.2, 4.0) };   // the gull's feather for the wings (paper.js)
+    const people = { ijsverkoper: iceCream(S, -5.6, .3), badmeester: lifeguard(S, 9.75, 6.25), zonnebader: sunbather(S, 11.9, 3.3) }; people.badmeester.f.face = -1;   // (the lifeguard on her chair at the lagoon's east end, looking out over it)   // the gull's feather for the wings (paper.js)
     // the boat to the rainbow island, at a short jetty where the bridge used to start (boat.js): the rainbow island's end of it is its jetty (set-regenboog.js)
     const RB = { z0: -.6, z1: .6 }, JX = 14.3, JE = JX + 2.2, RBJ = regenboogLand().bridge, rb = [ORIGIN.regenboog[0] - ORIGIN.strand[0], ORIGIN.regenboog[1] - ORIGIN.strand[1]];   // (the beach's jetty, out east where the old bridge began; the island's, far out at sea)
     for (let x = JX; x < JE; x += .32) root.add(slab([[x, RB.z0 - .05], [x + .28, RB.z0 - .05], [x + .28, RB.z1 + .05], [x, RB.z1 + .05]], -.12, .06, paper('#c9a878'), edgeMat));
@@ -101,31 +103,32 @@ export default {
     // planted, not scattered (PLAN.md): beach grass in clumps round the dune, the shells where the sea left them (a line along
     // the south shore, and two heaps), starfish in threes by the water
     { const BR2 = rng(563), duneOk = (x, z) => inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .22 && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5);
-      const sandOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .5 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .7) && !(x > PIER.x0 - .6 && x < PIER.x1 + .6 && z > PIER.z0 - 1.5);
+      const sandOk = (x, z) => inPoly(SAND, x, z) && edgeDist(SAND, x, z) > .5 && !inPoly(DUNE, x, z) && edgeDist(DUNE, x, z) > .3 && !inPoly(ROCK, x, z) && !laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .25) && !S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .7) && !(x > PIER.x0 - .6 && x < PIER.x1 + .6 && z > PIER.z0 - 1.5) && !pool.has(x, z);
       plantAt(S, findSpots(BR2, 13, 1.6, R2 => [-13.5 + R2() * 12.5, -7.2 + R2() * 7.2], duneOk).flatMap(([cx, cz]) => inOval(BR2, cx, cz, .5, .34, 5, .16, duneOk).map(([x, z]) => [x, H_DUNE, z])), 563, beachGrass);
       const shore = x => { for (let z = 9.6; z > 0; z -= .05) if (inPoly(SAND, x, z) && edgeDist(SAND, x, z) > 1.0) return z; return null; }, cols = ['#fbf5ea', '#f4c6b8', '#e8d5b0', '#cbc5d6', '#f6dfa6'], shells = [];
       for (let x = -12.4; x < 12.6; x += .2 + BR2() * .3) { const z0 = shore(x); if (z0 === null) continue; const z = z0 - .15 + Math.sin(x * 1.3) * .22 + (BR2() - .5) * .2; if (sandOk(x, z)) shells.push([x, z]); }
       for (const [hx, hz] of [[-5.6, 1.2], [6.6, -1.4]]) for (const [x, z] of inOval(BR2, hx, hz, .5, .34, 9, .13, sandOk)) shells.push([x, z]);
       shells.forEach(([x, z], k) => { const st = slab(circlePts(.05 + BR2() * .06, 580 + k, 9).map(([px, pz]) => [px * (1 + BR2() * .5), pz]), H_SAND + .03, .03, paper(cols[k % cols.length]), whiteEdge); st.position.set(x, 0, z); st.rotation.y = BR2() * 3; root.add(st); });
-      plantAt(S, [[-9.6, 6.0], [7.2, 6.6], [12.2, 2.2]].flatMap(([cx, cz]) => inOval(BR2, cx, cz, .5, .36, 3, .28, sandOk).map(([x, z]) => [x, H_SAND, z])), 564, starfish); }
+      plantAt(S, [[-9.6, 6.0], [4.0, 8.15], [12.2, 2.2]].flatMap(([cx, cz]) => inOval(BR2, cx, cz, .5, .36, 3, .28, sandOk).map(([x, z]) => [x, H_SAND, z])), 564, starfish); }
 
     return {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
         theBoat.step(e); theVoyage.step(e); spade.step(e); sealToy.step(e); fishKite.step(e); for (const q of Object.values(people)) q.step(e);
-        light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e);
+        light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e); pool.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, ...people, schep: spade, zeehondbal: sealToy, viskite: fishKite, boot: theBoat, voyage: theVoyage, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, ...people, ...pool.toys, schep: spade, zeehondbal: sealToy, viskite: fishKite, boot: theBoat, voyage: theVoyage, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal
         { name: 'vuurtoren', zone: [8.2, -5.8, 14.2, -1.2], span: 16, tall: 10, rise: .34 },                                                 // by the lighthouse: back far enough to see its lamp
+        pool.shot,                                                                                                                            // by the bathing lagoon: a little lower and closer (lagoon.js)
         { name: 'strand', span: 15, tall: 8.5, rise: .32 },
       ],
       spots: { paal: [.82, DECK + .6, GAP[1] + .3], paalnoord: [.82, DECK + .6, GAP[0] - .3], zandkasteel: [-3.6, .08, 3.75], vuurtoren: [11.5, 1.6, -3.6], palm: [-4.2, 1.6, -6.6], bank: [-8.6, .1, 3.63] },
-      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], spade: [-1.2, 4.4], cross: [-8.8, 6.3], icecream: [-4.2, 1.2], lifeguard: [6.4, 7.4], sunbather: [10.2, 5.0], kite: [-9.2, -2.8], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
+      places: { start: [0, -7.4], castle: [-3.5, 4.3], light: [10.6, -1.9], pier: [2.0, 15.0], dune: [-6.6, -2.8], crab: [5.2, 4.6], turtle: [-6.2, 7.0], spade: [-1.2, 4.4], cross: [-8.8, 6.3], icecream: [-4.2, 1.2], lifeguard: [9.0, 7.0], sunbather: [11.6, 4.4], ...pool.places, kite: [-9.2, -2.8], north: [0, BR.z0 + 2], lip: [0, GAP[1] + 1.2] },
     };
   },
 };

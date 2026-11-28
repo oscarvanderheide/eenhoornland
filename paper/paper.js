@@ -22,6 +22,7 @@ import grot from './set-grot.js';
 import hol from './set-hol.js';
 import winkel from './set-winkel.js';
 import kasteelzaal from './set-kasteelzaal.js';
+import kasteeltoren from './set-kasteeltoren.js';
 import sneeuw from './set-sneeuw.js';
 import boomhut from './set-boomhut.js';
 import blokhut from './set-blokhut.js';
@@ -30,7 +31,7 @@ import { CARDS3 } from './cards3.js';
 import { openShop } from './shopui.js';
 import { PRICES } from './props.js';
 import { ORIGIN, WORLDS, SPREAD } from './lands.js';
-const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut, kasteelzaal, sneeuw };
+const SETS = { eiland, dorp, bos, huis, wei, strand, regenboog, kasteel, grot, hol, winkel, boomhut, blokhut, kasteelzaal, kasteeltoren, sneeuw };
 
 // switches in the address, for measuring on a phone what costs what: ?fps shows a readout; ?shadows=0, ?dof=0 (no soft focus),
 // ?post=0 (no lens and film pass at all), ?dpr=1 (pixels per point; default the screen's, at most 2), ?bake=0 (every piece drawn on its own). Also ?who=fenna and ?wear=kroon,ballon.
@@ -287,6 +288,8 @@ function buildSet(def) {
     door: (name, zone, stand, dir, any = false, arrive = null) => { s.doors.push({ name, zone: [zone[0] + ox, zone[1] + oz, zone[2] + ox, zone[3] + oz], stand: W(stand), dir, any, arrive }); },   // (`arrive`: what happens when she comes out of this door: the treehouse puts her on its ladder)   // (`any`: being in the zone is enough, whichever way she came: a way in through water)
     through: name => { const d = s.doors.find(q => q.name === name); if (d) goThrough(d); },
     cut: () => { camCut = true; },
+    night: () => { eveTarget = 1; skyIcon(true); },   // evening falls (the castle's feast: late, and sleepy)
+    ending: () => goHome(),   // the end of the story: the unicorn flies the sleeping girls home to bed, and they dream of an egg again
     // an island under the sea (the rainbow island, until she has rowed through all seven rings: set-regenboog.js). Sunk, it has
     // no ground, is not drawn and nobody on it shows, and the sea is not cut round it; rising, it is drawn, `raise` lifting it
     sink: state => { s.sunk = state; },   // 'down' | 'rising' | false
@@ -451,14 +454,14 @@ function stepEgg(dt) {
 /* her sister: asleep in her own bed at home while the other one is out. The button swaps the two */
 const zus = fig('zus', girl.kid === 'anna' ? 'fenna' : 'anna'); zus.g.visible = false;
 function stepSister() {
-  if (zus.out) { zus.g.visible = true; zus.asleep = false; return; }   // out playing (the seesaw)
+  if (zus.out) { zus.g.visible = true; zus.asleep = !!zus.dozing; if (!zus.dozing && !playing) { zus.lean = 0; zus.floatY = undefined; if (zus.lift > 0 && !zus.poseName) zus.lift = 0; } return; }   // (out of bed: upright, not still lying as in bed)   // (out with her: awake, unless she has dozed off at the feast)   // out playing (the seesaw)
   const home = sets.find(q => q.name === 'huis' && q.beds); zus.g.visible = !!home; if (!home) return;
   const b = home.beds[zus.kid]; zus.x = b[0]; zus.z = b[1]; zus.floatY = zus.y = home.bedY || 0; zus.lift = home.lie; zus.lean = b[2]; zus.poseName = b[2] > 0 ? 'bedL' : 'bedR'; zus.view = 'front'; zus.asleep = true;
 }
 /* the mask and snorkel she wears while she swims: a card of its own on her face */
 const mask = makeFigure('snorkel', SNORKEL); mask.thing = true; mask.g.visible = false; let bubble = 0;
 function stepMask(dt) {
-  mask.g.visible = !!girl.swimming && !playing && girl.view !== 'back'; if (!mask.g.visible) return;
+  mask.g.visible = !!girl.swimming && !playing && girl.view !== 'back' && !(floorAt(girl.x, girl.z) || {}).open; if (!mask.g.visible) return;   // (no mask in a bathing place: only where the snorkel is needed)
   girl.g.updateMatrixWorld(true); const top = girl.point(kidPoints(girl.kid, girl.view, girl.poseOf(girl.frame), girl.frame).top);
   const k = girl.H / 1.2; mask.g.scale.setScalar(k);   // (as big as her face: Fenna's is bigger)
   mask.x = top.x + (girl.view === 'side' ? girl.face * .07 * k : 0); mask.z = top.z + (girl.view === 'back' ? -.03 : .04); mask.floatY = mask.y = top.y - (.21 + .51 * .72) * k; mask.face = girl.view === 'side' ? girl.face : 1;
@@ -531,6 +534,7 @@ const SONGS = {
   jacques: { beat: .38, notes: 'C4 D4 E4 C4 C4 D4 E4 C4 E4 F4 G4:2 E4 F4 G4:2 G4:.5 A4:.5 G4:.5 F4:.5 E4 C4 G4:.5 A4:.5 G4:.5 F4:.5 E4 C4 C4 G3 C4:2 C4 G3 C4:2' },
   ode: { beat: .4, notes: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:.5 C4:2' },
   oldmac: { beat: .36, notes: 'G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:3 D4 G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:3' },
+  dans: { beat: .2, notes: 'C5 E5 G5 E5 C5 E5 G5:2 A5 G5 E5 C5 D5:2 G4:2 C5 E5 G5 E5 C5 E5 G5:2 A5 B5 C6 A5 G5:2 C5:2 F5 F5 A5 F5 E5 E5 G5 E5 D5 D5 F5 D5 C5:2 G4:2 C5 E5 G5 E5 F5 A5 C6 A5 G5 E5 D5 G4 C5:4' },   // (our own happy dance tune: dance mode at the castle's feast)
   fanfare: { beat: .3, notes: 'G4:.5 C5:.5 E5:.5 G5:1.5 E5:.5 G5:2.5' },
   elise: { beat: .26, notes: 'E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 G#4 B4 C5:2 E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 C5 B4 A4:3' },
   birthday: { beat: .36, notes: 'G4:.75 G4:.25 A4 G4 C5 B4:2 G4:.75 G4:.25 A4 G4 D5 C5:2 G4:.75 G4:.25 G5 E5 C5 B4 A4:2 F5:.75 F5:.25 E5 C5 D5 C5:3' },
@@ -572,6 +576,7 @@ const sfx = {
   thud() { tone(120, .12, 'sine', .12, .6); noise(.08, .05, 400); },
   cluck() { tone(520, .07, 'square', .05, .8); setTimeout(() => tone(640, .1, 'square', .05, .7), 110); },
   peep() { tone(1500, .08, 'sine', .06, 1.2); },
+  meow() { tone(760, .35, 'triangle', .045, .7, 6); },
   moo() { tone(150, .9, 'sawtooth', .045, .85, 5); tone(300, .7, 'sine', .02, .85); },
   bleat() { tone(560, .45, 'triangle', .05, .92, 14); },
   oink() { tone(180, .16, 'sawtooth', .06, .8, 30); setTimeout(() => tone(200, .14, 'sawtooth', .05, .8, 30), 220); },
@@ -809,6 +814,40 @@ const closet = {
   buy(id) { wardrobe.own.add(id); closet.put(id); },
   put(id) { const slotOf = Object.entries(WEAR).find(([, l]) => l.includes(id))[0], me = wardrobe.on[girl.kid]; if (me[slotOf] === id) delete me[slotOf]; else me[slotOf] = id; redressBoth(); girl.hopV = 2.6; sfx.hop(); confetti(girl.x, girl.y + 1, girl.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 14, starGeo, 2.2); },
 };
+/* ---------------- the end of the story: home to bed ----------------
+   After the castle's feast the girls fall asleep. The picture dips to dark; their unicorn, wings out, flies them home through
+   the night (both on its back, asleep), slowly over the sea and the islands, the camera wide and following. Over the house
+   the picture dips again: they are in their beds, and the dream cloud comes: an egg. The story begins again: her clothes,
+   coins and tools stay; the unicorn hatches and grows anew, and the castle sleeps again until the next time */
+let homeTrip = null;
+function goHome() {
+  if (homeTrip) return; const castle = sets.find(q => q.name === 'kasteel'), dorp = sets.find(q => q.name === 'dorp'), home = sets.find(q => q.name === 'huis');
+  if (!castle || !dorp || !home) return;
+  fadeEl.style.transition = 'opacity .6s linear'; fadeEl.style.opacity = 1;
+  const door = dorp.spots.door || [dorp.ox, 0, dorp.oz], A = [castle.ox - 4, castle.oz + 6], B = [door[0], door[2] + 2.5], T = 17;
+  homeTrip = { t: -.7, A, B };
+  const trip = { look: A, rate: .7, shot: { span: 26, tall: 16, rise: .4, riseTall: .55, ly: 3, dof: .15, range: 7, fx: 1, fz: 1, lag: 1 }, step(dt) {
+    const q = homeTrip; q.t += dt; if (q.t < 0) return;
+    if (!q.started) { q.started = true; fadeEl.style.opacity = 0; if (ride.on) dismount(true); eve = eveTarget = 1; skyIcon(true); uni.away = false; uni.g.visible = true; uni.become(FIGS.grownRide || FIGS.grown); zus.out = true; standOn(castle); camCut = true; sfx.whoosh(); }
+    const k = Math.min(1, q.t / T), e = k * k * (3 - 2 * k), x = A[0] + (B[0] - A[0]) * e, z = A[1] + (B[1] - A[1]) * e + Math.sin(k * Math.PI) * 6, alt = 2.2 + Math.sin(k * Math.PI) * 4.5 - k * 1.2, face = B[0] < A[0] ? -1 : 1;
+    uni.x = x; uni.z = z; uni.floatY = uni.y = WATER_Y; uni.lift = alt - WATER_Y; uni.face = face; uni.view = 'side'; uni.busy = true;
+    for (const [f, back] of [[girl, .08], [zus, .5]]) { f.x = x - face * back; f.z = z + .06 - back * .1; f.floatY = f.y = WATER_Y; f.lift = alt - WATER_Y + BACK; f.poseName = 'sit'; f.view = 'side'; f.face = face; f.asleep = true; f.dozing = true; f.g.visible = true; }
+    trip.look = [x, z]; trip.shot.ly = alt * .7;
+    if (Math.floor(q.t * .7) !== Math.floor((q.t - dt) * .7)) confetti(x - face * 1.2, alt + .6, z, ['#fbf7ee', '#e2d8f4', '#f2c65c'], 4, starGeo, 1);   // a trail of little stars
+    if (k >= 1 && !q.down) { q.down = true; fadeEl.style.opacity = 1; setTimeout(toBed, 700); }
+  } };
+  const toBed = () => {
+    stopPlay(); homeTrip = null; fadeEl.style.transition = 'opacity .13s linear';
+    for (const f of [girl, zus, uni]) { f.floatY = undefined; f.lift = 0; f.asleep = false; f.dozing = false; f.poseName = null; }
+    // a new beginning: the story starts again; what she owns stays
+    quest.stage = 'dream'; gear.grown = false; gear.wings = false; gear.feathers = []; gear.potion = false; gear.cycle = (gear.cycle || 0) + 1;
+    for (const k of ['magie', 'ster-0', 'ster-1', 'ster-2', 'feest']) purse.seen.delete(k);
+    uni.away = true; uni.g.visible = false; uni.busy = false; uni.become(FIGS.baby); zus.out = false; showCoins();
+    [girl.x, girl.z] = home.beds[girl.kid]; girl.y = 0; standOn(home); camCut = true; fadeEl.style.opacity = 0; home.sleep(girl.kid); writeSave();
+  };
+  play(trip);
+}
+
 /* ---------------- the unicorn grows, and she rides it ----------------
    The rainbow island's tree drops a rainbow fruit when shaken (set-regenboog.js); given to the baby unicorn, she eats it
    and grows (a moment to watch: the camera comes close, stars, and she stands there big). From then on a round button
@@ -867,7 +906,7 @@ function giveWings() {
    camera wide and following, big paper wings beating. In the air a tap anywhere is only where to fly (no toys, no doors),
    over the water too, over the islands only. The same button lands: straight down where there is ground to stand on, or
    first to the nearest such ground. While flying it is the only button (Oscar, in the pixel game: one button to land) */
-const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot', 'winkel', 'boomhut', 'blokhut', 'kasteelzaal']);
+const flight = { on: false, alt: 0, landing: false, landAt: null, flights: 0 }, ALT = 3.6, OUTSIDE = new Set(['huis', 'hol', 'grot', 'winkel', 'boomhut', 'blokhut', 'kasteelzaal', 'kasteeltoren']);
 const flyBtn = document.getElementById('fly'); if (flyBtn) flyBtn.style.backgroundImage = `url(${wingIcon().toDataURL()})`;
 function bounds() { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const s of sets) if (!OUTSIDE.has(s.name) && s.box) { x0 = Math.min(x0, s.box[0]); z0 = Math.min(z0, s.box[1]); x1 = Math.max(x1, s.box[2]); z1 = Math.max(z1, s.box[3]); } return [x0 - 4, z0 - 4, x1 + 4, z1 + 4]; }
 const landable = (x, z) => { const fl = floorAt(x, z); return !!fl && !fl.swim && !OUTSIDE.has(fl.set.name) && free(x, z, fl.h); };
@@ -998,7 +1037,7 @@ function stepDoors(dt) {
  *  floor of height null is a hole: the pond); where two sets overlap (a bridge's end under the next shore) the higher one */
 function floorAt(x, z) {
   let best = null;
-  for (const s of sets) if (!s.sunk && x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || f.open || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim }; break; }
+  for (const s of sets) if (!s.sunk && x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3]) for (const f of s.floors) if (f.box ? x > f.box[0] && x < f.box[2] && z > f.box[1] && z < f.box[3] : inPoly(f.pts, x, z) && (!f.inset || edgeDist(f.pts, x, z) > f.inset)) { if (f.h !== null && (!f.swim || f.open || gear.snorkel) && (!best || f.h > best.h)) best = { h: f.h, set: s, swim: !!f.swim, open: !!f.open }; break; }
   return best;
 }
 const heightAt = (x, z) => { const f = floorAt(x, z); return f ? f.h : null; };
@@ -1573,6 +1612,8 @@ window.__p = {
   /** (for tests) what a tap at this point of the screen would hit: its name or kind, where, and whether it is a tap target */
   pick(x, y) { const h = pickAt(x, y); if (!h) return null; let o = h.object, path = []; for (let q = o; q && path.length < 5; q = q.parent) path.push(q.name || q.type); return { path, at: h.point.toArray().map(v => +v.toFixed(2)), tap: !!o.userData.tap }; },
   /** (for tests) the rainbow island rises now, as after the seven rings */
+  /** (for tests) the end: the flight home and the new dream */
+  ending() { goHome(); return true; }, home: () => !!homeTrip,
   rise(now = false) { if (!shared.island) return false; if (now) { shared.island.now(); return true; } return !!shared.island.rise(); },   // (now: up at once, for a test that starts on it)
   seaLife: () => ({ boats: seaLife.boats.map(b => [+b.f.x.toFixed(1), +b.f.z.toFixed(1), b.f.g.visible, true]), gulls: seaLife.gulls.map(q => [+q.f.x.toFixed(1), +q.f.z.toFixed(1)]), whale: !!seaLife.whale }),
   /** riding: whether she is on it, flying, and the unicorn's state */
@@ -1651,6 +1692,8 @@ window.__p = {
   cam() { return { look: camLook.toArray(), pos: camPos.toArray() }; },
   /** what she is playing on (a toy's own state), or null */
   toy(name) { const q = sets.map(s => s.toys && s.toys[name]).find(Boolean); return q ? { ...q.state(), on: playing === q.toy } : null; },
+  /** (for tests) call a toy's own helper: __p.call('zaal', 'solve') */
+  call(name, fn, ...args) { const q = sets.map(s => s.toys && s.toys[name]).find(Boolean); return q && q[fn] ? q[fn](...args) ?? true : null; },
   /** can she walk from where she starts to this spot? */
   canReach(x, z) { const r = this.reach(.15, [[x, z]]); return r.extra[0]; },
   /** hold keys down as a child would ('a', 'd', 'w', 's'), or none */
