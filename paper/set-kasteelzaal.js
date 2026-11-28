@@ -171,6 +171,12 @@ export default {
       start: [0, D / 2 - .95], uni: [-.9, D / 2 - .85],
       shadow: { follow: 20 },
       step({ dt, time }) {
+        // a new beginning (the story starts again after the flight home, paper.js goHome): the hall sleeps again, the puzzles undone
+        for (let i = 0; i < 3; i++) if (sockets[i].star && !had('ster-' + i) && !flying.length) { root.remove(sockets[i].star); sockets[i].star = null;
+          if (i === 0) { paintsDone = false; paints.forEach((q, k) => { q.q = q.rot = [1, 2, 3][k]; }); }
+          if (i === 1) { for (const b of blocks) { b.on = null; b.held = false; b.at = [[-1.6, 1.5], [1.6, 1.7], [-3.9, -.2]][KINDS.indexOf(b.k)]; } for (const st of stands) st.block = null; }
+          if (i === 2) { found = 0; hideAt = 0; kitDone = false; kitOut = -1; kit.g.visible = false; } }
+        if (!awake() && awakeK > 0 && unfolding < 0) { setAwake(0); feast.visible = false; table.scale.y = .01; garland.scale.x = .01; for (const q of guests) { q.f.g.visible = false; q.pop = -1; } for (const q of food) q.f.g.visible = false; dancing = false; frozen = false; sleepy = -1; }
         // the puzzles, once solved in this save, stay solved
         for (let i = 0; i < 3; i++) if (had('ster-' + i) && !sockets[i].star) giveStar(i, null, true);
         // the paintings turn to where they are asked; all straight: a star

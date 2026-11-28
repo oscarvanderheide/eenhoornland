@@ -110,6 +110,15 @@ Claude's picks that he has seen working and not objected to, but never said yes 
 - **A trampoline** on the meadow (trampoline.js): push as she lands to go higher (a somersault when high), steer in the air to drift; the mat throws her back to the middle, too far out and she flies off onto the grass.
 - Found on the way: lamps placed in the world's measure never lit (the cave's light too); fixed.
 
+**The night round, 2026-11-28 (Oscar asleep):**
+
+- **The castle's ending is in** (below): the three puzzles, the stars in the sky, the pop-up feast, dance mode, falling asleep, the flight home and the new dream. Played through end to end; the hall and tower are set-kasteelzaal.js and set-kasteeltoren.js.
+- **Treehouse:** climbing keeps the oak's low camera, lifted as she goes up; the zipline starts wide with her in the picture; the hut outside matches the room (planks, window, door, a doorway to the zipline); the telescope is a paper card; the hammock is a hanging basket chair that swings left and right, pushed in time.
+- **The forest** and **the meadow** have no beach: the ground goes to the water.
+- **The beach's bathing lagoon** (lagoon.js, cards4.js): open water anyone may swim in (S.water(..., true)), a girl in a ring, a floating grandpa, a snorkeller, a seal pup, and a big rubber duck to ride.
+- **The snow island** (set-sneeuw.js, snow.js, cards5.js), far north, reached by the flying unicorn: Santa at his workshop gives presents; his sleigh with three reindeer flies her home to the village; a big Christmas tree that lights up to Jingle Bells, We Wish You a Merry Christmas and O Tannenbaum; igloos and penguins that belly-slide on the ice; a frozen pond to glide on; a snowman to build; snowballs to throw (at the snowman's hat, the penguins, Santa).
+- The drawing sheets for the new cards are paper/cards4.html and paper/cards5.html, for Oscar to look at.
+
 ## The castle: the end of the story (Oscar, 2026-11-28)
 
 "for the castle ... its like the end of the game and right now we can sit on the throne in the castle and thats it? ... take
