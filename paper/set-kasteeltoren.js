@@ -63,8 +63,8 @@ export default {
         big.forEach((b, i) => { const want = i === next && done < 0 ? .4 + Math.sin(time * 5) * .25 : i < next || done >= 0 ? .3 : 0; b.glow.material.opacity += (want - b.glow.material.opacity) * Math.min(1, dt * 6); b.s.scale.setScalar(i === next && done < 0 ? 1.25 + Math.sin(time * 5) * .2 : 1);
           b.g.userData.wob = Math.max(0, (b.g.userData.wob || 0) - dt * 2); b.g.rotation.z = Math.sin((b.g.userData.wob || 0) * 16) * (b.g.userData.wob || 0) * .3; });
         for (const l of lines) { l.t = Math.min(1, l.t + dt * 2.2); l.m.scale.x = Math.max(.001, l.L * l.t); l.m.position.set(l.a.x + Math.cos(l.m.rotation.z) * l.L * l.t / 2, l.a.y + Math.sin(l.m.rotation.z) * l.L * l.t / 2, SKY_Z + .03); }
-        // her unicorn's horn glows while she draws
-        if (uni && !uni.away && done < 0 && Math.floor(time * 3) !== Math.floor((time - dt) * 3)) S.confetti(uni.x + uni.face * .55, (uni.y || 0) + 1.75, uni.z + .05, ['#fff3c4', '#e2d8f4'], 2, S.starGeo, .8);
+        // her unicorn's horn glows while she draws (up here only: this runs wherever she is, and on every island it rained stars)
+        if (uni && !uni.away && done < 0 && S.where() === 'kasteeltoren' && Math.floor(time * 1.5) !== Math.floor((time - dt) * 1.5)) S.confetti(uni.x + uni.face * .55, (uni.y || 0) + 1.75, uni.z + .05, ['#fff3c4', '#e2d8f4'], 2, S.starGeo, .8);
         if (done >= 90) alive.material.opacity = .9;
         else if (done >= 0) { const was = done; done += dt;
           if (was < .6 && done >= .6) { S.play(magic); sfx.chime(); sfx.song('twinkle', 'musicbox'); if (uni && !uni.away) { uni.hopV = 3; sfx.neigh(); } }
