@@ -13,6 +13,7 @@ import { befriend } from './companion.js';
 import { strandLand, regenboogLand, ORIGIN, BACK } from './lands.js';
 import { voyage } from './voyage.js';
 import { ferry } from './boat.js';
+import { jetty, swimmer } from './swim.js';
 import { findSpots, inOval, plantAt, beachGrass, starfish, driftwood, rowboat } from './flora.js';
 import { hookGap } from './gear.js';
 import { frisbee, kite } from './toys.js';
@@ -97,7 +98,9 @@ export default {
     for (const x of [JX + 1.1, JE - .15]) for (const z of [RB.z0, RB.z1]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1.6, 8), paper('#8d6a48')); m.castShadow = true; m.position.set(x, -.72, z); root.add(m); }
     S.floorBox(-.12, JX, RB.z0, JE, RB.z1);
     const theBoat = ferry(S, [{ stand: S.at([JE - .3, 0]), moor: S.at([JE + 1.2, 0]) }, { stand: S.at([rb[0] + RBJ.x1 - 1.9, rb[1]]), moor: S.at([rb[0] + RBJ.x1 - 3.4, rb[1]]), low: true, open: () => !S.shared.island || S.shared.island.risen() }]);
-    const theVoyage = voyage(S, theBoat);   // what she meets on the way (voyage.js)
+    jetty(S, 'strand', [JX, 0], [1, 0], -.12, JE - JX, false);   // (the swim ring at the boat's jetty: swim.js)
+    const theSwim = S.shared.swim = swimmer(S);   // her grown unicorn swims her from jetty to jetty (swim.js)
+    const theVoyage = voyage(S, theBoat, { x: ORIGIN.regenboog[0] - 13.5, z: ORIGIN.regenboog[1] + .6 });   // (the last ring waits over the sunk island, west of its rainbow)   // what she meets on the way (voyage.js)
     // beach grass on the dune (with flowers to pick), and shells and pebbles on the sand
     const grass = meadow(S, 0, R2 => { const x = -13.5 + R2() * 12.5, z = -7.2 + R2() * 7.2; if (!inPoly(DUNE, x, z) || edgeDist(DUNE, x, z) < .3 || laid.some(o => inPoly(o, x, z) || edgeDist(o, x, z) < .22) || S.solids.some(q => Math.hypot(q.x - x, q.z - z) < .5)) return null; return [x, H_DUNE, z]; }, 562, 10, ['#a8bd7c', '#b9c98a', '#93ad6a'], bunch);
     // planted, not scattered (PLAN.md): beach grass in clumps round the dune, the shells where the sea left them (a line along
@@ -115,11 +118,11 @@ export default {
       start: [0, -7.4], uni: [-.8, -7.0],
       shadow: { follow: 20 }, back: BACK, sky: 2.6,
       step(e) {
-        theBoat.step(e); theVoyage.step(e); spade.step(e); sealToy.step(e); fishKite.step(e); for (const q of Object.values(people)) q.step(e);
+        theBoat.step(e); theVoyage.step(e); theSwim.step(e); spade.step(e); sealToy.step(e); fishKite.step(e); for (const q of Object.values(people)) q.step(e);
         light.step(e); castle.step(e); bunch.step(e); grass.step(e); gap.step(e); disc.step(e); guitar.step(e); pool.step(e);
         for (const q of [...palms, ...benches, ...lamps, ...mills, ...Object.values(live)]) q.step(e);
       },
-      toys: { ...live, ...people, ...pool.toys, schep: spade, zeehondbal: sealToy, viskite: fishKite, boot: theBoat, voyage: theVoyage, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
+      toys: { ...live, ...people, ...pool.toys, schep: spade, zeehondbal: sealToy, viskite: fishKite, boot: theBoat, voyage: theVoyage, zwemmen: theSwim, gitarist: guitar, frisbee: disc, kloof: gap, vuurtoren: light, zandkasteel: castle, palm: palms[2], bos: bunch, gras: grass, bank: benches[0] },
       shots: [
         { name: 'brug-zuid', zone: [-1.1, BR.z0 + .9, 1.1, BR.z1 - .2], span: 24, tall: 13, rise: .55, dof: .7, range: 2.2, play: false },   // the bridge from the meadow: far back and high
         { name: 'pier', zone: [.2, 9.4, 3.8, 16.2], span: 13, tall: 8, rise: .5 },                                                           // out on the pier: looking down on the water, the gull and the seal

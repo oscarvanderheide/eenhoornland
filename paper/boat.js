@@ -39,6 +39,13 @@ export function ferry(S, ends) {
   };
   const SAIL = { span: 19, tall: 12, rise: .46, riseTall: .62, dof: .35, range: 4, fx: 1, fz: 1, lag: 1 }, LOW = { span: 9.5, tall: 6.5, rise: .1, riseTall: .16, ly: .5, yaw: -.85, dof: .5, range: 3, fx: 1, fz: 1, lag: 1 };   // (yaw: from the south-west, so the island stands before her)
   let cine = null;   // (the voyage may take the camera for a while: { look, shot, rate })
+  // the island rising under the boat (voyage.js): a rumble, then the boat is thrown up into the sky and breaks; she and her
+  // unicorn fly in a high arc, she onto the top of the rainbow (set-regenboog.js), it down beside it. The boat is gone until a
+  // new story round (S.gear.wreck); from then on her grown unicorn swims her (swim.js)
+  let blastQ = null; const planks = [];
+  const breakUp = () => { const cols = ['#8fc3e0', '#8fc3e0', '#fbf5ea', '#c79a66', '#c79a66', '#e98f8f', '#8fc3e0'];
+    cols.forEach((c, i) => { const m = m3(new THREE.BoxGeometry(.5 + (i % 3) * .2, .05, .16), c); m.userData.live = true; S.world(m); m.position.set(boat.x, WATER_Y + .4, boat.z); const a = i / cols.length * 6.283; planks.push({ m, vx: Math.cos(a) * 3, vz: Math.sin(a) * 1.6, vy: 6 + (i % 3) * 1.5, spin: 4 + i, t: 0 }); });
+    g.visible = false; sfx.thud(); sfx.whoosh(); S.confetti(boat.x, WATER_Y + .8, boat.z, ['#cfeaf0', '#ffffff', '#9fd3e0', '#8fc3e0'], 30, undefined, 4.2); };
   const toy = { look: [0, 0], shot: SAIL, rate: 1.2, steer: true, at: () => [boat.x, boat.z], step(dt, inp) {
     t += dt;
     if (mode === 'in') {   // she climbs in from the jetty, her unicorn hops in behind
@@ -68,6 +75,20 @@ export function ferry(S, ends) {
       // near a jetty (the other one, or back at her own once she has been out): in it glides by itself
       for (const i of [0, 1]) { if (i === at && !left) continue; if (ends[i].open && !ends[i].open()) continue; if (Math.hypot(boat.x - ends[i].moor[0], boat.z - ends[i].moor[1]) < DOCK) { mode = 'dock'; t = 0; from = { ...boat }; to = dock(i); at = i; sfx.chime(); } }
       return; }
+    if (mode === 'blast') { const B = blastQ; B.t += dt; const T = B.t;
+      if (T < 1.5) {   // the rumble: the water boils round the boat, it shakes
+        place(boat.x, boat.z, boat.a, Math.sin(T * 34) * .05 * T); seat(); boat.v = 0; oarsGo(0, t);
+        if (Math.floor(T * 8) !== Math.floor((T - dt) * 8)) { const a = Math.random() * 6.283, r = 1 + Math.random() * 1.5; S.confetti(boat.x + Math.cos(a) * r, WATER_Y + .1, boat.z + Math.sin(a) * r, ['#cfeaf0', '#ffffff', '#9fd3e0'], 6, undefined, 2.4); sfx.splash(); }
+        toy.look = [boat.x, boat.z]; toy.shot = { span: 15, tall: 10, rise: .3, riseTall: .45, dof: .3, range: 5, fx: 1, fz: 1, lag: 1 }; toy.rate = 1.2; return; }
+      if (!B.up) { B.up = true; B.from = { x: boat.x, z: boat.z, ux: uni.x, uz: uni.z }; B.onUp(); breakUp(); }
+      const k = Math.min(1, (T - 1.5) / 2.8), e = k, top = 8.5, [tx, ty, tz] = B.to;   // (up high, then down onto the arch's top)
+      const gy = WATER_Y + .4 + (ty - WATER_Y - .4) * e + Math.sin(k * Math.PI) * top;
+      girl.x = B.from.x + (tx - B.from.x) * e; girl.z = B.from.z + (tz - B.from.z) * e; girl.lift = gy - girl.y; girl.view = 'side'; girl.face = tx >= B.from.x ? 1 : -1; girl.poseName = k < .8 ? 'up' : 'sit'; girl.lean = k < .8 ? -k / .8 * Math.PI * 2 * girl.face : 0;   // (a somersault on the way)
+      if (!uni.away) { const ku = Math.min(1, k * 1.02), [ux, uz] = B.uniTo, uy = WATER_Y + .36 + (B.uniY - WATER_Y - .36) * ku + Math.sin(ku * Math.PI) * (top - 1); uni.busy = true; uni.x = B.from.ux + (ux - B.from.ux) * ku; uni.z = B.from.uz + (uz - B.from.uz) * ku; uni.lift = uy - uni.y; uni.face = girl.face; uni.lean = Math.sin(k * Math.PI) * .4 * -uni.face; }
+      toy.look = [girl.x, girl.z]; toy.shot = { span: 26, tall: 18, rise: .2, riseTall: .34, ly: (gy - .5) * .92, dof: .15, range: 10, fx: 1, fz: 1, lag: 1 }; toy.rate = 2.6;
+      if (Math.floor(T * 6) !== Math.floor((T - dt) * 6)) S.confetti(girl.x, gy + .3, girl.z, ['#fbf7ee', '#e98f8f', '#f2d86b', '#8fc3e0'], 2, S.starGeo, .8);
+      if (k >= 1) { mode = null; blastQ = null; S.gear.wreck = true; girl.lean = 0; if (!uni.away) { uni.lift = 0; uni.lean = 0; uni.busy = false; uni.hopV = 3; } sfx.thud(); B.onLand(); }
+      return; }
     if (mode === 'dock') {   // gliding in, bow to the jetty
       const k = Math.min(1, t / 1.1), e = k * k * (3 - 2 * k); let d = to.a - from.a; d = Math.atan2(Math.sin(d), Math.cos(d));
       place(from.x + (to.x - from.x) * e, from.z + (to.z - from.z) * e, from.a + d * e, Math.sin(t * 3) * .02); oarsGo(1 - k, t); seat(); toy.look = [boat.x, boat.z];
@@ -77,9 +98,17 @@ export function ferry(S, ends) {
       if (!uni.away) { uni.x = girl.x - .8; uni.z = girl.z + .2; uni.lift = (WATER_Y + .36 - uni.y) * (1 - k) + Math.sin(k * Math.PI) * .5; }
       if (k >= 1) { mode = null; girl.lift = 0; uni.lift = 0; S.stopPlay(); sfx.hop(); } }
   } };
-  const board = () => { if (S.playing() || mode || empty) return; const [sx, sz] = ends[at].stand; S.walkThen(sx, sz, () => { if (S.playing() || mode) return; mode = 'in'; t = 0; toy.look = [boat.x, boat.z]; S.play(toy); sfx.hop(); }, .9); };
+  const board = () => { if (S.playing() || mode || empty || S.gear.wreck) return; const [sx, sz] = ends[at].stand; S.walkThen(sx, sz, () => { if (S.playing() || mode) return; mode = 'in'; t = 0; toy.look = [boat.x, boat.z]; S.play(toy); sfx.hop(); }, .9); };
   S.tap(g, () => { if (!mode && !empty && Math.hypot(girl.x - ends[at].stand[0], girl.z - ends[at].stand[1]) < 10) board(); }, 'boot');
-  return { toy, cine: o => { cine = o; }, state: () => ({ at, mode, crossings, empty, bumps, cine: !!cine, stands: ends.map(e => e.stand), moors: ends.map(e => e.moor), boat: [boat.x, boat.z], v: boat.v }), boat, step({ dt, time }) {
+  let wrecked = false;
+  return { toy, goTo: (x, z) => { boat.x = x; boat.z = z; }, cine: o => { cine = o; }, blast: o => { if (mode !== 'sail') return false; cine = null; mode = 'blast'; blastQ = { t: 0, up: false, ...o }; sfx.whoosh(); return true; },
+    state: () => ({ at, mode, crossings, empty, bumps, cine: !!cine, wreck: !!S.gear.wreck, stands: ends.map(e => e.stand), moors: ends.map(e => e.moor), boat: [boat.x, boat.z], v: boat.v }), boat, step({ dt, time }) {
+    for (let i = planks.length - 1; i >= 0; i--) { const q = planks[i]; q.t += dt; q.vy -= 9 * dt; q.m.position.x += q.vx * dt; q.m.position.z += q.vz * dt; q.m.position.y = Math.max(WATER_Y - .2, q.m.position.y + q.vy * dt); q.m.rotation.x += q.spin * dt; q.m.rotation.z += q.spin * .6 * dt;
+      if (q.m.position.y <= WATER_Y - .2 && q.vy < 0 && !q.splash) { q.splash = true; S.confetti(q.m.position.x, WATER_Y + .1, q.m.position.z, ['#cfeaf0', '#ffffff'], 6, undefined, 1.6); }
+      if (q.t > 3.5) { q.m.scale.setScalar(Math.max(.01, 1 - (q.t - 3.5) * 2)); if (q.t > 4) { q.m.parent && q.m.parent.remove(q.m); planks.splice(i, 1); } } }
+    // wrecked: no boat (until a new story round mends it: then it lies at the beach's jetty again)
+    if (S.gear.wreck) { wrecked = true; if (mode !== 'blast') g.visible = false; return; }
+    if (wrecked) { wrecked = false; g.visible = true; at = 0; mode = null; empty = false; const d = dock(0); place(d.x, d.z, d.a, 0); }
     if (!mode && !empty) { const d = dock(at); place(d.x, d.z, d.a, Math.sin(time * 1.6) * .025);
       // she waits on the other jetty: the boat comes over to fetch her
       const there = Math.hypot(girl.x - ends[1 - at].stand[0], girl.z - ends[1 - at].stand[1]) < 1.2 && !S.playing(); wait = there ? wait + dt : 0;

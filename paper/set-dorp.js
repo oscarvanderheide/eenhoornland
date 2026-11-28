@@ -6,6 +6,7 @@
 // (the site takes only paper/ from this branch). Trees, sea and shadows are the real thing, at the real count: they are
 // what the phone pays for.
 import { THREE, rng, paper, slab, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { jetty } from './swim.js';
 import { cottage, shore, flowerBed, bouquet, meadow, pinwheel, fountain, bench, lantern, bramble, stall, pondDress, shop, GROUND } from './props.js';
 import { swing, slide, seesaw, plane } from './toys.js';
 import { dog, ball } from './dog.js';
@@ -196,6 +197,7 @@ export default {
     let pi = 0; const grass = meadow(S, planted.length, () => planted[pi++] || null, 401, 0, undefined, bunch);
 
     const [sx, sz] = T(31.5, 36.6);
+    jetty(S, 'dorp', [10.3, 10.3], [1, 1]);   // a jetty in the south-east, white with blue posts: in the water on her grown unicorn (swim.js)
     return {
       start: [sx, sz], uni: [sx - 1.1, sz + .1],
       shadow: { follow: 20 }, back: BACK, sky: 2,     // the shadow sheet follows the camera; the theatre's hills stand behind the forest

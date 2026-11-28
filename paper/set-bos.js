@@ -2,6 +2,7 @@
 // cave's rock and the rest in grey card. Reached from the village over the north bridge, through the gate (paper.js).
 // Places come from the pixel game's map (js/map.js) by T() below; shapes are cut by hand. Numbers copied, never imported.
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge } from './kit.js';
+import { jetty } from './swim.js';
 import { shore, meadow, bouquet, pinwheel, cabin, witchHouse, GROUND } from './props.js';
 import { findSpots, inOval, plantAt, fern, toadstool, fallenLeaf } from './flora.js';
 import { musician, witch } from './folk.js';
@@ -126,6 +127,7 @@ export default {
     const thePicnic = picnic(S, gx - .1, H_GRASS + .02, gz + .1, [live.egel, live.eekhoorn]);
     const flies = { vlinder1: butterfly(S, cx + 1.4, cz - .6, 'v1'), vlinder2: butterfly(S, ox, oz + .3, 'v2', '#bba6ea', '#f6efe2') };
 
+    jetty(S, 'bos', [-17.7, 10.2], [-.866, .5]);   // a jetty of round logs in the west, by the witch's house: in the water on her grown unicorn (swim.js)
     return {
       step: e => { for (const c of Object.values(live)) c.step(e); for (const b of Object.values(flies)) b.step(e); bunch.step(e); grass.step(e); harp.step(e); heks.step(e); house.step(e); theTree.step(e); theCabin.step(e); },
       toys: { ...live, ...flies, heks, harpist: harp, boomhut: theTree, picknick: thePicnic, hut: theCabin, bos: bunch, gras: grass },

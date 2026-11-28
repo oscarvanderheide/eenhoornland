@@ -11,6 +11,7 @@ import { flamingo, parrot, rabbit } from './critters2.js';
 import { candyFloss, alpaca, monkey, children } from './candy.js';
 import { regenboogLand, BACK } from './lands.js';
 import { gameHouse } from './games.js';
+import { jetty } from './swim.js';
 import { findSpots, inOval, plantAt, cottonTree, pompom, sprinkle } from './flora.js';
 
 const H_SAND = -.32, H_GRASS = 0, DECK = -.12;
@@ -35,12 +36,13 @@ export default {
     // under the sea until she has rowed through all seven rings (voyage.js); then it rises (Oscar: "it would be awesome if we
     // could have candy island raise from out of the sea once we travelled with the boat through the seven rings")
     const SUNK = -5.2; S.sink('down'); S.raise(SUNK); S.seaLand(false, false);
-    let rising = -1, risen = false, first = true, rises = 0;
+    let rising = -1, risen = false, first = true, rises = 0, riseT = 6.5;
     const [mx, mz] = S.at([0, 0]), shoreAt = i => { const [x, z] = SAND[Math.floor(i) % SAND.length]; return S.at([x, z]); };
     const riseNow = () => { risen = true; rising = -1; S.sink(false); S.raise(0); S.seaLand(true); S.gear.island = true; for (const f of S.myFigures()) { f.g.visible = true; } };
     S.shared.island = { risen: () => risen, middle: [mx, mz], now: () => { if (!risen) riseNow(); },
-      rise: () => { if (risen || rising >= 0) return false; rising = 0; rises++; S.sink('rising'); S.sfx.whoosh(); return true; } };
+      rise: (fast = false) => { if (risen || rising >= 0) return false; rising = 0; riseT = fast ? 2.2 : 6.5; rises++; S.sink('rising'); S.sfx.whoosh(); return true; } };   // (fast: under her boat, which it throws up into the sky: voyage.js)
     S.floorBox(DECK, J0, BR.z0, BR.x1, BR.z1);
+    jetty(S, 'regenboog', [BR.x1, 0], [-1, 0], DECK, BR.x1 - J0, false, () => risen);   // (the swim ring at its jetty: swim.js)
     S.water(H_GRASS, POND); S.floor(H_GRASS, GRASS); S.floor(H_SAND, SAND, .22);
 
     /* ---------------- paths ---------------- */
@@ -53,7 +55,7 @@ export default {
     stepping([[2.66, 1.82], [4.06, 2.38], [5.46, 2.94]], 646, BANDS);                                                               // to the pond
 
     /* ---------------- things ---------------- */
-    const bow = rainbow(S, 0, H_GRASS, -5.04), bunch = bouquet(S);
+    const bow = rainbow(S, 0, H_GRASS, -5.04), bunch = bouquet(S); S.shared.rainbow = bow;   // (the voyage throws her onto its top: voyage.js, boat.js)
     const fruitTree = rainbowTree(S, 2.52, H_GRASS, 2.24);   // the rainbow tree, in the island's open middle: its fruit makes the baby unicorn grow (wonders.js)
     const pots = paint(S, [{ x: -6.44, z: 4.76, r: .62, col: '#e98f8f' }, { x: -3.08, z: 6.44, r: .56, col: '#8fc3e0' }, { x: 0.84, z: 5.88, r: .6, col: '#f2d86b' }], H_GRASS);
     const shrooms = [mushroom(S, -9.8, H_GRASS, -4.48, .42, '#e98f8f', .6), mushroom(S, -8.4, H_GRASS, -3.22, .5, '#f2b56b', 1), mushroom(S, -10.08, H_GRASS, -2.1, .62, '#bba6ea', 1.6), mushroom(S, -11.48, H_GRASS, -3.5, .36, '#9ed9a0', .3)];
@@ -118,7 +120,8 @@ export default {
       shadow: { follow: 20 }, back: BACK, sky: 3,
       step(e) {
         if (first) { first = false; if (S.gear.island || S.where() === 'regenboog') riseNow(); }   // (risen already in this save, or the game starts here)
-        if (rising >= 0) { const was = rising; rising += e.dt; const k = Math.min(1, rising / 6.5), ease = 1 - Math.pow(1 - k, 3);
+        if (risen && !S.gear.island && S.where() !== 'regenboog') { risen = false; rising = -1; S.sink('down'); S.raise(SUNK); S.seaLand(false); }   // (a new story round, paper.js goHome: down under the sea again, to rise under her boat once more)
+        if (rising >= 0) { const was = rising; rising += e.dt; const k = Math.min(1, rising / riseT), ease = 1 - Math.pow(1 - k, 3);
           S.raise(SUNK * (1 - ease) + Math.sin(rising * 5) * .05 * (1 - k));
           if (Math.floor(was / .35) !== Math.floor(rising / .35)) { for (let i = 0; i < 3; i++) { const [x, z] = shoreAt(Math.random() * SAND.length); S.confetti(x, -.6, z, ['#cfeaf0', '#ffffff', '#9fd3e0'], 10, undefined, 3.2); } S.sfx.splash(); }
           if (k >= 1) { riseNow(); S.sfx.chime(); S.coins.reward('eiland', mx, 2, mz); for (const f of S.myFigures()) S.confetti(f.x, (f.y || 0) + .6, f.z, ['#f4a6c4', '#f2c65c', '#9ed9cf', '#bba6ea'], 6, S.starGeo, 1.6); } }

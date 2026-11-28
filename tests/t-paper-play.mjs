@@ -268,7 +268,7 @@ export default async function (t) {
     await t.ev(`__p.tap('lam')`); await t.sleep(250); ok((await toy('lam')).frame === 3, 'a tap on the lamb: it leaps');
     await by('otter', -1.6, 1.5); await t.shot('tmp-shots/y-otter-land.png'); const o0 = (await toy('otter')).at; await t.ev(`__p.tap('otter')`); await t.sleep(700); ok((await toy('otter')).mode === 'knock', 'a tap on the otter: it knocks its pebble');
     ok(await until(`__p.toy('otter').dives === 1 && !__p.toy('otter').mode`, 6), 'then it dives'); const o1 = (await toy('otter')).at; ok(Math.hypot(o1[0] - o0[0], o1[1] - o0[1]) > 2, 'and comes up somewhere else in the pool');
-    const r = await t.ev('__p.reach()'), lost = Object.entries(r.places).filter(([n, v]) => !v && !/^(regenboog|kasteel|kasteelzaal|kasteeltoren|boomhut|sneeuw) /.test(n)).map(([n]) => n); ok(!lost.length, 'every named place can still be walked to' + (lost.length ? ' NOT: ' + lost.join(', ') : ''));
+    const r = await t.ev('__p.reach()'), lost = Object.entries(r.places).filter(([n, v]) => !v && !/^(regenboog|kasteel|kasteelzaal|schatkamer|kasteeltrap|kasteeltoren|boomhut|sneeuw) /.test(n)).map(([n]) => n); ok(!lost.length, 'every named place can still be walked to' + (lost.length ? ' NOT: ' + lost.join(', ') : ''));
   }
 
   /* ---------------- the seesaw: she and the unicorn; kicking off just as she lands throws the unicorn higher ---------------- */
@@ -730,11 +730,22 @@ export default async function (t) {
     await t.ev(`__p.placeAt(${s0.stands[0][0] - 2.5}, ${s0.stands[0][1] + .3})`); await t.sleep(2400); await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'sail'`, 6), 'a tap on the boat: she walks out on the jetty and climbs in');
     await t.sleep(1500); ok((await b()).v < .1, 'it waits for her to steer');
     await t.ev(`__p.keys(['d'])`); await t.sleep(3200); await t.ev('__p.keys([])'); const s1 = await b(); ok(Math.hypot(s1.boat[0] - s0.moors[0][0], s1.boat[1] - s0.moors[0][1]) > 2, `the arrow turns it round and rows it out (${s1.boat.map(v => v.toFixed(1))})`);
-    const v0 = await t.ev(`__p.toy('voyage')`); let through = 0;
-    for (const r of v0.ringsAt) { await t.ev(`__p.sail(${r[0]}, ${r[1]})`); for (let i = 0; i < 40; i++) { await t.sleep(300); const q = await b(); if (Math.hypot(q.boat[0] - r[0], q.boat[1] - r[1]) < 1.2) break; } if (!through) { await t.sleep(400); await t.shot('tmp-shots/y-boat-land.png'); } through++; }
-    const v1 = await t.ev(`__p.toy('voyage')`); ok(v1.passed === 7, `a tap on the water rows there: through all seven rings (${v1.passed})`); ok(v1.whale.blows > 0, 'the whale came up and blew');
-    ok(await until(`__p.toy('opkomst').rising || __p.toy('opkomst').risen`, 3), 'through the seventh ring: the rainbow island rises out of the sea'); ok((await b()).cine, 'and the camera goes far back to watch');
-    await t.sleep(2500); await t.shot('tmp-shots/y-island-rising-land.png'); ok(await until(`__p.toy('opkomst').risen`, 8), 'up it is'); await t.sleep(1500); await t.shot('tmp-shots/y-island-up-land.png');
+    const v0 = await t.ev(`__p.toy('voyage')`); let through = 0; ok(v0.blastable && v0.lastUp < .1, 'the last ring waits down in the water, over the sunk island');
+    for (const r of v0.ringsAt.slice(0, 6)) { await t.ev(`__p.sail(${r[0]}, ${r[1]})`); for (let i = 0; i < 40; i++) { await t.sleep(300); const q = await b(); if (Math.hypot(q.boat[0] - r[0], q.boat[1] - r[1]) < 1.2) break; } if (!through) { await t.sleep(400); await t.shot('tmp-shots/y-boat-land.png'); } through++; }
+    const v1 = await t.ev(`__p.toy('voyage')`); ok(v1.passed === 6, `a tap on the water rows there: through six rings (${v1.passed})`); ok(v1.whale.blows > 0, 'the whale came up and blew');
+    ok(await until(`__p.toy('voyage').lastUp > .9`, 3), 'and the last ring comes up, over the island');
+    { const r = (await t.ev(`__p.toy('voyage')`)).ringsAt[6]; await t.ev(`__p.sail(${r[0]}, ${r[1]})`); }
+    ok(await until(`__p.toy('boot').mode === 'blast'`, 30), 'through the last ring: the water boils under the boat');
+    ok(await until(`__p.toy('opkomst').rising || __p.toy('opkomst').risen`, 4), 'the island rises right under her'); await t.sleep(900); await t.shot('tmp-shots/y-blast-land.png');
+    ok(await until(`__p.toy('regenboog').landed === 1`, 8), 'up into the sky, and down onto the top of the rainbow'); ok((await b()).wreck, 'the boat broke');
+    ok(await until(`__p.toy('regenboog').mode === null`, 8), 'she slides down it'); { const i = await t.ev('__p.info()'); ok(i.set === 'regenboog' && i.lift === 0, 'and stands on the rainbow island'); ok(Math.hypot(i.uni[0] - i.girl[0], i.uni[1] - i.girl[1]) < 6, 'her unicorn came down beside the rainbow'); }
+    // home again on her grown unicorn: from the island's jetty, swimming
+    { const pl = await t.ev(`__p.places('regenboog')`); await t.ev(`__p.placeAt(${pl.start[0]}, ${pl.start[1]})`); await t.sleep(800);
+      await t.ev(`__p.tap('zwemring-regenboog')`); ok(await until(`__p.toy('zwemmen').mode === 'swim'`, 8), 'a tap on the swim ring: on her unicorn\'s back into the sea'); await t.sleep(600); await t.shot('tmp-shots/y-swim-land.png');
+      const m = s0.moors[0]; await t.ev(`__p.call('zwemmen', 'goTo', ${m[0] + 4}, ${m[1] + 2})`); await t.ev(`__p.keys(['a'])`); ok(await until(`__p.toy('zwemmen').mode === null && __p.info().set === 'strand'`, 12), 'it swims her in to the beach\'s jetty, and out they climb'); await t.ev('__p.keys([])'); }
+    // a new story round mends the boat: then it is the ferry it was, to the risen island
+    await t.ev(`__p.gear({ wreck: false })`); await t.sleep(600); ok(!(await b()).wreck && (await b()).at === 0, 'mended, the boat lies at the beach\'s jetty again');
+    await t.ev(`__p.placeAt(${s0.stands[0][0] - 2.5}, ${s0.stands[0][1] + .3})`); await t.sleep(1500); await t.ev(`__p.tap('boot')`); ok(await until(`__p.toy('boot').mode === 'sail'`, 6), 'in the boat again');
     await t.ev(`__p.sail(${v1.bottle[0]}, ${v1.bottle[1]})`); ok(await until(`__p.toy('voyage').fished`, 14), 'rowing up to the bottle: she fishes it out');
     await t.ev(`__p.sail(${s0.moors[1][0]}, ${s0.moors[1][1]})`); ok(await until(`(() => { const q = __p.toy('boot'); return Math.hypot(q.boat[0] - ${s0.moors[1][0]}, q.boat[1] - ${s0.moors[1][1]}) < 9; })()`, 30), 'on to the island'); await t.sleep(1200); await t.shot('tmp-shots/y-island-low-land.png');
     ok(await until(`__p.toy('boot').mode === null && __p.info().set === 'regenboog'`, 30), 'near the island\'s jetty it glides in, and out she steps');

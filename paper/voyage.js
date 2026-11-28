@@ -15,7 +15,8 @@ import { CARDS3 } from './cards3.js';
 
 const m3 = (geo, col, o) => { const m = new THREE.Mesh(geo, paper(col, o)); m.castShadow = m.receiveShadow = true; return m; };
 
-export function voyage(S, ferry) {
+/** `over`: a place over the sunk island (the world's measure) where the last ring waits while the island can still rise under the boat */
+export function voyage(S, ferry, over = null) {
   const { girl, sfx } = S, st = ferry.state(), [A, B] = st.moors.map(([x, z]) => ({ x, z }));
   const dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L, nx = -uz, nz = ux;
   /** a place along the way: k from the beach (0) to the island (1), `side` steps off the line (+ to the right going out) */
@@ -31,7 +32,12 @@ export function voyage(S, ferry) {
     const parts = []; for (let s = 0; s < 8; s++) { const m = new THREE.Mesh(new THREE.TorusGeometry(2.05, .17, 8, 10, Math.PI / 4), s % 2 ? white : red); m.rotation.z = s * Math.PI / 4; m.castShadow = true; g.add(m); parts.push(m); }   // (big enough for the boat with her unicorn standing in it: Oscar saw it go through the ring)
     return { g, p, parts, done: false, wob: 0 };
   });
-  let passed = 0, trips = -1, allRings = 0, cineT = 0;
+  let passed = 0, trips = -1, allRings = 0, cineT = 0, blasts = 0;
+  // the last ring: while the island lies under the sea (and her unicorn is with her), it waits right over the island, down in
+  // the water, and comes up only when the other six are gold. Through it, and the island rises under the boat (Oscar: "it
+  // doesnt rise next to us but underneath us. and we get sort of blasted upwards and then we land on the rainbow")
+  const last = rings[6], OLD = { ...last.p }; let lastUp = 1;
+  const canBlast = () => !!over && !!S.shared.island && !S.shared.island.risen() && !!S.uni && !S.uni.away && !!S.shared.rainbow && !S.gear.wreck;
 
   /* ---------------- the whale: a big paper card (cards3.js), rising out of the water ---------------- */
   const wp = along(.5, -8.5), whale = S.figure('walvis', CARDS3.walvis); whale.thing = true; whale.x = wp.x; whale.z = wp.z; whale.face = ux >= 0 ? 1 : -1; whale.g.visible = false;
@@ -61,17 +67,22 @@ export function voyage(S, ferry) {
   const turtle = S.figure('zeeschildpad', ANIMALS2.schildpad); turtle.thing = true; turtle.g.scale.setScalar(1.3); const tc = along(.88, 5);
   let ta = 0; turtle.onTap = () => { turtle.hopV = 2; sfx.peep(); };
 
-  return { state: () => ({ rings: rings.map(r => r.done), passed, allRings, whale: { up: W.up > .5, blows: W.blows, at: [wp.x, wp.z], frame: whale.frame }, fished, rang, ringsAt: rings.map(r => [r.p.x, r.p.z]), bottle: [bp.x, bp.z], buoy: [yp.x, yp.z] }),
+  return { state: () => ({ rings: rings.map(r => r.done), passed, allRings, blasts, lastUp: +lastUp.toFixed(2), blastable: canBlast(), whale: { up: W.up > .5, blows: W.blows, at: [wp.x, wp.z], frame: whale.frame }, fished, rang, ringsAt: rings.map(r => [r.p.x, r.p.z]), bottle: [bp.x, bp.z], buoy: [yp.x, yp.z] }),
     step({ dt, time }) {
       const fs = ferry.state(), bt = boatAt();
       if (cineT > 0) { cineT -= dt; if (cineT <= 0) ferry.cine(null); }
       // a new trip: the rings are red and white again
       if (fs.crossings !== trips) { trips = fs.crossings; passed = 0; for (const r of rings) { r.done = false; r.parts.forEach((m, s) => m.material = s % 2 ? white : red); } }
+      { const blastable = canBlast(), at = blastable ? over : OLD; last.p.x = at.x ?? at[0]; last.p.z = at.z ?? at[1]; last.g.position.x = last.p.x; last.g.position.z = last.p.z;
+        const want = !blastable || passed >= 6 || last.done ? 1 : 0; if (want > lastUp && lastUp < .02) { sfx.chime(); S.confetti(last.p.x, WATER_Y + .6, last.p.z, ['#f2c65c', '#fbf5ea', '#cfeaf0'], 16, S.starGeo, 2.6); }
+        lastUp += (want - lastUp) * Math.min(1, dt * 2.5); last.g.scale.setScalar(Math.max(.01, lastUp)); last.g.visible = lastUp > .02; }
       for (const r of rings) {
-        r.g.position.y = WATER_Y + .15 + Math.sin(time * 1.4 + r.p.x) * .06; r.wob = Math.max(0, r.wob - dt); r.g.rotation.z = Math.sin(r.wob * 14) * r.wob * .25;
+        r.g.position.y = WATER_Y + .15 + Math.sin(time * 1.4 + r.p.x) * .06 - (r === last ? (1 - lastUp) * 2.2 : 0);
+        if (r === last && lastUp < .9) continue; r.wob = Math.max(0, r.wob - dt); r.g.rotation.z = Math.sin(r.wob * 14) * r.wob * .25;
         if (!r.done && sailing() && near(r.p, 1.8)) { r.done = true; r.wob = 1; passed++; for (const m of r.parts) m.material = gold; sfx.note(523 * Math.pow(2, (passed - 1) / 7 * 1.2));
           S.confetti(r.p.x, WATER_Y + 1.1, r.p.z, ['#f2c65c', '#fbf5ea', '#e8505b'], 14, S.starGeo, 2.4);
-          if (passed === rings.length && S.shared.island && S.shared.island.rise()) { const [ix, iz] = S.shared.island.middle;   // all seven: the island rises out of the sea, and the camera goes far back to watch
+          if (passed === rings.length && r === last && canBlast() && ferry.blast({ to: S.shared.rainbow.top, uniTo: S.shared.rainbow.foot, uniY: 0, onUp: () => S.shared.island.rise(true), onLand: () => S.shared.rainbow.land() })) { blasts++; }   // (up into the sky: boat.js)
+          else if (passed === rings.length && S.shared.island && S.shared.island.rise()) { const [ix, iz] = S.shared.island.middle;   // all seven: the island rises out of the sea, and the camera goes far back to watch
             ferry.cine({ look: [(bt.x + ix * 2) / 3, (bt.z + iz * 2) / 3], shot: { span: 64, tall: 38, rise: .34, riseTall: .5, dof: .1, range: 12, fx: 1, fz: 1, lag: 1 }, rate: .5 }); cineT = 7.5; }
           if (passed === rings.length) { allRings++; sfx.chime(); S.coins.reward('ringen', bt.x, WATER_Y + 1.4, bt.z); S.confetti(bt.x, WATER_Y + 1.4, bt.z, ['#e98f8f', '#f2b56b', '#f2d86b', '#9ed9a0', '#8fc3e0', '#bba6ea'], 30, S.starGeo, 3.2); } }
       }

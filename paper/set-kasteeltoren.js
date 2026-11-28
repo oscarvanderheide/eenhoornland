@@ -1,5 +1,5 @@
-// The top of the castle's tower: the magic (PLAN.md "The castle: the end of the story"). Up the stairs behind the golden
-// door: a round stone top with battlements, at night, under a sky full of paper stars, the moon low.
+// The top of the castle's tower: the magic (PLAN.md "The castle: the end of the story"). Up the spiral stair
+// (set-kasteeltrap.js): a round stone top with battlements, at night, under a sky full of paper stars, the moon low.
 //   the stars    one shines brighter than the rest and pulses: a tap on it, and a line of light runs to it from the last
 //                one, with a note (each one higher); the next one lights up. Star by star she draws a big unicorn in the sky
 //   alive        the last line closes the picture: it fills with light and the unicorn is there in the sky, a shooting star
@@ -24,7 +24,8 @@ export default {
     for (let i = 0; i < 9; i++) { const a = Math.PI * (1.05 + i * .1), x = Math.cos(a) * (R - .15), z = Math.sin(a) * (R - .15), m = new THREE.Mesh(new THREE.BoxGeometry(.5, i % 2 ? .55 : .8, .3), P(i % 2 ? '#c4bccf' : '#d6d0de')); m.position.set(x, (i % 2 ? .55 : .8) / 2, z); m.rotation.y = -a + Math.PI / 2; m.castShadow = true; root.add(m); }
     root.add(slab([[-.55, R - .9], [.55, R - .9], [.55, R - .2], [-.55, R - .2]], .012, .01, P('#4a3f5c'), P('#4a3f5c')));   // the hatch to the stairs
     S.floor(0, circlePts(R - .25, 961, 40));
-    S.door('toren', [-R, R - .6, R, R + .3], [0, R - 1.3], [0, 1]);
+    S.door('toren', [-R, R - .6, R, R + .3], [0, R - 1.3], [0, 1]);   // (down the hatch: the top of the stair, set-kasteeltrap.js)
+    S.door('feest', [90, 90, 91, 91], [0, R - 1.3], [0, 1]);   // (after the magic: straight to the hall, where the feast unfolds. Its zone is nowhere)
     // the night sky: a big dark card, a moon, little stars everywhere
     const SKY_Z = -R - 1.2;
     const sky = new THREE.Mesh(new THREE.PlaneGeometry(26, 14), new THREE.MeshBasicMaterial({ color: '#26304f' })); sky.position.set(0, 4.5, SKY_Z - .2); root.add(sky);
@@ -70,7 +71,7 @@ export default {
           alive.material.opacity = Math.min(.9, Math.max(0, (done - .6) / 1.6));
           if (done > 2.2 && done < 3.4) { const k = (done - 2.2) / 1.2; shoot.visible = true; shoot.position.set(6 - k * 12, 7.5 - k * 3, SKY_Z + .1); shoot.rotation.z = .24; } else shoot.visible = false;
           if (done > 2.8 && done < 6 && Math.floor(done * 5) !== Math.floor((done - dt) * 5)) { const [x, z] = S.at([(Math.random() - .5) * 5, (Math.random() - .5) * 3]); S.confetti(x, 4.5, z, ['#fff3c4', '#f4a6c4', '#9ed9cf', '#bba6ea', '#f2c65c'], 10, S.starGeo, 1.4); }
-          if (was < 6.4 && done >= 6.4) { S.coins.had('magie', true); S.shared.unfoldNext = true; S.coins.reward('magie-sterren', girl.x, girl.y + 1.4, girl.z); S.stopPlay(); S.through('toren'); } }   // (down to the hall, which wakes up: set-kasteelzaal.js)
+          if (was < 6.4 && done >= 6.4) { S.coins.had('magie', true); S.shared.unfoldNext = true; S.coins.reward('magie-sterren', girl.x, girl.y + 1.4, girl.z); S.stopPlay(); S.through('feest'); } }   // (down to the hall, which wakes up: set-kasteelzaal.js)
         else alive.material.opacity = 0;
       },
       toys: { toren: { state: () => ({ next, of: big.length, done: done >= 0, made, magic: S.coins.had('magie') }) } },

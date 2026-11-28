@@ -1,6 +1,7 @@
 // What stands on the rainbow island (set-regenboog.js).
-//   rainbow    a real arch of six bands of card, big enough to walk under. A tap: she is carried up one side, over the top
-//              (slowly: the going up uses up her speed) and down the other, faster and faster. The camera goes back to see it
+//   rainbow    a real arch of six bands of card, big enough to walk under. A tap: she hops up the little clouds resting on
+//              its left half to the very top, sits, and slides down the other side, faster and faster. And once she comes
+//              down onto its top out of the sky (voyage.js: the island rising under her boat)
 //   paint      puddles of paint on the ground. Walking through one colours her feet: her next steps leave prints of that
 //              colour, and the prints stay
 //   mushroom   big and springy. Walking onto one bounces her; the bigger the mushroom, the higher. A tap: it wobbles
@@ -12,14 +13,23 @@ export const BANDS = ['#e98f8f', '#f2b56b', '#f2d86b', '#9ed9a0', '#8fc3e0', '#b
 export function rainbow(S, x, y, z, R = 4.4) {
   const { girl, sfx } = S, g = new THREE.Group(); g.position.set(x, y, z); S.root.add(g); const W = .3, [wx, wz] = S.at([x, z]);
   BANDS.forEach((c, i) => { const m = mesh(new THREE.RingGeometry(R - (i + 1) * W, R - i * W, 44, 1, 0, Math.PI), c, { side: THREE.DoubleSide }); m.position.z = i * .012; m.receiveShadow = false; g.add(m); });
-  for (const s of [-1, 1]) for (const [dx, dy, dz, r] of [[0, .28, .2, .5], [.42, .2, .3, .36], [-.4, .22, .28, .38], [.1, .5, .1, .34]]) { const c = mesh(new THREE.SphereGeometry(r, 10, 8), '#fbf7ee'); c.scale.y = .72; c.position.set(s * (R - W * 3) + dx, dy, dz); g.add(c); }   // a cloud at each foot
+  for (const s of [-1, 1]) for (const [dx, dy, dz, r] of [[0, .28, .2, .5], [.42, .2, .3, .36], [-.4, .22, .28, .38], [.1, .5, .1, .34]]) { const c = mesh(new THREE.SphereGeometry(r, 10, 8), '#fbf7ee'); c.scale.y = .72; c.position.set(s * (R - W * 3) + dx, dy, dz); g.add(c); }
   for (const s of [-1, 1]) S.solid({ x: x + s * (R - W * 3), z: z + .1, r: .55 });
-  const RR = R + .02, G = 6.5, S0 = .2, S1 = Math.PI - .2, VTOP = 1.1;
-  let mode = null, t = 0, s = S0, w = 0, rides = 0, spark = 0;
+  const RR = R + .02, G = 6.5, S0 = .2, S1 = Math.PI - .2;
+  // little clouds resting on the left half of the arch: the steps she hops up by (Oscar: going up the slide "feels a bit weird")
+  const STEPS = [.55, .9, 1.22];
+  for (const s of STEPS) { const cg = new THREE.Group(); cg.position.set(-RR * Math.cos(s), RR * Math.sin(s) - .12, .2); g.add(cg); for (const [dx, dy, r] of [[0, 0, .26], [-.22, -.04, .18], [.22, -.03, .19], [.06, .1, .17]]) { const c = mesh(new THREE.SphereGeometry(r, 10, 8), '#fbf7ee'); c.scale.set(1.1, .7, .8); c.position.set(dx, dy, 0); cg.add(c); } }
+  let mode = null, t = 0, s = S0, w = 0, rides = 0, spark = 0, hop = 0, landed = 0;
+  const cloudAt = i => i < 0 ? [wx - RR * Math.cos(S0) - 1.0, 0, wz + .66] : i >= STEPS.length ? [wx, RR, wz + .06] : [wx - RR * Math.cos(STEPS[i]), RR * Math.sin(STEPS[i]) + .05, wz + .26];
   const toy = { look: [wx, wz], shot: null, step(dt, inp) {
     t += dt;
-    if (mode === 'on') { const k = Math.min(1, t / .45); girl.x = wx - RR * Math.cos(S0) - (1 - k) * 1.0; girl.z = wz + .06 + (1 - k) * .6; girl.lift = RR * Math.sin(S0) * k + Math.sin(k * Math.PI) * .5; girl.view = 'side'; girl.face = 1; girl.poseName = k > .6 ? 'sit' : null; if (k >= 1) { mode = 'ride'; s = S0; w = Math.sqrt(2 * G * (1 - Math.sin(S0)) / RR + (VTOP / RR) ** 2); rides++; sfx.whoosh(); toy.shot = { span: 26, tall: 16, rise: .3, riseTall: .5, dof: .4, range: 6 }; } return; }
-    if (mode === 'ride') {
+    if (mode === 'climb') {   // up the clouds, hop by hop, and onto the very top
+      const k = Math.min(1, t / .42), a = cloudAt(hop - 1), b = cloudAt(hop), e = k * k * (3 - 2 * k);
+      girl.x = a[0] + (b[0] - a[0]) * e; girl.z = a[2] + (b[2] - a[2]) * e; girl.lift = a[1] + (b[1] - a[1]) * e + Math.sin(k * Math.PI) * .45; girl.view = 'side'; girl.face = 1; girl.poseName = k < .8 ? 'up' : null; girl.lean = 0;
+      if (k >= 1) { t = 0; hop++; sfx.hop(); S.confetti(girl.x, y + girl.lift + .1, girl.z, ['#fbf7ee', '#e2d8f4'], 4, undefined, 1.2);
+        if (hop > STEPS.length) { mode = 'ride'; s = Math.PI / 2 + .02; w = .2; rides++; sfx.chime(); } }
+      return; }
+    if (mode === 'ride') {   // down the other side, faster and faster
       w += -(G / RR) * Math.cos(s) * dt; w = Math.max(w, .25); s += w * dt;
       girl.x = wx - RR * Math.cos(s); girl.z = wz + .06; girl.lift = RR * Math.sin(s); girl.lean = (s - Math.PI / 2) * -.75; girl.poseName = s > 1.9 ? 'up' : 'sit'; girl.face = 1; girl.view = 'side';
       spark -= dt; if (spark <= 0) { spark = .14; S.confetti(girl.x - .2, y + girl.lift + .3, girl.z, BANDS, 2, S.starGeo, .8); }
@@ -29,8 +39,10 @@ export function rainbow(S, x, y, z, R = 4.4) {
     const k = Math.min(1, t / .4); girl.x = wx - RR * Math.cos(S1) + k * 1.1; girl.z = wz + .06 + k * .6; girl.lift = RR * Math.sin(S1) * (1 - k) + Math.sin(k * Math.PI) * .45; girl.lean = 0; girl.poseName = null;
     if (k >= 1) { girl.lift = 0; mode = null; girl.hopV = 2.2; S.confetti(girl.x, y + .5, girl.z, BANDS, 14, S.starGeo, 2.4); S.stopPlay(); }
   } };
-  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx - RR * Math.cos(S0) - 1.0, wz + .66, () => { if (S.playing()) return; mode = 'on'; t = 0; S.play(toy); }, 1.2); });
-  return { toy, state: () => ({ mode, s, rides, high: girl.lift || 0 }), step() { } };
+  S.tap(g, () => { if (S.playing()) return; S.walkThen(wx - RR * Math.cos(S0) - 1.0, wz + .66, () => { if (S.playing()) return; mode = 'climb'; hop = 0; t = 0; S.play(toy); sfx.hop(); }, 1.2); });
+  /** she comes down out of the sky onto the top of the arch (the boat thrown up by the rising island, voyage.js): and slides down */
+  const land = () => { mode = 'ride'; s = Math.PI / 2 + .02; w = .25; t = 0; rides++; landed++; toy.shot = null; S.play(toy); sfx.thud(); sfx.chime(); S.confetti(wx, y + RR + .3, wz, BANDS, 18, S.starGeo, 2.6); };
+  return { toy, land, top: [wx, y + RR, wz + .06], foot: [wx + RR + .9, wz + .9], state: () => ({ mode, s, rides, landed, hop, high: girl.lift || 0 }), step() { } };
 }
 
 /** `puddles`: [{ x, z, r, col }] in the set's measure, on ground of height y */

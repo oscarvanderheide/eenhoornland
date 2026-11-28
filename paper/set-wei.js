@@ -10,6 +10,7 @@ import { wanderer } from './candy.js';
 import { CARDS3 } from './cards3.js';
 import { trampoline } from './trampoline.js';
 import { THREE, rng, paper, slab, card, blob, ribbon, circlePts, inPoly, edgeDist, edgeMat, whiteEdge, grassMap, grassBump } from './kit.js';
+import { jetty } from './swim.js';
 import { cottage, shore, meadow, bouquet, pinwheel, bench, lantern, dandelion, GROUND } from './props.js';
 import { kite, balloon } from './toys.js';
 import { butterfly } from './critters.js';
@@ -156,6 +157,7 @@ export default {
 
     const NOTES = [392, 440, 523.3, 587.3, 659.3]; let sung = 0, hopping = false;
     const [px0, pz0] = S.at([18.9, -3.4]), [px1, pz1] = S.at([28.1, -2.7]), sx = stones.map(s => S.at([s.x, s.z])[0]);
+    jetty(S, 'wei', [8.6, 8.6], [1, 1]);   // a rustic jetty in the south-east, with a box of flowers: in the water on her grown unicorn (swim.js)
     return {
       start: [W[0] + 1.4, W[1]], uni: [W[0] + .4, W[1] + .5],
       shadow: { follow: 20 }, back: BACK, sky: 2,

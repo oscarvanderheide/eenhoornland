@@ -153,6 +153,51 @@ How it goes (first version, 2026-11-28; each step is something she does, never s
    into bed. A dream cloud: a new egg. The story begins again (her clothes, coins and tools stay; the unicorn will hatch and
    grow again).
 
+**Second version (Oscar, 2026-11-28):** "the castle when entering needs some sort of hall with some characters with
+funny/cute interactions (like a knight, a jester, a lady). then a room that leads into the treasure room with some coins ...
+and then a door to a stairway ... maybe circular stairs ... with a camera movement we should get a sense of scale that we are
+really going to climb up some tower. then everytime we go up a part we need to do some puzzle. maybe it gives us a key to open
+a gate ... right now we just have a room with three puzzles in there and its cramped and difficult to click on things because
+the unicorn is in the way ... the dance should really be like all the characters forming an audience cheering for our main
+characters (the girls, the witch, the unicorn) dancing in the middle". So the castle is now four rooms in a row:
+
+1. **The great hall** (set-kasteelzaal.js): the knight, the jester and the lady, each with three funny things that come one
+   tap after the other (the knight's visor clangs shut and he stumbles about blind; the jester cartwheels and walks on his
+   hands; the lady blows a kiss and a heart floats over to her). The golden door at the back opens when she comes near.
+2. **The treasure room** (set-schatkamer.js): heaps of gold that slide and jingle, three chests that fly open and give coins
+   (full again every story round), a crown that floats onto her head, gems that ring. A little door at the back.
+3. **The stair** (set-kasteeltrap.js): a round tower cut open at the front, a spiral of steps round an open well, four turns
+   high. Coming in, the camera looks up the whole tower and back down to her. Her unicorn waits at the bottom, by the door.
+   A portcullis at the start of turns 2, 3 and 4; a puzzle on each landing gives the key (the paintings, the kitten, the
+   shapes, which go into the last gate's lock themselves); the key flies in, turns, the gate rattles up and the camera looks
+   up the next turn. The steps over each other are floor only near her height (paper.js floorAt `band`), and the steps in
+   front, higher than she is, fold out of the camera's way.
+4. **The top** (set-kasteeltoren.js): the magic, as before. Then straight to the hall: the feast unfolds.
+5. **The dance**: the table folds away, everybody (the castle's people too) makes a ring round the middle in two rows, open
+   to the camera, and cheers and claps on the beat; in the middle the girls, the witch and the unicorn dance. Freeze when the
+   music stops, three dances, then the sleepy end as before.
+
+## The island rises under the boat (Oscar, 2026-11-28)
+
+"how about this. it doesnt rise next to us but underneath us. and we get sort of blasted upwards and then we land on the
+rainbow and slide down ... and then our boat gets destroyed. but with the unicorn grown it can be our boat? and then all other
+islands (except the castle of course and maybe the snow island) should be reachable too so we need add the wooden structures
+to enter land or depart to see with the unicorn".
+
+- **The last ring** (voyage.js) waits down in the water right over the sunk island, and comes up only when the other six are
+  gold. Through it: the water boils, the island rises fast right under the boat, and the boat is thrown high into the sky and
+  breaks into planks (boat.js). She does a somersault and comes down on the very top of the rainbow and slides down it; her
+  unicorn lands beside it. (Only with her unicorn along; without it the island rises beside the boat as before.)
+- **The rainbow** (wonders.js): no more being carried up one side. Little clouds rest on its left half; a tap and she hops up
+  them to the top, and slides down the other side.
+- **The unicorn as boat** (swim.js): the boat is gone until a new story round. Every island but the castle's and the snow
+  island has a jetty of its own look (the village: white with blue posts and a lantern; the meadow: rustic, a box of flowers;
+  the forest: round logs, moss on the posts; the beach and the rainbow island: the jetties they had). A red and white swim ring
+  hangs at the end: a tap, and on her grown unicorn's back she goes into the sea, steered as the boat is, and swims in at any
+  other jetty. Not grown yet: the little one shakes its head at the water. On the rainbow island the fruit to grow it is right
+  there, so she is never stuck.
+- **A new story round** (paper.js goHome) mends the boat and puts the island back under the sea, to rise under her once more.
+
 ## Every island its own (Oscar, 2026-11-27)
 
 "all the areas need to feel unique. now i see like all the same elements like the flowers and mills and grass tufts everywhere. that doesnt make it feel like exploring a new area." So: **nothing grows or stands on two islands.** A shared maker is fine for how a thing works, not for how an island looks. What each has (`flora.js` holds everything that is not the village's):
