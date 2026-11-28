@@ -1350,16 +1350,17 @@ bake(theatre); for (const g of hungs) bake(g);
    starts the save being played afresh (the tests use it) */
 const SLOTS = 3, SLOT_COLS = [['#f4a6c4', '#fbd9e6'], ['#f2c65c', '#fbe9b0'], ['#8fd0c8', '#d2f0ec']], slotKey = n => 'eh-paper-save-' + n;
 const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } }, del: k => { try { localStorage.removeItem(k); } catch (e) { } } };
-let saveSlot = Math.min(SLOTS, Math.max(1, +store.get('eh-paper-slot') || 1)), saving = true;
+const TESTING = ASK.has('test');   // (Oscar's story points, below: then the game plays in a save of its own, and the girls' three are left alone)
+let saveSlot = TESTING ? 'test' : Math.min(SLOTS, Math.max(1, +store.get('eh-paper-slot') || 1)), saving = true;
 function peekSave(n) { try { const s = JSON.parse(store.get(slotKey(n)) || 'null'); return s && s.stage && s.stage !== 'dream' ? s : null; } catch (e) { return null; } }
 function readSave() { if (ASK.has('new')) { store.del(slotKey(saveSlot)); const u = new URL(location.href); u.searchParams.delete('new'); history.replaceState(null, '', u.href); return null; } return peekSave(saveSlot); }
-let lastSpot = null;
+let lastSpot = null, testPoint = null;
 function writeSave() {
   if (!STORY || !saving || quest.stage === 'dream') return;
   if (!playing && !through && !flight.on && floorAt(girl.x, girl.z)) lastSpot = [+girl.x.toFixed(2), +girl.z.toFixed(2)];
   store.set(slotKey(saveSlot), JSON.stringify({ v: 1, who: girl.kid, stage: quest.stage, gear: { ...gear, feathers: [...gear.feathers] }, coins: purse.coins, seen: [...purse.seen],
-    taken: [...takenCoins], own: [...wardrobe.own], on: wardrobe.on, where: lastSpot, eve: eveTarget, t: Date.now() }));
-  store.set('eh-paper-slot', String(saveSlot));
+    taken: [...takenCoins], own: [...wardrobe.own], on: wardrobe.on, where: lastSpot, eve: eveTarget, t: Date.now(), point: testPoint }));
+  if (!TESTING) store.set('eh-paper-slot', String(saveSlot));
 }
 function restoreSave(sv) {
   if (sv.who && sv.who !== girl.kid && FIGS[sv.who]) { const a = girl.kid; girl.become(FIGS[sv.who]); zus.become(FIGS[a]); }
@@ -1406,7 +1407,75 @@ function openSaves() {
     colEl.appendChild(bin); row.appendChild(colEl);
   }
 }
-if (savesBtn) { if (ASK.has('set')) savesBtn.hidden = true; savesBtn.addEventListener('click', openSaves); }
+if (savesBtn) { if (ASK.has('set') || TESTING) savesBtn.hidden = true; savesBtn.addEventListener('click', openSaves); }
+
+/* ---------------- the story points (?test): Oscar's quick way to any part of the story ----------------
+   Oscar: "i need like a test mode where i can choose all the parts of the story to quickly test. i.e. the start, after
+   getting the egg, etc". With ?test a book button top right opens a list of the story's points, in order; a tap starts
+   the game again right there, with what she would have by then (her tools, the unicorn as big as it is then, the first
+   times that are behind her). It plays in a save of its own, so the girls' saves are never touched. A point may do one
+   thing more once it is there (`after`: the feast unfolding, the flight home). Text, not pictures: it is for Oscar */
+const FEATHERS3 = ['uil', 'meeuw', 'papegaai'], GATES = ['poort-1', 'poort-2', 'poort-3', 'trap-gezien'];
+const T0 = { potion: true }, T1 = { ...T0, hook: true, snorkel: true }, T2 = { ...T1, island: true, wreck: true }, T3 = { ...T2, grown: true }, T4 = { ...T3, wings: true };
+const STORY_POINTS = [
+  ['The beginning', [
+    ['The dream (a new game)', null],
+    ['Morning: looking for the egg', { stage: 'zoek', at: ['dorp', 'start'] }],
+    ['The egg found, in its cave', { stage: 'ei', at: ['hol', 'start'], seen: ['ei'] }],
+    ['The witch, with the egg', { stage: 'ei', at: ['bos', 'witch'], seen: ['ei'] }],
+    ['The potion: to the brambles', { stage: 'ei', gear: T0, at: ['dorp', 'thorns'], seen: ['ei'] }],
+    ['The meadow: the warm star hatches it', { stage: 'ei', gear: T0, at: ['wei', 'start'], seen: ['ei'] }]]],
+  ['The little unicorn', [
+    ['The unicorn is out', { stage: 'baby', gear: T0, at: ['wei', 'start'], seen: ['ei', 'uitgekomen'] }],
+    ['The hook, in the cave behind the waterfall', { stage: 'baby', gear: T0, at: ['grot', 'start'], seen: ['ei', 'uitgekomen'] }],
+    ['The beach: the boat and the seven rings', { stage: 'baby', gear: T1, at: ['boat'], seen: ['ei', 'uitgekomen'] }],
+    ['Candy island, after the blast: the fruit', { stage: 'baby', gear: T2, at: ['regenboog', 'tree'], seen: ['ei', 'uitgekomen', 'eiland'] }]]],
+  ['The big unicorn', [
+    ['Grown: swimming from the jetty', { stage: 'baby', gear: T3, at: ['regenboog', 'start'], seen: ['ei', 'uitgekomen', 'eiland'] }],
+    ['Three feathers: to the witch', { stage: 'baby', gear: { ...T3, feathers: FEATHERS3 }, at: ['bos', 'witch'], seen: ['ei', 'uitgekomen', 'eiland'] }],
+    ['Wings: flying', { stage: 'baby', gear: T4, at: ['dorp', 'start'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }],
+    ['The snow island', { stage: 'baby', gear: T4, at: ['sneeuw', 'start'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }]]],
+  ['The castle', [
+    ['The castle island', { stage: 'baby', gear: T4, at: ['kasteel', 'gate'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }],
+    ['The great hall', { stage: 'baby', gear: T4, at: ['kasteelzaal', 'start'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }],
+    ['The treasure room', { stage: 'baby', gear: T4, at: ['schatkamer', 'start'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }],
+    ['The stair, at the bottom', { stage: 'baby', gear: T4, at: ['kasteeltrap', 'start'], seen: ['ei', 'uitgekomen', 'eiland'], coins: 40 }],
+    ['The stair, its gates open', { stage: 'baby', gear: T4, at: ['kasteeltrap', 'start'], seen: ['ei', 'uitgekomen', 'eiland', ...GATES], coins: 40 }],
+    ['The tower top: the magic', { stage: 'baby', gear: T4, at: ['kasteeltoren', 'start'], seen: ['ei', 'uitgekomen', 'eiland', ...GATES], coins: 40 }]]],
+  ['The end', [
+    ['The feast unfolds', { stage: 'baby', gear: T4, at: ['kasteeltoren', 'start'], seen: ['ei', 'uitgekomen', 'eiland', ...GATES, 'magie'], coins: 40, after: 'unfold' }],
+    ['The feast: the music box for the dance', { stage: 'baby', gear: T4, at: ['kasteelzaal', 'musicbox'], seen: ['ei', 'uitgekomen', 'eiland', ...GATES, 'magie', 'feest'], coins: 40 }],
+    ['The flight home, and the dream again', { stage: 'baby', gear: T4, at: ['kasteelzaal', 'start'], seen: ['ei', 'uitgekomen', 'eiland', ...GATES, 'magie', 'feest'], coins: 40, eve: 1, after: 'ending' }]]],
+];
+/** where a point puts her, in the world's measure */
+function pointWhere(at) {
+  if (at[0] === 'boat') { const b = sets.map(q => q.toys && q.toys.boot).find(Boolean); return b ? b.state().stands[0].map(v => +v.toFixed(2)) : null; }
+  const q = sets.find(s => s.name === at[0]); const p = q && q.places[at[1]]; return p ? [+p[0].toFixed(2), +p[1].toFixed(2)] : null;
+}
+function goToPoint(name, o) {
+  saving = false;
+  if (!o) store.del(slotKey('test'));
+  else store.set(slotKey('test'), JSON.stringify({ v: 1, who: girl.kid, stage: o.stage, gear: { snorkel: false, hook: false, potion: false, grown: false, wings: false, island: false, wreck: false, feathers: [], ...(o.gear || {}) },
+    coins: o.coins || 0, seen: o.seen || [], taken: [], own: [], on: {}, where: pointWhere(o.at), eve: o.eve || 0, t: Date.now(), point: name, after: o.after || null }));
+  location.replace(location.href);
+}
+function openPoints() {
+  if (document.getElementById('pointbook')) return; sfx.click();
+  const veil = document.createElement('div'); veil.id = 'pointbook';
+  veil.style.cssText = 'position:fixed;inset:0;z-index:10;background:rgba(40,52,60,.6);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 10px) 12px calc(env(safe-area-inset-left) + 10px);box-sizing:border-box;font:600 12.5px/1.2 ui-rounded,system-ui,sans-serif;color:#4a3b30';
+  const cols = document.createElement('div'); cols.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;max-width:1200px;margin:0 auto;align-items:start'; veil.appendChild(cols);
+  for (const [part, points] of STORY_POINTS) {
+    const box = document.createElement('div'); box.style.cssText = 'background:#f3ead8;border-radius:12px;padding:6px;box-shadow:0 3px 0 #b9a888;display:flex;flex-direction:column;gap:4px';
+    const h = document.createElement('div'); h.textContent = part; h.style.cssText = 'font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#9a8466;padding:1px 3px'; box.appendChild(h);
+    for (const [name, o] of points) { const b = document.createElement('button'); b.textContent = name; const cur = (SAVED && SAVED.point === name) || (!SAVED && !o);
+      b.style.cssText = `text-align:left;border:0;border-radius:8px;padding:5px 7px;font:inherit;color:inherit;cursor:pointer;background:${cur ? '#f4c6d4' : '#fbf7ee'};box-shadow:0 2px 0 #d8c9ad`;
+      b.onclick = e => { e.stopPropagation(); sfx.chime(); goToPoint(name, o); }; box.appendChild(b); }
+    cols.appendChild(box); }
+  veil.addEventListener('pointerdown', e => { if (e.target === veil) veil.remove(); }); document.body.appendChild(veil);
+}
+if (TESTING) { const b = document.createElement('button'); b.className = 'btn'; b.id = 'points'; b.setAttribute('aria-label', 'story points'); b.style.right = 'calc(env(safe-area-inset-right) + 150px)';
+  b.innerHTML = '<svg viewBox="0 0 32 32"><path d="M16 9c-3-2-7-2.5-11-2v17c4-.5 8 0 11 2 3-2 7-2.5 11-2V7c-4-.5-8 0-11 2z" fill="#fbf7ee" stroke="#9a7b5c" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 9v17" stroke="#9a7b5c" stroke-width="1.6"/><path d="M8 12h5M8 15.5h5M19 12h5M19 15.5h5" stroke="#f4a6c4" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  b.addEventListener('click', e => { e.stopPropagation(); openPoints(); }); document.body.appendChild(b); }
 
 /* The start. With ?set=... : a look at one island, the unicorn there, as before. Without: the game from its beginning.
    Night, the two sisters asleep in their beds at home, and the dream they share (quest.js). Then it is morning; there is
@@ -1415,11 +1484,15 @@ const STORY = !ASK.has('set');
 const SAVED = STORY ? readSave() : null;   // the save being played (saves, below); with ?set=... nothing is saved
 if (SAVED) for (const id of SAVED.taken || []) takenCoins.add(id);
 loadWorld(STORY ? 'dorp' : SETS[ASK.get('set')] ? ASK.get('set') : 'eiland');
-if (SAVED) restoreSave(SAVED);
+if (SAVED) { restoreSave(SAVED); testPoint = SAVED.point || null; }
 else if (STORY) {
   const home = sets.find(q => q.name === 'huis'); gear.potion = false; quest.stage = 'dream'; uni.away = true; uni.g.visible = false; eve = eveTarget = 1; skyIcon(true);
   [girl.x, girl.z] = home.beds[girl.kid]; girl.y = 0; standOn(home); camCut = true; home.sleep(girl.kid);
 }
+if (TESTING && SAVED && SAVED.after) {   // a story point that does one thing more once she is there
+  const after = SAVED.after; delete SAVED.after; setTimeout(() => {
+    if (after === 'unfold') { const d = (sets.find(q => q.name === 'kasteeltoren') || { doors: [] }).doors.find(q => q.name === 'feest'); if (d) { shared.unfoldNext = true; goThrough(d); } }
+    if (after === 'ending') goHome(); }, 1200); }
 /* the button with her sister's face: a tap, and she is her sister (who was asleep at home, and now the other one is) */
 const whoBtn = document.getElementById('who');
 function showWho() { if (!whoBtn) return; whoBtn.style.backgroundImage = `url(${faceCut(zus.kid, 128).toDataURL()})`; whoBtn.style.backgroundSize = '100%'; whoBtn.style.backgroundPosition = 'center'; }
@@ -1635,6 +1708,7 @@ window.__p = {
   fly: () => (flight.on ? land() : takeOff(), flight.on),
   flyTo(x, z) { if (flight.on && !flight.landing) target = { x, z }; },
   ground: (x, z) => { const fl = floorAt(x, z); return fl ? { h: fl.h, set: fl.set.name, swim: fl.swim } : null; },
+  storyPoints: () => STORY_POINTS.flatMap(p => p[1].map(q => q[0])), story: name => { const q = STORY_POINTS.flatMap(p => p[1]).find(q => q[0] === name); if (q) goToPoint(...q); return !!q; },   // (the ?test story points, for the tests)
   hatched: () => { quest.stage = 'baby'; uni.away = false; uni.x = girl.x - 1; uni.z = girl.z + .3; uni.y = heightAt(uni.x, uni.z) ?? 0; },   // (for tests: as if the egg had hatched here)
   gear: o => { Object.assign(gear, o || {}); if (gear.grown) uni.become(FIGS[gear.wings ? 'grown' : 'groot']); showCoins(); return { ...gear }; },   // (for tests)
   grow: () => { gear.grown = true; uni.become(FIGS[gear.wings ? 'grown' : 'groot']); },
